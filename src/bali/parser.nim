@@ -42,6 +42,9 @@ proc consume*(
   str
 
 proc swap*(parent, child: Token) {.inline.} =
+  assert parent != nil
+  assert child != nil
+
   parent.next = child
   child.prev = parent
 
@@ -56,13 +59,14 @@ proc consumeWhitespace*(
 proc parse*(src: string): AST =
   var
     prev: Token
+    scope = Token(kind: tkScope, tokens: @[])
     ast = AST(
-      tokens: @[],
+      tokens: @[scope],
       src: src,
       pos: -1
     )
-
-  while not ?ast:
+  
+  while not ?ast:  
     case ++ast:
       of {'a'..'z'}, {'1'..'9'}, '=':
         let name = ~ast & consume(
@@ -71,17 +75,21 @@ proc parse*(src: string): AST =
         )
         if prev == nil:
           if name in ["let", "var", "const"]:
-            prev = Token(
+            var prevD = Token(
               kind: tkDeclaration,
               mutable: name == "var"
             )
-            ast.tokens.add(prev)
+
+            scope.tokens.add(prevD)
+            prev = prevD
           else:
-            prev = Token(
+            var prevK = Token(
               kind: tkKeyword,
               keyword: name
             )
-            ast.tokens.add(prev)
+
+            scope.tokens.add(prevK)
+            prev = prevK
         else:
           ast.pos -= name.len
           if prev.kind == tkDeclaration:
@@ -160,6 +168,10 @@ proc parse*(src: string): AST =
               pName: ptrName
             )
             swap(prev, pointerOp)
+            prev = pointerOp
+
+            # FIXME: this is absolutely stupid even though I'm the one who wrote this.
+            discard --ast
           elif prev.kind == tkAssignment:
             consumeWhitespace(ast)
  
@@ -177,14 +189,31 @@ proc parse*(src: string): AST =
               )
             
             swap(prev, literal)
-
             prev.reset()
           elif prev.kind == tkComparisonPointerRight:
+            # then we do this atrocity here. WTF?
+            discard ++ast
             consumeWhitespace(ast)
 
-            echo ++ast
+            if ++ast == '{':
+              echo "openned scope!"
+              var scopeOp = Token(
+                kind: tkScope,
+                tokens: @[]
+              )
+              swap(prev, scopeOp)
+              scope = scopeOp
+              prev.reset()
+            elif ++ast == '}':
+              assert prev.kind == tkScope
+              # return to the closest scope after this one ends,
+              # unless you hit BALI_MAX_TRAVERSALS, which you won't,
+              # hopefully. :)
+              scope = scope.traverseUntilParentFound(tkScope)
+              echo "resetted scope!"
+            else:
+              echo ++ast
       else:
         discard
         # echo "oops: " & -ast
-
   ast

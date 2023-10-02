@@ -6,6 +6,7 @@ let x = 5;
 let y = 8;
 
 if x == y {
+  let z = 32;
 }
 """)
   
@@ -14,6 +15,6 @@ if x == y {
     print tok]#
   
   let interpreter = newASTInterpreter(ast)
-  interpreter.interpret()
+  #interpreter.interpret()
 
-  print interpreter
+  print ast

@@ -1,4 +1,4 @@
-import jsvalue
+import std/tables, jsvalue
 
 const
   BALI_MAX_TRAVERSALS {.intdefine.} = 65536
@@ -50,7 +50,10 @@ type
         keyword*: string
 
         ifStatementComputedResult*: bool
-      of tkAssignment, tkScope: discard
+      of tkScope:
+        valueSpace*: TableRef[string, JSValue]
+        tokens*: seq[Token]
+      of tkAssignment: discard
 
 proc `$`*(tk: TokenKind): string =
   case tk:
