@@ -2,7 +2,7 @@
   AST parser
 ]#
 
-import std/sugar, token, jsvalue
+import std/[tables, sugar], token, jsvalue, logging, pretty
 
 type AST* = ref object of RootObj
   tokens*: seq[Token]
@@ -66,7 +66,13 @@ proc parse*(src: string): AST =
       pos: -1
     )
   
-  while not ?ast:  
+  while not ?ast:
+    assert scope.kind == tkScope, "Expected scope, got " & $scope.kind
+    info "Assertion passed!"
+    if peek(ast) == '}':
+      info "Closed scope, exiting to next closest scope!"
+      scope = scope.traverseUntilParentFound(tkScope)
+
     case ++ast:
       of {'a'..'z'}, {'1'..'9'}, '=':
         let name = ~ast & consume(
@@ -79,7 +85,7 @@ proc parse*(src: string): AST =
               kind: tkDeclaration,
               mutable: name == "var"
             )
-
+            
             scope.tokens.add(prevD)
             prev = prevD
           else:
@@ -116,12 +122,9 @@ proc parse*(src: string): AST =
             swap(prev, assignOp)
             prev = assignOp
           elif prev.kind == tkKeyword:
-            #echo "comparison pointer left"
             consumeWhitespace(ast)
-            
-            #echo "KEYWOOOORDS"
-            #echo prev.keyword
             if prev.keyword == "if":
+              info "if-clause beginning!"
               var pointerOp = Token(
                 kind: tkComparisonPointerLeft,
                 pName: name
@@ -194,25 +197,17 @@ proc parse*(src: string): AST =
             # then we do this atrocity here. WTF?
             discard ++ast
             consumeWhitespace(ast)
-
+            
             if ++ast == '{':
-              echo "openned scope!"
+              info "Opened scope!"
               var scopeOp = Token(
                 kind: tkScope,
                 tokens: @[]
               )
-              swap(prev, scopeOp)
+              swap(scope, scopeOp)
+              scopeOp.next = prev
               scope = scopeOp
               prev.reset()
-            elif ++ast == '}':
-              assert prev.kind == tkScope
-              # return to the closest scope after this one ends,
-              # unless you hit BALI_MAX_TRAVERSALS, which you won't,
-              # hopefully. :)
-              scope = scope.traverseUntilParentFound(tkScope)
-              echo "resetted scope!"
-            else:
-              echo ++ast
       else:
         discard
         # echo "oops: " & -ast

@@ -127,14 +127,19 @@ proc traverseUntilParentFound*(token: Token, kind: TokenKind): Token =
     idx = 0
     parent = token.prev
 
-  while idx < BALI_MAX_TRAVERSALS and parent.kind != kind:
+  while idx < BALI_MAX_TRAVERSALS:
+    inc idx
     if parent.prev != nil:
       parent = parent.prev
-    else:
+    
+    if parent.kind == kind:
       break
 
-  assert parent != nil, "Parent with kind " & $parent.kind & " could not be found within BALI_MAX_TRAVERSALS=" & $BALI_MAX_TRAVERSALS
+  when not defined(baliNoGuards):
+    assert parent != nil, "Parent with kind " & $kind & " could not be found within BALI_MAX_TRAVERSALS=" & $BALI_MAX_TRAVERSALS
   
+    assert parent.kind == kind, "Parent with kind " & $kind & " could not be found within BALI_MAX_TRAVERSALS=" & $BALI_MAX_TRAVERSALS
+
   parent
 
 proc getValue*(token: Token): JSValue =

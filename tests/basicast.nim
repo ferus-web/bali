@@ -8,6 +8,8 @@ let y = 8;
 if x == y {
   let z = 32;
 }
+
+let a = 98;
 """)
   
   echo "Parsing done; total tokens = " & $ast.tokens.len
