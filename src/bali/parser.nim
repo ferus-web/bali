@@ -2,7 +2,7 @@
   AST parser
 ]#
 
-import std/[tables, sugar], token, jsvalue, logging, pretty
+import std/[tables, options, sugar], token, jsvalue, logging, pretty
 
 type AST* = ref object of RootObj
   tokens*: seq[Token]
@@ -59,7 +59,7 @@ proc consumeWhitespace*(
 proc parse*(src: string): AST =
   var
     prev: Token
-    scope = Token(kind: tkScope, tokens: @[])
+    scope: Token
     ast = AST(
       tokens: @[scope],
       src: src,
@@ -67,11 +67,15 @@ proc parse*(src: string): AST =
     )
   
   while not ?ast:
-    assert scope.kind == tkScope, "Expected scope, got " & $scope.kind
-    info "Assertion passed!"
     if peek(ast) == '}':
+      assert scope != nil
       info "Closed scope, exiting to next closest scope!"
-      scope = scope.traverseUntilParentFound(tkScope)
+      let newScope = scope.traverseUntilParentFound(tkScope)
+
+      if newScope.isSome:
+        scope = newScope.get()
+      else:
+        scope.reset()
 
     case ++ast:
       of {'a'..'z'}, {'1'..'9'}, '=':
@@ -85,16 +89,26 @@ proc parse*(src: string): AST =
               kind: tkDeclaration,
               mutable: name == "var"
             )
-            
-            scope.tokens.add(prevD)
+
+            if scope != nil:
+              info "scope != nil, adding to scope tokens list"
+              scope.tokens.add(prevD)
+            else:
+              info "scope == nil, adding to root ast tokens list"
+              ast.tokens.add(prevD)
             prev = prevD
           else:
             var prevK = Token(
               kind: tkKeyword,
               keyword: name
             )
-
-            scope.tokens.add(prevK)
+            
+            if scope != nil:
+              info "scope != nil, adding to scope tokens list"
+              scope.tokens.add(prevK)
+            else:
+              info "scope == nil, adding to root ast tokens list"
+              ast.tokens.add(prevK)
             prev = prevK
         else:
           ast.pos -= name.len
@@ -204,7 +218,8 @@ proc parse*(src: string): AST =
                 kind: tkScope,
                 tokens: @[]
               )
-              swap(scope, scopeOp)
+
+              swap(prev, scopeOp)
               scopeOp.next = prev
               scope = scopeOp
               prev.reset()

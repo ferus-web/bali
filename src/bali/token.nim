@@ -1,4 +1,4 @@
-import std/tables, jsvalue
+import std/[options, tables], jsvalue
 
 const
   BALI_MAX_TRAVERSALS {.intdefine.} = 65536
@@ -107,7 +107,7 @@ proc getAbsoluteChild*(token: Token): Token =
 
   child
 
-proc traverseUntilChildFound*(token: Token, kind: TokenKind): Token =
+proc traverseUntilChildFound*(token: Token, kind: TokenKind): Option[Token] =
   var
     idx = 0
     child = token.next
@@ -118,11 +118,11 @@ proc traverseUntilChildFound*(token: Token, kind: TokenKind): Token =
     else:
       break
 
-  assert child != nil, "Child with kind " & $child.kind & " could not be found within BALI_MAX_TRAVERSALS=" & $BALI_MAX_TRAVERSALS
+  
+  if child.kind == kind:
+    return some(child)
 
-  child
-
-proc traverseUntilParentFound*(token: Token, kind: TokenKind): Token =
+proc traverseUntilParentFound*(token: Token, kind: TokenKind): Option[Token] =
   var
     idx = 0
     parent = token.prev
@@ -135,12 +135,8 @@ proc traverseUntilParentFound*(token: Token, kind: TokenKind): Token =
     if parent.kind == kind:
       break
 
-  when not defined(baliNoGuards):
-    assert parent != nil, "Parent with kind " & $kind & " could not be found within BALI_MAX_TRAVERSALS=" & $BALI_MAX_TRAVERSALS
-  
-    assert parent.kind == kind, "Parent with kind " & $kind & " could not be found within BALI_MAX_TRAVERSALS=" & $BALI_MAX_TRAVERSALS
-
-  parent
+  if parent.kind == kind:
+    return some(parent)
 
 proc getValue*(token: Token): JSValue =
   var value: JSValue
@@ -149,6 +145,7 @@ proc getValue*(token: Token): JSValue =
     value = token.value
   else:
     let lit = token.traverseUntilChildFound(tkLiteral)
-    value = lit.value
+    assert lit.isSome
+    value = lit.get().value
 
   value
