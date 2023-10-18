@@ -28,11 +28,15 @@ proc handleIfClause*(interpreter: ASTInterpreter, keyword: Token) =
 
   while curr != nil:
     if curr.kind == tkComparisonPointerLeft:
+      info "Handling tkComparisonPointerLeft (LHS)"
       ptrLeft = curr.pName
     elif curr.kind == tkComparison:
+      info "Handling tkComparison (equation sign)"
       comparison = curr.comparisonType
     elif curr.kind == tkComparisonPointerRight:
+      info "Handling tkComparisonPointerRight (RHS)"
       ptrRight = curr.pName
+      break
     
     curr = curr.next
 
@@ -67,18 +71,26 @@ proc handleIfClause*(interpreter: ASTInterpreter, keyword: Token) =
   case comparison:
     of ctEquality:
       # FIXME: add the quirky equality checker, this currently is too accurate for Brendan Eich.
+      info "Equality comparison (" & ptrLeft & " == " & ptrRight & ")"
       keyword.ifStatementComputedResult = hashes.left == hashes.right
     of ctNotEquality:
+      info "Inequality comparison (" & ptrLeft & " != " & ptrRight & ")"
       keyword.ifStatementComputedResult = hashes.left != hashes.right
     of ctTrueEquality:
+      info "True equality comparison (" & ptrLeft & " === " & ptrRight & ")"
       keyword.ifStatementComputedResult = hashes.left == hashes.right
     of ctNotTrueEquality:
+      info "True inequality comparison (" & ptrLeft & " !== " & ptrRight & ")"
       keyword.ifStatementComputedResult = hashes.left != hashes.right
     of ctDefault:
-      error("WTF? Comparison somehow hit ctDefault even though there is an assertion that prevents that from happening. Something has went terribly, terribly wrong. Debugging time, yay! (or alternatively, conveniently blame it at a bit flip)")
+      error "WTF? Comparison somehow hit ctDefault even though there is an assertion that prevents that from happening. Something has went terribly, terribly wrong. Debugging time, yay! (or alternatively, conveniently blame it at a bit flip)"
 
 proc step*(interpreter: ASTInterpreter, token: Token = nil, crawl: bool = true) =
+  if token == nil:
+    return
+
   if token.kind == tkDeclaration:
+    sanityCheck(token)
     interpreter.step(token.next)
   elif token.kind == tkLiteral:
     info "Assigning " & token.value.payload & " to name: \"" & token.prev.prev.name & "\""

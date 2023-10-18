@@ -84,10 +84,13 @@ proc `$`*(tk: TokenKind): string =
   Please call this before any operation as it is a good safety net.
 ]#
 proc sanityCheck*(token: Token) =
+  assert token != nil, "Sanity check was passed nil."
   case token.kind:
     of tkAssignment:
       assert token.prev != nil and token.next != nil, "Assignment needs a prev node (identifier) and next node (literal)"
       assert token.prev.kind == tkIdentifier and token.next.kind == tkLiteral, "Assignment prev node must be identifier and next node must be literal"
+    of tkDeclaration:
+      assert token.next != nil and token.next.kind == tkIdentifier, "Declaration next node must be identifier"
     else:
       discard
 

@@ -22,7 +22,6 @@ test "basic tokens":
     lit = Token(
       kind: tkLiteral,
       value: JSValue(
-        kind: jskInt,
         payload: "4"
       )
     )
