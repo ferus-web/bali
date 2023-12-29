@@ -1,4 +1,4 @@
-import std/[strutils], nimSHA2
+import std/[strutils, marshal], nimSHA2
 
 type
   JSValueKind* = enum
@@ -18,6 +18,9 @@ proc `$`*(jsk: JSValueKind): string =
       return "String"
     of jskNone:
       return "None"
+
+proc `$`*(jsv: JSValue): string {.inline.} =
+  $$jsv
 
 proc getInt*(value: JSValue): int =
   assert {'a'..'z'} notin value.payload.toLowerAscii()
