@@ -103,6 +103,20 @@ proc hash*(stmt: Statement): Hash {.inline.} =
   else:
     discard
 
+proc pushIdent*(args: var PositionedArguments, ident: string) {.inline.} =
+  args &=
+    CallArg(
+      kind: cakIdent,
+      ident: ident
+    )
+
+proc pushAtom*(args: var PositionedArguments, atom: MAtom) {.inline.} =
+  args &=
+    CallArg(
+      kind: cakAtom,
+      atom: atom
+    )
+
 {.push checks: off, inline.}
 proc createImmutVal*(name: string, atom: MAtom): Statement =
   Statement(

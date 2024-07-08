@@ -91,7 +91,6 @@ proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] 
 
   case initialIdent
   of "let", "const":
-    discard parser.tokenizer.next()
     return some(createImmutVal(ident, &atom))
   of "var":
     return some(createMutVal(ident, &atom))
@@ -142,31 +141,92 @@ proc parseFunction*(parser: Parser): Option[Function] =
         parser.error Other, "missing ) before start of function scope"
 
       break
-    else: discard # parameter parser goes here :3
-
+    else: 
+      warn "parser (unimplemented): whilst parsing parameters: "
+      print tok
+      discard # parameter parser goes here :3
+  
+  var body: seq[Statement]
+  info "parser: parse function body: " & &name
   while not parser.tokenizer.eof:
-    let prevPos = parser.tokenizer.pos
-    let c = parser.tokenizer.nextExceptWhitespace()
-    if c.kind == TokenKind.RCurly:
+    let 
+      prevPos = parser.tokenizer.pos
+      c = parser.tokenizer.nextExceptWhitespace()
+
+    if *c and (&c).kind == TokenKind.RCurly:
       info "parser: met end of curly bracket block"
       break
+    else:
+      parser.tokenizer.pos = prevPos
     
-    parser.tokenizer.pos = prevPos # if we didn't get a right curly bracket, backtrack to the previous position and parse statements
+    let 
+      peCount = parser.errors.len
+      stmt = parser.parseStatement()
 
-    let stmt = parser.parseStatement()
     if not *stmt:
-      warn "parser: no statement generated, checking for errors to throw"
-      assert parser.errors.len > 0, "No statement returned without any errors"
-      raise newException(
-        SyntaxError,
-        $parser.errors[0]
-      )
+      info "parser: can't find any more statements for function body: " & &name & "; body parsing complete"
+      break
+
+    body &= &stmt
   
-  some function(&name, @[])
+  info "parser: parsed function: " & &name
+  some function(&name, body)
+
+proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
+  info "parser: trying to parse an atom out of " & $token.kind
+  
+  case token.kind
+  of TokenKind.Number:
+    return some integer(
+      &token.intVal
+    )
+  of TokenKind.String:
+    return some str(
+      token.str
+    )
+  else: unreachable
+
+proc parseArguments*(parser: Parser): Option[PositionedArguments] =
+  info "parser: parse arguments for function call"
+  var
+    metEnd = false
+    args: PositionedArguments
+
+  while not parser.tokenizer.eof():
+    let token = parser.tokenizer.next()
+
+    case token.kind
+    of TokenKind.Whitespace, TokenKind.Comma: discard
+    of TokenKind.Identifier:
+      args.pushIdent(token.ident)
+    of TokenKind.Number, TokenKind.String:
+      let atom = parser.parseAtom(token)
+
+      if !atom:
+        parser.error Other, "expected atom, got malformed data instead." # FIXME: make this less vague!
+
+      args.pushAtom(&atom)
+    of TokenKind.RParen:
+      metEnd = true
+      break
+    else: unreachable
+
+  if not metEnd:
+    parser.error Other, "missing ) after argument list."
+
+  some args
 
 proc parseStatement*(parser: Parser): Option[Statement] =
-  let token = parser.tokenizer.next()
-    
+  if parser.tokenizer.eof:
+    parser.error Other, "expected statement, got EOF instead."
+
+  let tok = parser.tokenizer.nextExceptWhitespace()
+
+  if !tok:
+    return #parser.error Other, "expected statement, got whitespace/EOF instead."
+  
+  let token = &tok
+
   case token.kind
   of TokenKind.Let:
     info "parser: parse let-expr"
@@ -179,9 +239,31 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     return parser.parseDeclaration("var")
   of TokenKind.Function:
     info "parser: parse function declaration"
-    print parser.parseFunction()
-    return Statement().some()
-  of TokenKind.Whitespace: discard
+    let fnOpt = parser.parseFunction()
+    
+    if !fnOpt:
+      parser.error Other, "unexpected end of input"
+    
+    var fn = &fnOpt
+    
+    var scope = parser.ast.scopes[0]
+      
+    while *scope.next:
+      scope = &scope.next
+    
+    fn.prev = some(scope)
+    scope.next = some(Scope(fn))
+  of TokenKind.Identifier:
+    let prevPos = parser.tokenizer.pos
+    
+    if not parser.tokenizer.eof() and parser.tokenizer.next().kind == TokenKind.LParen:
+      let 
+        args = parser.parseArguments()
+        arguments = if *args: &args else: newSeq[CallArg](0)
+
+      return some call(token.ident, arguments)
+
+    parser.tokenizer.pos = prevPos
   else: unreachable
 
 proc parse*(parser: Parser): AST {.inline.} =
@@ -189,15 +271,11 @@ proc parse*(parser: Parser): AST {.inline.} =
 
   while not parser.tokenizer.eof():
     let stmt = parser.parseStatement()
-    if not *stmt:
-      warn "parser: no statement generated, checking for errors to throw"
-      assert parser.errors.len > 0, "No statement returned without any errors"
-      raise newException(
-        SyntaxError,
-        $parser.errors[0]
-      )
     
-    parser.ast.appendToCurrentScope(&stmt)
+    if *stmt:
+      parser.ast.appendToCurrentScope(&stmt)
+
+  parser.ast
 
 proc newParser*(input: string): Parser {.inline.} =
   Parser(

@@ -1,4 +1,5 @@
 proc normalizeIRName*(name: string): string =
+  ## Normalize or "mangle" a raw identifier to be MIR-friendly.
   var buffer: string
 
   for i, c in name:

@@ -1,17 +1,14 @@
-import std/tables
+import std/[os, tables]
 import bali/grammar/prelude
 import pretty
 import ../common
 
 enableLogging()
-let parser = newParser("""
-function main() {
-  let x = "e"
-  let y = "this is truly a moment"
-}
-
-main()
-""")
+let parser = newParser(
+  readFile(
+    paramStr(1)
+  )
+)
 
 let ast = parser.parse()
 print parser.errors

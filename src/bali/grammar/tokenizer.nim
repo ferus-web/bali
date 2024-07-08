@@ -87,7 +87,7 @@ proc consumeIdentifier*(tokenizer: Tokenizer): Token =
     let c = &tokenizer.charAt()
 
     case c
-    of {'a' .. 'z'}, {'A' .. 'Z'}, '_':
+    of {'a' .. 'z'}, {'A' .. 'Z'}, '_', '.':
       ident &= c
       tokenizer.advance()
     else:
@@ -390,11 +390,13 @@ proc next*(tokenizer: Tokenizer): Token =
   else:
     tokenizer.consumeInvalid()
 
-proc nextExceptWhitespace*(tokenizer: Tokenizer): Token {.inline.} =
+proc nextExceptWhitespace*(tokenizer: Tokenizer): Option[Token] =
   var tok = tokenizer.next()
-  assert off
 
-  while tok.kind == TokenKind.Whitespace:
+  while not tokenizer.eof() and tok.kind == TokenKind.Whitespace:
     tok = tokenizer.next()
-
-  tok
+  
+  if tok.kind != TokenKind.Whitespace:
+    some tok
+  else:
+    none Token
