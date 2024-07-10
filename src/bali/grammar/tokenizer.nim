@@ -150,10 +150,22 @@ proc consumeString*(tokenizer: Tokenizer): Token =
   info "tokenizer: consume string with closing character: " & closesWith
   tokenizer.advance()
 
-  var str: string
+  var 
+    str: string
+    ignoreNextQuote = false
 
-  while (not tokenizer.eof()) and not (&tokenizer.charAt() == closesWith):
-    str &= &tokenizer.charAt()
+  while not tokenizer.eof():
+    let c = &tokenizer.charAt()
+
+    if c == closesWith and not ignoreNextQuote:
+      break
+    
+    if c == '\\':
+      ignoreNextQuote = true
+      tokenizer.advance()
+      continue
+
+    str &= c
     tokenizer.advance()
 
   let malformed = str.endsWith(closesWith)
