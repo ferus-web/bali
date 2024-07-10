@@ -33,7 +33,6 @@ proc consoleLogIR*(vm: PulsarInterpreter, generator: IRGenerator) =
 
   vm.registerBuiltin("BALI_CONSOLELOG",
     proc(op: Operation) =
-      echo "\n\n\nI WAS CALLED MEOW :33333"
       for arg in vm.registers.callArgs:
         let value =
           case arg.kind
