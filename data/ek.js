@@ -1,8 +1,9 @@
 function main() {
-  let x = "this is the value of x"
-  let y = "this is truly a moment"
+  let x = "this demonstrates a segment of the Web Console API as defined by the WhatWG standard!"
   console.log(x)
-  console.log(y)
+  console.warn(x)
+  console.debug(x)
+  console.error(x)
 }
 
 main()

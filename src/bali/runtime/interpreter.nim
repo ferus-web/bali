@@ -88,8 +88,7 @@ proc generateIR*(runtime: Runtime, stmt: Statement) =
             )
 
       runtime.ir.call(nam)
-      #runtime.ir.resetArgs()
-      discard runtime.ir.addOp IROperation(opcode: CrashInterpreter)
+      runtime.ir.resetArgs()
   else:
     warn "interpreter: unimplemented IR generation directive: " & $stmt.kind
 
