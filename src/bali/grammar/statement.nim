@@ -42,6 +42,7 @@ type
 
   Function* = ref object of Scope
     name*: string
+    arguments*: seq[uint]
 
   Statement* = object
     case kind*: StatementKind

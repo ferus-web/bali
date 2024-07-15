@@ -8,6 +8,7 @@ import mirage/runtime/prelude
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/[normalize]
+import bali/stdlib/prelude
 import crunchy, pretty
 
 type
@@ -59,6 +60,7 @@ proc generateIR*(runtime: Runtime, stmt: Statement) =
     )
   of Call:
     if runtime.vm.hasBuiltin(stmt.fn):
+      info "interpreter: generate IR for calling builtin: " & stmt.fn
       let args =
         (proc(): seq[MAtom] =
           var x: seq[MAtom]
@@ -74,7 +76,19 @@ proc generateIR*(runtime: Runtime, stmt: Statement) =
     else:
       let nam = stmt.fn.normalizeIRName()
       info "interpreter: generate IR for calling function (normalized): " & nam
+      
+      for i, arg in stmt.arguments:
+        case arg.kind
+        of cakIdent:
+          runtime.ir.passArgument(runtime.index(arg.ident))
+        of cakAtom:
+          for child in stmt.expand():
+            runtime.generateIR(
+              child
+            )
+
       runtime.ir.call(nam)
+      runtime.ir.resetArgs()
   else:
     warn "interpreter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -114,7 +128,8 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
       runtime.generateIR(stmt, addrIdx)]#
 
 proc run*(runtime: Runtime) =
-  #runtime.generateIRForStd()
+  console.generateStdIr(runtime.vm, runtime.ir)
+
   runtime.generateIRForScope(runtime.ast.scopes[0])
 
   let source = runtime.ir.emit()

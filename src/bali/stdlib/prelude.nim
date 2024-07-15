@@ -1,0 +1,3 @@
+import ./[console]
+
+export console
