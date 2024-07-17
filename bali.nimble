@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.1.9"
 author        = "xTrayambak"
 description   = "The Bali JavaScript Engine"
 license       = "MIT"
