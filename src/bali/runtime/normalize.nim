@@ -31,6 +31,10 @@ proc normalizeIRName*(name: string): string =
       buffer &= "eight"
     of '9':
       buffer &= "nine"
+    of '_':
+      buffer &= "underscore"
+    of '@':
+      buffer &= "at"
     else:
       raise newException(ValueError, "Found invalid character in buffer during normalization (pos " & $i & "): '" & c & "' in " & name)
 
