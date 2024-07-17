@@ -1,3 +1,5 @@
-function output_this(x) {
-  console.log(x)
+function output_this() {
+  console.log("Hello world!", "hey there!")
 }
+
+output_this()

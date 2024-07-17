@@ -30,7 +30,7 @@ proc index*(runtime: Runtime, name: string): uint =
 proc mark*(runtime: Runtime, name: string) =
   runtime.nameToIdx[name] = runtime.addrIdx
 
-proc generateIR*(runtime: Runtime, stmt: Statement) =
+proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
   case stmt.kind
   of CreateImmutVal:
     inc runtime.addrIdx
@@ -80,17 +80,27 @@ proc generateIR*(runtime: Runtime, stmt: Statement) =
       for i, arg in stmt.arguments:
         case arg.kind
         of cakIdent:
-          runtime.ir.passArgument(runtime.index(arg.ident))
-        of cakAtom:
-          for child in stmt.expand():
-            runtime.generateIR(
-              child
-            )
+          let ident = '@' & $hash(fn) & '_' & arg.ident
+          info "interpreter: passing ident parameter to function with ident: " & ident
+          runtime.ir.passArgument(runtime.index(ident))
+        of cakAtom: # already loaded via the statement expander
+          let ident = '@' & $hash(stmt) & '_' & $i
+          info "interpreter: passing atom parameter to function with ident: " & ident
+          runtime.ir.passArgument(runtime.index(ident))
 
       runtime.ir.call(nam)
       runtime.ir.resetArgs()
   else:
     warn "interpreter: unimplemented IR generation directive: " & $stmt.kind
+
+proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
+  info "interpreter: loading up function signature arguments onto stack via IR: " & fn.name
+
+  for i, arg in fn.arguments:
+    let name = '@' & $hash(fn) & '_' & arg
+    mark runtime, name
+    runtime.ir.readRegister(runtime.index name, Register.CallArgument)
+    runtime.ir.resetArgs() # reset the call param register
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope) =
   let 
@@ -104,11 +114,14 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
     runtime.clauses.add(name)
     runtime.ir.newModule(name.normalizeIRName())
   
+  if name != "outer":
+    runtime.loadArgumentsOntoStack(fn)
+  
   for stmt in scope.stmts:
     for child in stmt.expand():
-      runtime.generateIR(child)
+      runtime.generateIR(fn, child)
     
-    runtime.generateIR(stmt)
+    runtime.generateIR(fn, stmt)
 
   var curr = scope
   while *curr.next:

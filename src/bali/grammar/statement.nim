@@ -42,7 +42,7 @@ type
 
   Function* = ref object of Scope
     name*: string
-    arguments*: seq[uint]
+    arguments*: seq[string] ## expected arguments!
 
   Statement* = object
     case kind*: StatementKind
@@ -61,6 +61,9 @@ type
     of NewFunction:
       fnName*: string
       body*: Scope
+
+proc hash*(fn: Function): Hash {.inline.} =
+  hash((fn.name, fn.arguments))
 
 proc hash*(stmt: Statement): Hash {.inline.} =
   var hash: Hash
@@ -147,7 +150,7 @@ proc expand*(stmt: Statement): seq[Statement] =
     for i, arg in stmt.arguments:
       if arg.kind == cakAtom:
         result &= createImmutVal(
-          "callarg_" & $hash(stmt) & '_' & $i,
+          '@' & $hash(stmt) & '_' & $i,
           arg.atom
         ) # XXX: should this be mutable?
   else: discard

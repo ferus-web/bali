@@ -115,6 +115,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
   var 
     metLParen = false
     metRParen = false
+    arguments: seq[string] 
 
   # TODO: parameter parsing
   while not parser.tokenizer.eof:
@@ -141,11 +142,19 @@ proc parseFunction*(parser: Parser): Option[Function] =
         parser.error Other, "missing ) before start of function scope"
 
       break
+    of TokenKind.Whitespace: discard
+    of TokenKind.Identifier:
+      info "parser: appending identifier to expected function argument signature: " & tok.ident
+      if metRParen:
+        parser.error Other, "unexpected identifier after end of function signature"
+
+      arguments &=
+        tok.ident
     else: 
       warn "parser (unimplemented): whilst parsing parameters: "
       print tok
       discard # parameter parser goes here :3
-  
+
   var body: seq[Statement]
   info "parser: parse function body: " & &name
   while not parser.tokenizer.eof:
@@ -170,7 +179,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
     body &= &stmt
   
   info "parser: parsed function: " & &name
-  some function(&name, body)
+  some function(&name, body, arguments)
 
 proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
   info "parser: trying to parse an atom out of " & $token.kind
