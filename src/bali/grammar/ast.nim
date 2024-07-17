@@ -1,5 +1,6 @@
 import std/[options]
 import bali/internal/sugar
+import pretty
 import ./[statement, scopes]
 
 type
@@ -35,10 +36,12 @@ iterator items*(ast: AST): Scope =
   for scope in ast.scopes:
     yield scope
 
-func function*(name: string, stmts: seq[Statement]): Function {.inline.} =
+func function*(name: string, stmts: seq[Statement], args: seq[string]): Function {.inline.} =
+  print args
   Function(
     name: name,
-    stmts: stmts
+    stmts: stmts,
+    arguments: args
   )
 
 proc newAST*: AST {.inline.} =
