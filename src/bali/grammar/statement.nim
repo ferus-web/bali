@@ -1,5 +1,6 @@
 import std/[hashes, logging, options]
 import mirage/atom
+import pretty
 
 type
   ExecCondition* = enum
@@ -22,6 +23,8 @@ type
     IfCond
     NewFunction
     Call
+    ReturnFn
+    CallAndStoreResult
 
   CallArgKind* = enum
     cakIdent
@@ -41,10 +44,10 @@ type
     stmts*: seq[Statement]
 
   Function* = ref object of Scope
-    name*: string
+    name*: string = "outer"
     arguments*: seq[string] ## expected arguments!
 
-  Statement* = object
+  Statement* = ref object
     case kind*: StatementKind
     of CreateMutVal:
       mutIdentifier*: string
@@ -61,9 +64,19 @@ type
     of NewFunction:
       fnName*: string
       body*: Scope
+    of ReturnFn:
+      retVal*: Option[MAtom]
+      retIdent*: Option[string]
+    of CallAndStoreResult:
+      mutable*: bool
+      storeIdent*: string
+      storeFn*: Statement
 
-proc hash*(fn: Function): Hash {.inline.} =
-  hash((fn.name, fn.arguments))
+func hash*(fn: Function): Hash {.inline.} =
+  when fn is Scope: # FIXME: really dumb fix to prevent a segfault
+    hash(0)
+  else:
+    hash((fn.name, fn.arguments))
 
 proc hash*(stmt: Statement): Hash {.inline.} =
   var hash: Hash
@@ -129,6 +142,31 @@ proc createImmutVal*(name: string, atom: MAtom): Statement =
     imAtom: atom
   )
 
+proc returnFunc*: Statement =
+  Statement(kind: ReturnFn)
+
+proc returnFunc*(retVal: MAtom): Statement =
+  Statement(kind: ReturnFn, retVal: some(retVal))
+
+proc returnFunc*(ident: string): Statement =
+  Statement(kind: ReturnFn, retIdent: some(ident))
+
+proc callAndStoreImmut*(ident: string, fn: Statement): Statement =
+  Statement(
+    kind: CallAndStoreResult,
+    mutable: false,
+    storeIdent: ident,
+    storeFn: fn
+  )
+
+proc callAndStoreMut*(ident: string, fn: Statement): Statement =
+  Statement(
+    kind: CallAndStoreResult,
+    mutable: true,
+    storeIdent: ident,
+    storeFn: fn
+  )
+
 proc createMutVal*(name: string, atom: MAtom): Statement =
   Statement(
     kind: CreateMutVal,
@@ -147,12 +185,17 @@ proc expand*(stmt: Statement): seq[Statement] =
 
   case stmt.kind
   of Call:
+    debug "ir: expand Call statement"
     for i, arg in stmt.arguments:
       if arg.kind == cakAtom:
+        debug "ir: load immutable value to expand Call's immediate arguments: " & arg.atom.crush("")
         result &= createImmutVal(
           '@' & $hash(stmt) & '_' & $i,
           arg.atom
         ) # XXX: should this be mutable?
+  of CallAndStoreResult:
+    debug "ir: expand CallAndStoreResult statement by expanding child Call statement"
+    result &= expand(stmt.storeFn)
   else: discard
 
 proc call*(fn: string, arguments: PositionedArguments): Statement =

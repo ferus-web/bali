@@ -5,6 +5,7 @@
 import std/[math, options, logging, strutils, tables]
 import ./token
 import bali/internal/sugar
+import pretty
 
 type
   TokenizerOpts* = object
@@ -250,15 +251,26 @@ proc charToDecimalDigit*(c: char): Option[uint32] {.inline.} =
   if c >= '0' and c <= '9':
     return some((c.ord - '0'.ord).uint32)
 
-proc consumeNumeric*(tokenizer: Tokenizer): Token =
-  let (hasSign, sign) =
+proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
+  var
+    hasSign: bool
+    sign = 1f
+
+  if negative:
+    hasSign = true
+    sign = -1f
+  else:
     case tokenizer.consume()
     of '-':
-      (true, -1f)
+      hasSign = true
+      sign = -1f
     of '+':
-      (true, 1f)
+      hasSign = true
+      sign = 1f
     else:
-      (false, 1f)
+      hasSign = false
+      sign = 1f
+      tokenizer.pos -= 1
 
   if hasSign:
     tokenizer.advance(1)
@@ -266,12 +278,10 @@ proc consumeNumeric*(tokenizer: Tokenizer): Token =
   var
     integralPart: float64
     digit: uint32
-
-  while unpack(charToDecimalDigit(tokenizer.consume()), digit):
+  
+  while not tokenizer.eof and unpack(charToDecimalDigit(&tokenizer.charAt()), digit):
     integralPart = integralPart * 10'f64 + digit.float64
     tokenizer.advance(1)
-    if tokenizer.eof:
-      break
 
   var
     isInteger = true
@@ -356,7 +366,9 @@ proc next*(tokenizer: Tokenizer): Token =
   of '#':
     tokenizer.consumeComment(multiline = false)
   of {'0' .. '9'}:
-    tokenizer.consumeNumeric()
+    tokenizer.consumeNumeric(false)
+  of '-':
+    tokenizer.consumeNumeric(true)
   of '.':
     tokenizer.advance()
     Token(

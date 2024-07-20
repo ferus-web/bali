@@ -145,5 +145,6 @@ const
     "false": TokenKind.False,
     "new": TokenKind.New,
     "debugger": TokenKind.Debugger,
-    "function": TokenKind.Function
+    "function": TokenKind.Function,
+    "return": TokenKind.Return
   }.toTable

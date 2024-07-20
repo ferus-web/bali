@@ -1,7 +1,7 @@
 ## Bali runtime (MIR emitter)
 ##
 ## Copyright (C) 2024 Trayambak Rai and Ferus Authors
-import std/[logging, sugar, tables, importutils]
+import std/[options, logging, sugar, tables, importutils]
 import mirage/ir/generator
 import mirage/runtime/tokenizer
 import mirage/runtime/prelude
@@ -19,23 +19,45 @@ type
 
     addrIdx: uint
     nameToIdx: Table[string, uint]
+    locals: Table[uint, string]
     clauses: seq[string]
 
 proc index*(runtime: Runtime, name: string): uint =
+  debug "interpreter: find index of ident: " & name
   if name in runtime.nameToIdx:
     return runtime.nameToIdx[name]
   else:
     raise newException(CatchableError, "No such ident: " & name) # FIXME: turn into semantic error
 
+proc localTo*(runtime: Runtime, name: string): Option[string] =
+  let idx = runtime.index(name)
+
+  if idx in runtime.locals:
+    return some runtime.locals[idx]
+
+proc markInternal*(runtime: Runtime, name: string) =
+  inc runtime.addrIdx
+  debug "interpreter: mark ident '" & name & "' to index " & $runtime.addrIdx
+  runtime.nameToIdx['@' & name] = runtime.addrIdx
+
+proc indexInternal*(runtime: Runtime, name: string): uint =
+  let nameInt = '@' & name
+  debug "interpreter: find index of internal value: " & nameInt
+
+  if nameInt in runtime.nameToIdx:
+    return runtime.nameToIdx[nameInt]
+  else:
+    raise newException(CatchableError, "No such internal ident: " & name)
+
 proc mark*(runtime: Runtime, name: string) =
+  inc runtime.addrIdx
   runtime.nameToIdx[name] = runtime.addrIdx
 
 proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
   case stmt.kind
   of CreateImmutVal:
-    inc runtime.addrIdx
     mark runtime, stmt.imIdentifier
-    info "interpreter: generate IR for creating immutable value"
+    info "interpreter: generate IR for creating immutable value with identifier: " & stmt.imIdentifier
 
     case stmt.imAtom.kind
     of Integer:
@@ -44,13 +66,19 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
         runtime.addrIdx,
         stmt.imAtom
       )
+    of UnsignedInt:
+      info "interpreter: generate IR for loading immutable unsigned integer"
+      runtime.ir.loadInt(
+        runtime.addrIdx,
+        integer int(&stmt.imAtom.getUint()) # FIXME: make all mirage integer ops work on unsigned integers whenever possible too.
+      )
     of String:
       info "interpreter: generate IR for loading immutable string"
       discard runtime.ir.loadStr(
         runtime.addrIdx,
         stmt.imAtom
       ) # FIXME: mirage: loadStr doesn't have the discardable pragma
-    else: unreachable
+    else: print stmt.imAtom.kind; unreachable
   of CreateMutVal:
     inc runtime.addrIdx
     mark runtime, stmt.mutIdentifier
@@ -80,16 +108,34 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
       for i, arg in stmt.arguments:
         case arg.kind
         of cakIdent:
-          let ident = '@' & $hash(fn) & '_' & arg.ident
+          let ident = arg.ident
           info "interpreter: passing ident parameter to function with ident: " & ident
           runtime.ir.passArgument(runtime.index(ident))
         of cakAtom: # already loaded via the statement expander
-          let ident = '@' & $hash(stmt) & '_' & $i
+          let ident = $hash(stmt) & '_' & $i
           info "interpreter: passing atom parameter to function with ident: " & ident
-          runtime.ir.passArgument(runtime.index(ident))
+          runtime.ir.passArgument(runtime.indexInternal(ident))
 
       runtime.ir.call(nam)
       runtime.ir.resetArgs()
+  of ReturnFn:
+    assert not (*stmt.retVal and *stmt.retIdent), "ReturnFn statement cannot have both return atom and return ident at once!"
+    
+    if *stmt.retVal:
+      let name = $hash(fn) & "_retval"
+      runtime.generateIR(fn, createImmutVal(name, &stmt.retVal))
+      runtime.ir.returnFn(runtime.index(name).int)
+    elif *stmt.retIdent:
+      runtime.ir.returnFn(runtime.index('@' & $hash(fn) & '_' & &stmt.retIdent).int)
+    else:
+      let name = $hash(fn) & "_retval"
+      runtime.generateIR(fn, createImmutVal(name, null())) # load NULL atom
+      runtime.ir.returnFn(runtime.index(name).int)
+  of CallAndStoreResult:
+    let ident = $hash(fn) & "funcall_arg_" & stmt.storeIdent
+    mark runtime, ident
+    runtime.generateIR(fn, stmt.storeFn)
+    runtime.ir.readRegister(runtime.index(ident), Register.ReturnValue)
   else:
     warn "interpreter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -98,6 +144,7 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
 
   for i, arg in fn.arguments:
     let name = '@' & $hash(fn) & '_' & arg
+    debug name
     mark runtime, name
     runtime.ir.readRegister(runtime.index name, Register.CallArgument)
     runtime.ir.resetArgs() # reset the call param register

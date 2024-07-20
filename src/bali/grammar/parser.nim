@@ -2,7 +2,7 @@
 ##
 ## Copyright (C) 2024 Trayambak Rai
 
-import std/[options, logging, tables]
+import std/[options, logging, strutils, tables]
 import bali/grammar/[token, tokenizer, ast, statement]
 import bali/internal/sugar
 import mirage/atom
@@ -42,6 +42,15 @@ proc `$`*(error: ParseError): string =
 
   buff & " (line " & $error.location.line & ", column " & $error.location.col & ')'
 
+proc parseArguments*(parser: Parser): Option[PositionedArguments]
+
+proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
+  let
+    args = parser.parseArguments()
+    arguments = if *args: &args else: newSeq[CallArg](0)
+  
+  return some call(name, arguments)
+
 proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] =
   var ident = initialIdent
 
@@ -60,6 +69,7 @@ proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] 
   var
     atom: Option[MAtom]
     vIdent: Option[string]
+    toCall: Option[Statement]
 
   while not parser.tokenizer.eof:
     let tok = parser.tokenizer.next()
@@ -74,9 +84,17 @@ proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] 
       )
       break
     of TokenKind.Identifier:
-      vIdent = some(
-        tok.ident
-      )
+      let prevPos = parser.tokenizer.pos
+      if not parser.tokenizer.eof() and parser.tokenizer.next().kind == TokenKind.LParen:
+        # this is a function call!
+        toCall = parser.parseFunctionCall(tok.ident)
+        break
+      else:
+        # just an ident copy
+        vIdent = some(
+          tok.ident
+        )
+        break
     of TokenKind.Number:
       if *tok.intVal:
         atom = some(
@@ -85,15 +103,21 @@ proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] 
     of TokenKind.Whitespace: discard
     else: unreachable
   
-  assert not (*atom and *vIdent)
+  assert not (*atom and *vIdent and *toCall)
 
-  if *vIdent: error Other, "assignment from another address is not supported yet"
+  if *vIdent: parser.error Other, "assignment from another address is not supported yet"
 
   case initialIdent
   of "let", "const":
-    return some(createImmutVal(ident, &atom))
+    if *atom:
+      return some(createImmutVal(ident, &atom))
+    elif *toCall:
+      return some(callAndStoreImmut(ident, &toCall))
   of "var":
-    return some(createMutVal(ident, &atom))
+    if *atom:
+      return some(createMutVal(ident, &atom))
+    elif *toCall:
+      return some(callAndStoreMut(ident, &toCall))
   else: unreachable
 
 proc parseStatement*(parser: Parser): Option[Statement]
@@ -200,14 +224,33 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
   var
     metEnd = false
     args: PositionedArguments
+    idx = -1
 
   while not parser.tokenizer.eof():
+    inc idx
     let token = parser.tokenizer.next()
 
     case token.kind
     of TokenKind.Whitespace, TokenKind.Comma: discard
     of TokenKind.Identifier:
-      args.pushIdent(token.ident)
+      let prevPos = parser.tokenizer.pos
+
+      if parser.tokenizer.next().kind == TokenKind.LParen:
+        # function!
+        let 
+          call = parser.parseFunctionCall(token.ident)
+          resIdent = "@0_" & $idx
+
+        parser.ast.appendToCurrentScope(
+          callAndStoreMut(
+            resIdent, 
+            &call
+          )
+        )
+        args.pushIdent(resIdent)
+      else:
+        parser.tokenizer.pos = prevPos
+        args.pushIdent(token.ident)
     of TokenKind.Number, TokenKind.String:
       let atom = parser.parseAtom(token)
 
@@ -266,13 +309,27 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     let prevPos = parser.tokenizer.pos
     
     if not parser.tokenizer.eof() and parser.tokenizer.next().kind == TokenKind.LParen:
-      let 
-        args = parser.parseArguments()
-        arguments = if *args: &args else: newSeq[CallArg](0)
-
-      return some call(token.ident, arguments)
+      return parser.parseFunctionCall(token.ident) #some call(token.ident, arguments)
 
     parser.tokenizer.pos = prevPos
+  of TokenKind.Return:
+    let prevPos = parser.tokenizer.pos
+
+    while not parser.tokenizer.eof():
+      let next = parser.tokenizer.next()
+
+      case next.kind
+      of TokenKind.Identifier:
+        return some returnFunc(next.ident)
+      of TokenKind.Number, TokenKind.String:
+        return some returnFunc(&parser.parseAtom(next))
+      of TokenKind.Whitespace:
+        if next.whitespace.contains(strutils.Newlines):
+          return some returnFunc()
+      else: unreachable
+    
+    parser.tokenizer.pos = prevPos
+    return some returnFunc()
   else: unreachable
 
 proc parse*(parser: Parser): AST {.inline.} =
