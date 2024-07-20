@@ -37,7 +37,6 @@ iterator items*(ast: AST): Scope =
     yield scope
 
 func function*(name: string, stmts: seq[Statement], args: seq[string]): Function {.inline.} =
-  print args
   Function(
     name: name,
     stmts: stmts,
