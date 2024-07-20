@@ -2,4 +2,5 @@ function domaths(x) {
   return x
 }
 
-console.log(domaths(32))
+let x = domaths(32)
+console.log(x)

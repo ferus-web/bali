@@ -110,7 +110,7 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
         of cakIdent:
           let ident = arg.ident
           info "interpreter: passing ident parameter to function with ident: " & ident
-          runtime.ir.passArgument(runtime.index(ident))
+          runtime.ir.passArgument(runtime.index($hash(fn) & "funcall_arg_" & ident))
         of cakAtom: # already loaded via the statement expander
           let ident = $hash(stmt) & '_' & $i
           info "interpreter: passing atom parameter to function with ident: " & ident
