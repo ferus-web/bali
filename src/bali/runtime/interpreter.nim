@@ -189,6 +189,7 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
 
 proc run*(runtime: Runtime) =
   console.generateStdIr(runtime.vm, runtime.ir)
+  math.generateStdIR(runtime.vm, runtime.ir)
 
   runtime.generateIRForScope(runtime.ast.scopes[0])
 

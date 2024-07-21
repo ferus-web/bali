@@ -349,6 +349,21 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
 
   Token(kind: TokenKind.Number, hasSign: hasSign, floatVal: valF32, intVal: intValue)
 
+proc consumePlus*(tokenizer: Tokenizer): Token =
+  tokenizer.advance()
+  
+  let next = tokenizer.charAt()
+  if not *next:
+    return Token(kind: TokenKind.Add)
+  
+  case &next
+  of '+':
+    tokenizer.advance()
+    return Token(kind: TokenKind.Increment)
+  of strutils.Whitespace:
+    return Token(kind: TokenKind.Add)
+  else: discard
+
 proc next*(tokenizer: Tokenizer): Token =
   let c = tokenizer.charAt()
 
@@ -411,6 +426,8 @@ proc next*(tokenizer: Tokenizer): Token =
     )
   of '!':
     tokenizer.consumeExclaimation()
+  of '+':
+    tokenizer.consumePlus()
   else:
     tokenizer.consumeInvalid()
 

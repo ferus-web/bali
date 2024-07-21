@@ -1,4 +1,6 @@
 ## JavaScript console API standard interface
+## This uses a delegate system similar to that of V8's.
+## Copyright (C) 2024 Trayambak Rai and Ferus Authors
 import std/[options, tables, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
@@ -34,6 +36,8 @@ proc console(vm: PulsarInterpreter, level: ConsoleLevel) {.inline.} =
         $(&arg.getInt())
       of String:
         $(&arg.getStr())
+      of Float:
+        $(&arg.getFloat())
       else: ""
 
     delegate(level, value)
