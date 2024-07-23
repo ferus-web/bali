@@ -210,9 +210,12 @@ proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
   
   case token.kind
   of TokenKind.Number:
-    return some integer(
-      &token.intVal
-    )
+    if *token.intVal:
+      return some integer(
+        &token.intVal
+      )
+    else:
+      return some floating(token.floatVal)
   of TokenKind.String:
     return some str(
       token.str

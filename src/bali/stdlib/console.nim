@@ -1,4 +1,6 @@
 ## JavaScript console API standard interface
+## This uses a delegate system similar to that of V8's.
+## Copyright (C) 2024 Trayambak Rai and Ferus Authors
 import std/[options, tables, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
@@ -27,6 +29,8 @@ proc attachConsoleDelegate*(del: ConsoleDelegate) {.inline.} =
   delegate = del
 
 proc console(vm: PulsarInterpreter, level: ConsoleLevel) {.inline.} =
+  var accum: string
+
   for arg in vm.registers.callArgs:
     let value =
       case arg.kind
@@ -34,9 +38,13 @@ proc console(vm: PulsarInterpreter, level: ConsoleLevel) {.inline.} =
         $(&arg.getInt())
       of String:
         $(&arg.getStr())
+      of Float:
+        $(&arg.getFloat())
       else: ""
 
-    delegate(level, value)
+    accum &= value & ' '
+  
+  delegate(level, accum)
 
 proc consoleLogIR*(vm: PulsarInterpreter, generator: IRGenerator) =
   # generate binding interface

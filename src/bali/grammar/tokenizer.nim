@@ -282,24 +282,22 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
   while not tokenizer.eof and unpack(charToDecimalDigit(&tokenizer.charAt()), digit):
     integralPart = integralPart * 10'f64 + digit.float64
     tokenizer.advance(1)
-
+  
   var
     isInteger = true
     fractionalPart: float64 = 0'f64
-
-  if tokenizer.charAt(1) == some('.') and
-      &tokenizer.charAt(2) in {'0' .. '9'}:
+  
+  if tokenizer.charAt() == some('.') and
+      &tokenizer.charAt(1) in {'0' .. '9'}:
     isInteger = false
     tokenizer.advance(1)
 
     var factor = 0.1'f64
 
-    while unpack(charToDecimalDigit(tokenizer.consume()), digit):
+    while not tokenizer.eof() and unpack(charToDecimalDigit(tokenizer.consume()), digit):
       fractionalPart += digit.float64 * factor
       factor *= 0.1'f64
       tokenizer.advance(1)
-      if tokenizer.eof():
-        break
 
   var value = sign * (integralPart + fractionalPart)
   if tokenizer.charAt(1) in [some 'e', some 'E']:
@@ -346,8 +344,22 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
       none(int32)
 
   let valF32 = value.float64
-
   Token(kind: TokenKind.Number, hasSign: hasSign, floatVal: valF32, intVal: intValue)
+
+proc consumePlus*(tokenizer: Tokenizer): Token =
+  tokenizer.advance()
+  
+  let next = tokenizer.charAt()
+  if not *next:
+    return Token(kind: TokenKind.Add)
+  
+  case &next
+  of '+':
+    tokenizer.advance()
+    return Token(kind: TokenKind.Increment)
+  of strutils.Whitespace:
+    return Token(kind: TokenKind.Add)
+  else: discard
 
 proc next*(tokenizer: Tokenizer): Token =
   let c = tokenizer.charAt()
@@ -411,6 +423,8 @@ proc next*(tokenizer: Tokenizer): Token =
     )
   of '!':
     tokenizer.consumeExclaimation()
+  of '+':
+    tokenizer.consumePlus()
   else:
     tokenizer.consumeInvalid()
 
