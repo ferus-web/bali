@@ -36,7 +36,7 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.random")
   vm.registerBuiltin("BALI_MATHRANDOM",
     proc(op: Operation) =
-      let value = float64(rng.generator.next()) / 1.8446744073709552e+19
+      let value = float64(rng.generator.next()) / 1.8446744073709552e+19'f64
 
       vm.registers.retVal = some floating value
   )
