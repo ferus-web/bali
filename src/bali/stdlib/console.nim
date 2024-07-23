@@ -29,6 +29,8 @@ proc attachConsoleDelegate*(del: ConsoleDelegate) {.inline.} =
   delegate = del
 
 proc console(vm: PulsarInterpreter, level: ConsoleLevel) {.inline.} =
+  var accum: string
+
   for arg in vm.registers.callArgs:
     let value =
       case arg.kind
@@ -40,7 +42,9 @@ proc console(vm: PulsarInterpreter, level: ConsoleLevel) {.inline.} =
         $(&arg.getFloat())
       else: ""
 
-    delegate(level, value)
+    accum &= value & ' '
+  
+  delegate(level, accum)
 
 proc consoleLogIR*(vm: PulsarInterpreter, generator: IRGenerator) =
   # generate binding interface

@@ -78,7 +78,12 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
         runtime.addrIdx,
         stmt.imAtom
       ) # FIXME: mirage: loadStr doesn't have the discardable pragma
-    else: print stmt.imAtom.kind; unreachable
+    of Float:
+      info "interpreter: generate IR for loading immutable float"
+      discard runtime.ir.addOp(
+        IROperation(opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.imAtom])
+      ) # FIXME: mirage: loadFloat isn't implemented
+    else: unreachable
   of CreateMutVal:
     inc runtime.addrIdx
     mark runtime, stmt.mutIdentifier
@@ -194,7 +199,6 @@ proc run*(runtime: Runtime) =
   runtime.generateIRForScope(runtime.ast.scopes[0])
 
   let source = runtime.ir.emit()
-  echo source
   
   privateAccess(PulsarInterpreter) # modern problems require modern solutions
   runtime.vm.tokenizer = tokenizer.newTokenizer(source) 
