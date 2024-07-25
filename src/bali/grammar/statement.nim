@@ -3,28 +3,14 @@ import mirage/atom
 import pretty
 
 type
-  ExecCondition* = enum
-    ecEqual
-    ecNotEqual
-    ecTrueEqual
-    ecNotTrueEqual
-    ecGreaterThan
-    ecGreaterThanEqual
-    ecLesserThan
-    ecLesserThanEqual
-
-  CondHands* = object
-    lhsIdent*, rhsIdent*: Option[string]
-    lhsAtom*, rhsAtom*: Option[MAtom]
-
   StatementKind* = enum
     CreateImmutVal
     CreateMutVal
-    IfCond
     NewFunction
     Call
     ReturnFn
     CallAndStoreResult
+    ConstructObject
 
   CallArgKind* = enum
     cakIdent
@@ -55,9 +41,6 @@ type
     of CreateImmutVal:
       imIdentifier*: string
       imAtom*: MAtom
-    of IfCond:
-      condition*: ExecCondition
-      hands*: CondHands
     of Call:
       fn*: string
       arguments*: PositionedArguments
@@ -71,6 +54,9 @@ type
       mutable*: bool
       storeIdent*: string
       storeFn*: Statement
+    of ConstructObject:
+      objName*: string
+      args*: PositionedArguments
 
 func hash*(fn: Function): Hash {.inline.} =
   when fn is Scope: # FIXME: really dumb fix to prevent a segfault
@@ -95,13 +81,6 @@ proc hash*(stmt: Statement): Hash {.inline.} =
       (
         stmt.imIdentifier,
         stmt.imAtom
-      )
-    )
-  of IfCond:
-    hash = hash !& hash(
-      (
-        stmt.condition,
-        stmt.hands
       )
     )
   of Call:
@@ -180,6 +159,13 @@ proc identArg*(ident: string): CallArg =
 proc atomArg*(atom: MAtom): CallArg =
   CallArg(kind: cakAtom, atom: atom)
 
+proc constructObject*(name: string, args: PositionedArguments): Statement =
+  Statement(
+    kind: ConstructObject,
+    objName: name,
+    args: args
+  )
+
 proc expand*(stmt: Statement): seq[Statement] =
   ## Expand one statement (like a Call's atom arguments should load up immutable values)
 
@@ -189,6 +175,15 @@ proc expand*(stmt: Statement): seq[Statement] =
     for i, arg in stmt.arguments:
       if arg.kind == cakAtom:
         debug "ir: load immutable value to expand Call's immediate arguments: " & arg.atom.crush("")
+        result &= createImmutVal(
+          '@' & $hash(stmt) & '_' & $i,
+          arg.atom
+        ) # XXX: should this be mutable?
+  of ConstructObject:
+    debug "ir: expand ConstructObject statement"
+    for i, arg in stmt.args:
+      if arg.kind == cakAtom:
+        debug "ir: load immutable value to ConstructObject's immediate arguments: " & arg.atom.crush("")
         result &= createImmutVal(
           '@' & $hash(stmt) & '_' & $i,
           arg.atom
@@ -205,31 +200,4 @@ proc call*(fn: string, arguments: PositionedArguments): Statement =
     arguments: arguments
   )
 
-proc ifCond*(
-  lhs, rhs: string | MAtom,
-  condition: ExecCondition
-): Statement =
-  var hanth = CondHands()
-
-  when lhs is string:
-    info "runtime if-cond builder: lhs is an ident"
-    hanth.lhsIdent = some(lhs)
-
-  when rhs is string:
-    info "runtime if-cond builder: rhs is an ident"
-    hanth.rhsIdent = some(rhs)
-  
-  when lhs is MAtom:
-    info "runtime if-cond builder: lhs is an atom"
-    hanth.lhsAtom = some(lhs)
-
-  when rhs is MAtom:
-    info "runtime if-cond builder: rhs is an atom"
-    hanth.rhsAtom = some(rhs)
-
-  Statement(
-    kind: IfCond,
-    condition: condition,
-    hands: hanth
-  )
 {.pop.}

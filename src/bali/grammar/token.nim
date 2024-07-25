@@ -59,6 +59,8 @@ type
     RCurly
     LBracket
     RBracket
+    And
+    Or
     LParen
     RParen
     Period

@@ -3,7 +3,7 @@
 ## Copyright (C) 2024 Trayambak Rai
 
 import std/[options, logging, strutils, tables]
-import bali/grammar/[token, tokenizer, ast, statement]
+import bali/grammar/[token, tokenizer, ast, statement, condition]
 import bali/internal/sugar
 import mirage/atom
 import pretty
@@ -52,6 +52,7 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
   return some call(name, arguments)
 
 proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] =
+  info "parser: parse declaration"
   var ident = initialIdent
 
   while not parser.tokenizer.eof:
@@ -71,7 +72,7 @@ proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] 
     vIdent: Option[string]
     toCall: Option[Statement]
 
-  while not parser.tokenizer.eof:
+  while not parser.tokenizer.eof and !vIdent and !atom:
     let tok = parser.tokenizer.next()
     
     case tok.kind
@@ -101,6 +102,20 @@ proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] 
           uinteger uint32(&tok.intVal)
         )
     of TokenKind.Whitespace: discard
+    of TokenKind.New:
+      let next = parser.tokenizer.nextExceptWhitespace()
+
+      if !next:
+        parser.error UnexpectedToken, "expected Identifier, got EOF"
+      
+      if (&next).kind != TokenKind.Identifier:
+        parser.error UnexpectedToken, "expected Identifier, got " & $(&next).kind
+
+      if not parser.tokenizer.eof() and parser.tokenizer.next().kind != TokenKind.LParen:
+        parser.error Other, "expected left parenthesis when creating object constructor"
+      
+      toCall = some(constructObject((&next).ident, &parser.parseArguments()))
+      break
     else: unreachable
   
   assert not (*atom and *vIdent and *toCall)
@@ -123,6 +138,7 @@ proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] 
 proc parseStatement*(parser: Parser): Option[Statement]
 
 proc parseFunction*(parser: Parser): Option[Function] =
+  info "parser: parse function"
   var name: Option[string]
 
   while not parser.tokenizer.eof:
@@ -271,6 +287,23 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
 
   some args
 
+proc parseConditions*(parser: Parser): Option[Condition] =
+  var 
+    metLParen = false
+    lastGate: Gate
+    cond: Condition
+
+  while not parser.tokenizer.eof:
+    let next = parser.tokenizer.next()
+    case next.kind
+    of TokenKind.LParen:
+      cond.append(&parser.parseConditions(), lastGate)
+    of TokenKind.And:
+      lastGate = Gate.And
+    else: unreachable
+
+  some(cond)
+
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
@@ -333,6 +366,15 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     
     parser.tokenizer.pos = prevPos
     return some returnFunc()
+  of TokenKind.If:
+    if parser.tokenizer.eof:
+      parser.error Other, "expected conditions after if token, got EOF instead"
+
+    if (&parser.tokenizer.nextExceptWhitespace()).kind != TokenKind.Whitespace:
+      parser.error Other, "expected conditions after if token"
+
+    let conds = parser.parseConditions()
+    print conds
   else: unreachable
 
 proc parse*(parser: Parser): AST {.inline.} =
