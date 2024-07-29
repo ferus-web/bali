@@ -361,6 +361,35 @@ proc consumePlus*(tokenizer: Tokenizer): Token =
     return Token(kind: TokenKind.Add)
   else: discard
 
+proc consumeAmpersand*(tokenizer: Tokenizer): Token =
+  tokenizer.advance()
+  let next = tokenizer.charAt()
+  if !next:
+    return tokenizer.consumeInvalid()
+  
+  case &next
+  of '&':
+    info "tokenizer: consumed And operand"
+    tokenizer.advance()
+    return Token(kind: TokenKind.And)
+  else:
+    return tokenizer.consumeInvalid()
+
+proc consumePipe*(tokenizer: Tokenizer): Token =
+  tokenizer.advance()
+
+  let next = tokenizer.charAt()
+  if !next:
+    return tokenizer.consumeInvalid()
+  
+  case &next
+  of '|':
+    info "tokenizer: consumed Or operand"
+    tokenizer.advance()
+    return Token(kind: TokenKind.Or)
+  else:
+    return tokenizer.consumeInvalid()
+
 proc next*(tokenizer: Tokenizer): Token =
   let c = tokenizer.charAt()
 
@@ -425,6 +454,10 @@ proc next*(tokenizer: Tokenizer): Token =
     tokenizer.consumeExclaimation()
   of '+':
     tokenizer.consumePlus()
+  of '&':
+    tokenizer.consumeAmpersand()
+  of '|':
+    tokenizer.consumePipe()
   else:
     tokenizer.consumeInvalid()
 

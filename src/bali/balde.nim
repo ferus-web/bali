@@ -8,7 +8,7 @@ when not isMainModule:
 import std/[times, tables, os, monotimes, logging]
 import bali/grammar/prelude
 import bali/runtime/prelude
-import climate, colored_logger, jsony
+import climate, colored_logger, jsony, pretty
 
 var 
   enableProfiler = false
@@ -60,12 +60,18 @@ proc execFile(ctx: Context, file: string) {.inline.} =
   
   profileThis "parse source code":
     let ast = parser.parse()
+
+  if ctx.cmdOptions.contains("dump-ast"):
+    print ast
   
   profileThis "allocate runtime":
     let runtime = newRuntime(file, ast)
 
   profileThis "execution time":
     runtime.run()
+
+  if ctx.cmdOptions.contains("dump-runtime-after-exec"):
+    print runtime
 
 proc baldeRun(ctx: Context): int =
   if not ctx.cmdOptions.contains("verbose") or ctx.cmdOptions.contains("v"):

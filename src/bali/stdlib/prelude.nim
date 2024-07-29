@@ -1,3 +1,3 @@
-import ./[console, math]
+import ./[console, math, uri]
 
-export console, math
+export console, math, uri

@@ -1,7 +1,7 @@
 ## Bali runtime (MIR emitter)
 ##
 ## Copyright (C) 2024 Trayambak Rai and Ferus Authors
-import std/[options, logging, sugar, tables, importutils]
+import std/[options, logging, sugar, strutils, tables, importutils]
 import mirage/ir/generator
 import mirage/runtime/tokenizer
 import mirage/runtime/prelude
@@ -141,6 +141,19 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
     mark runtime, ident
     runtime.generateIR(fn, stmt.storeFn)
     runtime.ir.readRegister(runtime.index(ident), Register.ReturnValue)
+  of ConstructObject:
+    for i, arg in stmt.args:
+      case arg.kind
+      of cakIdent:
+        let ident = arg.ident
+        info "interpreter: passing ident parameter to function with ident: " & ident
+        runtime.ir.passArgument(runtime.index($hash(fn) & "funcall_arg_" & ident))
+      of cakAtom: # already loaded via the statement expander
+        let ident = $hash(stmt) & '_' & $i
+        info "interpreter: passing atom parameter to function with ident: " & ident
+        runtime.ir.passArgument(runtime.indexInternal(ident))
+
+    runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
   else:
     warn "interpreter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -193,8 +206,9 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
       runtime.generateIR(stmt, addrIdx)]#
 
 proc run*(runtime: Runtime) =
-  console.generateStdIr(runtime.vm, runtime.ir)
+  console.generateStdIR(runtime.vm, runtime.ir)
   math.generateStdIR(runtime.vm, runtime.ir)
+  uri.generateStdIR(runtime.vm, runtime.ir)
 
   runtime.generateIRForScope(runtime.ast.scopes[0])
 
