@@ -6,7 +6,40 @@ I repeat,
 
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
 
+# Running code with Bali
+You can compile Balde, the Bali debugger by running:
+```
+# nimble balde -d:release
+```
+It is primarily used for debugging the engine as of right now, but it runs code fine too.
+
+# Integrating Bali into your applications
+Again, Bali is not in a usable state yet. However, it is possible to use Bali in your programs. There is no easy Nim-to-JS conversion layer yet, most of the JS code that calls Nim is using a lot of hacks and bridges provided by Mirage.
+
+Firstly, add Bali to your project's dependencies.
+```
+# nimble add gh:ferus-web/bali
+```
+Here is a basic example of the API:
+```nim
+import bali/grammar/prelude
+import bali/runtime/prelude
+
+const JS_SRC = "console.log(\"Hello world!\")"
+
+let 
+  parser = newParser(JS_SRC) # Feed your JavaScript code to Bali's JavaScript parser
+  ast = parser.parse() # Parse an AST out of the tokens
+  runtime = newRuntime("myfile.js", ast) # Instantiate the JavaScript runtime.
+
+# Emit Mirage bytecode and pass over control to the Mirage VM.
+# NOTE: This is a blocking function and will block this thread until execution is completed (or an error is encountered and the
+# interpreter is halted)
+runtime.run()
+```
+
 # Roadmap
 - Getting a grammar to AST parser      [ X ]
-- Getting a small MIR emitter working  [ X ]
-- Getting the standard library working [ ]
+- Getting the MIR emitter working      [ X ]
+- Get arithmetic operations working    [   ]
+- Getting the standard library working [   ]
