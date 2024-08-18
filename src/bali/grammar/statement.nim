@@ -1,4 +1,4 @@
-import std/[hashes, logging, options]
+import std/[hashes, logging, options, tables]
 import mirage/atom
 import pretty
 
@@ -99,6 +99,8 @@ proc hash*(stmt: Statement): Hash {.inline.} =
   else:
     discard
 
+  hash
+
 proc pushIdent*(args: var PositionedArguments, ident: string) {.inline.} =
   args &=
     CallArg(
@@ -165,33 +167,6 @@ proc constructObject*(name: string, args: PositionedArguments): Statement =
     objName: name,
     args: args
   )
-
-proc expand*(stmt: Statement): seq[Statement] =
-  ## Expand one statement (like a Call's atom arguments should load up immutable values)
-
-  case stmt.kind
-  of Call:
-    debug "ir: expand Call statement"
-    for i, arg in stmt.arguments:
-      if arg.kind == cakAtom:
-        debug "ir: load immutable value to expand Call's immediate arguments: " & arg.atom.crush("")
-        result &= createImmutVal(
-          '@' & $hash(stmt) & '_' & $i,
-          arg.atom
-        ) # XXX: should this be mutable?
-  of ConstructObject:
-    debug "ir: expand ConstructObject statement"
-    for i, arg in stmt.args:
-      if arg.kind == cakAtom:
-        debug "ir: load immutable value to ConstructObject's immediate arguments: " & arg.atom.crush("")
-        result &= createImmutVal(
-          '@' & $hash(stmt) & '_' & $i,
-          arg.atom
-        ) # XXX: should this be mutable?
-  of CallAndStoreResult:
-    debug "ir: expand CallAndStoreResult statement by expanding child Call statement"
-    result &= expand(stmt.storeFn)
-  else: discard
 
 proc call*(fn: string, arguments: PositionedArguments): Statement =
   Statement(

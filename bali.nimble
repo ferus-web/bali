@@ -16,8 +16,7 @@ requires "pretty >= 0.1.0"
 requires "colored_logger >= 0.1.0"
 
 task balde, "Compile the Bali debugger":
-  exec "nimble uninstall bali"
-  exec "nimble install"
+  exec "nimble uninstall bali & nimble install"
 
   when defined(release):
     exec "nim c -d:release -d:speed -d:flto --out:./balde src/bali/balde.nim"

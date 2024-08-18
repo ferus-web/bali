@@ -1,10 +1,9 @@
 ## Bali runtime (MIR emitter)
 ##
 ## Copyright (C) 2024 Trayambak Rai and Ferus Authors
-import std/[options, logging, sugar, strutils, tables, importutils]
+import std/[options, hashes, logging, sugar, strutils, tables, importutils]
 import mirage/ir/generator
-import mirage/runtime/tokenizer
-import mirage/runtime/prelude
+import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/[normalize]
@@ -12,51 +11,155 @@ import bali/stdlib/prelude
 import crunchy, pretty
 
 type
+  ValueKind* = enum
+    vkGlobal
+    vkLocal
+    vkInternal ## or immediate
+
+  IndexParams* = object
+    priorities*: seq[ValueKind] = @[vkLocal, vkGlobal]
+
+    fn*: Option[Function]
+    stmt*: Option[Statement]
+
+  Value* = object
+    index*: uint
+    identifier*: string
+    case kind*: ValueKind
+    of vkLocal:
+      ownerFunc*: Hash
+    of vkInternal:
+      ownerStmt*: Hash
+    else: discard
+
   Runtime* = ref object
     ast: AST
     ir: IRGenerator
     vm*: PulsarInterpreter
 
     addrIdx: uint
-    nameToIdx: Table[string, uint]
-    locals: Table[uint, string]
+    values*: seq[Value]
     clauses: seq[string]
 
-proc index*(runtime: Runtime, name: string): uint =
-  debug "interpreter: find index of ident: " & name
-  if name in runtime.nameToIdx:
-    return runtime.nameToIdx[name]
-  else:
-    raise newException(CatchableError, "No such ident: " & name) # FIXME: turn into semantic error
+proc defaultParams*(fn: Function): IndexParams {.inline.} =
+  IndexParams(
+    fn: some fn
+  )
 
-proc localTo*(runtime: Runtime, name: string): Option[string] =
-  let idx = runtime.index(name)
+proc internalIndex*(stmt: Statement): IndexParams {.inline.} =
+  IndexParams(priorities: @[vkInternal], stmt: some stmt)
 
-  if idx in runtime.locals:
-    return some runtime.locals[idx]
+proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
+  runtime.values &=
+    Value(
+      kind: vkInternal,
+      index: runtime.addrIdx,
+      identifier: ident,
+      ownerStmt: hash(stmt)
+    )
 
-proc markInternal*(runtime: Runtime, name: string) =
+  info "Ident \"" & ident & "\" is being internally marked at index " & $runtime.addrIdx & " with statement hash: " & $hash(stmt)
+
   inc runtime.addrIdx
-  debug "interpreter: mark ident '" & name & "' to index " & $runtime.addrIdx
-  runtime.nameToIdx['@' & name] = runtime.addrIdx
 
-proc indexInternal*(runtime: Runtime, name: string): uint =
-  let nameInt = '@' & name
-  debug "interpreter: find index of internal value: " & nameInt
+proc markGlobal*(runtime: Runtime, ident: string) =
+  runtime.values &=
+    Value(
+      kind: vkGlobal,
+      index: runtime.addrIdx,
+      identifier: ident
+    )
 
-  if nameInt in runtime.nameToIdx:
-    return runtime.nameToIdx[nameInt]
-  else:
-    raise newException(CatchableError, "No such internal ident: " & name)
+  info "Ident \"" & ident & "\" is being globally marked at index " & $runtime.addrIdx
 
-proc mark*(runtime: Runtime, name: string) =
   inc runtime.addrIdx
-  runtime.nameToIdx[name] = runtime.addrIdx
 
-proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
+proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
+  runtime.values &=
+    Value(
+      kind: vkLocal,
+      index: runtime.addrIdx,
+      identifier: ident,
+      ownerFunc: hash(fn)
+    )
+
+  info "Ident \"" & ident & "\" is being locally marked at index " & $runtime.addrIdx
+
+  inc runtime.addrIdx
+
+proc indexGlobal*(runtime: Runtime, ident: string): Option[uint] =
+  for value in runtime.values:
+    if value.kind != vkGlobal: continue
+    if value.identifier == ident:
+      return some(value.index)
+
+proc indexInternal*(runtime: Runtime, stmt: Statement, ident: string): Option[uint] =
+  for value in runtime.values:
+    if value.kind != vkInternal: continue
+    if value.identifier == ident and
+      value.ownerStmt == hash(stmt):
+      return some(value.index)
+
+proc indexLocal*(runtime: Runtime, fn: Function, ident: string): Option[uint] =
+  for value in runtime.values:
+    if value.kind != vkLocal: continue
+    if value.identifier == ident and
+      value.ownerFunc == hash(fn):
+      return some(value.index)
+
+proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
+  for value in runtime.values:
+    for prio in params.priorities:
+      if value.kind != prio: continue
+
+      let cond = case value.kind
+      of vkGlobal:
+        value.identifier == ident
+      of vkLocal:
+        assert *params.fn
+        value.identifier == ident and value.ownerFunc == hash(&params.fn)
+      of vkInternal:
+        assert *params.stmt
+        value.identifier == ident and value.ownerStmt == hash(&params.stmt)
+      
+      if value.kind == vkInternal and cond:
+        echo value.identifier
+
+      if cond:
+        return value.index
+  
+  raise newException(ValueError, "No such ident: " & ident)
+
+proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false, ownerStmt: Option[Statement] = none(Statement))
+
+proc expand*(runtime: Runtime, fn: Function, stmt: Statement) =
+  case stmt.kind
+  of Call:
+    debug "ir: expand Call statement"
+    for i, arg in stmt.arguments:
+      if arg.kind == cakAtom:
+        debug "ir: load immutable value to expand Call's immediate arguments: " & arg.atom.crush("")
+        runtime.generateIR(fn, createImmutVal(
+          $i,
+          arg.atom
+        ), ownerStmt = some(stmt), internal = true) # XXX: should this be mutable?
+  of ConstructObject:
+    debug "ir: expand ConstructObject statement"
+    for i, arg in stmt.args:
+      if arg.kind == cakAtom:
+        debug "ir: load immutable value to ConstructObject's immediate arguments: " & arg.atom.crush("")
+        runtime.generateIR(fn, createImmutVal(
+          $i,
+          arg.atom
+        ), ownerStmt = some(stmt), internal = true) # XXX: should this be mutable?
+  of CallAndStoreResult:
+    debug "ir: expand CallAndStoreResult statement by expanding child Call statement"
+    runtime.expand(fn, stmt.storeFn)
+  else: discard 
+
+proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false, ownerStmt: Option[Statement] = none(Statement)) =
   case stmt.kind
   of CreateImmutVal:
-    mark runtime, stmt.imIdentifier
     info "interpreter: generate IR for creating immutable value with identifier: " & stmt.imIdentifier
 
     case stmt.imAtom.kind
@@ -84,13 +187,18 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
         IROperation(opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.imAtom])
       ) # FIXME: mirage: loadFloat isn't implemented
     else: unreachable
+    
+    if not internal:
+      runtime.markLocal(fn, stmt.imIdentifier)
+    else:
+      assert *ownerStmt
+      runtime.markInternal(&ownerStmt, stmt.imIdentifier)
   of CreateMutVal:
-    inc runtime.addrIdx
-    mark runtime, stmt.mutIdentifier
     runtime.ir.loadInt(
       runtime.addrIdx,
       stmt.mutAtom
     )
+    runtime.markLocal(fn, stmt.imIdentifier)
   of Call:
     if runtime.vm.hasBuiltin(stmt.fn):
       info "interpreter: generate IR for calling builtin: " & stmt.fn
@@ -98,7 +206,7 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
         (proc(): seq[MAtom] =
           var x: seq[MAtom]
           for arg in stmt.arguments:
-            x &= uinteger runtime.index(arg.ident)
+            x &= uinteger runtime.index(arg.ident, defaultParams(fn))
 
           x
         )()
@@ -109,17 +217,18 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
     else:
       let nam = stmt.fn.normalizeIRName()
       info "interpreter: generate IR for calling function (normalized): " & nam
+      runtime.expand(fn, stmt)
       
       for i, arg in stmt.arguments:
         case arg.kind
         of cakIdent:
-          let ident = arg.ident
-          info "interpreter: passing ident parameter to function with ident: " & ident
-          runtime.ir.passArgument(runtime.index($hash(fn) & "funcall_arg_" & ident))
+          info "interpreter: passing ident parameter to function with ident: " & arg.ident
+          
+          runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
         of cakAtom: # already loaded via the statement expander
-          let ident = $hash(stmt) & '_' & $i
+          let ident = $i
           info "interpreter: passing atom parameter to function with ident: " & ident
-          runtime.ir.passArgument(runtime.indexInternal(ident))
+          runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
 
       runtime.ir.call(nam)
       runtime.ir.resetArgs()
@@ -129,29 +238,28 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement) =
     if *stmt.retVal:
       let name = $hash(fn) & "_retval"
       runtime.generateIR(fn, createImmutVal(name, &stmt.retVal))
-      runtime.ir.returnFn(runtime.index(name).int)
+      runtime.ir.returnFn(runtime.index(name, defaultParams(fn)).int)
     elif *stmt.retIdent:
-      runtime.ir.returnFn(runtime.index('@' & $hash(fn) & '_' & &stmt.retIdent).int)
+      runtime.ir.returnFn(runtime.index(&stmt.retIdent, defaultParams(fn)).int)
     else:
       let name = $hash(fn) & "_retval"
       runtime.generateIR(fn, createImmutVal(name, null())) # load NULL atom
-      runtime.ir.returnFn(runtime.index(name).int)
+      runtime.ir.returnFn(runtime.index(name, defaultParams(fn)).int)
   of CallAndStoreResult:
-    let ident = $hash(fn) & "funcall_arg_" & stmt.storeIdent
-    mark runtime, ident
+    runtime.markLocal(fn, stmt.storeIdent)
     runtime.generateIR(fn, stmt.storeFn)
-    runtime.ir.readRegister(runtime.index(ident), Register.ReturnValue)
+    runtime.ir.readRegister(runtime.index(stmt.storeIdent, defaultParams(fn)), Register.ReturnValue)
   of ConstructObject:
     for i, arg in stmt.args:
       case arg.kind
       of cakIdent:
         let ident = arg.ident
         info "interpreter: passing ident parameter to function with ident: " & ident
-        runtime.ir.passArgument(runtime.index($hash(fn) & "funcall_arg_" & ident))
+        runtime.ir.passArgument(runtime.index(ident, defaultParams(fn)))
       of cakAtom: # already loaded via the statement expander
         let ident = $hash(stmt) & '_' & $i
         info "interpreter: passing atom parameter to function with ident: " & ident
-        runtime.ir.passArgument(runtime.indexInternal(ident))
+        runtime.ir.passArgument(runtime.index(ident, defaultParams(fn)))
 
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
   else:
@@ -161,10 +269,8 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
   info "interpreter: loading up function signature arguments onto stack via IR: " & fn.name
 
   for i, arg in fn.arguments:
-    let name = '@' & $hash(fn) & '_' & arg
-    debug name
-    mark runtime, name
-    runtime.ir.readRegister(runtime.index name, Register.CallArgument)
+    runtime.markLocal(fn, arg)
+    runtime.ir.readRegister(runtime.index(arg, defaultParams(fn)), Register.CallArgument)
     runtime.ir.resetArgs() # reset the call param register
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope) =
@@ -183,9 +289,6 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
     runtime.loadArgumentsOntoStack(fn)
   
   for stmt in scope.stmts:
-    for child in stmt.expand():
-      runtime.generateIR(fn, child)
-    
     runtime.generateIR(fn, stmt)
 
   var curr = scope
@@ -215,7 +318,10 @@ proc run*(runtime: Runtime) =
   let source = runtime.ir.emit()
   
   privateAccess(PulsarInterpreter) # modern problems require modern solutions
-  runtime.vm.tokenizer = tokenizer.newTokenizer(source) 
+  runtime.vm.tokenizer = tokenizer.newTokenizer(source)
+
+  debug "interpreter: the following bytecode will now be executed"
+  debug source
 
   info "interpreter: begin VM analyzer"
   runtime.vm.analyze()
