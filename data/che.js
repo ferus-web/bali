@@ -1,1 +1,4 @@
-let x = 5 + 5
+let value = "32"
+let parsed = parseInt(value)
+
+console.log(parsed)

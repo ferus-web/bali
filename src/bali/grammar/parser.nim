@@ -375,6 +375,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     let conds = parser.parseConditions()
     print conds
+  of TokenKind.Comment: discard
   else: unreachable
 
 proc parse*(parser: Parser): AST {.inline.} =
