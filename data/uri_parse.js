@@ -1,2 +1,2 @@
-const url = new URL("https://github.com/ferus-web/bali")
+const url = new URL("ewr:/e!112wrnc")
 console.log(url)
