@@ -54,9 +54,7 @@ proc execFile(ctx: Context, file: string) {.inline.} =
       ""
 
   profileThis "allocate parser": 
-    let parser = newParser(
-      source
-    )
+    let parser = newParser(source)
   
   profileThis "parse source code":
     let ast = parser.parse()

@@ -1,3 +1,9 @@
 *
 !*.*
 !*/
+
+balde
+*.out
+*.log
+
+outcomes/

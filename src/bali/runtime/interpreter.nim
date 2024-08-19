@@ -280,14 +280,15 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
       fn.name
     else:
       "outer"
-
+  
+  debug "generateIRForScope(): function name: " & name
   if not runtime.clauses.contains(name):
     runtime.clauses.add(name)
     runtime.ir.newModule(name.normalizeIRName())
   
   if name != "outer":
     runtime.loadArgumentsOntoStack(fn)
-  
+
   for stmt in scope.stmts:
     runtime.generateIR(fn, stmt)
 
@@ -335,6 +336,7 @@ proc run*(runtime: Runtime) =
 proc newRuntime*(file: string, ast: AST): Runtime {.inline.} =
   Runtime(
     ast: ast,
+    clauses: @[],
     ir: newIRGenerator(
       "bali-" & $sha256(file).toHex()
     ),

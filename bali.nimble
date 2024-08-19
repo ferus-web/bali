@@ -25,3 +25,11 @@ task balde, "Compile the Bali debugger":
       exec "nim c --out:./balde src/bali/balde.nim"
     else:
       exec "nim c -d:useMalloc --debugger:native --profiler:on --outer:./balde src/bali/balde.nim"
+
+task test262, "Compile the Test262 suite tester against Bali":
+  when defined(release):
+    exec "nimble balde -d:release"
+  else:
+    exec "nimble balde"
+
+  exec "nim c -d:release -o:./test262 tests/test262.nim"
