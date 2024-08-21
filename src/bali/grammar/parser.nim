@@ -135,6 +135,10 @@ proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] 
       return some(callAndStoreMut(ident, &toCall))
   else: unreachable
 
+  if not parser.tokenizer.eof:
+    print parser.tokenizer.next()
+    quit 1
+
 proc parseStatement*(parser: Parser): Option[Statement]
 
 proc parseFunction*(parser: Parser): Option[Function] =
@@ -304,6 +308,19 @@ proc parseConditions*(parser: Parser): Option[Condition] =
 
   some(cond)
 
+proc parseThrow*(parser: Parser): Option[Statement] =
+  # FIXME: implement throw expressions, this is just a scaffold to entirely eliminate the expression to prevent parsing errors
+  warn "parser: throw-expr not implemented yet."
+  while not parser.tokenizer.eof:
+    let next = parser.tokenizer.next()
+    if next.kind != TokenKind.Whitespace:
+      continue
+
+    if not next.whitespace.contains(strutils.Newlines):
+      continue
+    
+    break
+
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
@@ -366,6 +383,9 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     
     parser.tokenizer.pos = prevPos
     return some returnFunc()
+  of TokenKind.Throw:
+    info "parser: parse throw-expr"
+    return parser.parseThrow()
   of TokenKind.If:
     if parser.tokenizer.eof:
       parser.error Other, "expected conditions after if token, got EOF instead"
@@ -375,7 +395,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     let conds = parser.parseConditions()
     print conds
-  of TokenKind.Comment: discard
+  of TokenKind.Comment, TokenKind.String, TokenKind.Number, TokenKind.Null: discard
+  of TokenKind.Shebang, TokenKind.Semicolon: discard
   else: unreachable
 
 proc parse*(parser: Parser): AST {.inline.} =

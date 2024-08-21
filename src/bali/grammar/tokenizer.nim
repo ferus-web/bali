@@ -72,7 +72,7 @@ proc tokenize*(tokenizer: Tokenizer, opts: TokenizerOpts = default(TokenizerOpts
   tokens
 
 proc consumeInvalid*(tokenizer: Tokenizer): Token =
-  warn "tokenizer: consume invalid token for character: " & &tokenizer.charAt()
+  warn "tokenizer: consume invalid token for character: " & (&tokenizer.charAt()).repr()
   tokenizer.advance()
 
   Token(
@@ -390,6 +390,32 @@ proc consumePipe*(tokenizer: Tokenizer): Token =
   else:
     return tokenizer.consumeInvalid()
 
+proc consumeHash*(tokenizer: Tokenizer): Token =
+  tokenizer.advance()
+
+  if tokenizer.charAt() == some('!'):
+    # shebang logic
+    tokenizer.advance()
+    var shebang: string 
+
+    while not tokenizer.eof:
+      let c = tokenizer.consume()
+      
+      case c
+      of strutils.Newlines:
+        break
+      else:
+        shebang &= c
+
+      tokenizer.advance()
+
+    return Token(
+      kind: TokenKind.Shebang,
+      shebang: shebang
+    )
+  
+  tokenizer.consumeInvalid()
+
 proc next*(tokenizer: Tokenizer): Token =
   let c = tokenizer.charAt()
 
@@ -402,10 +428,10 @@ proc next*(tokenizer: Tokenizer): Token =
     tokenizer.consumeString()
   of '=':
     tokenizer.consumeEquality()
+  of '\0':
+    Token(kind: TokenKind.Whitespace)
   of '/':
     tokenizer.consumeSlash()
-  of '#':
-    tokenizer.consumeComment(multiline = false)
   of {'0' .. '9'}:
     tokenizer.consumeNumeric(false)
   of '-':
@@ -458,6 +484,13 @@ proc next*(tokenizer: Tokenizer): Token =
     tokenizer.consumeAmpersand()
   of '|':
     tokenizer.consumePipe()
+  of ';':
+    tokenizer.advance()
+    Token(
+      kind: TokenKind.Semicolon
+    )
+  of '#':
+    tokenizer.consumeHash()
   else:
     tokenizer.consumeInvalid()
 
