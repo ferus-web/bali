@@ -20,8 +20,13 @@ type
     source: string
 
 {.push inline, checks: off, gcsafe.}
-func eof*(tokenizer: Tokenizer): bool {.noSideEffect.} =
-  tokenizer.pos > tokenizer.source.len.uint - 1
+func eof*(tokenizer: Tokenizer): bool =
+  let len = if tokenizer.source.len.uint < 1: 
+    0'u 
+  else: 
+    tokenizer.source.len.uint - 1
+
+  tokenizer.pos > len
 
 proc consume*(tokenizer: Tokenizer): char =
   inc tokenizer.pos
@@ -38,7 +43,7 @@ func hasAtleast*(tokenizer: Tokenizer, num: uint): bool =
   (tokenizer.pos + num) > tokenizer.source.len.uint - 1
 
 func charAt*(tokenizer: Tokenizer, offset: uint = 0): Option[char] =
-  if (tokenizer.pos + offset) > tokenizer.source.len.uint - 1:
+  if (tokenizer.pos + offset) > tokenizer.source.len.uint:
     return
 
   tokenizer.source[tokenizer.pos + offset].some()
@@ -428,7 +433,8 @@ proc next*(tokenizer: Tokenizer): Token =
     tokenizer.consumeString()
   of '=':
     tokenizer.consumeEquality()
-  of '\0':
+  of {'\0' .. '\1'}:
+    tokenizer.advance()
     Token(kind: TokenKind.Whitespace)
   of '/':
     tokenizer.consumeSlash()
@@ -498,6 +504,7 @@ proc nextExceptWhitespace*(tokenizer: Tokenizer): Option[Token] =
   var tok = tokenizer.next()
 
   while not tokenizer.eof() and tok.kind == TokenKind.Whitespace:
+    echo tokenizer.pos
     tok = tokenizer.next()
   
   if tok.kind != TokenKind.Whitespace:
