@@ -504,7 +504,6 @@ proc nextExceptWhitespace*(tokenizer: Tokenizer): Option[Token] =
   var tok = tokenizer.next()
 
   while not tokenizer.eof() and tok.kind == TokenKind.Whitespace:
-    echo tokenizer.pos
     tok = tokenizer.next()
   
   if tok.kind != TokenKind.Whitespace:

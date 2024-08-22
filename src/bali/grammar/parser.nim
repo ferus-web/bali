@@ -51,22 +51,25 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
   
   return some call(name, arguments)
 
-proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] =
+proc parseDeclaration*(parser: Parser, initialIdent: string, reassignment: bool = false): Option[Statement] =
   info "parser: parse declaration"
   var ident = initialIdent
-
-  while not parser.tokenizer.eof:
-    let tok = parser.tokenizer.next()
-
-    case tok.kind
-    of TokenKind.Identifier:
-      ident = tok.ident
-    of TokenKind.EqualSign:
-      break # weird quirky javascript feature :3 (I hate brendan eich)
-    of TokenKind.Whitespace: continue
-    else:
-      parser.error UnexpectedToken, "numeric literal"
   
+  if not reassignment:
+    while not parser.tokenizer.eof:
+      let tok = &parser.tokenizer.nextExceptWhitespace()
+
+      case tok.kind
+      of TokenKind.Identifier:
+        ident = tok.ident
+      of TokenKind.EqualSign:
+        break # weird quirky javascript feature :3 (I hate brendan eich)
+      of TokenKind.Whitespace: continue
+      of TokenKind.Number:
+        parser.error UnexpectedToken, "numeric literal"
+      else:
+        parser.error UnexpectedToken, $tok.kind
+
   var
     atom: Option[MAtom]
     vIdent: Option[string]
@@ -78,7 +81,7 @@ proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] 
     case tok.kind
     of TokenKind.String:
       if tok.malformed:
-        error Other, "string literal contains an unescaped line break"
+        error Other, "string literal is malformed"
 
       atom = some(
         str tok.str
@@ -114,26 +117,41 @@ proc parseDeclaration*(parser: Parser, initialIdent: string): Option[Statement] 
       if not parser.tokenizer.eof() and parser.tokenizer.next().kind != TokenKind.LParen:
         parser.error Other, "expected left parenthesis when creating object constructor"
       
-      toCall = some(constructObject((&next).ident, &parser.parseArguments()))
+      toCall = some(
+        constructObject((&next).ident, 
+                        &parser.parseArguments()
+        ))
       break
     else: unreachable
   
   assert not (*atom and *vIdent and *toCall)
 
   if *vIdent: parser.error Other, "assignment from another address is not supported yet"
-
-  case initialIdent
-  of "let", "const":
-    if *atom:
-      return some(createImmutVal(ident, &atom))
-    elif *toCall:
-      return some(callAndStoreImmut(ident, &toCall))
-  of "var":
-    if *atom:
-      return some(createMutVal(ident, &atom))
-    elif *toCall:
-      return some(callAndStoreMut(ident, &toCall))
-  else: unreachable
+  
+  if not reassignment:
+    case initialIdent
+    of "let", "const":
+      if *atom:
+        return some(createImmutVal(ident, &atom))
+      elif *toCall:
+        return some(callAndStoreImmut(ident, &toCall))
+    of "var":
+      if *atom:
+        return some(createMutVal(ident, &atom))
+      elif *toCall:
+        return some(callAndStoreMut(ident, &toCall))
+    else: unreachable
+  else:
+    if not reassignment:
+      if *atom:
+        return some(createImmutVal(ident, &atom))
+      elif *toCall:
+        return some(callAndStoreImmut(ident, &toCall))
+    else:
+      if *atom:
+        return some(createMutVal(ident, &atom))
+      elif *toCall:
+        return some(callAndStoreMut(ident, &toCall))
 
   if not parser.tokenizer.eof:
     print parser.tokenizer.next()
@@ -212,9 +230,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
     else:
       parser.tokenizer.pos = prevPos
     
-    let 
-      peCount = parser.errors.len
-      stmt = parser.parseStatement()
+    let stmt = parser.parseStatement()
 
     if not *stmt:
       info "parser: can't find any more statements for function body: " & &name & "; body parsing complete"
@@ -321,6 +337,68 @@ proc parseThrow*(parser: Parser): Option[Statement] =
     
     break
 
+proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
+  info "parser: parsing re-assignment"
+
+  var
+    atom: Option[MAtom]
+    vIdent: Option[string]
+    toCall: Option[Statement]
+
+  while not parser.tokenizer.eof and !vIdent and !atom:
+    let tok = parser.tokenizer.next()
+    
+    case tok.kind
+    of TokenKind.String:
+      if tok.malformed:
+        error Other, "string literal is malformed"
+
+      atom = some(
+        str tok.str
+      )
+      break
+    of TokenKind.Identifier:
+      let prevPos = parser.tokenizer.pos
+      if not parser.tokenizer.eof() and parser.tokenizer.next().kind == TokenKind.LParen:
+        # this is a function call!
+        toCall = parser.parseFunctionCall(tok.ident)
+        break
+      else:
+        # just an ident copy
+        vIdent = some(
+          tok.ident
+        )
+        break
+    of TokenKind.Number:
+      if *tok.intVal:
+        atom = some(
+          uinteger uint32(&tok.intVal)
+        )
+    of TokenKind.Whitespace: discard
+    of TokenKind.New:
+      let next = parser.tokenizer.nextExceptWhitespace()
+
+      if !next:
+        parser.error UnexpectedToken, "expected Identifier, got EOF"
+      
+      if (&next).kind != TokenKind.Identifier:
+        parser.error UnexpectedToken, "expected Identifier, got " & $(&next).kind
+
+      if not parser.tokenizer.eof() and parser.tokenizer.next().kind != TokenKind.LParen:
+        parser.error Other, "expected left parenthesis when creating object constructor"
+
+      toCall = some(
+        constructObject((&next).ident, 
+                        &parser.parseArguments()
+        ))
+      break
+    else: unreachable
+  
+  if *atom:
+    return some(reassignVal(ident, &atom))
+  elif *toCall:
+    return some(callAndStoreMut(ident, &toCall))
+
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
@@ -361,9 +439,20 @@ proc parseStatement*(parser: Parser): Option[Statement] =
   of TokenKind.Identifier:
     let prevPos = parser.tokenizer.pos
     
-    if not parser.tokenizer.eof() and parser.tokenizer.next().kind == TokenKind.LParen:
-      return parser.parseFunctionCall(token.ident) #some call(token.ident, arguments)
+    if not parser.tokenizer.eof():
+      let next = parser.tokenizer.nextExceptWhitespace()
 
+      if !next:
+        return # FIXME: should we expand this into a `Call("console.log", `ident`)` instead?
+
+      case (&next).kind
+      of TokenKind.LParen:
+        return parser.parseFunctionCall(token.ident) #some call(token.ident, arguments)
+      of TokenKind.EqualSign:
+        return parser.parseReassignment(token.ident)
+      else:
+        parser.error UnexpectedToken, "expected left parenthesis or equal sign, got " & $(&next).kind
+      
     parser.tokenizer.pos = prevPos
   of TokenKind.Return:
     let prevPos = parser.tokenizer.pos
@@ -397,7 +486,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     print conds
   of TokenKind.Comment, TokenKind.String, TokenKind.Number, TokenKind.Null: discard
   of TokenKind.Shebang, TokenKind.Semicolon: discard
-  else: unreachable
+  else: print token; unreachable
 
 proc parse*(parser: Parser): AST {.inline.} =
   parser.ast = newAST()

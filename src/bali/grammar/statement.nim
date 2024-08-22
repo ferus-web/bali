@@ -11,6 +11,7 @@ type
     ReturnFn
     CallAndStoreResult
     ConstructObject
+    ReassignVal
 
   CallArgKind* = enum
     cakIdent
@@ -57,6 +58,9 @@ type
     of ConstructObject:
       objName*: string
       args*: PositionedArguments
+    of ReassignVal:
+      reIdentifier*: string
+      reAtom*: MAtom
 
 func hash*(fn: Function): Hash {.inline.} =
   when fn is Scope: # FIXME: really dumb fix to prevent a segfault
@@ -125,6 +129,9 @@ proc createImmutVal*(name: string, atom: MAtom): Statement =
 
 proc returnFunc*: Statement =
   Statement(kind: ReturnFn)
+
+proc reassignVal*(identifier: string, atom: MAtom): Statement =
+  Statement(kind: ReassignVal, reIdentifier: identifier, reAtom: atom)
 
 proc returnFunc*(retVal: MAtom): Statement =
   Statement(kind: ReturnFn, retVal: some(retVal))

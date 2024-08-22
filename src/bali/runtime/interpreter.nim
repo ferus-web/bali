@@ -32,6 +32,18 @@ type
       ownerStmt*: Hash
     else: discard
 
+  SemanticErrorKind* = enum
+    UnknownIdentifier
+    ImmutableReassignment
+
+  SemanticError* = object
+    case kind*: SemanticErrorKind
+    of UnknownIdentifier:
+      unknown*: string
+    of ImmutableReassignment:
+      imIdent*: string
+      imNewValue*: MAtom
+
   Runtime* = ref object
     ast: AST
     ir: IRGenerator
@@ -39,6 +51,7 @@ type
 
     addrIdx: uint
     values*: seq[Value]
+    semanticErrors*: seq[SemanticError]
     clauses: seq[string]
 
 proc defaultParams*(fn: Function): IndexParams {.inline.} =
@@ -122,9 +135,6 @@ proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
         assert *params.stmt
         value.identifier == ident and value.ownerStmt == hash(&params.stmt)
       
-      if value.kind == vkInternal and cond:
-        echo value.identifier
-
       if cond:
         return value.index
   
@@ -157,10 +167,18 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement) =
     runtime.expand(fn, stmt.storeFn)
   else: discard 
 
+proc verifyNotOccupied*(runtime: Runtime, ident: string, fn: Function) =
+  # Algorithm:
+  # - ensure that no immutable identifier exists in any of our parent scopes (including toplevel)
+  #
+  # If occupied:
+  # - throw semantic error (`ImmutableReassignment`)
+  var prev = fn.prev
+
 proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false, ownerStmt: Option[Statement] = none(Statement)) =
   case stmt.kind
   of CreateImmutVal:
-    info "interpreter: generate IR for creating immutable value with identifier: " & stmt.imIdentifier
+    info "emitter: generate IR for creating immutable value with identifier: " & stmt.imIdentifier
 
     case stmt.imAtom.kind
     of Integer:
@@ -171,9 +189,9 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
       )
     of UnsignedInt:
       info "interpreter: generate IR for loading immutable unsigned integer"
-      runtime.ir.loadInt(
+      runtime.ir.loadUint(
         runtime.addrIdx,
-        integer int(&stmt.imAtom.getUint()) # FIXME: make all mirage integer ops work on unsigned integers whenever possible too.
+        &stmt.imAtom.getUint() # FIXME: make all mirage integer ops work on unsigned integers whenever possible too.
       )
     of String:
       info "interpreter: generate IR for loading immutable string"
@@ -189,16 +207,43 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     else: unreachable
     
     if not internal:
+      if fn.name.len < 1:
+        runtime.ir.markGlobal(runtime.addrIdx)
+
       runtime.markLocal(fn, stmt.imIdentifier)
     else:
       assert *ownerStmt
       runtime.markInternal(&ownerStmt, stmt.imIdentifier)
   of CreateMutVal:
-    runtime.ir.loadInt(
-      runtime.addrIdx,
-      stmt.mutAtom
-    )
-    runtime.markLocal(fn, stmt.imIdentifier)
+    case stmt.mutAtom.kind
+    of Integer:
+      info "emitter: generate IR for loading mutable integer"
+      runtime.ir.loadInt(
+        runtime.addrIdx,
+        stmt.mutAtom
+      )
+    of UnsignedInt:
+      info "emitter: generate IR for loading mutable unsigned integer"
+      runtime.ir.loadUint(
+        runtime.addrIdx,
+        &stmt.mutAtom.getUint()
+      )
+    of String:
+      info "emitter: generate IR for loading mutable string"
+      discard runtime.ir.loadStr(
+        runtime.addrIdx,
+        stmt.mutAtom
+      )
+    of Float:
+      info "emitter: generate IR for loading mutable float"
+      discard runtime.ir.addOp(
+        IROperation(opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.mutAtom])
+      ) # FIXME: mirage: loadFloat isn't implemented
+    else: unreachable
+    
+    if fn.name.len < 1:
+      runtime.ir.markGlobal(runtime.addrIdx)
+    runtime.markLocal(fn, stmt.mutIdentifier)
   of Call:
     if runtime.vm.hasBuiltin(stmt.fn):
       info "interpreter: generate IR for calling builtin: " & stmt.fn
@@ -262,11 +307,38 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
         runtime.ir.passArgument(runtime.index(ident, defaultParams(fn)))
 
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
+  of ReassignVal:
+    let index = runtime.index(stmt.reIdentifier, defaultParams(fn))
+    info "emitter: reassign value at index " & $index & " with ident \"" & stmt.reIdentifier & "\" to " & stmt.reAtom.crush("")
+    
+    case stmt.reAtom.kind
+    of Integer:
+      runtime.ir.loadInt(
+        index,
+        stmt.reAtom
+      )
+    of UnsignedInt:
+      runtime.ir.loadUint(
+        index,
+        &stmt.reAtom.getUint()
+      )
+    of String:
+      discard runtime.ir.loadStr(
+        index,
+        stmt.reAtom
+      )
+    of Float:
+      discard runtime.ir.addOp(
+        IROperation(opcode: LoadFloat, arguments: @[uinteger index, stmt.reAtom])
+      ) # FIXME: mirage: loadFloat isn't implemented
+    else: unreachable
+
+    runtime.ir.markGlobal(index)
   else:
-    warn "interpreter: unimplemented IR generation directive: " & $stmt.kind
+    warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
 proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
-  info "interpreter: loading up function signature arguments onto stack via IR: " & fn.name
+  info "emitter: loading up function signature arguments onto stack via IR: " & fn.name
 
   for i, arg in fn.arguments:
     runtime.markLocal(fn, arg)
