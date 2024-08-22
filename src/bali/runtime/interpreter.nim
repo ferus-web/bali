@@ -385,6 +385,7 @@ proc run*(runtime: Runtime) =
   console.generateStdIR(runtime.vm, runtime.ir)
   math.generateStdIR(runtime.vm, runtime.ir)
   uri.generateStdIR(runtime.vm, runtime.ir)
+  parseIntGenerateStdIR(runtime.vm, runtime.ir)
 
   runtime.generateIRForScope(runtime.ast.scopes[0])
 

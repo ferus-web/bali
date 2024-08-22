@@ -6,7 +6,7 @@ import colored_logger, pretty
 const BASE_DIR = "test262/test"
 
 proc execJS(file: string): bool =
-  execCmd("./balde run " & file) == 0
+  execCmd("./balde run " & file & " --test262") == 0
 
 proc main {.inline.} =
   addHandler(newColoredLogger())
