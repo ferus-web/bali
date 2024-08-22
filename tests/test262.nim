@@ -31,7 +31,6 @@ Commands:
 
     let head = paramStr(2)
 
-    info "Test result aggregation server is running on port 1337"
     var filesToExec = 0
     
     if not dirExists(BASE_DIR / head):

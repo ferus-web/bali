@@ -117,6 +117,7 @@ type
     Whitespace
     Comment
     Invalid
+    Shebang
 
   Token* = object
     case kind*: TokenKind
@@ -134,6 +135,8 @@ type
     of Comment:
       comment*: string
       multiline*: bool
+    of Shebang:
+      shebang*: string
     else: discard
 
 const
@@ -147,6 +150,7 @@ const
     "false": TokenKind.False,
     "new": TokenKind.New,
     "debugger": TokenKind.Debugger,
+    "throw": TokenKind.Throw,
     "function": TokenKind.Function,
     "return": TokenKind.Return
   }.toTable
