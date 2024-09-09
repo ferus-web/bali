@@ -1,4 +1,4 @@
-import std/[options, tables]
+import std/[options, strutils, tables]
 
 type
   TokenKind* {.pure.} = enum
@@ -138,6 +138,9 @@ type
     of Shebang:
       shebang*: string
     else: discard
+
+func isNewline*(token: Token): bool {.inline.} =
+  token.kind == TokenKind.Whitespace and token.whitespace.contains(strutils.Newlines)
 
 const
   Keywords* = {
