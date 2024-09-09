@@ -37,22 +37,33 @@ type
     ImmutableReassignment
 
   SemanticError* = object
+    line*, col*: uint
     case kind*: SemanticErrorKind
     of UnknownIdentifier:
       unknown*: string
     of ImmutableReassignment:
       imIdent*: string
       imNewValue*: MAtom
+  
+  InterpreterOpts* = object
+    test262*: bool = false
 
   Runtime* = ref object
     ast: AST
     ir: IRGenerator
     vm*: PulsarInterpreter
+    opts*: InterpreterOpts
 
     addrIdx: uint
     values*: seq[Value]
     semanticErrors*: seq[SemanticError]
     clauses: seq[string]
+
+proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =
+  SemanticError(kind: UnknownIdentifier, unknown: identifier)
+
+proc immutableReassignmentAttempt*(stmt: Statement): SemanticError {.inline.} =
+  SemanticError(kind: ImmutableReassignment, imIdent: stmt.reIdentifier, imNewValue: stmt.reAtom, line: stmt.line, col: stmt.col)
 
 proc defaultParams*(fn: Function): IndexParams {.inline.} =
   IndexParams(
@@ -100,26 +111,6 @@ proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
 
   inc runtime.addrIdx
 
-proc indexGlobal*(runtime: Runtime, ident: string): Option[uint] =
-  for value in runtime.values:
-    if value.kind != vkGlobal: continue
-    if value.identifier == ident:
-      return some(value.index)
-
-proc indexInternal*(runtime: Runtime, stmt: Statement, ident: string): Option[uint] =
-  for value in runtime.values:
-    if value.kind != vkInternal: continue
-    if value.identifier == ident and
-      value.ownerStmt == hash(stmt):
-      return some(value.index)
-
-proc indexLocal*(runtime: Runtime, fn: Function, ident: string): Option[uint] =
-  for value in runtime.values:
-    if value.kind != vkLocal: continue
-    if value.identifier == ident and
-      value.ownerFunc == hash(fn):
-      return some(value.index)
-
 proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
   for value in runtime.values:
     for prio in params.priorities:
@@ -165,15 +156,49 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement) =
   of CallAndStoreResult:
     debug "ir: expand CallAndStoreResult statement by expanding child Call statement"
     runtime.expand(fn, stmt.storeFn)
+  of ThrowError:
+    debug "ir: expand ThrowError"
+
+    if *stmt.error.str:
+      runtime.generateIR(fn, createImmutVal("error_msg", str(&stmt.error.str)), ownerStmt = some(stmt), internal = true)
+  of BinaryOp:
+    debug "ir: expand BinaryOp"
+
+    if *stmt.binStoreIn:
+      debug "ir: BinaryOp evaluation will be stored in: " & &stmt.binStoreIn & " (" & $runtime.addrIdx & ')'
+      runtime.ir.loadInt(runtime.addrIdx, 0)
+      runtime.markLocal(fn, &stmt.binStoreIn)
+
+    if stmt.binLeft.kind == AtomHolder:
+      debug "ir: BinaryOp left term is an atom"
+      runtime.generateIR(fn, createImmutVal("left_term", stmt.binLeft.atom), ownerStmt = some(stmt), internal = true)
+
+    if stmt.binRight.kind == AtomHolder:
+      debug "ir: BinaryOp right term is an atom"
+      runtime.generateIR(fn, createImmutVal("right_term", stmt.binRight.atom), ownerStmt = some(stmt), internal = true)
   else: discard 
 
-proc verifyNotOccupied*(runtime: Runtime, ident: string, fn: Function) =
-  # Algorithm:
-  # - ensure that no immutable identifier exists in any of our parent scopes (including toplevel)
-  #
-  # If occupied:
-  # - throw semantic error (`ImmutableReassignment`)
+proc verifyNotOccupied*(runtime: Runtime, ident: string, fn: Function): bool =
   var prev = fn.prev
+
+  while *prev:
+    let parked = try:
+      discard runtime.index(ident, defaultParams(fn))
+      true
+    except ValueError as exc:
+      false
+
+    if parked:
+      return true
+
+    prev = (&prev).prev
+
+  false
+
+proc semanticError*(runtime: Runtime, error: SemanticError) =
+  info "emitter: caught semantic error (" & $error.kind & ')'
+
+  runtime.semanticErrors &= error
 
 proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false, ownerStmt: Option[Statement] = none(Statement)) =
   case stmt.kind
@@ -309,6 +334,10 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
   of ReassignVal:
     let index = runtime.index(stmt.reIdentifier, defaultParams(fn))
+    if runtime.verifyNotOccupied(stmt.reIdentifier, fn):
+      runtime.semanticError(immutableReassignmentAttempt(stmt))
+      return
+
     info "emitter: reassign value at index " & $index & " with ident \"" & stmt.reIdentifier & "\" to " & stmt.reAtom.crush("")
     
     case stmt.reAtom.kind
@@ -334,6 +363,40 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     else: unreachable
 
     runtime.ir.markGlobal(index)
+  of ThrowError:
+    info "emitter: add error-throw logic"
+
+    if *stmt.error.str:
+      let msg = &stmt.error.str
+
+      info "emitter: error string that will be raised: `" & msg & '`'
+      runtime.expand(fn, stmt)
+
+      runtime.ir.passArgument(runtime.index("error_msg", internalIndex(stmt)))
+      runtime.ir.call("BALI_THROWERROR")
+  of BinaryOp:
+    info "emitter: emitting IR for binary operation"
+    runtime.expand(fn, stmt)
+
+    let 
+      leftTerm = stmt.binLeft
+      rightTerm = stmt.binRight
+
+    # TODO: recursive IR generation
+
+    if leftTerm.kind == AtomHolder and rightTerm.kind == AtomHolder:
+      let 
+        leftIdx = runtime.index("left_term", internalIndex(stmt))
+        rightIdx = runtime.index("right_term", internalIndex(stmt))
+      
+      case stmt.op
+      of BinaryOperation.Add: runtime.ir.addInt(leftIdx, rightIdx)
+      of BinaryOperation.Sub: runtime.ir.subInt(leftIdx, rightIdx)
+      else:
+        warn "emitter: unimplemented binary operation: " & $stmt.op 
+
+      if *stmt.binStoreIn:
+        runtime.ir.moveAtom(leftIdx, runtime.index(&stmt.binStoreIn, defaultParams(fn)))
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -369,23 +432,19 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
     curr = &curr.next
     runtime.generateIRForScope(curr)
 
-  #[for scope in runtime.ast:
-    let fn = cast[Function](scope)
-    if not clauses.contains(fn.name):
-      clauses.add(fn.name)
-      runtime.ir.newModule(fn.name)
-
-    for stmt in scope.stmts:
-      for child in stmt.expand():
-        runtime.generateIR(child, addrIdx)
-
-      runtime.generateIR(stmt, addrIdx)]#
-
 proc run*(runtime: Runtime) =
+  if runtime.semanticErrors.len > 0:
+    print runtime.semanticErrors
+    quit(1)
+
   console.generateStdIR(runtime.vm, runtime.ir)
   math.generateStdIR(runtime.vm, runtime.ir)
   uri.generateStdIR(runtime.vm, runtime.ir)
+  errors.generateStdIR(runtime.vm, runtime.ir)
   parseIntGenerateStdIR(runtime.vm, runtime.ir)
+
+  if runtime.opts.test262:
+    test262.generateStdIR(runtime.vm, runtime.ir)
 
   runtime.generateIRForScope(runtime.ast.scopes[0])
 
@@ -406,12 +465,13 @@ proc run*(runtime: Runtime) =
   info "interpreter: passing over execution to VM"
   runtime.vm.run()
 
-proc newRuntime*(file: string, ast: AST): Runtime {.inline.} =
+proc newRuntime*(file: string, ast: AST, opts: InterpreterOpts = default(InterpreterOpts)): Runtime {.inline.} =
   Runtime(
     ast: ast,
     clauses: @[],
     ir: newIRGenerator(
       "bali-" & $sha256(file).toHex()
     ),
-    vm: newPulsarInterpreter("")
+    vm: newPulsarInterpreter(""),
+    opts: opts
   )
