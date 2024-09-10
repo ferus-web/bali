@@ -35,7 +35,7 @@ proc console(vm: PulsarInterpreter, level: ConsoleLevel) {.inline.} =
   for arg in vm.registers.callArgs:
     let value = vm.ToString(arg)
     accum &= value & ' '
-  
+
   delegate(level, accum)
 
 proc consoleLogIR*(vm: PulsarInterpreter, generator: IRGenerator) =
