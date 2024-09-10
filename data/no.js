@@ -1,5 +1,4 @@
 let x = 42
+let y = x == 42
 
-if (x == 42) {
-	console.log("yeet")
-}
+console.log(y)

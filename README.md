@@ -28,7 +28,11 @@ Here is a basic example of the API:
 import bali/grammar/prelude
 import bali/runtime/prelude
 
-const JS_SRC = "console.log(\"Hello world!\")"
+const JS_SRC = """
+const value = 13 + 37
+console.log(\"Hello world!\")
+console.log(value)
+"""
 
 let 
   parser = newParser(JS_SRC) # Feed your JavaScript code to Bali's JavaScript parser
@@ -44,5 +48,5 @@ runtime.run()
 # Roadmap
 - Getting a grammar to AST parser      [ X ]
 - Getting the MIR emitter working      [ X ]
-- Get arithmetic operations working    [   ]
+- Get arithmetic operations working    [ X ]
 - Getting the standard library working [   ]
