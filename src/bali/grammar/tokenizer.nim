@@ -12,7 +12,7 @@ type
     ignoreWhitespace*: bool = false
 
   SourceLocation* = object
-    line*, col*: uint
+    line*, col*: uint = 1
     
   Tokenizer* = ref object
     pos*: uint = 0

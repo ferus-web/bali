@@ -133,6 +133,20 @@ proc hash*(stmt: Statement): Hash {.inline.} =
 
   hash
 
+proc hash*(scope: Scope): Hash {.inline.} =
+  var hash: Hash
+
+  if *scope.prev:
+    hash = hash !& hash &scope.prev
+
+  if *scope.next:
+    hash = hash !& hash &scope.next
+
+  for stmt in scope.stmts:
+    hash = hash !& hash stmt
+  
+  hash
+
 proc pushIdent*(args: var PositionedArguments, ident: string) {.inline.} =
   args &=
     CallArg(
