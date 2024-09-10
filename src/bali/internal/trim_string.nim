@@ -2,10 +2,12 @@
 ## Implemented according to the ECMAScript spec.
 ## 
 ## Copyright (C) 2024 Trayambak Rai and Ferus Authors
-import std/[strutils]
+import std/[strutils, logging]
 import mirage/runtime/prelude
 import bali/internal/sugar
 import bali/runtime/abstract/coercion
+
+import pretty
 
 type
   TrimMode* {.pure.} = enum
@@ -13,19 +15,19 @@ type
     Right
     Both
 
-proc internalTrim(str: string, things: set[char], mode: TrimMode): string {.inline.} =
+proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inline.} =
   var 
     substringStart = 0
     substringLength = str.len
 
   if mode == TrimMode.Left or mode == TrimMode.Both:
     for c in str:
-      if substringLength == 0:
+      if substringLength < 1:
         return
 
       if not things.contains(c):
         break
-
+      
       substringStart += 1
       substringLength -= 1
 
@@ -42,8 +44,8 @@ proc internalTrim(str: string, things: set[char], mode: TrimMode): string {.inli
       return
 
     substringLength -= seenWhitespaceLength
-
-  str[substringStart ..< substringLength]
+  
+  str[substringStart ..< str.len]
 
 proc trimString*(
   vm: PulsarInterpreter,
