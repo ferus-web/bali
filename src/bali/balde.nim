@@ -61,9 +61,15 @@ proc execFile(ctx: Context, file: string) {.inline.} =
 
   if ctx.cmdOptions.contains("dump-ast"):
     print ast
+    quit(0)
   
   profileThis "allocate runtime":
-    let runtime = newRuntime(file, ast)
+    let runtime = newRuntime(
+      file, ast,
+      InterpreterOpts(
+        test262: ctx.cmdOptions.contains("test262")
+      )
+    )
 
   profileThis "execution time":
     runtime.run()

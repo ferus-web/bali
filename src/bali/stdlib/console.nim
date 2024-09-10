@@ -5,6 +5,7 @@ import std/[options, tables, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/runtime/normalize
+import bali/runtime/abstract/coercion
 import bali/internal/sugar
 import pretty
 
@@ -32,16 +33,7 @@ proc console(vm: PulsarInterpreter, level: ConsoleLevel) {.inline.} =
   var accum: string
 
   for arg in vm.registers.callArgs:
-    let value =
-      case arg.kind
-      of Integer:
-        $(&arg.getInt())
-      of String:
-        $(&arg.getStr())
-      of Float:
-        $(&arg.getFloat())
-      else: ""
-
+    let value = vm.ToString(arg)
     accum &= value & ' '
   
   delegate(level, accum)

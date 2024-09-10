@@ -1,5 +1,6 @@
 import std/[hashes, logging, options, tables]
 import mirage/atom
+import bali/internal/sugar
 import pretty
 
 type
@@ -12,6 +13,10 @@ type
     CallAndStoreResult
     ConstructObject
     ReassignVal
+    ThrowError
+    BinaryOp
+    IdentHolder
+    AtomHolder
 
   CallArgKind* = enum
     cakIdent
@@ -33,8 +38,17 @@ type
   Function* = ref object of Scope
     name*: string = "outer"
     arguments*: seq[string] ## expected arguments!
+  
+  BinaryOperation* {.pure.} = enum
+    Add
+    Sub
+    Mult
+    Div
+    Pow
+    Invalid
 
   Statement* = ref object
+    line*, col*: uint = 0
     case kind*: StatementKind
     of CreateMutVal:
       mutIdentifier*: string
@@ -61,6 +75,16 @@ type
     of ReassignVal:
       reIdentifier*: string
       reAtom*: MAtom
+    of ThrowError:
+      error*: tuple[str: Option[string], exc: Option[void]]
+    of BinaryOp:
+      binLeft*, binRight*: Statement
+      op*: BinaryOperation = BinaryOperation.Invalid
+      binStoreIn*: Option[string]
+    of IdentHolder:
+      ident*: string
+    of AtomHolder:
+      atom*: MAtom
 
 func hash*(fn: Function): Hash {.inline.} =
   when fn is Scope: # FIXME: really dumb fix to prevent a segfault
@@ -100,6 +124,10 @@ proc hash*(stmt: Statement): Hash {.inline.} =
         stmt.fnName
       )
     )
+  of BinaryOp:
+    hash = hash !& hash(
+      (stmt.op, stmt.binLeft, stmt.binRight, stmt.binStoreIn)
+    )
   else:
     discard
 
@@ -120,6 +148,18 @@ proc pushAtom*(args: var PositionedArguments, atom: MAtom) {.inline.} =
     )
 
 {.push checks: off, inline.}
+proc throwError*(
+  errorStr: Option[string],
+  errorExc: Option[void] # TODO: implement
+): Statement =
+  if *errorStr and *errorExc:
+    raise newException(ValueError, "Both `errorStr` and `errorExc` are full containers - something has went horribly wrong.")
+  
+  Statement(
+    kind: ThrowError,
+    error: (str: errorStr, exc: errorExc)
+  )
+
 proc createImmutVal*(name: string, atom: MAtom): Statement =
   Statement(
     kind: CreateImmutVal,
@@ -129,6 +169,20 @@ proc createImmutVal*(name: string, atom: MAtom): Statement =
 
 proc returnFunc*: Statement =
   Statement(kind: ReturnFn)
+
+proc atomHolder*(atom: MAtom): Statement =
+  Statement(kind: AtomHolder, atom: atom)
+
+proc identHolder*(ident: string): Statement =
+  Statement(kind: IdentHolder, ident: ident)
+
+proc binOp*(op: BinaryOperation, left, right: Statement, storeIdent: string = ""): Statement =
+  Statement(
+    kind: BinaryOp,
+    binLeft: left, binRight: right,
+    op: op,
+    binStoreIn: if storeIdent.len > 0: storeIdent.some() else: none(string)
+  )
 
 proc reassignVal*(identifier: string, atom: MAtom): Statement =
   Statement(kind: ReassignVal, reIdentifier: identifier, reAtom: atom)

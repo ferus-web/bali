@@ -19,7 +19,8 @@ type
     location*: SourceLocation
     source: string
 
-{.push inline, checks: off, gcsafe.}
+{.push inline, gcsafe.}
+
 func eof*(tokenizer: Tokenizer): bool =
   let len = if tokenizer.source.len.uint < 1: 
     0'u 
@@ -36,25 +37,25 @@ proc consume*(tokenizer: Tokenizer): char =
   if c == '\n':
     inc tokenizer.location.line
     tokenizer.location.col = 0
-
+  
   c
 
 func hasAtleast*(tokenizer: Tokenizer, num: uint): bool =
   (tokenizer.pos + num) > tokenizer.source.len.uint - 1
 
 func charAt*(tokenizer: Tokenizer, offset: uint = 0): Option[char] =
-  if (tokenizer.pos + offset) > tokenizer.source.len.uint:
+  if (tokenizer.pos + offset) > tokenizer.source.len.uint - 1:
     return
 
   tokenizer.source[tokenizer.pos + offset].some()
 
 proc advance*(tokenizer: Tokenizer, offset: uint = 1) =
-  tokenizer.pos += offset
-  tokenizer.location.col += offset
-
   if tokenizer.charAt() == some('\n'):
     inc tokenizer.location.line
     tokenizer.location.col = 0
+
+  tokenizer.pos += offset
+  tokenizer.location.col += offset
 
 func newTokenizer*(source: string): Tokenizer =
   Tokenizer(
@@ -93,7 +94,7 @@ proc consumeIdentifier*(tokenizer: Tokenizer): Token =
     let c = &tokenizer.charAt()
 
     case c
-    of {'a' .. 'z'}, {'A' .. 'Z'}, '_', '.':
+    of {'a' .. 'z'}, {'A' .. 'Z'}, '_', '.', '$':
       ident &= c
       tokenizer.advance()
     else:
@@ -425,7 +426,7 @@ proc next*(tokenizer: Tokenizer): Token =
   let c = tokenizer.charAt()
 
   case &c
-  of {'a'..'z'}, {'A'..'Z'}, '_':
+  of {'a'..'z'}, {'A'..'Z'}, '_', '$':
     tokenizer.consumeIdentifier()
   of strutils.Whitespace:
     tokenizer.consumeWhitespace()
@@ -441,7 +442,13 @@ proc next*(tokenizer: Tokenizer): Token =
   of {'0' .. '9'}:
     tokenizer.consumeNumeric(false)
   of '-':
-    tokenizer.consumeNumeric(true)
+    if not tokenizer.eof and &tokenizer.charAt(1) in {'0' .. '9'}:
+      tokenizer.consumeNumeric(true)
+    else:
+      tokenizer.advance()
+      return Token(
+        kind: TokenKind.Sub
+      )
   of '.':
     tokenizer.advance()
     Token(
@@ -497,6 +504,9 @@ proc next*(tokenizer: Tokenizer): Token =
     )
   of '#':
     tokenizer.consumeHash()
+  of '*':
+    tokenizer.advance()
+    return Token(kind: TokenKind.Mul)
   else:
     tokenizer.consumeInvalid()
 
