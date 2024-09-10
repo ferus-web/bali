@@ -54,6 +54,7 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
 proc parseAtom*(parser: Parser, token: Token): Option[MAtom]
 
 proc parseExpression*(parser: Parser, storeIn: Option[string] = none(string)): Option[Statement] =
+  info "parser: parsing arithmetic expression"
   var term = Statement(kind: BinaryOp, binStoreIn: storeIn)
 
   while not parser.tokenizer.eof and (term.binLeft == nil or term.binRight == nil):
@@ -82,7 +83,7 @@ proc parseExpression*(parser: Parser, storeIn: Option[string] = none(string)): O
 
       term.binRight = &expr
     of TokenKind.RParen: break
-    else: unreachable
+    else: return
   
   if term.binLeft != nil and term.binRight != nil:
     return some term
