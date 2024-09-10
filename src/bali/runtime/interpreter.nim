@@ -20,6 +20,7 @@ type
     priorities*: seq[ValueKind] = @[vkLocal, vkGlobal]
 
     fn*: Option[Function]
+    scope*: Option[Scope]
     stmt*: Option[Statement]
 
   Value* = object
@@ -28,6 +29,7 @@ type
     case kind*: ValueKind
     of vkLocal:
       ownerFunc*: Hash
+      ownerScope*: Hash
     of vkInternal:
       ownerStmt*: Hash
     else: discard
@@ -69,6 +71,9 @@ proc defaultParams*(fn: Function): IndexParams {.inline.} =
   IndexParams(
     fn: some fn
   )
+
+proc defaultParams*(scope: Scope): IndexParams {.inline.} =
+  IndexParams(scope: some scope)
 
 proc internalIndex*(stmt: Statement): IndexParams {.inline.} =
   IndexParams(priorities: @[vkInternal], stmt: some stmt)
@@ -120,8 +125,11 @@ proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
       of vkGlobal:
         value.identifier == ident
       of vkLocal:
-        assert *params.fn
-        value.identifier == ident and value.ownerFunc == hash(&params.fn)
+        if *params.fn:
+          value.identifier == ident and value.ownerFunc == hash(&params.fn)
+        elif *params.scope:
+          value.identifier == ident and value.ownerScope == hash(&params.scope)
+        else: unreachable; false
       of vkInternal:
         assert *params.stmt
         value.identifier == ident and value.ownerStmt == hash(&params.stmt)
@@ -179,14 +187,16 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement) =
   else: discard 
 
 proc verifyNotOccupied*(runtime: Runtime, ident: string, fn: Function): bool =
-  var prev = fn.prev
+  var prev = some Scope(fn)
 
   while *prev:
     let parked = try:
-      discard runtime.index(ident, defaultParams(fn))
+      discard runtime.index(ident, defaultParams(&prev))
       true
     except ValueError as exc:
       false
+
+    print parked
 
     if parked:
       return true
@@ -204,6 +214,11 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
   case stmt.kind
   of CreateImmutVal:
     info "emitter: generate IR for creating immutable value with identifier: " & stmt.imIdentifier
+    echo runtime.verifyNotOccupied(stmt.imIdentifier, fn)
+
+    if runtime.verifyNotOccupied(stmt.imIdentifier, fn):
+      runtime.semanticError(immutableReassignmentAttempt(stmt))
+      return
 
     case stmt.imAtom.kind
     of Integer:
@@ -220,15 +235,13 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
       )
     of String:
       info "interpreter: generate IR for loading immutable string"
-      discard runtime.ir.loadStr(
+      runtime.ir.loadStr(
         runtime.addrIdx,
         stmt.imAtom
       ) # FIXME: mirage: loadStr doesn't have the discardable pragma
     of Float:
       info "interpreter: generate IR for loading immutable float"
-      discard runtime.ir.addOp(
-        IROperation(opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.imAtom])
-      ) # FIXME: mirage: loadFloat isn't implemented
+      runtime.ir.loadFloat(runtime.addrIdx, stmt.imAtom)
     else: unreachable
     
     if not internal:
