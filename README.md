@@ -17,7 +17,8 @@ You can compile Balde, the Bali debugger by running:
 It is primarily used for debugging the engine as of right now, but it runs code fine too.
 
 # Integrating Bali into your applications
-Again, Bali is not in a usable state yet. However, it is possible to use Bali in your programs. There is no easy Nim-to-JS conversion layer yet, most of the JS code that calls Nim is using a lot of hacks and bridges provided by Mirage.
+Again, Bali is not in a usable state yet. However, it is possible to use Bali in your programs. There is no easy Nim-to-JS conversion layer yet, most of the JS code that calls Nim is using a lot of hacks and bridges provided by Mirage. \
+**Balde requires the C++ backend to be used as it depends on simdutf!**
 
 Firstly, add Bali to your project's dependencies.
 ```
@@ -48,5 +49,5 @@ runtime.run()
 # Roadmap
 - Getting a grammar to AST parser      [ X ]
 - Getting the MIR emitter working      [ X ]
-- Get arithmetic operations working    [ X ]
+- Get arithmetic operations working    [   ]
 - Getting the standard library working [   ]
