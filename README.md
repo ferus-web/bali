@@ -7,7 +7,7 @@ I repeat,
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
 
 # Specification Compliance
-As of 10th of September, 2024, Bali can successfully run 0.95% of the entire Test262 suite. There's a lot of work to be done here, so don't shy away from sending in PRs. ;)
+As of 10th of September, 2024, Bali can successfully run 1.23% of the entire Test262 suite. There's a lot of work to be done here, so don't shy away from sending in PRs. ;)
 
 # Running code with Bali
 You can compile Balde, the Bali debugger by running:
