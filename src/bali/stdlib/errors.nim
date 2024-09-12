@@ -25,12 +25,19 @@ proc jsException*(msg: string): JSException {.inline.} =
 
   exc
 
+proc logTracebackAndDie*(vm: PulsarInterpreter) =
+  let traceback = vm.generateTraceback()
+  assert *traceback, "Mirage failed to generate traceback!"
+
+  stderr.write &traceback & '\n'
+  quit(1)
+
 proc typeError*(vm: PulsarInterpreter, message: string) {.inline.} =
   ## Meant for other Bali stdlib methods to use.
   vm.throw(
-    jsException("Uncaught TypeError: " & message)
+    jsException("TypeError: " & message)
   )
-  quit(1)
+  vm.logTracebackAndDie()
 
 proc generateStdIr*(vm: PulsarInterpreter, ir: IRGenerator) =
   info "errors: generate IR interface"
@@ -40,10 +47,5 @@ proc generateStdIr*(vm: PulsarInterpreter, ir: IRGenerator) =
       vm.throw(
         jsException(&vm.registers.callArgs[0].getStr())
       )
-      
-      let traceback = vm.generateTraceback()
-      assert *traceback, "Mirage failed to generate traceback!"
-
-      echo &traceback
-      quit(1)
+      vm.logTracebackAndDie()
   )
