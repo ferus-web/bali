@@ -48,7 +48,10 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
   let
     args = parser.parseArguments()
     arguments = if *args: &args else: newSeq[CallArg](0)
-  
+
+  if name == "$DONOTEVALUATE":
+    parser.ast.doNotEvaluate = true
+
   return some call(name, arguments)
 
 proc parseAtom*(parser: Parser, token: Token): Option[MAtom]

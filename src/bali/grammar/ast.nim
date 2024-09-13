@@ -8,6 +8,8 @@ type
     currentScope*: int
     scopes*: seq[Scope]
 
+    doNotEvaluate*: bool = false # For Test262
+
 proc `&=`*(ast: AST, scope: Scope) =
   ast.scopes &= scope
 

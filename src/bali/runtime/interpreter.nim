@@ -433,9 +433,8 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
     runtime.generateIRForScope(curr)
 
 proc run*(runtime: Runtime) =
-  if runtime.semanticErrors.len > 0:
-    print runtime.semanticErrors
-    quit(1)
+  if runtime.ast.doNotEvaluate and runtime.opts.test262:
+    quit(0)
 
   console.generateStdIR(runtime.vm, runtime.ir)
   math.generateStdIR(runtime.vm, runtime.ir)
