@@ -87,7 +87,7 @@ proc consumeInvalid*(tokenizer: Tokenizer): Token =
 {.pop.}
 
 proc consumeIdentifier*(tokenizer: Tokenizer): Token =
-  info "tokenizer: consume identifier"
+  debug "tokenizer: consume identifier"
   var ident: string
 
   while not tokenizer.eof():
@@ -101,21 +101,21 @@ proc consumeIdentifier*(tokenizer: Tokenizer): Token =
       break
   
   if not Keywords.contains(ident):
-    info "tokenizer: consumed identifier \"" & ident & "\""
+    debug "tokenizer: consumed identifier \"" & ident & "\""
     Token(
       kind: TokenKind.Identifier,
       ident: ident
     )
   else:
     let keyword = Keywords[ident]
-    info "tokenizer: consumed keyword: " & $keyword
+    debug "tokenizer: consumed keyword: " & $keyword
 
     Token(
       kind: keyword
     )
 
 proc consumeWhitespace*(tokenizer: Tokenizer): Token =
-  info "tokenizer: consume whitespace"
+  debug "tokenizer: consume whitespace"
   var ws: string
 
   while not tokenizer.eof():
@@ -128,7 +128,7 @@ proc consumeWhitespace*(tokenizer: Tokenizer): Token =
     else:
       break
 
-  info "tokenizer: consumed " & $ws.len & " whitespace character(s)"
+  debug "tokenizer: consumed " & $ws.len & " whitespace character(s)"
 
   Token(
     kind: TokenKind.Whitespace,
@@ -136,25 +136,30 @@ proc consumeWhitespace*(tokenizer: Tokenizer): Token =
   )
 
 proc consumeEquality*(tokenizer: Tokenizer): Token =
-  info "tokenizer: consume equality signs"
   tokenizer.advance()
   let next = tokenizer.charAt()
 
   if not *next:
+    debug "tokenizer: consume equal-to sign"
     return Token(kind: TokenKind.EqualSign)
 
   case &next
   of '=':
     if tokenizer.charAt(1) != some('='):
+      debug "tokenizer: consume equality sign"
+      tokenizer.advance()
       return Token(kind: TokenKind.Equal)
     else:
+      debug "tokenizer: consume true equality sign"
+      tokenizer.advance()
       return Token(kind: TokenKind.TrueEqual)
   else:
+    debug "tokenizer: consume equal-to sign because next char isn't another equal sign"
     return Token(kind: TokenKind.EqualSign)
 
 proc consumeString*(tokenizer: Tokenizer): Token =
   let closesWith = &tokenizer.charAt()
-  info "tokenizer: consume string with closing character: " & closesWith
+  debug "tokenizer: consume string with closing character: " & closesWith
   tokenizer.advance()
 
   var 
@@ -179,7 +184,7 @@ proc consumeString*(tokenizer: Tokenizer): Token =
 
   tokenizer.advance() # consume ending quote
   if not malformed:
-    info "tokenizer: consumed string \"" & str & '\"'
+    debug "tokenizer: consumed string \"" & str & '\"'
   else:
     warn "tokenizer: consumed malformed string: " & str
     warn "tokenizer: this string does not end with the ending character: " & closesWith
@@ -191,7 +196,7 @@ proc consumeString*(tokenizer: Tokenizer): Token =
   )
 
 proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
-  info "tokenizer: consuming comment"
+  debug "tokenizer: consuming comment"
   tokenizer.advance()
   var comment: string
 
@@ -208,7 +213,7 @@ proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
     comment &= c
     tokenizer.advance()
   
-  info "tokenizer: consumed comment: " & comment
+  debug "tokenizer: consumed comment: " & comment
 
   Token(
     kind: TokenKind.Comment,
@@ -375,7 +380,7 @@ proc consumeAmpersand*(tokenizer: Tokenizer): Token =
   
   case &next
   of '&':
-    info "tokenizer: consumed And operand"
+    debug "tokenizer: consumed And operand"
     tokenizer.advance()
     return Token(kind: TokenKind.And)
   else:
@@ -390,7 +395,7 @@ proc consumePipe*(tokenizer: Tokenizer): Token =
   
   case &next
   of '|':
-    info "tokenizer: consumed Or operand"
+    debug "tokenizer: consumed Or operand"
     tokenizer.advance()
     return Token(kind: TokenKind.Or)
   else:
