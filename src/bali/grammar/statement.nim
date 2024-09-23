@@ -47,6 +47,12 @@ type
     Pow
     Invalid
 
+    Equal
+    TrueEqual
+
+    NotEqual
+    NotTrueEqual
+
   Statement* = ref object
     line*, col*: uint = 0
     case kind*: StatementKind

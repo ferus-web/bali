@@ -172,10 +172,15 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement) =
     if stmt.binLeft.kind == AtomHolder:
       debug "ir: BinaryOp left term is an atom"
       runtime.generateIR(fn, createImmutVal("left_term", stmt.binLeft.atom), ownerStmt = some(stmt), internal = true)
+    #else:
+    #  debug "ir: BinaryOp left term is an ident, reserving new index for result"
+    #  runtime.generateIR(fn, createImmutVal("store_in", null()), ownerStmt = some(stmt), internal = true)
 
     if stmt.binRight.kind == AtomHolder:
       debug "ir: BinaryOp right term is an atom"
       runtime.generateIR(fn, createImmutVal("right_term", stmt.binRight.atom), ownerStmt = some(stmt), internal = true)
+    elif stmt.binRight.kind == IdentHolder:
+      debug "ir: BinaryOp right term is an ident"
   else: discard 
 
 proc verifyNotOccupied*(runtime: Runtime, ident: string, fn: Function): bool =
@@ -229,7 +234,13 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
       discard runtime.ir.addOp(
         IROperation(opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.imAtom])
       ) # FIXME: mirage: loadFloat isn't implemented
-    else: unreachable
+    of Boolean:
+      info "emitter: generate IR for loading immutable boolean"
+      runtime.ir.loadBool(runtime.addrIdx, stmt.imAtom)
+    of Null:
+      info "emitter: generate IR for loading immutable null"
+      runtime.ir.loadNull(runtime.addrIdx)
+    else: print stmt.imAtom; unreachable
     
     if not internal:
       if fn.name.len < 1:
@@ -384,19 +395,67 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
 
     # TODO: recursive IR generation
 
-    if leftTerm.kind == AtomHolder and rightTerm.kind == AtomHolder:
-      let 
-        leftIdx = runtime.index("left_term", internalIndex(stmt))
-        rightIdx = runtime.index("right_term", internalIndex(stmt))
-      
-      case stmt.op
-      of BinaryOperation.Add: runtime.ir.addInt(leftIdx, rightIdx)
-      of BinaryOperation.Sub: runtime.ir.subInt(leftIdx, rightIdx)
-      else:
-        warn "emitter: unimplemented binary operation: " & $stmt.op 
+    let
+      leftIdx = if leftTerm.kind == AtomHolder:
+        runtime.index("left_term", internalIndex(stmt))
+      elif leftTerm.kind == IdentHolder:
+        runtime.index(leftTerm.ident, defaultParams(fn))
+      else: 0
 
-      if *stmt.binStoreIn:
-        runtime.ir.moveAtom(leftIdx, runtime.index(&stmt.binStoreIn, defaultParams(fn)))
+      rightIdx = if rightTerm.kind == AtomHolder:
+        runtime.index("right_term", internalIndex(stmt))
+      elif rightTerm.kind == IdentHolder:
+        runtime.index(rightTerm.ident, defaultParams(fn))
+      else: 0
+      
+    case stmt.op
+    of BinaryOperation.Add: runtime.ir.addInt(leftIdx, rightIdx)
+    of BinaryOperation.Sub: runtime.ir.subInt(leftIdx, rightIdx)
+    of BinaryOperation.Equal:
+      runtime.ir.equate(leftIdx, rightIdx)
+      # FIXME: really weird bug in mirage's IR generator. wtf?
+      let equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left == right branch
+      let unequalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left != right branch
+      
+      # left == right branch
+      let equalBranch = if leftTerm.kind == AtomHolder:
+        runtime.ir.loadBool(leftIdx, true)
+      else:
+        runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), true)
+      runtime.ir.overrideArgs(equalJmp, @[uinteger(equalBranch)])
+      runtime.ir.jump(equalBranch + 3)
+
+      # left != right branch
+      let unequalBranch = if leftTerm.kind == AtomHolder:
+        runtime.ir.loadBool(leftIdx, false)
+      else:
+        runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
+      runtime.ir.overrideArgs(unequalJmp, @[uinteger(unequalBranch)])
+    of BinaryOperation.NotEqual:
+      runtime.ir.equate(leftIdx, rightIdx)
+      # FIXME: really weird bug in mirage's IR generator. wtf?
+      let equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left == right branch
+      let unequalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left != right branch
+        
+      # left != right branch: true
+      let unequalBranch = if leftTerm.kind == AtomHolder:
+        runtime.ir.loadBool(leftIdx, true)
+      else:
+        runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), true)
+      runtime.ir.overrideArgs(unequalJmp, @[uinteger(unequalBranch)])
+      runtime.ir.jump(unequalBranch + 3)
+
+      # left == right branch: false
+      let equalBranch = if leftTerm.kind == AtomHolder:
+        runtime.ir.loadBool(leftIdx, false)
+      else:
+        runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
+      runtime.ir.overrideArgs(equalJmp, @[uinteger(equalBranch)])
+    else:
+      warn "emitter: unimplemented binary operation: " & $stmt.op 
+
+    if not *stmt.binStoreIn:
+      runtime.ir.moveAtom(leftIdx, runtime.index(&stmt.binStoreIn, defaultParams(fn)))
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 

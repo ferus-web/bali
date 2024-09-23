@@ -57,37 +57,98 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
 proc parseAtom*(parser: Parser, token: Token): Option[MAtom]
 
 proc parseExpression*(parser: Parser, storeIn: Option[string] = none(string)): Option[Statement] =
-  info "parser: parsing arithmetic expression"
+  info "parser: parsing arithmetic/binary expression"
   var term = Statement(kind: BinaryOp, binStoreIn: storeIn)
+
+  template parseRHSExpression(otherRight: Statement) =
+    debug "parser: " & $otherRight.kind & " will fill right term"
+    var copiedTok = deepCopy(parser.tokenizer)
+    if not parser.tokenizer.eof() and (let andSymbol = parser.tokenizer.nextExceptWhitespace(); *andSymbol):
+      case (&andSymbol).kind
+      of TokenKind.And, TokenKind.Or:
+        let expr = parser.parseExpression()
+
+        if *expr:
+          term.binLeft = Statement(kind: BinaryOp, binStoreIn: storeIn, binLeft: term.binLeft, binRight: otherRight)
+          term.binRight = &expr
+          break
+        else:
+          parser.error Other, "expected expression"
+      else:
+        parser.tokenizer = move(copiedTok)
 
   while not parser.tokenizer.eof and (term.binLeft == nil or term.binRight == nil):
     let next = parser.tokenizer.next()
-    
+
     case next.kind
     of TokenKind.Number:
+      debug "parser: whilst parsing arithmetic expr, found number"
       if term.binLeft == nil:
+        debug "parser: atom will fill left term"
         term.binLeft = atomHolder(&parser.parseAtom(next))
       else:
+        debug "parser: atom will fill right term"
         term.binRight = atomHolder(&parser.parseAtom(next))
+    of TokenKind.Identifier:
+      debug "parser: whilst parsing arithmetic expr, found ident"
+      if term.binLeft == nil:
+        debug "parser: ident will fill left term"
+        term.binLeft = identHolder(next.ident)
+      else:
+        debug "parser: ident will fill right term"
+        term.binRight = identHolder(next.ident)
     of TokenKind.Add:
+      debug "parser: whilst parsing arithmetic expr, found add operand"
       term.op = BinaryOperation.Add
     of TokenKind.Sub:
+      debug "parser: whilst parsing arithmetic expr, found sub operand"
       term.op = BinaryOperation.Sub
     of TokenKind.Mul:
+      debug "parser: whilst parsing arithmetic expr, found mult operand"
       term.op = BinaryOperation.Mult
     of TokenKind.Div:
+      debug "parser: whilst parsing arithmetic expr, found div operand"
       term.op = BinaryOperation.Div
+    of TokenKind.Equal:
+      debug "parser: whilst parsing arithmetic expr, found equality operand"
+      term.op = BinaryOperation.Equal
+    of TokenKind.NotEqual:
+      term.op = BinaryOperation.NotEqual
     of TokenKind.Whitespace:
-      if next.isNewline(): break
+      debug "parser: whilst parsing arithmetic expr, found whitespace"
+      if next.isNewline(): 
+        debug "parser: whitespace contains newline, aborting expr parsing"
+        break
     of TokenKind.LParen:
+      debug "parser: whilst parsing arithmetic expr, found potential right-hand expr"
       let expr = parser.parseExpression()
       if !expr:
         parser.error Other, "failed to parse expression"
 
       term.binRight = &expr
-    of TokenKind.RParen: break
-    else: return
-  
+    of TokenKind.RParen:
+      debug "parser: whilst parsing arithmetic expr, found right-paren to close off expr; aborting expr parsing"
+      break
+    of TokenKind.True:
+      debug "parser: whilst parsing arithmetic expr, found boolean (true)"
+      if term.binLeft == nil:
+        debug "parser: boolean will fill left term"
+        term.binLeft = atomHolder(boolean(true))
+      else:
+        parseRHSExpression(atomHolder(boolean(true)))
+        term.binRight = atomHolder(boolean(true))
+    of TokenKind.False:
+      debug "parser: whilst parsing arithmetic expr, found boolean (false)"
+      if term.binLeft == nil:
+        debug "parser: boolean will fill left term"
+        term.binLeft = atomHolder(boolean(false))
+      else:
+        debug "parser: boolean will fill right term"
+        term.binRight = atomHolder(boolean(false))
+    else:
+      debug "parser: met unexpected token " & $next.kind & " during tokenization, marking expression parse as failed"
+      return
+
   if term.binLeft != nil and term.binRight != nil:
     return some term
   else:
@@ -129,12 +190,15 @@ proc parseDeclaration*(parser: Parser, initialIdent: string, reassignment: bool 
       else:
         parser.error UnexpectedToken, $tok.kind
   
-  let copiedTok = parser.tokenizer.deepCopy()
-  let expr = parser.parseExpression(ident.some())
+  let
+    copiedTok = parser.tokenizer.deepCopy()
+    expr = parser.parseExpression(ident.some())
 
   if !expr:
+    debug "parser: no expression was parsed, reverting back to old tokenizer state"
     parser.tokenizer = copiedTok
   else:
+    debug "parser: an expression was successfully parsed, continuing in this state"
     return expr
 
   var
