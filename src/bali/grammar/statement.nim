@@ -17,9 +17,11 @@ type
     BinaryOp
     IdentHolder
     AtomHolder
+    AccessField
 
   CallArgKind* = enum
     cakIdent
+    cakFieldAccess
     cakAtom
 
   CallArg* = object
@@ -28,6 +30,9 @@ type
       ident*: string
     of cakAtom:
       atom*: MAtom
+    of cakFieldAccess:
+      fIdent*: string
+      fField*: string
 
   PositionedArguments* = seq[CallArg]
 
@@ -91,6 +96,9 @@ type
       ident*: string
     of AtomHolder:
       atom*: MAtom
+    of AccessField:
+      identifier*: string
+      field*: string
 
 func hash*(fn: Function): Hash {.inline.} =
   when fn is Scope: # FIXME: really dumb fix to prevent a segfault
@@ -144,6 +152,14 @@ proc pushIdent*(args: var PositionedArguments, ident: string) {.inline.} =
     CallArg(
       kind: cakIdent,
       ident: ident
+    )
+
+proc pushFieldAccess*(args: var PositionedArguments, ident: string, field: string) {.inline.} =
+  args &=
+    CallArg(
+      kind: cakFieldAccess,
+      fIdent: ident,
+      fField: field
     )
 
 proc pushAtom*(args: var PositionedArguments, atom: MAtom) {.inline.} =
@@ -224,6 +240,9 @@ proc createMutVal*(name: string, atom: MAtom): Statement =
 
 proc identArg*(ident: string): CallArg =
   CallArg(kind: cakIdent, ident: ident)
+
+proc fieldAccessArg*(ident: string, field: string): CallArg =
+  CallArg(kind: cakFieldAccess, fIdent: ident, fField: field)
 
 proc atomArg*(atom: MAtom): CallArg =
   CallArg(kind: cakAtom, atom: atom)
