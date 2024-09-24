@@ -205,6 +205,29 @@ proc semanticError*(runtime: Runtime, error: SemanticError) =
 
   runtime.semanticErrors &= error
 
+proc resolveFieldAccess*(runtime: Runtime, fn: Function, stmt: Statement, address: int, field: string): uint =
+  let internalName = $(hash(stmt) !& hash(ident) !& hash(field))
+  runtime.generateIR(fn, createImmutVal(internalName, null()), internal = true, ownerStmt = some(stmt))
+  let accessResult = runtime.addrIdx - 1
+
+  # start preparing for call to internal field resolver
+  inc runtime.addrIdx
+  runtime.ir.loadUint(runtime.addrIdx, accessResult)
+  inc runtime.addrIdx
+  runtime.ir.loadInt(runtime.addrIdx, address)
+  inc runtime.addrIdx
+  runtime.ir.loadStr(runtime.addrIdx, field)
+  inc runtime.addrIdx
+
+  runtime.ir.passArgument(runtime.addrIdx - 3)     # pass `accessResult`
+  runtime.ir.passArgument(runtime.addrIdx - 2)     # pass `address`
+  runtime.ir.passArgument(runtime.addrIdx - 1)     # pass `field`
+
+  runtime.ir.call("BALI_RESOLVEFIELD")
+  runtime.ir.resetArgs()
+
+  accessResult
+
 proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false, ownerStmt: Option[Statement] = none(Statement)) =
   case stmt.kind
   of CreateImmutVal:
@@ -310,6 +333,10 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
           let ident = $i
           info "interpreter: passing atom parameter to function with ident: " & ident
           runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
+        of cakFieldAccess:
+          let index = runtime.resolveFieldAccess(fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField)
+          runtime.ir.markGlobal(index)
+          runtime.ir.passArgument(index)
 
       runtime.ir.call(nam)
       runtime.ir.resetArgs()
@@ -329,7 +356,10 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
   of CallAndStoreResult:
     runtime.markLocal(fn, stmt.storeIdent)
     runtime.generateIR(fn, stmt.storeFn)
-    runtime.ir.readRegister(runtime.index(stmt.storeIdent, defaultParams(fn)), Register.ReturnValue)
+
+    let index = runtime.index(stmt.storeIdent, defaultParams(fn))
+    debug "emitter: call-and-store result will be stored in ident \"" & stmt.storeIdent & "\" or index " & $index
+    runtime.ir.readRegister(index, Register.ReturnValue)
   of ConstructObject:
     for i, arg in stmt.args:
       case arg.kind
@@ -341,6 +371,10 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
         let ident = $hash(stmt) & '_' & $i
         info "interpreter: passing atom parameter to function with ident: " & ident
         runtime.ir.passArgument(runtime.index(ident, defaultParams(fn)))
+      of cakFieldAccess:
+        let index = runtime.resolveFieldAccess(fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField)
+        runtime.ir.markGlobal(index)
+        runtime.ir.passArgument(index)
 
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
   of ReassignVal:
@@ -491,6 +525,32 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
     curr = &curr.next
     runtime.generateIRForScope(curr)
 
+proc generateInternalIR*(runtime: Runtime) =
+  runtime.ir.newModule("BALI_RESOLVEFIELD")
+  runtime.vm.registerBuiltin("BALI_RESOLVEFIELD_INTERNAL",
+    proc(op: Operation) =
+      let
+        ident = runtime.vm.registers.callArgs.pop()
+        index = uint(&getInt(runtime.vm.registers.callArgs.pop()))
+        storeAt = uint(&getInt(runtime.vm.registers.callArgs.pop()))
+
+      let atom = runtime.vm.stack[index] # FIXME: weird bug with mirage, `get` returns a NULL atom.
+
+      if atom.kind != Object:
+        debug "runtime: atom is not an object, returning null."
+        runtime.vm.addAtom(obj(), storeAt)
+        return
+
+      if not atom.objFields.contains(&ident.getStr()):
+        debug "runtime: atom does not have any field \"" & &ident.getStr() & "\"; returning null."
+        runtime.vm.addAtom(obj(), storeAt)
+        return
+      
+      let value = atom.objValues[atom.objFields[&ident.getStr()]]
+      runtime.vm.addAtom(value, storeAt)
+  )
+  runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")
+
 proc run*(runtime: Runtime) =
   if runtime.ast.doNotEvaluate and runtime.opts.test262:
     quit(0)
@@ -501,6 +561,8 @@ proc run*(runtime: Runtime) =
   errors.generateStdIR(runtime.vm, runtime.ir)
   base64.generateStdIR(runtime.vm, runtime.ir)
   parseIntGenerateStdIR(runtime.vm, runtime.ir)
+
+  runtime.generateInternalIR()
 
   if runtime.opts.test262:
     test262.generateStdIR(runtime.vm, runtime.ir)

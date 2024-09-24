@@ -7,6 +7,7 @@ when not isMainModule:
 
 import std/[times, tables, os, monotimes, logging]
 import bali/grammar/prelude
+import bali/internal/sugar
 import bali/runtime/prelude
 import climate, colored_logger, jsony, pretty
 
@@ -52,6 +53,19 @@ proc execFile(ctx: Context, file: string) {.inline.} =
     except IOError as exc:
       die "failed to open file:", exc.msg
       ""
+
+  if ctx.cmdOptions.contains("dump-tokens"):
+    let excludeWs = ctx.cmdOptions.contains("no-whitespace")
+    let tok = newTokenizer(source)
+    while not tok.eof:
+      if excludeWs:
+        let val = tok.nextExceptWhitespace()
+        if !val: break
+        print &val
+      else:
+        print tok.next()
+
+    quit(0)
 
   profileThis "allocate parser": 
     let parser = newParser(source)
