@@ -150,7 +150,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement) =
       if arg.kind == cakAtom:
         debug "ir: load immutable value to ConstructObject's immediate arguments: " & arg.atom.crush("")
         runtime.generateIR(fn, createImmutVal(
-          $i,
+          $hash(stmt) & '_' & $i,
           arg.atom
         ), ownerStmt = some(stmt), internal = true) # XXX: should this be mutable?
   of CallAndStoreResult:
@@ -361,6 +361,7 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     debug "emitter: call-and-store result will be stored in ident \"" & stmt.storeIdent & "\" or index " & $index
     runtime.ir.readRegister(index, Register.ReturnValue)
   of ConstructObject:
+    runtime.expand(fn, stmt)
     for i, arg in stmt.args:
       case arg.kind
       of cakIdent:
@@ -370,7 +371,7 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
       of cakAtom: # already loaded via the statement expander
         let ident = $hash(stmt) & '_' & $i
         info "interpreter: passing atom parameter to function with ident: " & ident
-        runtime.ir.passArgument(runtime.index(ident, defaultParams(fn)))
+        runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
       of cakFieldAccess:
         let index = runtime.resolveFieldAccess(fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField)
         runtime.ir.markGlobal(index)
