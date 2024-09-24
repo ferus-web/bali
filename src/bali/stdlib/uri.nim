@@ -1,7 +1,9 @@
-## JavaScript URI API - uses sanchar's builtin URI parser
+## JavaScript URL API - uses sanchar's builtin URL parser
 import std/[options, logging, tables]
 import bali/internal/sugar
 import bali/runtime/[objects, normalize]
+import bali/runtime/abstract/coercion
+import bali/stdlib/errors
 import mirage/ir/generator
 import mirage/atom
 import mirage/runtime/[prelude]
@@ -30,9 +32,11 @@ proc transposeUrlToObject(parsed: URL, url: var MAtom, source: MAtom) =
   url.objFields["pathname"] = 1#str parsed.path()
   url.objFields["port"] = 2#integer parsed.port()
   url.objFields["protocol"] = 3#str parsed.scheme()
-  url.objFields["searchParams"] = 4#str parsed.query()
+  url.objFields["search"] = 4#str parsed.query()
   url.objFields["host"] = 5#str parsed.hostname()
   url.objFields["href"] = 6#source
+  url.objFields["origin"] = 7
+  url.objFields["hash"] = 8
 
   url.objValues = @[
     str parsed.hostname(),
@@ -41,11 +45,13 @@ proc transposeUrlToObject(parsed: URL, url: var MAtom, source: MAtom) =
     str parsed.scheme(),
     str parsed.query(),
     str parsed.hostname(),
-    source
+    source,
+    str(parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port()),
+    (if parsed.fragment().len > 0: str '#' & parsed.fragment() else: str newString(0))
   ]
 
 proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
-  info "uri: generating IR interfaces"
+  info "url: generating IR interfaces"
 
   # `new URL()` syntax
   vm.registerBuiltin("BALI_CONSTRUCTOR_URL",
@@ -57,10 +63,10 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
           null()
 
       if source.kind != String:
-        vm.registers.retVal = some null()
-        return # TODO: TypeError
+        vm.typeError("URL constructor: " & ToString(vm, source) & " is not a valid URL.")
+        return
 
-      let parsed = parser.parse(&source.getStr())
+      let parsed = parser.parse(ToString(vm, source))
       var url = obj()
 
       transposeUrlToObject(parsed, url, source)
