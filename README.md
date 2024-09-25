@@ -33,6 +33,9 @@ const JS_SRC = """
 const value = 13 + 37
 console.log(\"Hello world!\")
 console.log(value)
+
+var myUrl = new URL("https://github.com/ferus-web/bali")
+console.warn(myUrl.origin)
 """
 
 let 
