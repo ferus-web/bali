@@ -10,18 +10,6 @@ import mirage/runtime/[prelude]
 import sanchar/parse/url
 import pretty
 
-const URL_FIELDS = [
-  "hostname",
-  "pathname",
-  "href",
-  "hash",
-  "host",
-  "pathname",
-  "port",
-  "protocol",
-  "searchParams"
-]
-
 var parser = newURLParser()
 
 proc transposeUrlToObject(parsed: URL, url: var MAtom, source: MAtom) =
@@ -66,7 +54,17 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
         vm.typeError("URL constructor: " & ToString(vm, source) & " is not a valid URL.")
         return
 
-      let parsed = parser.parse(ToString(vm, source))
+      let parsed = try:
+        parser.parse(ToString(vm, source))
+      except URLParseError as pError:
+        debug "url: encountered parse error whilst parsing url: " & &source.getStr() & ": " & pError.msg
+        debug "url: this is a constructor, so a TypeError will be thrown."
+        vm.typeError(pError.msg)
+        newURL("", "", "", "")
+      
+      if parsed.scheme().len < 1:
+        return
+
       var url = obj()
 
       transposeUrlToObject(parsed, url, source)
@@ -87,7 +85,12 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
         vm.registers.retVal = some null()
         return
 
-      var parsed = parser.parse(&source.getStr())
+      var parsed = try:
+        parser.parse(&source.getStr())
+      except URLParseError as exc:
+        debug "url: encountered parse error whilst parsing url: " & &source.getStr() & ": " & exc.msg
+        debug "url: this is the function variant, so no error will be thrown."
+        URL()
 
       # allocate object
       var url = obj()
