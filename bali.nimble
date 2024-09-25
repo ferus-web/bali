@@ -32,3 +32,5 @@ task test262, "Compile the Test262 suite tester against Bali":
     exec "nimble balde"
 
   exec "nim c -d:release --path:src -o:./test262 tests/test262.nim"
+
+requires "https://github.com/ferus-web/sanchar >= 2.0.0"
