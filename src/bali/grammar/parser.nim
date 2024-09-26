@@ -385,6 +385,16 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
 
   while not parser.tokenizer.eof():
     inc idx
+    let copiedTok = deepCopy(parser.tokenizer)
+    
+    if (let expr = parser.parseExpression(); *expr):
+      debug "parser: whilst parsing arguments in function call, found expression"
+      args.pushImmExpr(&expr)
+      continue
+    else:
+      debug "parser: found no expression, reverting tokenizer back to its old state."
+      parser.tokenizer = copiedTok
+
     let token = parser.tokenizer.next()
 
     case token.kind
@@ -432,7 +442,7 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
     of TokenKind.RParen:
       metEnd = true
       break
-    else: unreachable
+    else: print token; unreachable
 
   if not metEnd:
     parser.error Other, "missing ) after argument list."
