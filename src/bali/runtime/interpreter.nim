@@ -81,7 +81,8 @@ proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
       identifier: ident,
       ownerStmt: hash(stmt)
     )
-
+  
+  echo "minternal: " & $stmt.kind
   info "Ident \"" & ident & "\" is being internally marked at index " & $runtime.addrIdx & " with statement hash: " & $hash(stmt)
 
   inc runtime.addrIdx
@@ -131,9 +132,17 @@ proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
   
   raise newException(ValueError, "No such ident: " & ident)
 
-proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false, ownerStmt: Option[Statement] = none(Statement))
+proc generateIR*(
+  runtime: Runtime, 
+  fn: Function, 
+  stmt: Statement, 
+  internal: bool = false, 
+  ownerStmt: Option[Statement] = none(Statement), 
+  exprStoreIn: Option[string] = none(string), 
+  parentStmt: Option[Statement] = none(Statement)
+)
 
-proc expand*(runtime: Runtime, fn: Function, stmt: Statement) =
+proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false) =
   case stmt.kind
   of Call:
     debug "ir: expand Call statement"
@@ -144,6 +153,10 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement) =
           $i,
           arg.atom
         ), ownerStmt = some(stmt), internal = true) # XXX: should this be mutable?
+      elif arg.kind == cakImmediateExpr:
+        debug "ir: add code to solve expression to expand Call's immediate arguments"
+        runtime.markInternal(stmt, $i)
+        runtime.generateIR(fn, arg.expr, internal = true, exprStoreIn = some($i), parentStmt = some(stmt))
   of ConstructObject:
     debug "ir: expand ConstructObject statement"
     for i, arg in stmt.args:
@@ -155,7 +168,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement) =
         ), ownerStmt = some(stmt), internal = true) # XXX: should this be mutable?
   of CallAndStoreResult:
     debug "ir: expand CallAndStoreResult statement by expanding child Call statement"
-    runtime.expand(fn, stmt.storeFn)
+    runtime.expand(fn, stmt.storeFn, internal)
   of ThrowError:
     debug "ir: expand ThrowError"
 
@@ -167,7 +180,14 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement) =
     if *stmt.binStoreIn:
       debug "ir: BinaryOp evaluation will be stored in: " & &stmt.binStoreIn & " (" & $runtime.addrIdx & ')'
       runtime.ir.loadInt(runtime.addrIdx, 0)
-      runtime.markLocal(fn, &stmt.binStoreIn)
+
+      if not internal:
+        debug "ir: ...locally"
+        runtime.markLocal(fn, &stmt.binStoreIn)
+      else:
+        debug "ir: ...internally"
+        print stmt
+        runtime.markInternal(stmt, &stmt.binStoreIn)
 
     if stmt.binLeft.kind == AtomHolder:
       debug "ir: BinaryOp left term is an atom"
@@ -228,7 +248,7 @@ proc resolveFieldAccess*(runtime: Runtime, fn: Function, stmt: Statement, addres
 
   accessResult
 
-proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false, ownerStmt: Option[Statement] = none(Statement)) =
+proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false, ownerStmt: Option[Statement] = none(Statement), exprStoreIn: Option[string] = none(string), parentStmt: Option[Statement] = none(Statement)) =
   case stmt.kind
   of CreateImmutVal:
     info "emitter: generate IR for creating immutable value with identifier: " & stmt.imIdentifier
@@ -321,7 +341,7 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     else:
       let nam = stmt.fn.normalizeIRName()
       info "interpreter: generate IR for calling function (normalized): " & nam
-      runtime.expand(fn, stmt)
+      runtime.expand(fn, stmt, internal)
       
       for i, arg in stmt.arguments:
         case arg.kind
@@ -335,6 +355,10 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
           runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
         of cakFieldAccess:
           let index = runtime.resolveFieldAccess(fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField)
+          runtime.ir.markGlobal(index)
+          runtime.ir.passArgument(index)
+        of cakImmediateExpr:
+          let index = runtime.index($i, internalIndex(stmt))
           runtime.ir.markGlobal(index)
           runtime.ir.passArgument(index)
 
@@ -361,7 +385,7 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     debug "emitter: call-and-store result will be stored in ident \"" & stmt.storeIdent & "\" or index " & $index
     runtime.ir.readRegister(index, Register.ReturnValue)
   of ConstructObject:
-    runtime.expand(fn, stmt)
+    runtime.expand(fn, stmt, internal)
     for i, arg in stmt.args:
       case arg.kind
       of cakIdent:
@@ -376,6 +400,7 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
         let index = runtime.resolveFieldAccess(fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField)
         runtime.ir.markGlobal(index)
         runtime.ir.passArgument(index)
+      of cakImmediateExpr: discard
 
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
   of ReassignVal:
@@ -416,13 +441,13 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
       let msg = &stmt.error.str
 
       info "emitter: error string that will be raised: `" & msg & '`'
-      runtime.expand(fn, stmt)
+      runtime.expand(fn, stmt, internal)
 
       runtime.ir.passArgument(runtime.index("error_msg", internalIndex(stmt)))
       runtime.ir.call("BALI_THROWERROR")
   of BinaryOp:
     info "emitter: emitting IR for binary operation"
-    runtime.expand(fn, stmt)
+    runtime.expand(fn, stmt, internal)
 
     let 
       leftTerm = stmt.binLeft
@@ -489,8 +514,11 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     else:
       warn "emitter: unimplemented binary operation: " & $stmt.op 
 
-    if not *stmt.binStoreIn:
-      runtime.ir.moveAtom(leftIdx, runtime.index(&stmt.binStoreIn, defaultParams(fn)))
+    if *stmt.binStoreIn:
+      runtime.ir.moveAtom(leftIdx, runtime.index(&stmt.binStoreIn, if not internal: defaultParams(fn) else: internalIndex(stmt)))
+    elif *exprStoreIn:
+      assert *parentStmt
+      runtime.ir.moveAtom(leftIdx, runtime.index(&exprStoreIn, internalIndex(&parentStmt)))
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 

@@ -22,6 +22,7 @@ type
   CallArgKind* = enum
     cakIdent
     cakFieldAccess
+    cakImmediateExpr
     cakAtom
 
   CallArg* = object
@@ -33,6 +34,8 @@ type
     of cakFieldAccess:
       fIdent*: string
       fField*: string
+    of cakImmediateExpr:
+      expr*: Statement
 
   PositionedArguments* = seq[CallArg]
 
@@ -167,6 +170,14 @@ proc pushAtom*(args: var PositionedArguments, atom: MAtom) {.inline.} =
     CallArg(
       kind: cakAtom,
       atom: atom
+    )
+
+proc pushImmExpr*(args: var PositionedArguments, expr: Statement) {.inline.} =
+  assert expr.kind == BinaryOp, "Attempt to push non expression"
+  args &=
+    CallArg(
+      kind: cakImmediateExpr,
+      expr: expr
     )
 
 {.push checks: off, inline.}
