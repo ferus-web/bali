@@ -82,7 +82,6 @@ proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
       ownerStmt: hash(stmt)
     )
   
-  echo "minternal: " & $stmt.kind
   info "Ident \"" & ident & "\" is being internally marked at index " & $runtime.addrIdx & " with statement hash: " & $hash(stmt)
 
   inc runtime.addrIdx
