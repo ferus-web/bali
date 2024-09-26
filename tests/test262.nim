@@ -38,11 +38,13 @@ Commands:
       quit(1)
 
     var
-      successful, failed: seq[string]
+      successful, failed, skipped: seq[string]
 
     for file in walkDirRec(BASE_DIR / head):
       if not fileExists(file): continue
-      if not file.endsWith(".js"): continue
+      if not file.endsWith(".js"):
+        skipped &= file
+        continue
 
       inc filesToExec
 
@@ -68,8 +70,18 @@ Commands:
 
         echo "  * " & fail
     
-    info "Total tests: " & $filesToExec
-    info "Successful tests: " & $successPercentage & "% (" & $successful.len & ')'
-    info "Failed tests: " & $failedPercentage & "% (" & $failed.len & ')'
+    if paramCount() > 1 and paramStr(2) == "json":
+      echo $(%* {
+        "total": $filesToExec,
+        "successful": $successful.len,
+        "skipped": $skipped.len,
+        "failed": $failed.len,
+        "successful_percentage": $successPercentage
+      })
+    else:
+      info "Total tests: " & $filesToExec
+      info "Successful tests: " & $successPercentage & "% (" & $successful.len & ')'
+      info "Skipped tests: " & $skipped
+      info "Failed tests: " & $failedPercentage & "% (" & $failed.len & ')'
       
 when isMainModule: main()
