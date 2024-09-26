@@ -30,9 +30,8 @@ import bali/grammar/prelude
 import bali/runtime/prelude
 
 const JS_SRC = """
-const value = 13 + 37
 console.log(\"Hello world!\")
-console.log(value)
+console.log(13 + 37)
 
 var myUrl = new URL("https://github.com/ferus-web/bali")
 console.warn(myUrl.origin)
