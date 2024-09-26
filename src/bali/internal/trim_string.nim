@@ -5,7 +5,7 @@
 import std/[strutils, logging]
 import mirage/runtime/prelude
 import bali/internal/sugar
-import bali/runtime/abstract/coercion
+import bali/runtime/abstract/[coercible, to_string]
 
 import pretty
 

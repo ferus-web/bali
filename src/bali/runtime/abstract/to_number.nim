@@ -38,7 +38,7 @@ proc ToNumber*(vm: PulsarInterpreter, value: MAtom): float =
     else:
       vm.typeError("ToPrimitive() is not implemented yet!")
   of Null: return 0f # 4. If argument is either null or false, return +0𝔽.
-  of Bool:
+  of Boolean:
     if not &value.getBool(): return 0f # 4. If argument is either null or false, return +0𝔽.
     else: return 1f # 5. If argument is true, return 1𝔽.
   of String:
