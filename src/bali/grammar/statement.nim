@@ -18,6 +18,7 @@ type
     IdentHolder
     AtomHolder
     AccessField
+    IfStmt
 
   CallArgKind* = enum
     cakIdent
@@ -102,6 +103,9 @@ type
     of AccessField:
       identifier*: string
       field*: string
+    of IfStmt:
+      conditionExpr*: Statement
+      branchTrue*: Scope
 
 func hash*(fn: Function): Hash {.inline.} =
   when fn is Scope: # FIXME: really dumb fix to prevent a segfault
@@ -145,6 +149,18 @@ proc hash*(stmt: Statement): Hash {.inline.} =
     hash = hash !& hash(
       (stmt.op, stmt.binLeft, stmt.binRight, stmt.binStoreIn)
     )
+  of IfStmt:
+    hash = hash !& hash(
+      (stmt.conditionExpr)
+    )
+  of AccessField:
+    hash = hash !& hash(
+      (stmt.identifier, stmt.field)
+    )
+  of AtomHolder:
+    hash = hash !& hash(stmt.atom)
+  of IdentHolder:
+    hash = hash !& hash(stmt.ident)
   else:
     discard
 
@@ -202,6 +218,9 @@ proc createImmutVal*(name: string, atom: MAtom): Statement =
 
 proc returnFunc*: Statement =
   Statement(kind: ReturnFn)
+
+proc ifStmt*(condition: Statement, body: Scope): Statement =
+  Statement(kind: IfStmt, conditionExpr: condition, branchTrue: body)
 
 proc atomHolder*(atom: MAtom): Statement =
   Statement(kind: AtomHolder, atom: atom)

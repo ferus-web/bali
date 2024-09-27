@@ -640,10 +640,56 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     if parser.tokenizer.eof:
       parser.error Other, "expected conditions after if token, got EOF instead"
 
-    if (&parser.tokenizer.nextExceptWhitespace()).kind != TokenKind.Whitespace:
-      parser.error Other, "expected conditions after if token"
+    if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
+      if (&tok).kind != TokenKind.LParen:
+        parser.error Other, "expected left parenthesis after if token"
 
-    let conds = parser.parseConditions()
+    let expr = parser.parseExpression()
+    if !expr:
+      parser.error Other, "expected expression, got nothing instead"
+
+    if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
+      if (&tok).kind != TokenKind.RParen:
+        parser.error Other, "expected right parenthesis after conditional expression"
+
+    if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
+      if (&tok).kind != TokenKind.LCurly:
+        parser.error Other, "expected left curly bracket after right parenthesis"
+
+    # body parsing
+    # TODO: make a generic function for anonymous scopes, functions, if statements, while/for statements and everything that takes in a body of statements
+    var body: seq[Statement]
+    info "parser: parse if-statement body"
+    while not parser.tokenizer.eof:
+      let 
+        prevPos = parser.tokenizer.pos
+        prevLoc = parser.tokenizer.location
+        c = parser.tokenizer.nextExceptWhitespace()
+
+      if *c and (&c).kind == TokenKind.RCurly:
+        info "parser: met end of curly bracket block"
+        break
+      else:
+        parser.tokenizer.pos = prevPos
+        parser.tokenizer.location = prevLoc
+    
+      let stmt = parser.parseStatement()
+
+      if not *stmt:
+        info "parser: can't find any more statements for if statement; body parsing complete"
+        break
+
+      var statement = &stmt
+      statement.line = parser.tokenizer.location.line
+      statement.col = parser.tokenizer.location.col
+
+      body &= statement
+     
+    var lastScope = parser.ast.scopes[parser.ast.currentScope]
+    var exprScope = Scope(stmts: body)
+    exprScope.prev = some(lastScope)
+
+    return some ifStmt(&expr, exprScope)
   of TokenKind.New:
     let expr = parser.parseConstructor()
     if !expr:
