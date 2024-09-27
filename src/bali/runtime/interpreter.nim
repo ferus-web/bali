@@ -247,6 +247,8 @@ proc resolveFieldAccess*(runtime: Runtime, fn: Function, stmt: Statement, addres
 
   accessResult
 
+proc generateIRForScope*(runtime: Runtime, scope: Scope)
+
 proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false, ownerStmt: Option[Statement] = none(Statement), exprStoreIn: Option[string] = none(string), parentStmt: Option[Statement] = none(Statement)) =
   case stmt.kind
   of CreateImmutVal:
@@ -473,8 +475,9 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     of BinaryOperation.Equal:
       runtime.ir.equate(leftIdx, rightIdx)
       # FIXME: really weird bug in mirage's IR generator. wtf?
-      let equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left == right branch
-      let unequalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left != right branch
+      let 
+        equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left == right branch
+        unequalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left != right branch
       
       # left == right branch
       let equalBranch = if leftTerm.kind == AtomHolder:
@@ -518,6 +521,13 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     elif *exprStoreIn:
       assert *parentStmt
       runtime.ir.moveAtom(leftIdx, runtime.index(&exprStoreIn, internalIndex(&parentStmt)))
+  of IfStmt:
+    info "emitter: emitting IR for if statement"
+    let
+      trueJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+      falseJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+    
+    runtime.generateIRForScope(stmt.branchTrue)
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
