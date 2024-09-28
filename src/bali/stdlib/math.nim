@@ -3,7 +3,8 @@
 import std/[importutils, tables, math, options, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
-import bali/runtime/normalize
+import bali/runtime/[normalize]
+import bali/runtime/abstract/[to_number]
 import bali/internal/sugar
 import pretty, librng, librng/generator
 
@@ -47,24 +48,10 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   vm.registerBuiltin("BALI_MATHPOW",
     proc(op: Operation) =
       let
-        value = vm.registers.callArgs[0]
-        exponent = vm.registers.callArgs[1]
-
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
-        
-        fExponent = if exponent.kind == Integer:
-          float(&exponent.getInt())
-        elif exponent.kind == Float:
-          &exponent.getFloat()
-        else:
-          NaN
+        value = vm.ToNumber(vm.registers.callArgs[0])
+        exponent = vm.ToNumber(vm.registers.callArgs[1])
       
-      vm.registers.retVal = some floating pow(fValue, fExponent)
+      vm.registers.retVal = some floating pow(value, exponent)
   )
   generator.call("BALI_MATHPOW")
 
@@ -72,17 +59,9 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.cos")
   vm.registerBuiltin("BALI_MATHCOS",
     proc(op: Operation) =
-      let
-        value = vm.registers.callArgs[0]
-
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
+      let value = vm.ToNumber(vm.registers.callArgs[0])
       
-      vm.registers.retVal = some floating cos(fValue)
+      vm.registers.retVal = some floating cos(value)
   )
   generator.call("BALI_MATHCOS")
 
@@ -90,16 +69,9 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.sqrt")
   vm.registerBuiltin("BALI_MATHSQRT",
     proc(op: Operation) =
-      let 
-        value = vm.registers.callArgs[0]
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
+      let value = vm.ToNumber(vm.registers.callArgs[0])
 
-      vm.registers.retVal = some floating sqrt(fValue)
+      vm.registers.retVal = some floating sqrt(value)
   )
   generator.call("BALI_MATHSQRT")
 
@@ -107,16 +79,9 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.tanh")
   vm.registerBuiltin("BALI_MATHTANH",
     proc(op: Operation) =
-      let 
-        value = vm.registers.callArgs[0]
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
+      let value = vm.ToNumber(vm.registers.callArgs[0])
 
-      vm.registers.retVal = some floating tanh(fValue)
+      vm.registers.retVal = some floating tanh(value)
   )
   generator.call("BALI_MATHTANH")
 
@@ -124,16 +89,9 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.sin")
   vm.registerBuiltin("BALI_MATHSIN",
     proc(op: Operation) =
-      let 
-        value = vm.registers.callArgs[0]
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
+      let value = vm.ToNumber(vm.registers.callArgs[0])
 
-      vm.registers.retVal = some floating sin(fValue)
+      vm.registers.retVal = some floating sin(value)
   )
   generator.call("BALI_MATHSIN")
 
@@ -141,16 +99,9 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.sinh")
   vm.registerBuiltin("BALI_MATHSINH",
     proc(op: Operation) =
-      let 
-        value = vm.registers.callArgs[0]
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
+      let value = vm.ToNumber(vm.registers.callArgs[0])
 
-      vm.registers.retVal = some floating sinh(fValue)
+      vm.registers.retVal = some floating sinh(value)
   )
   generator.call("BALI_MATHSINH")
   
@@ -158,16 +109,9 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.tan")
   vm.registerBuiltin("BALI_MATHTAN",
     proc(op: Operation) =
-      let 
-        value = vm.registers.callArgs[0]
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
+      let value = vm.ToNumber(vm.registers.callArgs[0])
 
-      vm.registers.retVal = some floating tan(fValue)
+      vm.registers.retVal = some floating tan(value)
   )
   generator.call("BALI_MATHTAN")
 
@@ -175,16 +119,9 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.trunc")
   vm.registerBuiltin("BALI_MATHTRUNC",
     proc(op: Operation) =
-      let 
-        value = vm.registers.callArgs[0]
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
+      let value = vm.ToNumber(vm.registers.callArgs[0])
 
-      vm.registers.retVal = some floating trunc(fValue)
+      vm.registers.retVal = some floating trunc(value)
   )
   generator.call("BALI_MATHTRUNC")
 
@@ -192,16 +129,9 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.floor")
   vm.registerBuiltin("BALI_MATHFLOOR",
     proc(op: Operation) =
-      let 
-        value = vm.registers.callArgs[0]
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
+      let value = vm.ToNumber(vm.registers.callArgs[0])
 
-      vm.registers.retVal = some floating floor(fValue)
+      vm.registers.retVal = some floating floor(value)
   )
   generator.call("BALI_MATHFLOOR")
 
@@ -209,16 +139,8 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.ceil")
   vm.registerBuiltin("BALI_MATHCEIL",
     proc(op: Operation) =
-      let 
-        value = vm.registers.callArgs[0]
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
-
-      vm.registers.retVal = some floating ceil(fValue)
+      let value = vm.ToNumber(vm.registers.callArgs[0])
+      vm.registers.retVal = some floating ceil(value)
   )
   generator.call("BALI_MATHCEIL")
 
@@ -226,16 +148,9 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.cbrt")
   vm.registerBuiltin("BALI_MATHCBRT",
     proc(op: Operation) =
-      let 
-        value = vm.registers.callArgs[0]
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
+      let value = vm.ToNumber(vm.registers.callArgs[0])
 
-      vm.registers.retVal = some floating cbrt(fValue)
+      vm.registers.retVal = some floating cbrt(value)
   )
   generator.call("BALI_MATHCBRT")
 
@@ -244,23 +159,10 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   vm.registerBuiltin("BALI_MATHMAX",
     proc(op: Operation) =
       let 
-        a = vm.registers.callArgs[0]
-        fA = if a.kind == Integer:
-          float(&a.getInt())
-        elif a.kind == Float:
-          &a.getFloat()
-        else:
-          NaN
+        a = vm.ToNumber(vm.registers.callArgs[0])
+        b = vm.ToNumber(vm.registers.callArgs[1])
 
-        b = vm.registers.callArgs[1]
-        fB = if b.kind == Integer:
-          float(&b.getInt())
-        elif b.kind == Float:
-          &b.getFloat()
-        else:
-          NaN
-      
-      vm.registers.retVal = some floating max(fA, fB)
+      vm.registers.retVal = some floating max(a, b)
   )
   generator.call("BALI_MATHMAX")
 
@@ -268,15 +170,8 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   generator.newModule(normalizeIRName "Math.abs")
   vm.registerBuiltin("BALI_MATHABS",
     proc(op: Operation) =
-      let 
-        value = vm.registers.callArgs[0]
-        fValue = if value.kind == Integer:
-          float(&value.getInt())
-        elif value.kind == Float:
-          &value.getFloat()
-        else:
-          NaN
+      let value = vm.ToNumber(vm.registers.callArgs[0])
 
-      vm.registers.retVal = some floating abs(fValue)
+      vm.registers.retVal = some floating abs(value)
   )
   generator.call("BALI_MATHABS")
