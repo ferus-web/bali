@@ -19,7 +19,8 @@ proc unpack*[T](opt: Option[T], x: var T): bool =
     return true
 
   false
+
 {.pop.}
 
-template unreachable* =
+template unreachable*() =
   assert false, "Unreachable"

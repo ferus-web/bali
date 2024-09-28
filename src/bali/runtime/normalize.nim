@@ -4,7 +4,7 @@ proc normalizeIRName*(name: string): string =
 
   for i, c in name:
     case c
-    of {'a'..'z'}, {'A'..'Z'}:
+    of {'a' .. 'z'}, {'A' .. 'Z'}:
       buffer &= c
     of '.':
       buffer &= "dot"
@@ -36,6 +36,10 @@ proc normalizeIRName*(name: string): string =
     of '@':
       buffer &= "at"
     else:
-      raise newException(ValueError, "Found invalid character in buffer during normalization (pos " & $i & "): '" & c & "' in " & name)
+      raise newException(
+        ValueError,
+        "Found invalid character in buffer during normalization (pos " & $i & "): '" & c &
+          "' in " & name,
+      )
 
   buffer

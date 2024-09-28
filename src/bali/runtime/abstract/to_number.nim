@@ -21,7 +21,7 @@ proc StringToNumber*(vm: PulsarInterpreter, value: MAtom): float =
   let parsed = parseNumberText(text)
   if !parsed:
     return NaN
-  
+
   return &parsed
 
 proc ToNumber*(vm: PulsarInterpreter, value: MAtom): float =
@@ -29,18 +29,25 @@ proc ToNumber*(vm: PulsarInterpreter, value: MAtom): float =
   ## The abstract operation ToNumber takes argument argument (an ECMAScript language value) and returns either
   ## a normal completion containing a Number or a throw completion. It converts argument to a value of type Number.
   ## It performs the following steps when called
-  
+
   case value.kind
-  of Integer: return float(&value.getInt())   # 1. If argument is a Number, return argument.
-  of UnsignedInt: return float(&value.getUint())
+  of Integer:
+    return float(&value.getInt()) # 1. If argument is a Number, return argument.
+  of UnsignedInt:
+    return float(&value.getUint())
   of Object:
-    if value.isUndefined(): return NaN # 3. If argument is undefined, return NaN.
+    if value.isUndefined():
+      return NaN # 3. If argument is undefined, return NaN.
     else:
       vm.typeError("ToPrimitive() is not implemented yet!")
-  of Null: return 0f # 4. If argument is either null or false, return +0𝔽.
+  of Null:
+    return 0f # 4. If argument is either null or false, return +0𝔽.
   of Boolean:
-    if not &value.getBool(): return 0f # 4. If argument is either null or false, return +0𝔽.
-    else: return 1f # 5. If argument is true, return 1𝔽.
+    if not &value.getBool():
+      return 0f # 4. If argument is either null or false, return +0𝔽.
+    else:
+      return 1f # 5. If argument is true, return 1𝔽.
   of String:
     return vm.StringToNumber(value)
-  else: unreachable
+  else:
+    unreachable

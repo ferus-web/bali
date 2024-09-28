@@ -30,7 +30,8 @@ type
       ownerFunc*: Hash
     of vkInternal:
       ownerStmt*: Hash
-    else: discard
+    else:
+      discard
 
   SemanticErrorKind* = enum
     UnknownIdentifier
@@ -44,7 +45,7 @@ type
     of ImmutableReassignment:
       imIdent*: string
       imNewValue*: MAtom
-  
+
   InterpreterOpts* = object
     test262*: bool = false
 
@@ -63,12 +64,16 @@ proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =
   SemanticError(kind: UnknownIdentifier, unknown: identifier)
 
 proc immutableReassignmentAttempt*(stmt: Statement): SemanticError {.inline.} =
-  SemanticError(kind: ImmutableReassignment, imIdent: stmt.reIdentifier, imNewValue: stmt.reAtom, line: stmt.line, col: stmt.col)
+  SemanticError(
+    kind: ImmutableReassignment,
+    imIdent: stmt.reIdentifier,
+    imNewValue: stmt.reAtom,
+    line: stmt.line,
+    col: stmt.col,
+  )
 
 proc defaultParams*(fn: Function): IndexParams {.inline.} =
-  IndexParams(
-    fn: some fn
-  )
+  IndexParams(fn: some fn)
 
 proc internalIndex*(stmt: Statement): IndexParams {.inline.} =
   IndexParams(priorities: @[vkInternal], stmt: some stmt)
@@ -76,23 +81,16 @@ proc internalIndex*(stmt: Statement): IndexParams {.inline.} =
 proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
   runtime.values &=
     Value(
-      kind: vkInternal,
-      index: runtime.addrIdx,
-      identifier: ident,
-      ownerStmt: hash(stmt)
+      kind: vkInternal, index: runtime.addrIdx, identifier: ident, ownerStmt: hash(stmt)
     )
-  
-  info "Ident \"" & ident & "\" is being internally marked at index " & $runtime.addrIdx & " with statement hash: " & $hash(stmt)
+
+  info "Ident \"" & ident & "\" is being internally marked at index " & $runtime.addrIdx &
+    " with statement hash: " & $hash(stmt)
 
   inc runtime.addrIdx
 
 proc markGlobal*(runtime: Runtime, ident: string) =
-  runtime.values &=
-    Value(
-      kind: vkGlobal,
-      index: runtime.addrIdx,
-      identifier: ident
-    )
+  runtime.values &= Value(kind: vkGlobal, index: runtime.addrIdx, identifier: ident)
 
   info "Ident \"" & ident & "\" is being globally marked at index " & $runtime.addrIdx
 
@@ -100,12 +98,7 @@ proc markGlobal*(runtime: Runtime, ident: string) =
 
 proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
   runtime.values &=
-    Value(
-      kind: vkLocal,
-      index: runtime.addrIdx,
-      identifier: ident,
-      ownerFunc: hash(fn)
-    )
+    Value(kind: vkLocal, index: runtime.addrIdx, identifier: ident, ownerFunc: hash(fn))
 
   info "Ident \"" & ident & "\" is being locally marked at index " & $runtime.addrIdx
 
@@ -114,31 +107,33 @@ proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
 proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
   for value in runtime.values:
     for prio in params.priorities:
-      if value.kind != prio: continue
+      if value.kind != prio:
+        continue
 
-      let cond = case value.kind
-      of vkGlobal:
-        value.identifier == ident
-      of vkLocal:
-        assert *params.fn
-        value.identifier == ident and value.ownerFunc == hash(&params.fn)
-      of vkInternal:
-        assert *params.stmt
-        value.identifier == ident and value.ownerStmt == hash(&params.stmt)
-      
+      let cond =
+        case value.kind
+        of vkGlobal:
+          value.identifier == ident
+        of vkLocal:
+          assert *params.fn
+          value.identifier == ident and value.ownerFunc == hash(&params.fn)
+        of vkInternal:
+          assert *params.stmt
+          value.identifier == ident and value.ownerStmt == hash(&params.stmt)
+
       if cond:
         return value.index
-  
+
   raise newException(ValueError, "No such ident: " & ident)
 
 proc generateIR*(
-  runtime: Runtime, 
-  fn: Function, 
-  stmt: Statement, 
-  internal: bool = false, 
-  ownerStmt: Option[Statement] = none(Statement), 
-  exprStoreIn: Option[string] = none(string), 
-  parentStmt: Option[Statement] = none(Statement)
+  runtime: Runtime,
+  fn: Function,
+  stmt: Statement,
+  internal: bool = false,
+  ownerStmt: Option[Statement] = none(Statement),
+  exprStoreIn: Option[string] = none(string),
+  parentStmt: Option[Statement] = none(Statement),
 )
 
 proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false) =
@@ -147,24 +142,29 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
     debug "ir: expand Call statement"
     for i, arg in stmt.arguments:
       if arg.kind == cakAtom:
-        debug "ir: load immutable value to expand Call's immediate arguments: " & arg.atom.crush("")
-        runtime.generateIR(fn, createImmutVal(
-          $i,
-          arg.atom
-        ), ownerStmt = some(stmt), internal = true) # XXX: should this be mutable?
+        debug "ir: load immutable value to expand Call's immediate arguments: " &
+          arg.atom.crush("")
+        runtime.generateIR(
+          fn, createImmutVal($i, arg.atom), ownerStmt = some(stmt), internal = true
+        ) # XXX: should this be mutable?
       elif arg.kind == cakImmediateExpr:
         debug "ir: add code to solve expression to expand Call's immediate arguments"
         runtime.markInternal(stmt, $i)
-        runtime.generateIR(fn, arg.expr, internal = true, exprStoreIn = some($i), parentStmt = some(stmt))
+        runtime.generateIR(
+          fn, arg.expr, internal = true, exprStoreIn = some($i), parentStmt = some(stmt)
+        )
   of ConstructObject:
     debug "ir: expand ConstructObject statement"
     for i, arg in stmt.args:
       if arg.kind == cakAtom:
-        debug "ir: load immutable value to ConstructObject's immediate arguments: " & arg.atom.crush("")
-        runtime.generateIR(fn, createImmutVal(
-          $hash(stmt) & '_' & $i,
-          arg.atom
-        ), ownerStmt = some(stmt), internal = true) # XXX: should this be mutable?
+        debug "ir: load immutable value to ConstructObject's immediate arguments: " &
+          arg.atom.crush("")
+        runtime.generateIR(
+          fn,
+          createImmutVal($hash(stmt) & '_' & $i, arg.atom),
+          ownerStmt = some(stmt),
+          internal = true,
+        ) # XXX: should this be mutable?
   of CallAndStoreResult:
     debug "ir: expand CallAndStoreResult statement by expanding child Call statement"
     runtime.expand(fn, stmt.storeFn, internal)
@@ -172,12 +172,18 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
     debug "ir: expand ThrowError"
 
     if *stmt.error.str:
-      runtime.generateIR(fn, createImmutVal("error_msg", str(&stmt.error.str)), ownerStmt = some(stmt), internal = true)
+      runtime.generateIR(
+        fn,
+        createImmutVal("error_msg", str(&stmt.error.str)),
+        ownerStmt = some(stmt),
+        internal = true,
+      )
   of BinaryOp:
     debug "ir: expand BinaryOp"
 
     if *stmt.binStoreIn:
-      debug "ir: BinaryOp evaluation will be stored in: " & &stmt.binStoreIn & " (" & $runtime.addrIdx & ')'
+      debug "ir: BinaryOp evaluation will be stored in: " & &stmt.binStoreIn & " (" &
+        $runtime.addrIdx & ')'
       runtime.ir.loadInt(runtime.addrIdx, 0)
 
       if not internal:
@@ -190,27 +196,39 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
 
     if stmt.binLeft.kind == AtomHolder:
       debug "ir: BinaryOp left term is an atom"
-      runtime.generateIR(fn, createImmutVal("left_term", stmt.binLeft.atom), ownerStmt = some(stmt), internal = true)
+      runtime.generateIR(
+        fn,
+        createImmutVal("left_term", stmt.binLeft.atom),
+        ownerStmt = some(stmt),
+        internal = true,
+      )
     #else:
     #  debug "ir: BinaryOp left term is an ident, reserving new index for result"
     #  runtime.generateIR(fn, createImmutVal("store_in", null()), ownerStmt = some(stmt), internal = true)
 
     if stmt.binRight.kind == AtomHolder:
       debug "ir: BinaryOp right term is an atom"
-      runtime.generateIR(fn, createImmutVal("right_term", stmt.binRight.atom), ownerStmt = some(stmt), internal = true)
+      runtime.generateIR(
+        fn,
+        createImmutVal("right_term", stmt.binRight.atom),
+        ownerStmt = some(stmt),
+        internal = true,
+      )
     elif stmt.binRight.kind == IdentHolder:
       debug "ir: BinaryOp right term is an ident"
-  else: discard 
+  else:
+    discard
 
 proc verifyNotOccupied*(runtime: Runtime, ident: string, fn: Function): bool =
   var prev = fn.prev
 
   while *prev:
-    let parked = try:
-      discard runtime.index(ident, defaultParams(fn))
-      true
-    except ValueError as exc:
-      false
+    let parked =
+      try:
+        discard runtime.index(ident, defaultParams(fn))
+        true
+      except ValueError as exc:
+        false
 
     if parked:
       return true
@@ -224,9 +242,13 @@ proc semanticError*(runtime: Runtime, error: SemanticError) =
 
   runtime.semanticErrors &= error
 
-proc resolveFieldAccess*(runtime: Runtime, fn: Function, stmt: Statement, address: int, field: string): uint =
+proc resolveFieldAccess*(
+    runtime: Runtime, fn: Function, stmt: Statement, address: int, field: string
+): uint =
   let internalName = $(hash(stmt) !& hash(ident) !& hash(field))
-  runtime.generateIR(fn, createImmutVal(internalName, null()), internal = true, ownerStmt = some(stmt))
+  runtime.generateIR(
+    fn, createImmutVal(internalName, null()), internal = true, ownerStmt = some(stmt)
+  )
   let accessResult = runtime.addrIdx - 1
 
   # start preparing for call to internal field resolver
@@ -238,9 +260,9 @@ proc resolveFieldAccess*(runtime: Runtime, fn: Function, stmt: Statement, addres
   runtime.ir.loadStr(runtime.addrIdx, field)
   inc runtime.addrIdx
 
-  runtime.ir.passArgument(runtime.addrIdx - 3)     # pass `accessResult`
-  runtime.ir.passArgument(runtime.addrIdx - 2)     # pass `address`
-  runtime.ir.passArgument(runtime.addrIdx - 1)     # pass `field`
+  runtime.ir.passArgument(runtime.addrIdx - 3) # pass `accessResult`
+  runtime.ir.passArgument(runtime.addrIdx - 2) # pass `address`
+  runtime.ir.passArgument(runtime.addrIdx - 1) # pass `field`
 
   runtime.ir.call("BALI_RESOLVEFIELD")
   runtime.ir.resetArgs()
@@ -249,34 +271,41 @@ proc resolveFieldAccess*(runtime: Runtime, fn: Function, stmt: Statement, addres
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope)
 
-proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false, ownerStmt: Option[Statement] = none(Statement), exprStoreIn: Option[string] = none(string), parentStmt: Option[Statement] = none(Statement)) =
+proc generateIR*(
+    runtime: Runtime,
+    fn: Function,
+    stmt: Statement,
+    internal: bool = false,
+    ownerStmt: Option[Statement] = none(Statement),
+    exprStoreIn: Option[string] = none(string),
+    parentStmt: Option[Statement] = none(Statement),
+) =
   case stmt.kind
   of CreateImmutVal:
-    info "emitter: generate IR for creating immutable value with identifier: " & stmt.imIdentifier
+    info "emitter: generate IR for creating immutable value with identifier: " &
+      stmt.imIdentifier
 
     case stmt.imAtom.kind
     of Integer:
       info "interpreter: generate IR for loading immutable integer"
-      runtime.ir.loadInt(
-        runtime.addrIdx,
-        stmt.imAtom
-      )
+      runtime.ir.loadInt(runtime.addrIdx, stmt.imAtom)
     of UnsignedInt:
       info "interpreter: generate IR for loading immutable unsigned integer"
       runtime.ir.loadUint(
         runtime.addrIdx,
-        &stmt.imAtom.getUint() # FIXME: make all mirage integer ops work on unsigned integers whenever possible too.
+        &stmt.imAtom.getUint(),
+          # FIXME: make all mirage integer ops work on unsigned integers whenever possible too.
       )
     of String:
       info "interpreter: generate IR for loading immutable string"
-      discard runtime.ir.loadStr(
-        runtime.addrIdx,
-        stmt.imAtom
-      ) # FIXME: mirage: loadStr doesn't have the discardable pragma
+      discard runtime.ir.loadStr(runtime.addrIdx, stmt.imAtom)
+        # FIXME: mirage: loadStr doesn't have the discardable pragma
     of Float:
       info "interpreter: generate IR for loading immutable float"
       discard runtime.ir.addOp(
-        IROperation(opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.imAtom])
+        IROperation(
+          opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.imAtom]
+        )
       ) # FIXME: mirage: loadFloat isn't implemented
     of Boolean:
       info "emitter: generate IR for loading immutable boolean"
@@ -284,8 +313,10 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     of Null:
       info "emitter: generate IR for loading immutable null"
       runtime.ir.loadNull(runtime.addrIdx)
-    else: print stmt.imAtom; unreachable
-    
+    else:
+      print stmt.imAtom
+      unreachable
+
     if not internal:
       if fn.name.len < 1:
         runtime.ir.markGlobal(runtime.addrIdx)
@@ -298,64 +329,59 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     case stmt.mutAtom.kind
     of Integer:
       info "emitter: generate IR for loading mutable integer"
-      runtime.ir.loadInt(
-        runtime.addrIdx,
-        stmt.mutAtom
-      )
+      runtime.ir.loadInt(runtime.addrIdx, stmt.mutAtom)
     of UnsignedInt:
       info "emitter: generate IR for loading mutable unsigned integer"
-      runtime.ir.loadUint(
-        runtime.addrIdx,
-        &stmt.mutAtom.getUint()
-      )
+      runtime.ir.loadUint(runtime.addrIdx, &stmt.mutAtom.getUint())
     of String:
       info "emitter: generate IR for loading mutable string"
-      discard runtime.ir.loadStr(
-        runtime.addrIdx,
-        stmt.mutAtom
-      )
+      discard runtime.ir.loadStr(runtime.addrIdx, stmt.mutAtom)
     of Float:
       info "emitter: generate IR for loading mutable float"
       discard runtime.ir.addOp(
-        IROperation(opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.mutAtom])
+        IROperation(
+          opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.mutAtom]
+        )
       ) # FIXME: mirage: loadFloat isn't implemented
-    else: unreachable
-    
+    else:
+      unreachable
+
     if fn.name.len < 1:
       runtime.ir.markGlobal(runtime.addrIdx)
     runtime.markLocal(fn, stmt.mutIdentifier)
   of Call:
     if runtime.vm.hasBuiltin(stmt.fn):
       info "interpreter: generate IR for calling builtin: " & stmt.fn
-      let args =
-        (proc(): seq[MAtom] =
+      let args = (
+        proc(): seq[MAtom] =
           var x: seq[MAtom]
           for arg in stmt.arguments:
             x &= uinteger runtime.index(arg.ident, defaultParams(fn))
 
           x
-        )()
+      )()
 
-      runtime.ir.call(
-        stmt.fn, args
-      )
+      runtime.ir.call(stmt.fn, args)
     else:
       let nam = stmt.fn.normalizeIRName()
       info "interpreter: generate IR for calling function (normalized): " & nam
       runtime.expand(fn, stmt, internal)
-      
+
       for i, arg in stmt.arguments:
         case arg.kind
         of cakIdent:
-          info "interpreter: passing ident parameter to function with ident: " & arg.ident
-          
+          info "interpreter: passing ident parameter to function with ident: " &
+            arg.ident
+
           runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
         of cakAtom: # already loaded via the statement expander
           let ident = $i
           info "interpreter: passing atom parameter to function with ident: " & ident
           runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
         of cakFieldAccess:
-          let index = runtime.resolveFieldAccess(fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField)
+          let index = runtime.resolveFieldAccess(
+            fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField
+          )
           runtime.ir.markGlobal(index)
           runtime.ir.passArgument(index)
         of cakImmediateExpr:
@@ -366,8 +392,9 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
       runtime.ir.call(nam)
       runtime.ir.resetArgs()
   of ReturnFn:
-    assert not (*stmt.retVal and *stmt.retIdent), "ReturnFn statement cannot have both return atom and return ident at once!"
-    
+    assert not (*stmt.retVal and *stmt.retIdent),
+      "ReturnFn statement cannot have both return atom and return ident at once!"
+
     if *stmt.retVal:
       let name = $hash(fn) & "_retval"
       runtime.generateIR(fn, createImmutVal(name, &stmt.retVal))
@@ -383,7 +410,8 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     runtime.generateIR(fn, stmt.storeFn)
 
     let index = runtime.index(stmt.storeIdent, defaultParams(fn))
-    debug "emitter: call-and-store result will be stored in ident \"" & stmt.storeIdent & "\" or index " & $index
+    debug "emitter: call-and-store result will be stored in ident \"" & stmt.storeIdent &
+      "\" or index " & $index
     runtime.ir.readRegister(index, Register.ReturnValue)
   of ConstructObject:
     runtime.expand(fn, stmt, internal)
@@ -398,10 +426,13 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
         info "interpreter: passing atom parameter to function with ident: " & ident
         runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
       of cakFieldAccess:
-        let index = runtime.resolveFieldAccess(fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField)
+        let index = runtime.resolveFieldAccess(
+          fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField
+        )
         runtime.ir.markGlobal(index)
         runtime.ir.passArgument(index)
-      of cakImmediateExpr: discard
+      of cakImmediateExpr:
+        discard
 
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
   of ReassignVal:
@@ -410,29 +441,22 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
       runtime.semanticError(immutableReassignmentAttempt(stmt))
       return
 
-    info "emitter: reassign value at index " & $index & " with ident \"" & stmt.reIdentifier & "\" to " & stmt.reAtom.crush("")
-    
+    info "emitter: reassign value at index " & $index & " with ident \"" &
+      stmt.reIdentifier & "\" to " & stmt.reAtom.crush("")
+
     case stmt.reAtom.kind
     of Integer:
-      runtime.ir.loadInt(
-        index,
-        stmt.reAtom
-      )
+      runtime.ir.loadInt(index, stmt.reAtom)
     of UnsignedInt:
-      runtime.ir.loadUint(
-        index,
-        &stmt.reAtom.getUint()
-      )
+      runtime.ir.loadUint(index, &stmt.reAtom.getUint())
     of String:
-      discard runtime.ir.loadStr(
-        index,
-        stmt.reAtom
-      )
+      discard runtime.ir.loadStr(index, stmt.reAtom)
     of Float:
       discard runtime.ir.addOp(
         IROperation(opcode: LoadFloat, arguments: @[uinteger index, stmt.reAtom])
       ) # FIXME: mirage: loadFloat isn't implemented
-    else: unreachable
+    else:
+      unreachable
 
     runtime.ir.markGlobal(index)
   of ThrowError:
@@ -450,83 +474,107 @@ proc generateIR*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool
     info "emitter: emitting IR for binary operation"
     runtime.expand(fn, stmt, internal)
 
-    let 
+    let
       leftTerm = stmt.binLeft
       rightTerm = stmt.binRight
 
     # TODO: recursive IR generation
 
     let
-      leftIdx = if leftTerm.kind == AtomHolder:
-        runtime.index("left_term", internalIndex(stmt))
-      elif leftTerm.kind == IdentHolder:
-        runtime.index(leftTerm.ident, defaultParams(fn))
-      else: 0
+      leftIdx =
+        if leftTerm.kind == AtomHolder:
+          runtime.index("left_term", internalIndex(stmt))
+        elif leftTerm.kind == IdentHolder:
+          runtime.index(leftTerm.ident, defaultParams(fn))
+        else:
+          0
 
-      rightIdx = if rightTerm.kind == AtomHolder:
-        runtime.index("right_term", internalIndex(stmt))
-      elif rightTerm.kind == IdentHolder:
-        runtime.index(rightTerm.ident, defaultParams(fn))
-      else: 0
-      
+      rightIdx =
+        if rightTerm.kind == AtomHolder:
+          runtime.index("right_term", internalIndex(stmt))
+        elif rightTerm.kind == IdentHolder:
+          runtime.index(rightTerm.ident, defaultParams(fn))
+        else:
+          0
+
     case stmt.op
-    of BinaryOperation.Add: runtime.ir.addInt(leftIdx, rightIdx)
-    of BinaryOperation.Sub: runtime.ir.subInt(leftIdx, rightIdx)
+    of BinaryOperation.Add:
+      runtime.ir.addInt(leftIdx, rightIdx)
+    of BinaryOperation.Sub:
+      runtime.ir.subInt(leftIdx, rightIdx)
     of BinaryOperation.Equal:
       runtime.ir.equate(leftIdx, rightIdx)
       # FIXME: really weird bug in mirage's IR generator. wtf?
-      let 
+      let
         equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left == right branch
-        unequalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left != right branch
-      
+        unequalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+          # left != right branch
+
       # left == right branch
-      let equalBranch = if leftTerm.kind == AtomHolder:
-        runtime.ir.loadBool(leftIdx, true)
-      else:
-        runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), true)
+      let equalBranch =
+        if leftTerm.kind == AtomHolder:
+          runtime.ir.loadBool(leftIdx, true)
+        else:
+          runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), true)
       runtime.ir.overrideArgs(equalJmp, @[uinteger(equalBranch)])
       runtime.ir.jump(equalBranch + 3)
 
       # left != right branch
-      let unequalBranch = if leftTerm.kind == AtomHolder:
-        runtime.ir.loadBool(leftIdx, false)
-      else:
-        runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
+      let unequalBranch =
+        if leftTerm.kind == AtomHolder:
+          runtime.ir.loadBool(leftIdx, false)
+        else:
+          runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
       runtime.ir.overrideArgs(unequalJmp, @[uinteger(unequalBranch)])
     of BinaryOperation.NotEqual:
       runtime.ir.equate(leftIdx, rightIdx)
       # FIXME: really weird bug in mirage's IR generator. wtf?
-      let equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left == right branch
-      let unequalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left != right branch
-        
+      let equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+        # left == right branch
+      let unequalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+        # left != right branch
+
       # left != right branch: true
-      let unequalBranch = if leftTerm.kind == AtomHolder:
-        runtime.ir.loadBool(leftIdx, true)
-      else:
-        runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), true)
+      let unequalBranch =
+        if leftTerm.kind == AtomHolder:
+          runtime.ir.loadBool(leftIdx, true)
+        else:
+          runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), true)
       runtime.ir.overrideArgs(unequalJmp, @[uinteger(unequalBranch)])
       runtime.ir.jump(unequalBranch + 3)
 
       # left == right branch: false
-      let equalBranch = if leftTerm.kind == AtomHolder:
-        runtime.ir.loadBool(leftIdx, false)
-      else:
-        runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
+      let equalBranch =
+        if leftTerm.kind == AtomHolder:
+          runtime.ir.loadBool(leftIdx, false)
+        else:
+          runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
       runtime.ir.overrideArgs(equalJmp, @[uinteger(equalBranch)])
     else:
-      warn "emitter: unimplemented binary operation: " & $stmt.op 
+      warn "emitter: unimplemented binary operation: " & $stmt.op
 
     if *stmt.binStoreIn:
-      runtime.ir.moveAtom(leftIdx, runtime.index(&stmt.binStoreIn, if not internal: defaultParams(fn) else: internalIndex(stmt)))
+      runtime.ir.moveAtom(
+        leftIdx,
+        runtime.index(
+          &stmt.binStoreIn,
+          if not internal:
+            defaultParams(fn)
+          else:
+            internalIndex(stmt),
+        ),
+      )
     elif *exprStoreIn:
       assert *parentStmt
-      runtime.ir.moveAtom(leftIdx, runtime.index(&exprStoreIn, internalIndex(&parentStmt)))
+      runtime.ir.moveAtom(
+        leftIdx, runtime.index(&exprStoreIn, internalIndex(&parentStmt))
+      )
   of IfStmt:
     info "emitter: emitting IR for if statement"
     let
       trueJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
       falseJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
-    
+
     runtime.generateIRForScope(stmt.branchTrue)
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
@@ -536,22 +584,21 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
 
   for i, arg in fn.arguments:
     runtime.markLocal(fn, arg)
-    runtime.ir.readRegister(runtime.index(arg, defaultParams(fn)), Register.CallArgument)
+    runtime.ir.readRegister(
+      runtime.index(arg, defaultParams(fn)), Register.CallArgument
+    )
     runtime.ir.resetArgs() # reset the call param register
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope) =
-  let 
+  let
     fn = cast[Function](scope)
-    name = if fn.name.len > 0:
-      fn.name
-    else:
-      "outer"
-  
+    name = if fn.name.len > 0: fn.name else: "outer"
+
   debug "generateIRForScope(): function name: " & name
   if not runtime.clauses.contains(name):
     runtime.clauses.add(name)
     runtime.ir.newModule(name.normalizeIRName())
-  
+
   if name != "outer":
     runtime.loadArgumentsOntoStack(fn)
 
@@ -565,14 +612,16 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
 
 proc generateInternalIR*(runtime: Runtime) =
   runtime.ir.newModule("BALI_RESOLVEFIELD")
-  runtime.vm.registerBuiltin("BALI_RESOLVEFIELD_INTERNAL",
+  runtime.vm.registerBuiltin(
+    "BALI_RESOLVEFIELD_INTERNAL",
     proc(op: Operation) =
       let
         ident = runtime.vm.registers.callArgs.pop()
         index = uint(&getInt(runtime.vm.registers.callArgs.pop()))
         storeAt = uint(&getInt(runtime.vm.registers.callArgs.pop()))
 
-      let atom = runtime.vm.stack[index] # FIXME: weird bug with mirage, `get` returns a NULL atom.
+      let atom = runtime.vm.stack[index]
+        # FIXME: weird bug with mirage, `get` returns a NULL atom.
 
       if atom.kind != Object:
         debug "runtime: atom is not an object, returning null."
@@ -580,12 +629,13 @@ proc generateInternalIR*(runtime: Runtime) =
         return
 
       if not atom.objFields.contains(&ident.getStr()):
-        debug "runtime: atom does not have any field \"" & &ident.getStr() & "\"; returning null."
+        debug "runtime: atom does not have any field \"" & &ident.getStr() &
+          "\"; returning null."
         runtime.vm.addAtom(obj(), storeAt)
         return
-      
+
       let value = atom.objValues[atom.objFields[&ident.getStr()]]
-      runtime.vm.addAtom(value, storeAt)
+      runtime.vm.addAtom(value, storeAt),
   )
   runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")
 
@@ -608,7 +658,7 @@ proc run*(runtime: Runtime) =
   runtime.generateIRForScope(runtime.ast.scopes[0])
 
   let source = runtime.ir.emit()
-  
+
   privateAccess(PulsarInterpreter) # modern problems require modern solutions
   runtime.vm.tokenizer = tokenizer.newTokenizer(source)
 
@@ -624,13 +674,13 @@ proc run*(runtime: Runtime) =
   info "interpreter: passing over execution to VM"
   runtime.vm.run()
 
-proc newRuntime*(file: string, ast: AST, opts: InterpreterOpts = default(InterpreterOpts)): Runtime {.inline.} =
+proc newRuntime*(
+    file: string, ast: AST, opts: InterpreterOpts = default(InterpreterOpts)
+): Runtime {.inline.} =
   Runtime(
     ast: ast,
     clauses: @[],
-    ir: newIRGenerator(
-      "bali-" & $sha256(file).toHex()
-    ),
+    ir: newIRGenerator("bali-" & $sha256(file).toHex()),
     vm: newPulsarInterpreter(""),
-    opts: opts
+    opts: opts,
   )

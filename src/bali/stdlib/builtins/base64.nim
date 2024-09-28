@@ -19,17 +19,18 @@ else:
 
 proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   info "builtins.base64: generating IR interfaces"
-  
+
   # atob
   # Decode a base64 encoded string
   generator.newModule("atob")
-  vm.registerBuiltin("BALI_ATOB",
+  vm.registerBuiltin(
+    "BALI_ATOB",
     proc(op: Operation) =
       if vm.registers.callArgs.len < 1:
         typeError(vm, "atob: At least 1 argument required, but only 0 passed")
         return
 
-      template decodeError =
+      template decodeError() =
         warn "atob: failed to decode string: " & exc.msg
         typeError(vm, "atob: String contains an invalid character")
         return
@@ -41,25 +42,29 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
       try:
         vm.registers.retVal = some(str decode(strVal))
       except Base64DecodeError as exc:
-        when not defined(baliUseStdBase64): decodeError
+        when not defined(baliUseStdBase64):
+          decodeError
       except ValueError as exc:
-        when defined(baliUseStdBase64): decodeError
+        when defined(baliUseStdBase64):
+          decodeError
+    ,
   )
   generator.call("BALI_ATOB")
 
   # btoa
   # Encode a string into Base64 data
   generator.newModule("btoa")
-  vm.registerBuiltin("BALI_BTOA",
+  vm.registerBuiltin(
+    "BALI_BTOA",
     proc(op: Operation) =
       if vm.registers.callArgs.len < 1:
         typeError(vm, "btoa: At least 1 argument required, but only 0 passed")
         return
 
-      let 
+      let
         value = vm.RequireObjectCoercible(vm.registers.callArgs[0])
         str = vm.ToString(value)
 
-      vm.registers.retVal = some(str encode(str))
+      vm.registers.retVal = some(str encode(str)),
   )
   generator.call("BALI_BTOA")

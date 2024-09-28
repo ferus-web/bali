@@ -26,9 +26,8 @@ type
     errors*: seq[ParseError]
 
 template error(parser: Parser, kind: ParseErrorKind, msg: string) =
-  parser.errors &=
-    ParseError(location: parser.tokenizer.location, message: msg)
-  
+  parser.errors &= ParseError(location: parser.tokenizer.location, message: msg)
+
   return
 
 proc `$`*(error: ParseError): string =
@@ -47,7 +46,11 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments]
 proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
   let
     args = parser.parseArguments()
-    arguments = if *args: &args else: newSeq[CallArg](0)
+    arguments =
+      if *args:
+        &args
+      else:
+        newSeq[CallArg](0)
 
   if name == "$DONOTEVALUATE":
     parser.ast.doNotEvaluate = true
@@ -56,20 +59,28 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
 
 proc parseAtom*(parser: Parser, token: Token): Option[MAtom]
 
-proc parseExpression*(parser: Parser, storeIn: Option[string] = none(string)): Option[Statement] =
+proc parseExpression*(
+    parser: Parser, storeIn: Option[string] = none(string)
+): Option[Statement] =
   info "parser: parsing arithmetic/binary expression"
   var term = Statement(kind: BinaryOp, binStoreIn: storeIn)
 
   template parseRHSExpression(otherRight: Statement) =
     debug "parser: " & $otherRight.kind & " will fill right term"
     var copiedTok = deepCopy(parser.tokenizer)
-    if not parser.tokenizer.eof() and (let andSymbol = parser.tokenizer.nextExceptWhitespace(); *andSymbol):
+    if not parser.tokenizer.eof() and
+        (let andSymbol = parser.tokenizer.nextExceptWhitespace(); *andSymbol):
       case (&andSymbol).kind
       of TokenKind.And, TokenKind.Or:
         let expr = parser.parseExpression()
 
         if *expr:
-          term.binLeft = Statement(kind: BinaryOp, binStoreIn: storeIn, binLeft: term.binLeft, binRight: otherRight)
+          term.binLeft = Statement(
+            kind: BinaryOp,
+            binStoreIn: storeIn,
+            binLeft: term.binLeft,
+            binRight: otherRight,
+          )
           term.binRight = &expr
           break
         else:
@@ -116,7 +127,7 @@ proc parseExpression*(parser: Parser, storeIn: Option[string] = none(string)): O
       term.op = BinaryOperation.NotEqual
     of TokenKind.Whitespace:
       debug "parser: whilst parsing arithmetic expr, found whitespace"
-      if next.isNewline(): 
+      if next.isNewline():
         debug "parser: whitespace contains newline, aborting expr parsing"
         break
     of TokenKind.LParen:
@@ -146,7 +157,8 @@ proc parseExpression*(parser: Parser, storeIn: Option[string] = none(string)): O
         debug "parser: boolean will fill right term"
         term.binRight = atomHolder(boolean(false))
     else:
-      debug "parser: met unexpected token " & $next.kind & " during tokenization, marking expression parse as failed"
+      debug "parser: met unexpected token " & $next.kind &
+        " during tokenization, marking expression parse as failed"
       return
 
   if term.binLeft != nil and term.binRight != nil:
@@ -159,22 +171,21 @@ proc parseConstructor*(parser: Parser): Option[Statement] =
 
   if !next:
     parser.error UnexpectedToken, "expected Identifier, got EOF"
-      
+
   if (&next).kind != TokenKind.Identifier:
     parser.error UnexpectedToken, "expected Identifier, got " & $(&next).kind
 
   if not parser.tokenizer.eof() and parser.tokenizer.next().kind != TokenKind.LParen:
     parser.error Other, "expected left parenthesis when creating object constructor"
-      
-  return some(
-    constructObject((&next).ident, 
-                    &parser.parseArguments()
-  ))
 
-proc parseDeclaration*(parser: Parser, initialIdent: string, reassignment: bool = false): Option[Statement] =
+  return some(constructObject((&next).ident, &parser.parseArguments()))
+
+proc parseDeclaration*(
+    parser: Parser, initialIdent: string, reassignment: bool = false
+): Option[Statement] =
   info "parser: parse declaration"
   var ident = initialIdent
-  
+
   if not reassignment:
     while not parser.tokenizer.eof:
       let tok = &parser.tokenizer.nextExceptWhitespace()
@@ -184,12 +195,13 @@ proc parseDeclaration*(parser: Parser, initialIdent: string, reassignment: bool 
         ident = tok.ident
       of TokenKind.EqualSign:
         break # weird quirky javascript feature :3 (I hate brendan eich)
-      of TokenKind.Whitespace: continue
+      of TokenKind.Whitespace:
+        continue
       of TokenKind.Number:
         parser.error UnexpectedToken, "numeric literal"
       else:
         parser.error UnexpectedToken, $tok.kind
-  
+
   let
     copiedTok = parser.tokenizer.deepCopy()
     expr = parser.parseExpression(ident.some())
@@ -208,15 +220,13 @@ proc parseDeclaration*(parser: Parser, initialIdent: string, reassignment: bool 
 
   while not parser.tokenizer.eof and !vIdent and !atom:
     let tok = parser.tokenizer.next()
-    
+
     case tok.kind
     of TokenKind.String:
       if tok.malformed:
         error Other, "string literal is malformed"
 
-      atom = some(
-        str tok.str
-      )
+      atom = some(str tok.str)
       break
     of TokenKind.Identifier:
       if not parser.tokenizer.eof() and parser.tokenizer.next().kind == TokenKind.LParen:
@@ -225,25 +235,25 @@ proc parseDeclaration*(parser: Parser, initialIdent: string, reassignment: bool 
         break
       else:
         # just an ident copy
-        vIdent = some(
-          tok.ident
-        )
+        vIdent = some(tok.ident)
         break
     of TokenKind.Number:
       if *tok.intVal:
-        atom = some(
-          uinteger uint32(&tok.intVal)
-        )
-    of TokenKind.Whitespace: discard
+        atom = some(uinteger uint32(&tok.intVal))
+    of TokenKind.Whitespace:
+      discard
     of TokenKind.New:
       toCall = parser.parseConstructor()
       break
-    else: unreachable
-  
-  assert not (*atom and *vIdent and *toCall), "Attempt to assign a value to nothing (something went wrong)"
+    else:
+      unreachable
 
-  if *vIdent: parser.error Other, "assignment from another address is not supported yet"
-  
+  assert not (*atom and *vIdent and *toCall),
+    "Attempt to assign a value to nothing (something went wrong)"
+
+  if *vIdent:
+    parser.error Other, "assignment from another address is not supported yet"
+
   if not reassignment:
     case initialIdent
     of "let", "const":
@@ -256,7 +266,8 @@ proc parseDeclaration*(parser: Parser, initialIdent: string, reassignment: bool 
         return some(createMutVal(ident, &atom))
       elif *toCall:
         return some(callAndStoreMut(ident, &toCall))
-    else: unreachable
+    else:
+      unreachable
   else:
     if not reassignment:
       if *atom:
@@ -281,20 +292,21 @@ proc parseFunction*(parser: Parser): Option[Function] =
     of TokenKind.Identifier:
       name = some(tok.ident)
       break
-    else: discard
+    else:
+      discard
 
   if not *name:
     parser.error Other, "function statement requires a name"
 
-  var 
+  var
     metLParen = false
     metRParen = false
-    arguments: seq[string] 
+    arguments: seq[string]
 
   # TODO: parameter parsing
   while not parser.tokenizer.eof:
     let tok = parser.tokenizer.next()
-    
+
     case tok.kind
     of TokenKind.LParen:
       info "parser: met left-paren"
@@ -303,7 +315,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
     of TokenKind.RParen:
       info "parser: met right-paren"
       metRParen = true
-      
+
       if not metLParen:
         parser.error Other, "missing ( before formal parameters"
     of TokenKind.LCurly:
@@ -311,20 +323,21 @@ proc parseFunction*(parser: Parser): Option[Function] =
 
       if not metLParen:
         parser.error Other, "missing ( before start of function scope"
-      
+
       if not metRParen:
         parser.error Other, "missing ) before start of function scope"
 
       break
-    of TokenKind.Whitespace: discard
+    of TokenKind.Whitespace:
+      discard
     of TokenKind.Identifier:
-      info "parser: appending identifier to expected function argument signature: " & tok.ident
+      info "parser: appending identifier to expected function argument signature: " &
+        tok.ident
       if metRParen:
         parser.error Other, "unexpected identifier after end of function signature"
 
-      arguments &=
-        tok.ident
-    else: 
+      arguments &= tok.ident
+    else:
       warn "parser (unimplemented): whilst parsing parameters: "
       print tok
       discard # parameter parser goes here :3
@@ -332,7 +345,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
   var body: seq[Statement]
   info "parser: parse function body: " & &name
   while not parser.tokenizer.eof:
-    let 
+    let
       prevPos = parser.tokenizer.pos
       prevLoc = parser.tokenizer.location
       c = parser.tokenizer.nextExceptWhitespace()
@@ -343,11 +356,12 @@ proc parseFunction*(parser: Parser): Option[Function] =
     else:
       parser.tokenizer.pos = prevPos
       parser.tokenizer.location = prevLoc
-    
+
     let stmt = parser.parseStatement()
 
     if not *stmt:
-      info "parser: can't find any more statements for function body: " & &name & "; body parsing complete"
+      info "parser: can't find any more statements for function body: " & &name &
+        "; body parsing complete"
       break
 
     var statement = &stmt
@@ -355,26 +369,23 @@ proc parseFunction*(parser: Parser): Option[Function] =
     statement.col = parser.tokenizer.location.col
 
     body &= statement
-  
+
   info "parser: parsed function: " & &name
   some function(&name, body, arguments)
 
 proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
   info "parser: trying to parse an atom out of " & $token.kind
-  
+
   case token.kind
   of TokenKind.Number:
     if *token.intVal:
-      return some integer(
-        &token.intVal
-      )
+      return some integer(&token.intVal)
     else:
       return some floating(token.floatVal)
   of TokenKind.String:
-    return some str(
-      token.str
-    )
-  else: unreachable
+    return some str(token.str)
+  else:
+    unreachable
 
 proc parseArguments*(parser: Parser): Option[PositionedArguments] =
   info "parser: parse arguments for function call"
@@ -386,7 +397,7 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
   while not parser.tokenizer.eof():
     inc idx
     let copiedTok = deepCopy(parser.tokenizer)
-    
+
     if (let expr = parser.parseExpression(); *expr):
       debug "parser: whilst parsing arguments in function call, found expression"
       args.pushImmExpr(&expr)
@@ -398,7 +409,8 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
     let token = parser.tokenizer.next()
 
     case token.kind
-    of TokenKind.Whitespace, TokenKind.Comma: discard
+    of TokenKind.Whitespace, TokenKind.Comma:
+      discard
     of TokenKind.Identifier:
       let
         prevPos = parser.tokenizer.pos
@@ -406,16 +418,11 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
 
       if parser.tokenizer.next().kind == TokenKind.LParen:
         # function!
-        let 
+        let
           call = parser.parseFunctionCall(token.ident)
           resIdent = "@0_" & $idx
 
-        parser.ast.appendToCurrentScope(
-          callAndStoreMut(
-            resIdent, 
-            &call
-          )
-        )
+        parser.ast.appendToCurrentScope(callAndStoreMut(resIdent, &call))
         args.pushIdent(resIdent)
       else:
         parser.tokenizer.pos = prevPos
@@ -436,13 +443,16 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
       let atom = parser.parseAtom(token)
 
       if !atom:
-        parser.error Other, "expected atom, got malformed data instead." # FIXME: make this less vague!
+        parser.error Other, "expected atom, got malformed data instead."
+          # FIXME: make this less vague!
 
       args.pushAtom(&atom)
     of TokenKind.RParen:
       metEnd = true
       break
-    else: print token; unreachable
+    else:
+      print token
+      unreachable
 
   if not metEnd:
     parser.error Other, "missing ) after argument list."
@@ -450,7 +460,7 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
   some args
 
 proc parseConditions*(parser: Parser): Option[Condition] =
-  var 
+  var
     metLParen = false
     lastGate: Gate
     cond: Condition
@@ -462,7 +472,8 @@ proc parseConditions*(parser: Parser): Option[Condition] =
       cond.append(&parser.parseConditions(), lastGate)
     of TokenKind.And:
       lastGate = Gate.And
-    else: unreachable
+    else:
+      unreachable
 
   some(cond)
 
@@ -477,7 +488,8 @@ proc parseThrow*(parser: Parser): Option[Statement] =
     let next = parser.tokenizer.next()
 
     if next.kind == TokenKind.Whitespace and next.whitespace.contains(strutils.Newlines):
-      parser.error UnexpectedToken, "no line break is allowed between 'throw' and its expression"
+      parser.error UnexpectedToken,
+        "no line break is allowed between 'throw' and its expression"
 
     if next.kind == TokenKind.String:
       throwStr = some(next.str)
@@ -486,12 +498,7 @@ proc parseThrow*(parser: Parser): Option[Statement] =
   if !throwStr and !throwErr:
     parser.error Other, "throw statement is missing an expression"
 
-  some(
-    throwError(
-      throwStr,
-      throwErr
-    )
-  )
+  some(throwError(throwStr, throwErr))
 
 proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
   info "parser: parsing re-assignment"
@@ -503,15 +510,13 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
 
   while not parser.tokenizer.eof and !vIdent and !atom:
     let tok = parser.tokenizer.next()
-    
+
     case tok.kind
     of TokenKind.String:
       if tok.malformed:
         error Other, "string literal is malformed"
 
-      atom = some(
-        str tok.str
-      )
+      atom = some(str tok.str)
       break
     of TokenKind.Identifier:
       if not parser.tokenizer.eof() and parser.tokenizer.next().kind == TokenKind.LParen:
@@ -520,35 +525,30 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
         break
       else:
         # just an ident copy
-        vIdent = some(
-          tok.ident
-        )
+        vIdent = some(tok.ident)
         break
     of TokenKind.Number:
       if *tok.intVal:
-        atom = some(
-          uinteger uint32(&tok.intVal)
-        )
-    of TokenKind.Whitespace: discard
+        atom = some(uinteger uint32(&tok.intVal))
+    of TokenKind.Whitespace:
+      discard
     of TokenKind.New:
       let next = parser.tokenizer.nextExceptWhitespace()
 
       if !next:
         parser.error UnexpectedToken, "expected Identifier, got EOF"
-      
+
       if (&next).kind != TokenKind.Identifier:
         parser.error UnexpectedToken, "expected Identifier, got " & $(&next).kind
 
       if not parser.tokenizer.eof() and parser.tokenizer.next().kind != TokenKind.LParen:
         parser.error Other, "expected left parenthesis when creating object constructor"
 
-      toCall = some(
-        constructObject((&next).ident, 
-                        &parser.parseArguments()
-        ))
+      toCall = some(constructObject((&next).ident, &parser.parseArguments()))
       break
-    else: unreachable
-  
+    else:
+      unreachable
+
   if *atom:
     return some(reassignVal(ident, &atom))
   elif *toCall:
@@ -562,7 +562,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
   if !tok:
     return #parser.error Other, "expected statement, got whitespace/EOF instead."
-  
+
   let token = &tok
 
   case token.kind
@@ -578,42 +578,44 @@ proc parseStatement*(parser: Parser): Option[Statement] =
   of TokenKind.Function:
     info "parser: parse function declaration"
     let fnOpt = parser.parseFunction()
-    
+
     if !fnOpt:
       parser.error Other, "unexpected end of input"
-    
+
     var fn = &fnOpt
-    
+
     var scope = parser.ast.scopes[0]
-      
+
     while *scope.next:
       scope = &scope.next
-    
+
     fn.prev = some(scope)
     scope.next = some(Scope(fn))
   of TokenKind.Identifier:
-    let 
+    let
       prevPos = parser.tokenizer.pos
       prevLoc = parser.tokenizer.location
-    
+
     if not parser.tokenizer.eof():
       let next = parser.tokenizer.nextExceptWhitespace()
 
       if !next:
-        return # FIXME: should we expand this into a `Call("console.log", `ident`)` instead?
-      
+        return
+          # FIXME: should we expand this into a `Call("console.log", `ident`)` instead?
+
       case (&next).kind
       of TokenKind.LParen:
         return parser.parseFunctionCall(token.ident) #some call(token.ident, arguments)
       of TokenKind.EqualSign:
         return parser.parseReassignment(token.ident)
       else:
-        parser.error UnexpectedToken, "expected left parenthesis or equal sign, got " & $(&next).kind
-      
+        parser.error UnexpectedToken,
+          "expected left parenthesis or equal sign, got " & $(&next).kind
+
     parser.tokenizer.pos = prevPos
     parser.tokenizer.location = prevLoc
   of TokenKind.Return:
-    let 
+    let
       prevPos = parser.tokenizer.pos
       prevLoc = parser.tokenizer.location
 
@@ -628,8 +630,9 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       of TokenKind.Whitespace:
         if next.whitespace.contains(strutils.Newlines):
           return some returnFunc()
-      else: unreachable
-    
+      else:
+        unreachable
+
     parser.tokenizer.pos = prevPos
     parser.tokenizer.location = prevLoc
     return some returnFunc()
@@ -661,7 +664,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     var body: seq[Statement]
     info "parser: parse if-statement body"
     while not parser.tokenizer.eof:
-      let 
+      let
         prevPos = parser.tokenizer.pos
         prevLoc = parser.tokenizer.location
         c = parser.tokenizer.nextExceptWhitespace()
@@ -672,7 +675,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       else:
         parser.tokenizer.pos = prevPos
         parser.tokenizer.location = prevLoc
-    
+
       let stmt = parser.parseStatement()
 
       if not *stmt:
@@ -684,7 +687,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       statement.col = parser.tokenizer.location.col
 
       body &= statement
-     
+
     var lastScope = parser.ast.scopes[parser.ast.currentScope]
     var exprScope = Scope(stmts: body)
     exprScope.prev = some(lastScope)
@@ -696,16 +699,20 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       parser.error Other, "expected expression for `new`"
 
     return expr
-  of TokenKind.Comment, TokenKind.String, TokenKind.Number, TokenKind.Null: discard
-  of TokenKind.Shebang, TokenKind.Semicolon: discard
-  else: print token; unreachable
+  of TokenKind.Comment, TokenKind.String, TokenKind.Number, TokenKind.Null:
+    discard
+  of TokenKind.Shebang, TokenKind.Semicolon:
+    discard
+  else:
+    print token
+    unreachable
 
 proc parse*(parser: Parser): AST {.inline.} =
   parser.ast = newAST()
 
   while not parser.tokenizer.eof():
     let stmt = parser.parseStatement()
-    
+
     if *stmt:
       var statement = &stmt
       statement.line = parser.tokenizer.location.line
@@ -715,6 +722,4 @@ proc parse*(parser: Parser): AST {.inline.} =
   parser.ast
 
 proc newParser*(input: string): Parser {.inline.} =
-  Parser(
-    tokenizer: newTokenizer(input)
-  )
+  Parser(tokenizer: newTokenizer(input))

@@ -3,12 +3,11 @@ import bali/internal/sugar
 import pretty
 import ./[statement, scopes]
 
-type
-  AST* = ref object
-    currentScope*: int
-    scopes*: seq[Scope]
+type AST* = ref object
+  currentScope*: int
+  scopes*: seq[Scope]
 
-    doNotEvaluate*: bool = false # For Test262
+  doNotEvaluate*: bool = false # For Test262
 
 proc `&=`*(ast: AST, scope: Scope) =
   ast.scopes &= scope
@@ -31,23 +30,22 @@ proc append*(ast: AST, name: string, stmt: Statement) =
     if fn.name == name:
       fn.stmts &= stmt
       return
-  
+
   raise newException(ValueError, "No such scope: " & name)
 
 iterator items*(ast: AST): Scope =
   for scope in ast.scopes:
     yield scope
 
-func function*(name: string, stmts: seq[Statement], args: seq[string]): Function {.inline.} =
-  Function(
-    name: name,
-    stmts: stmts,
-    arguments: args
-  )
+func function*(
+    name: string, stmts: seq[Statement], args: seq[string]
+): Function {.inline.} =
+  Function(name: name, stmts: stmts, arguments: args)
 
-proc newAST*: AST {.inline.} =
+proc newAST*(): AST {.inline.} =
   AST(
-    scopes: @[
-      Scope() # top-level scope
-    ]
+    scopes:
+      @[
+        Scope() # top-level scope
+      ]
   )

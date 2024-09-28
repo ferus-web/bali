@@ -16,23 +16,25 @@ proc test262Error*(vm: PulsarInterpreter, msg: string) =
 
 proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
   info "builtins.test262: generating IR interfaces"
-  
+
   # $DONOTEVALUATE (stub)
   generator.newModule(normalizeIRName "$DONOTEVALUATE")
-  vm.registerBuiltin("TESTS_DONOTEVALUATE",
+  vm.registerBuiltin(
+    "TESTS_DONOTEVALUATE",
     proc(op: Operation) =
-      return
+      return ,
   )
   generator.call("TESTS_DONOTEVALUATE")
 
   # assert.sameValue
   generator.newModule(normalizeIRName "assert.sameValue")
-  vm.registerBuiltin("TESTS_ASSERTSAMEVALUE",
+  vm.registerBuiltin(
+    "TESTS_ASSERTSAMEVALUE",
     proc(op: Operation) =
-      template no =
+      template no() =
         vm.test262Error("Assert.sameValue(): " & a.crush() & " != " & b.crush())
-      
-      template yes =
+
+      template yes() =
         info "Assert.sameValue(): passed test! (" & a.crush() & " == " & b.crush() & ')'
         discard
 
@@ -42,23 +44,17 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
 
       if a.kind != b.kind:
         no
-      
+
       case a.kind
       of Integer:
-        if a.getInt() == b.getInt():
-          yes
-        else:
-          no
+        if a.getInt() == b.getInt(): yes else: no
       of UnsignedInt:
-        if a.getUint() == b.getUint():
-          yes
-        else: no
+        if a.getUint() == b.getUint(): yes else: no
       of String:
-        if a.getStr() == b.getStr():
-          yes
-        else:
-          no
-      of Null: yes
-      else: no
+        if a.getStr() == b.getStr(): yes else: no
+      of Null:
+        yes
+      else:
+        no,
   )
   generator.call("TESTS_ASSERTSAMEVALUE")

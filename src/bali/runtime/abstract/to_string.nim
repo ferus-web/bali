@@ -26,15 +26,24 @@ proc ToString*(vm: PulsarInterpreter, value: MAtom): string {.inline.} =
     return "null" # 4. If argument is null, return "null".
   of Boolean:
     debug "runtime: toString(): atom is a boolean."
-    return $(&value.getBool()) # 5. If argument is true, return "true"
-                               # 6. If argument is false, return "false".
+    return
+      $(&value.getBool())
+        # 5. If argument is true, return "true"
+        # 6. If argument is false, return "false".
   of Integer:
     debug "runtime: toString(): atom is a number (int)."
-    return $(&value.getInt()) # 7. If argument is a Number, return Number::toString(argument, 10).
+    return
+      $(&value.getInt())
+        # 7. If argument is a Number, return Number::toString(argument, 10).
   of Float:
     debug "runtime: toString(): atom is a number (float)."
-    return $(&value.getFloat()) # 7. If argument is a Number, return Number::toString(argument, 10).
+    return
+      $(&value.getFloat())
+        # 7. If argument is a Number, return Number::toString(argument, 10).
   of UnsignedInt:
     debug "runtime: toString(): atom is a number (uint)."
-    return $(&value.getUint()) # 7. If argument is a Number, return Number::toString(argument, 10).
-  of Sequence: return "undefined" # FIXME: not implemented yet!
+    return
+      $(&value.getUint())
+        # 7. If argument is a Number, return Number::toString(argument, 10).
+  of Sequence:
+    return "undefined" # FIXME: not implemented yet!

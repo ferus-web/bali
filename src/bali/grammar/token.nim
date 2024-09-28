@@ -3,7 +3,6 @@ import std/[options, strutils, tables]
 type
   TokenKind* {.pure.} = enum
     Identifier
-
     Break
     Case
     Catch
@@ -31,18 +30,15 @@ type
     Void
     While
     With
-
     Class
     Enum
     Export
     Extends
     Import
     Super
-
     Null
     True
     False
-
     Implements
     Interface
     Let
@@ -52,9 +48,8 @@ type
     Public
     Static
     Yield
-
-    Get, Set
-
+    Get
+    Set
     LCurly
     RCurly
     LBracket
@@ -109,11 +104,9 @@ type
     BxorEq
     LAndEq
     LOrEq
-    
     Number
     String
     Regexp
-    
     Whitespace
     Comment
     Invalid
@@ -137,23 +130,23 @@ type
       multiline*: bool
     of Shebang:
       shebang*: string
-    else: discard
+    else:
+      discard
 
 func isNewline*(token: Token): bool {.inline.} =
   token.kind == TokenKind.Whitespace and token.whitespace.contains(strutils.Newlines)
 
-const
-  Keywords* = {
-    "const": TokenKind.Const,
-    "let": TokenKind.Let,
-    "var": TokenKind.Var,
-    "if": TokenKind.If,
-    "else": TokenKind.Else,
-    "true": TokenKind.True,
-    "false": TokenKind.False,
-    "new": TokenKind.New,
-    "debugger": TokenKind.Debugger,
-    "throw": TokenKind.Throw,
-    "function": TokenKind.Function,
-    "return": TokenKind.Return
-  }.toTable
+const Keywords* = {
+  "const": TokenKind.Const,
+  "let": TokenKind.Let,
+  "var": TokenKind.Var,
+  "if": TokenKind.If,
+  "else": TokenKind.Else,
+  "true": TokenKind.True,
+  "false": TokenKind.False,
+  "new": TokenKind.New,
+  "debugger": TokenKind.Debugger,
+  "throw": TokenKind.Throw,
+  "function": TokenKind.Function,
+  "return": TokenKind.Return,
+}.toTable

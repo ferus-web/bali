@@ -13,7 +13,7 @@ type
 
   SourceLocation* = object
     line*, col*: uint
-    
+
   Tokenizer* = ref object
     pos*: uint = 0
     location*: SourceLocation
@@ -22,10 +22,11 @@ type
 {.push inline, gcsafe.}
 
 func eof*(tokenizer: Tokenizer): bool =
-  let len = if tokenizer.source.len.uint < 1: 
-    0'u 
-  else: 
-    tokenizer.source.len.uint - 1
+  let len =
+    if tokenizer.source.len.uint < 1:
+      0'u
+    else:
+      tokenizer.source.len.uint - 1
 
   tokenizer.pos > len
 
@@ -37,7 +38,7 @@ proc consume*(tokenizer: Tokenizer): char =
   if c == '\n':
     inc tokenizer.location.line
     tokenizer.location.col = 0
-  
+
   c
 
 func hasAtleast*(tokenizer: Tokenizer, num: uint): bool =
@@ -58,14 +59,13 @@ proc advance*(tokenizer: Tokenizer, offset: uint = 1) =
   tokenizer.location.col += offset
 
 func newTokenizer*(source: string): Tokenizer =
-  Tokenizer(
-    pos: 0,
-    source: source
-  )
+  Tokenizer(pos: 0, source: source)
 
 proc next*(tokenizer: Tokenizer): Token
 
-proc tokenize*(tokenizer: Tokenizer, opts: TokenizerOpts = default(TokenizerOpts)): seq[Token] =
+proc tokenize*(
+    tokenizer: Tokenizer, opts: TokenizerOpts = default(TokenizerOpts)
+): seq[Token] =
   var tokens: seq[Token]
 
   while not tokenizer.eof():
@@ -81,9 +81,8 @@ proc consumeInvalid*(tokenizer: Tokenizer): Token =
   warn "tokenizer: consume invalid token for character: " & (&tokenizer.charAt()).repr()
   tokenizer.advance()
 
-  Token(
-    kind: TokenKind.Invalid
-  )
+  Token(kind: TokenKind.Invalid)
+
 {.pop.}
 
 proc consumeIdentifier*(tokenizer: Tokenizer): Token =
@@ -99,20 +98,15 @@ proc consumeIdentifier*(tokenizer: Tokenizer): Token =
       tokenizer.advance()
     else:
       break
-  
+
   if not Keywords.contains(ident):
     debug "tokenizer: consumed identifier \"" & ident & "\""
-    Token(
-      kind: TokenKind.Identifier,
-      ident: ident
-    )
+    Token(kind: TokenKind.Identifier, ident: ident)
   else:
     let keyword = Keywords[ident]
     debug "tokenizer: consumed keyword: " & $keyword
 
-    Token(
-      kind: keyword
-    )
+    Token(kind: keyword)
 
 proc consumeWhitespace*(tokenizer: Tokenizer): Token =
   debug "tokenizer: consume whitespace"
@@ -130,10 +124,7 @@ proc consumeWhitespace*(tokenizer: Tokenizer): Token =
 
   debug "tokenizer: consumed " & $ws.len & " whitespace character(s)"
 
-  Token(
-    kind: TokenKind.Whitespace,
-    whitespace: ws
-  )
+  Token(kind: TokenKind.Whitespace, whitespace: ws)
 
 proc consumeEquality*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
@@ -162,7 +153,7 @@ proc consumeString*(tokenizer: Tokenizer): Token =
   debug "tokenizer: consume string with closing character: " & closesWith
   tokenizer.advance()
 
-  var 
+  var
     str: string
     ignoreNextQuote = false
 
@@ -171,7 +162,7 @@ proc consumeString*(tokenizer: Tokenizer): Token =
 
     if c == closesWith and not ignoreNextQuote:
       break
-    
+
     if c == '\\':
       ignoreNextQuote = true
       tokenizer.advance()
@@ -188,12 +179,8 @@ proc consumeString*(tokenizer: Tokenizer): Token =
   else:
     warn "tokenizer: consumed malformed string: " & str
     warn "tokenizer: this string does not end with the ending character: " & closesWith
- 
-  Token(
-    kind: TokenKind.String,
-    malformed: malformed,
-    str: str
-  )
+
+  Token(kind: TokenKind.String, malformed: malformed, str: str)
 
 proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
   debug "tokenizer: consuming comment"
@@ -202,7 +189,7 @@ proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
 
   while (not tokenizer.eof()):
     let c = &tokenizer.charAt()
-    
+
     if not multiline and c in strutils.Newlines:
       break
 
@@ -212,14 +199,10 @@ proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
 
     comment &= c
     tokenizer.advance()
-  
+
   debug "tokenizer: consumed comment: " & comment
 
-  Token(
-    kind: TokenKind.Comment,
-    multiline: multiline,
-    comment: comment
-  )
+  Token(kind: TokenKind.Comment, multiline: multiline, comment: comment)
 
 proc consumeSlash*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
@@ -289,17 +272,16 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
   var
     integralPart: float64
     digit: uint32
-  
+
   while not tokenizer.eof and unpack(charToDecimalDigit(&tokenizer.charAt()), digit):
     integralPart = integralPart * 10'f64 + digit.float64
     tokenizer.advance(1)
-  
+
   var
     isInteger = true
     fractionalPart: float64 = 0'f64
-  
-  if tokenizer.charAt() == some('.') and
-      &tokenizer.charAt(1) in {'0' .. '9'}:
+
+  if tokenizer.charAt() == some('.') and &tokenizer.charAt(1) in {'0' .. '9'}:
     isInteger = false
     tokenizer.advance(1)
 
@@ -359,25 +341,26 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
 
 proc consumePlus*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
-  
+
   let next = tokenizer.charAt()
   if not *next:
     return Token(kind: TokenKind.Add)
-  
+
   case &next
   of '+':
     tokenizer.advance()
     return Token(kind: TokenKind.Increment)
   of strutils.Whitespace:
     return Token(kind: TokenKind.Add)
-  else: discard
+  else:
+    discard
 
 proc consumeAmpersand*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
   let next = tokenizer.charAt()
   if !next:
     return tokenizer.consumeInvalid()
-  
+
   case &next
   of '&':
     debug "tokenizer: consumed And operand"
@@ -392,7 +375,7 @@ proc consumePipe*(tokenizer: Tokenizer): Token =
   let next = tokenizer.charAt()
   if !next:
     return tokenizer.consumeInvalid()
-  
+
   case &next
   of '|':
     debug "tokenizer: consumed Or operand"
@@ -407,11 +390,11 @@ proc consumeHash*(tokenizer: Tokenizer): Token =
   if tokenizer.charAt() == some('!'):
     # shebang logic
     tokenizer.advance()
-    var shebang: string 
+    var shebang: string
 
     while not tokenizer.eof:
       let c = tokenizer.consume()
-      
+
       case c
       of strutils.Newlines:
         break
@@ -420,18 +403,15 @@ proc consumeHash*(tokenizer: Tokenizer): Token =
 
       tokenizer.advance()
 
-    return Token(
-      kind: TokenKind.Shebang,
-      shebang: shebang
-    )
-  
+    return Token(kind: TokenKind.Shebang, shebang: shebang)
+
   tokenizer.consumeInvalid()
 
 proc next*(tokenizer: Tokenizer): Token =
   let c = tokenizer.charAt()
 
   case &c
-  of {'a'..'z'}, {'A'..'Z'}, '_', '$':
+  of {'a' .. 'z'}, {'A' .. 'Z'}, '_', '$':
     tokenizer.consumeIdentifier()
   of strutils.Whitespace:
     tokenizer.consumeWhitespace()
@@ -451,49 +431,31 @@ proc next*(tokenizer: Tokenizer): Token =
       tokenizer.consumeNumeric(true)
     else:
       tokenizer.advance()
-      return Token(
-        kind: TokenKind.Sub
-      )
+      return Token(kind: TokenKind.Sub)
   of '.':
     tokenizer.advance()
-    Token(
-      kind: TokenKind.Dot
-    )
+    Token(kind: TokenKind.Dot)
   of '(':
     tokenizer.advance()
-    Token(
-      kind: TokenKind.LParen
-    )
+    Token(kind: TokenKind.LParen)
   of ')':
     tokenizer.advance()
-    Token(
-      kind: TokenKind.RParen
-    )
+    Token(kind: TokenKind.RParen)
   of '[':
     tokenizer.advance()
-    Token(
-      kind: TokenKind.LBracket
-    )
+    Token(kind: TokenKind.LBracket)
   of ']':
     tokenizer.advance()
-    Token(
-      kind: TokenKind.RBracket
-    )
+    Token(kind: TokenKind.RBracket)
   of '{':
     tokenizer.advance()
-    Token(
-      kind: TokenKind.LCurly
-    )
+    Token(kind: TokenKind.LCurly)
   of '}':
     tokenizer.advance()
-    Token(
-      kind: TokenKind.RCurly
-    )
+    Token(kind: TokenKind.RCurly)
   of ',':
     tokenizer.advance()
-    Token(
-      kind: TokenKind.Comma
-    )
+    Token(kind: TokenKind.Comma)
   of '!':
     tokenizer.consumeExclaimation()
   of '+':
@@ -504,9 +466,7 @@ proc next*(tokenizer: Tokenizer): Token =
     tokenizer.consumePipe()
   of ';':
     tokenizer.advance()
-    Token(
-      kind: TokenKind.Semicolon
-    )
+    Token(kind: TokenKind.Semicolon)
   of '#':
     tokenizer.consumeHash()
   of '*':
@@ -520,7 +480,7 @@ proc nextExceptWhitespace*(tokenizer: Tokenizer): Option[Token] =
 
   while not tokenizer.eof() and tok.kind == TokenKind.Whitespace:
     tok = tokenizer.next()
-  
+
   if tok.kind != TokenKind.Whitespace:
     some tok
   else:

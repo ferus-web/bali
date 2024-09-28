@@ -11,11 +11,11 @@ import bali/internal/sugar
 import bali/runtime/prelude
 import climate, colored_logger, jsony, pretty
 
-var 
+var
   enableProfiler = false
   profile = initTable[string, int64]()
 
-proc enableLogging {.inline.} =
+proc enableLogging() {.inline.} =
   addHandler newColoredLogger()
 
 template profileThis(task: string, body: untyped) =
@@ -24,7 +24,7 @@ template profileThis(task: string, body: untyped) =
     start = getMonoTime()
 
   body
-  
+
   if enableProfiler:
     let ant = getMonoTime()
     profile[task] = inMilliseconds(ant - start)
@@ -42,17 +42,18 @@ proc execFile(ctx: Context, file: string) {.inline.} =
   profileThis "execFile() sanity checks":
     if not fileExists(file):
       die "file not found:", file
-  
+
     let perms = getFilePermissions(file)
     if fpGroupRead notin perms and fpUserRead notin perms:
       die "access denied:", file
 
   profileThis "read source file":
-    let source = try:
-      readFile(file)
-    except IOError as exc:
-      die "failed to open file:", exc.msg
-      ""
+    let source =
+      try:
+        readFile(file)
+      except IOError as exc:
+        die "failed to open file:", exc.msg
+        ""
 
   if ctx.cmdOptions.contains("dump-tokens"):
     let excludeWs = ctx.cmdOptions.contains("no-whitespace")
@@ -60,29 +61,27 @@ proc execFile(ctx: Context, file: string) {.inline.} =
     while not tok.eof:
       if excludeWs:
         let val = tok.nextExceptWhitespace()
-        if !val: break
+        if !val:
+          break
         print &val
       else:
         print tok.next()
 
     quit(0)
 
-  profileThis "allocate parser": 
+  profileThis "allocate parser":
     let parser = newParser(source)
-  
+
   profileThis "parse source code":
     let ast = parser.parse()
 
   if ctx.cmdOptions.contains("dump-ast"):
     print ast
     quit(0)
-  
+
   profileThis "allocate runtime":
     let runtime = newRuntime(
-      file, ast,
-      InterpreterOpts(
-        test262: ctx.cmdOptions.contains("test262")
-      )
+      file, ast, InterpreterOpts(test262: ctx.cmdOptions.contains("test262"))
     )
 
   profileThis "execution time":
@@ -95,28 +94,24 @@ proc baldeRun(ctx: Context): int =
   if not ctx.cmdOptions.contains("verbose") or ctx.cmdOptions.contains("v"):
     setLogFilter(lvlWarn)
 
-  enableProfiler = ctx.cmdOptions.contains("enable-profiler") or ctx.cmdOptions.contains("P")
+  enableProfiler =
+    ctx.cmdOptions.contains("enable-profiler") or ctx.cmdOptions.contains("P")
 
   ctx.arg:
     execFile(ctx, arg)
   do:
     die "`run` requires a file to evaluate."
 
-proc main {.inline.} =
+proc main() {.inline.} =
   enableLogging()
 
-  const commands = {
-    "run": baldeRun
-  }
+  const commands = {"run": baldeRun}
 
   let value = parseCommands(commands)
-  
+
   if enableProfiler:
-    writeFile(
-      "balde_profiler.txt",
-      toJson profile
-    )
-  
+    writeFile("balde_profiler.txt", toJson profile)
+
   quit(value)
 
 when isMainModule:

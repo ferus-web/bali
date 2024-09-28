@@ -16,15 +16,9 @@ let fn = function(
   @[
     createImmutVal("x", integer(32)), # equivalent to `const x = 32`
     createImmutVal("y", integer(32)),
-    ifCond(
-      lhs = "x", rhs = "y", ecEqual
-    ),
-    call("console.log", 
-      @[
-        atomArg integer 32
-      ]
-    )
-  ]
+    ifCond(lhs = "x", rhs = "y", ecEqual),
+    call("console.log", @[atomArg integer 32]),
+  ],
 )
 program &= fn
 

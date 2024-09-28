@@ -8,7 +8,7 @@ const BASE_DIR = "test262/test"
 proc execJS(file: string): bool =
   execCmd("./balde run " & file & " --test262") == 0
 
-proc main {.inline.} =
+proc main() {.inline.} =
   addHandler(newColoredLogger())
   addHandler(newFileLogger("test262.log"))
 
@@ -32,16 +32,16 @@ Commands:
     let head = paramStr(2)
 
     var filesToExec = 0
-    
+
     if not dirExists(BASE_DIR / head):
       error "Invalid testing category: " & head
       quit(1)
 
-    var
-      successful, failed, skipped: seq[string]
+    var successful, failed, skipped: seq[string]
 
     for file in walkDirRec(BASE_DIR / head):
-      if not fileExists(file): continue
+      if not fileExists(file):
+        continue
       if not file.endsWith(".js"):
         skipped &= file
         continue
@@ -56,11 +56,11 @@ Commands:
         warn "Test for `" & file & "` has failed."
         failed &= file
         continue
-    
+
     let
       successPercentage = (successful.len / filesToExec) * 100f
       failedPercentage = (failed.len / filesToExec) * 100f
-    
+
     if failed.len > 0:
       info "The following tests have failed:"
       for i, fail in failed:
@@ -69,19 +69,22 @@ Commands:
           break
 
         echo "  * " & fail
-    
+
     if paramCount() > 1 and paramStr(2) == "json":
-      echo $(%* {
-        "total": $filesToExec,
-        "successful": $successful.len,
-        "skipped": $skipped.len,
-        "failed": $failed.len,
-        "successful_percentage": $successPercentage
-      })
+      echo $(
+        %*{
+          "total": $filesToExec,
+          "successful": $successful.len,
+          "skipped": $skipped.len,
+          "failed": $failed.len,
+          "successful_percentage": $successPercentage,
+        }
+      )
     else:
       info "Total tests: " & $filesToExec
       info "Successful tests: " & $successPercentage & "% (" & $successful.len & ')'
       info "Skipped tests: " & $skipped
       info "Failed tests: " & $failedPercentage & "% (" & $failed.len & ')'
-      
-when isMainModule: main()
+
+when isMainModule:
+  main()

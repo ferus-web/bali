@@ -4,10 +4,6 @@ import ../common
 enableLogging()
 
 var tokenizer = newTokenizer(readFile paramStr 1)
-let tokens = tokenizer.tokenize(
-  TokenizerOpts(
-    ignoreWhitespace: true
-  )
-)
+let tokens = tokenizer.tokenize(TokenizerOpts(ignoreWhitespace: true))
 
 print tokens

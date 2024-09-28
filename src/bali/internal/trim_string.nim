@@ -9,14 +9,13 @@ import bali/runtime/abstract/[coercible, to_string]
 
 import pretty
 
-type
-  TrimMode* {.pure.} = enum
-    Left
-    Right
-    Both
+type TrimMode* {.pure.} = enum
+  Left
+  Right
+  Both
 
 proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inline.} =
-  var 
+  var
     substringStart = 0
     substringLength = str.len
 
@@ -27,7 +26,7 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
 
       if not things.contains(c):
         break
-      
+
       substringStart += 1
       substringLength -= 1
 
@@ -44,14 +43,10 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
       return
 
     substringLength -= seenWhitespaceLength
-  
+
   str[substringStart ..< str.len]
 
-proc trimString*(
-  vm: PulsarInterpreter,
-  input: MAtom,
-  where: TrimMode
-): string =
+proc trimString*(vm: PulsarInterpreter, input: MAtom, where: TrimMode): string =
   # 1. Let str be ? RequireObjectCoercible(string).
   let inputString = RequireObjectCoercible(vm, input)
 

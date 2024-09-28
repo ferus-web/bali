@@ -1,11 +1,11 @@
 # Package
 
-version       = "0.3.0"
-author        = "xTrayambak"
-description   = "The Bali JavaScript Engine"
-license       = "MIT"
-srcDir        = "src"
-backend       = "cpp"
+version = "0.3.0"
+author = "xTrayambak"
+description = "The Bali JavaScript Engine"
+license = "MIT"
+srcDir = "src"
+backend = "cpp"
 
 # Dependencies
 

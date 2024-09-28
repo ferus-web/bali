@@ -47,7 +47,7 @@ type
   Function* = ref object of Scope
     name*: string = "outer"
     arguments*: seq[string] ## expected arguments!
-  
+
   BinaryOperation* {.pure.} = enum
     Add
     Sub
@@ -55,10 +55,8 @@ type
     Div
     Pow
     Invalid
-
     Equal
     TrueEqual
-
     NotEqual
     NotTrueEqual
 
@@ -119,44 +117,19 @@ proc hash*(stmt: Statement): Hash {.inline.} =
   hash = hash !& stmt.kind.int
   case stmt.kind
   of CreateMutVal:
-    hash = hash !& hash(
-      (
-        stmt.mutIdentifier,
-        stmt.mutAtom
-      )
-    )
+    hash = hash !& hash((stmt.mutIdentifier, stmt.mutAtom))
   of CreateImmutVal:
-    hash = hash !& hash(
-      (
-        stmt.imIdentifier,
-        stmt.imAtom
-      )
-    )
+    hash = hash !& hash((stmt.imIdentifier, stmt.imAtom))
   of Call:
-    hash = hash !& hash(
-      (
-        stmt.fn,
-        stmt.arguments
-      )
-    )
+    hash = hash !& hash((stmt.fn, stmt.arguments))
   of NewFunction:
-    hash = hash !& hash(
-      (
-        stmt.fnName
-      )
-    )
+    hash = hash !& hash((stmt.fnName))
   of BinaryOp:
-    hash = hash !& hash(
-      (stmt.op, stmt.binLeft, stmt.binRight, stmt.binStoreIn)
-    )
+    hash = hash !& hash((stmt.op, stmt.binLeft, stmt.binRight, stmt.binStoreIn))
   of IfStmt:
-    hash = hash !& hash(
-      (stmt.conditionExpr)
-    )
+    hash = hash !& hash((stmt.conditionExpr))
   of AccessField:
-    hash = hash !& hash(
-      (stmt.identifier, stmt.field)
-    )
+    hash = hash !& hash((stmt.identifier, stmt.field))
   of AtomHolder:
     hash = hash !& hash(stmt.atom)
   of IdentHolder:
@@ -167,56 +140,36 @@ proc hash*(stmt: Statement): Hash {.inline.} =
   hash
 
 proc pushIdent*(args: var PositionedArguments, ident: string) {.inline.} =
-  args &=
-    CallArg(
-      kind: cakIdent,
-      ident: ident
-    )
+  args &= CallArg(kind: cakIdent, ident: ident)
 
-proc pushFieldAccess*(args: var PositionedArguments, ident: string, field: string) {.inline.} =
-  args &=
-    CallArg(
-      kind: cakFieldAccess,
-      fIdent: ident,
-      fField: field
-    )
+proc pushFieldAccess*(
+    args: var PositionedArguments, ident: string, field: string
+) {.inline.} =
+  args &= CallArg(kind: cakFieldAccess, fIdent: ident, fField: field)
 
 proc pushAtom*(args: var PositionedArguments, atom: MAtom) {.inline.} =
-  args &=
-    CallArg(
-      kind: cakAtom,
-      atom: atom
-    )
+  args &= CallArg(kind: cakAtom, atom: atom)
 
 proc pushImmExpr*(args: var PositionedArguments, expr: Statement) {.inline.} =
   assert expr.kind == BinaryOp, "Attempt to push non expression"
-  args &=
-    CallArg(
-      kind: cakImmediateExpr,
-      expr: expr
-    )
+  args &= CallArg(kind: cakImmediateExpr, expr: expr)
 
 {.push checks: off, inline.}
 proc throwError*(
-  errorStr: Option[string],
-  errorExc: Option[void] # TODO: implement
+    errorStr: Option[string], errorExc: Option[void], # TODO: implement
 ): Statement =
   if *errorStr and *errorExc:
-    raise newException(ValueError, "Both `errorStr` and `errorExc` are full containers - something has went horribly wrong.")
-  
-  Statement(
-    kind: ThrowError,
-    error: (str: errorStr, exc: errorExc)
-  )
+    raise newException(
+      ValueError,
+      "Both `errorStr` and `errorExc` are full containers - something has went horribly wrong.",
+    )
+
+  Statement(kind: ThrowError, error: (str: errorStr, exc: errorExc))
 
 proc createImmutVal*(name: string, atom: MAtom): Statement =
-  Statement(
-    kind: CreateImmutVal,
-    imIdentifier: name,
-    imAtom: atom
-  )
+  Statement(kind: CreateImmutVal, imIdentifier: name, imAtom: atom)
 
-proc returnFunc*: Statement =
+proc returnFunc*(): Statement =
   Statement(kind: ReturnFn)
 
 proc ifStmt*(condition: Statement, body: Scope): Statement =
@@ -228,12 +181,19 @@ proc atomHolder*(atom: MAtom): Statement =
 proc identHolder*(ident: string): Statement =
   Statement(kind: IdentHolder, ident: ident)
 
-proc binOp*(op: BinaryOperation, left, right: Statement, storeIdent: string = ""): Statement =
+proc binOp*(
+    op: BinaryOperation, left, right: Statement, storeIdent: string = ""
+): Statement =
   Statement(
     kind: BinaryOp,
-    binLeft: left, binRight: right,
+    binLeft: left,
+    binRight: right,
     op: op,
-    binStoreIn: if storeIdent.len > 0: storeIdent.some() else: none(string)
+    binStoreIn:
+      if storeIdent.len > 0:
+        storeIdent.some()
+      else:
+        none(string),
   )
 
 proc reassignVal*(identifier: string, atom: MAtom): Statement =
@@ -246,27 +206,13 @@ proc returnFunc*(ident: string): Statement =
   Statement(kind: ReturnFn, retIdent: some(ident))
 
 proc callAndStoreImmut*(ident: string, fn: Statement): Statement =
-  Statement(
-    kind: CallAndStoreResult,
-    mutable: false,
-    storeIdent: ident,
-    storeFn: fn
-  )
+  Statement(kind: CallAndStoreResult, mutable: false, storeIdent: ident, storeFn: fn)
 
 proc callAndStoreMut*(ident: string, fn: Statement): Statement =
-  Statement(
-    kind: CallAndStoreResult,
-    mutable: true,
-    storeIdent: ident,
-    storeFn: fn
-  )
+  Statement(kind: CallAndStoreResult, mutable: true, storeIdent: ident, storeFn: fn)
 
 proc createMutVal*(name: string, atom: MAtom): Statement =
-  Statement(
-    kind: CreateMutVal,
-    mutIdentifier: name,
-    mutAtom: atom
-  )
+  Statement(kind: CreateMutVal, mutIdentifier: name, mutAtom: atom)
 
 proc identArg*(ident: string): CallArg =
   CallArg(kind: cakIdent, ident: ident)
@@ -278,17 +224,9 @@ proc atomArg*(atom: MAtom): CallArg =
   CallArg(kind: cakAtom, atom: atom)
 
 proc constructObject*(name: string, args: PositionedArguments): Statement =
-  Statement(
-    kind: ConstructObject,
-    objName: name,
-    args: args
-  )
+  Statement(kind: ConstructObject, objName: name, args: args)
 
 proc call*(fn: string, arguments: PositionedArguments): Statement =
-  Statement(
-    kind: Call,
-    fn: fn,
-    arguments: arguments
-  )
+  Statement(kind: Call, fn: fn, arguments: arguments)
 
 {.pop.}

@@ -12,5 +12,5 @@ func isObject*(atom: MAtom): bool {.inline.} =
 func isNull*(atom: MAtom): bool {.inline.} =
   atom.kind == Null
 
-func undefined*: MAtom {.inline.} =
+func undefined*(): MAtom {.inline.} =
   obj()

@@ -10,15 +10,7 @@ var program = newAST()
 var doMathsArgs: PositionedArguments
 doMathsArgs.pushIdent("x")
 
-let fn = function(
-  "do_maths",
-  @[
-    call("console.log",
-      doMathsArgs
-    )
-  ],
-  @["x"]
-)
+let fn = function("do_maths", @[call("console.log", doMathsArgs)], @["x"])
 program.appendFunctionToCurrentScope(fn)
 
 var args: PositionedArguments
@@ -27,7 +19,7 @@ args.pushImmExpr(
     kind: BinaryOp,
     binLeft: atomHolder(integer(13)),
     binRight: atomHolder(integer(37)),
-    op: BinaryOperation.Add
+    op: BinaryOperation.Add,
   )
 )
 
