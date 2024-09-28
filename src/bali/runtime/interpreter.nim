@@ -502,6 +502,10 @@ proc generateIR*(
       runtime.ir.addInt(leftIdx, rightIdx)
     of BinaryOperation.Sub:
       runtime.ir.subInt(leftIdx, rightIdx)
+    of BinaryOperation.Mult:
+      runtime.ir.multInt(leftIdx, rightIdx)
+    of BinaryOperation.Div:
+      runtime.ir.divInt(leftIdx, rightIdx)
     of BinaryOperation.Equal:
       runtime.ir.equate(leftIdx, rightIdx)
       # FIXME: really weird bug in mirage's IR generator. wtf?
