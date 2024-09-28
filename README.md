@@ -1,10 +1,13 @@
-# Bali's getting redesigned!
+# Bali
 Bali is a WIP JavaScript engine written in Nim that aims to be as compliant as possible to the ECMAScript specifications. \
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
 
 I repeat,
 
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
+
+# Contact Me
+You can join the [Ferus Discord Server](https://discord.gg/9MwfGn2Jkb) to discuss Bali and other components of the Ferus web engine.
 
 # Specification Compliance
 As of 10th of September, 2024, Bali can successfully run 1.57% of the entire Test262 suite. There's a lot of work to be done here, so don't shy away from sending in PRs. ;)
