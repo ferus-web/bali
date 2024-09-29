@@ -36,11 +36,20 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
 
       template yes() =
         info "Assert.sameValue(): passed test! (" & a.crush() & " == " & b.crush() & ')'
-        discard
+        return
 
       let
         a = vm.registers.callArgs.pop()
         b = vm.registers.callArgs.pop()
+
+      if a.kind == UnsignedInt:
+        if b.kind == Integer:
+          if int(&a.getUint()) == &b.getInt(): yes
+          else: no
+      elif b.kind == UnsignedInt:
+        if a.kind == Integer:
+          if &a.getInt() == int(&b.getUint()): yes
+          else: no
 
       if a.kind != b.kind:
         no
