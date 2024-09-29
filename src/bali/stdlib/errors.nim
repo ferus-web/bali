@@ -36,6 +36,11 @@ proc typeError*(vm: PulsarInterpreter, message: string) {.inline.} =
   vm.throw(jsException("TypeError: " & message))
   vm.logTracebackAndDie()
 
+proc syntaxError*(vm: PulsarInterpreter, message: string) {.inline.} =
+  ## Meant for other Bali stdlib methods to use.
+  vm.throw(jsException("SyntaxError: " & message))
+  vm.logTracebackAndDie()
+
 proc generateStdIr*(vm: PulsarInterpreter, ir: IRGenerator) =
   info "errors: generate IR interface"
 
