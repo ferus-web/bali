@@ -46,4 +46,15 @@ proc ToString*(vm: PulsarInterpreter, value: MAtom): string {.inline.} =
       $(&value.getUint())
         # 7. If argument is a Number, return Number::toString(argument, 10).
   of Sequence:
-    return "undefined" # FIXME: not implemented yet!
+    debug "runtime: toString(): atom is an object (sequence)."
+    var buffer = "["
+    
+    # FIXME: not spec compliant!
+    for i, item in value.sequence:
+      buffer &= vm.ToString(item)
+      if i < value.sequence.len - 1:
+        buffer &= ", "
+    
+    buffer &= ']'
+
+    return buffer

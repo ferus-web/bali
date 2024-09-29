@@ -652,6 +652,7 @@ proc run*(runtime: Runtime) =
   uri.generateStdIR(runtime.vm, runtime.ir)
   errors.generateStdIR(runtime.vm, runtime.ir)
   base64.generateStdIR(runtime.vm, runtime.ir)
+  json.generateStdIR(runtime.vm, runtime.ir)
   parseIntGenerateStdIR(runtime.vm, runtime.ir)
 
   runtime.generateInternalIR()
