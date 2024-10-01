@@ -676,6 +676,9 @@ proc run*(runtime: Runtime) =
   info "interpreter: setting entry point to `outer`"
   runtime.vm.setEntryPoint("outer")
 
+  for error in runtime.ast.errors:
+    runtime.vm.syntaxError(error, if runtime.opts.test262: 0 else: 1)
+
   info "interpreter: passing over execution to VM"
   runtime.vm.run()
 
