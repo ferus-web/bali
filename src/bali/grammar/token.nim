@@ -111,6 +111,7 @@ type
     Comment
     Invalid
     Shebang
+    InvalidShebang
 
   Token* = object
     case kind*: TokenKind
