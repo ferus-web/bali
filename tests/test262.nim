@@ -1,16 +1,30 @@
-import std/[os, osproc, json, posix, strutils, logging, tables]
+## Test262 runner for Bali
+## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
+import std/[os, osproc, json, posix, strutils, logging, tables, times]
 import bali/grammar/prelude
 import bali/runtime/prelude
 import colored_logger, pretty
 
 const BASE_DIR = "test262/test"
 
-proc execJS(file: string): bool =
-  execCmd("./balde run " & file & " --test262") == 0
+type
+  RunResult = enum
+    Success
+    Error
+    Segfault
+
+proc execJS(file: string): RunResult =
+  case execCmd("./balde run " & file & " --test262")
+  of 0: return Success
+  of 1: return Error
+  of 139: return Segfault
+  else: return Error
 
 proc main() {.inline.} =
   addHandler(newColoredLogger())
   addHandler(newFileLogger("test262.log"))
+  let startTime = epochTime()
 
   if paramCount() < 1:
     quit """
@@ -37,7 +51,7 @@ Commands:
       error "Invalid testing category: " & head
       quit(1)
 
-    var successful, failed, skipped: seq[string]
+    var successful, failed, skipped, segfaulted: seq[string]
 
     for file in walkDirRec(BASE_DIR / head):
       if not fileExists(file):
@@ -48,17 +62,26 @@ Commands:
 
       inc filesToExec
 
-      if execJS(file):
+      case execJS(file)
+      of Success:
         info "Worker for file `" & file & "` has completed execution successfully."
         successful &= file
         continue
-      else:
+      of Error:
         warn "Test for `" & file & "` has failed."
         failed &= file
         continue
+      of Segfault:
+        warn "!!!! Test for `" & file & "` exited ungracefully with a segmentation fault !!!!"
+        segfaulted &= file
+        continue
+
+    let endTime = epochTime()
+    let secondsTaken = endTime - startTime
 
     let
       successPercentage = (successful.len / filesToExec) * 100f
+      segfaultPercentage = (segfaulted.len / filesToExec) * 100f
       failedPercentage = (failed.len / filesToExec) * 100f
 
     if failed.len > 0:
@@ -70,21 +93,36 @@ Commands:
 
         echo "  * " & fail
 
+    if segfaulted.len > 0:
+      info "The following tests have abnormally exited:"
+      for i, seg in segfaulted:
+        if i > 16:
+          echo "  ... and " & $(segfaulted.len - i) & " more."
+          break
+
+        echo "  * " & seg
+
     if paramCount() > 1 and paramStr(2) == "json":
-      echo $(
+      let data = $(
         %*{
           "total": $filesToExec,
           "successful": $successful.len,
           "skipped": $skipped.len,
           "failed": $failed.len,
+          "segfaulted": $segfaulted.len,
           "successful_percentage": $successPercentage,
+          "runtime_seconds": $secondsTaken
         }
       )
+      echo data
+      writeFile("test262.json", data)
     else:
       info "Total tests: " & $filesToExec
       info "Successful tests: " & $successPercentage & "% (" & $successful.len & ')'
-      info "Skipped tests: " & $skipped
       info "Failed tests: " & $failedPercentage & "% (" & $failed.len & ')'
+      info "Abnormal crashes: " & $segfaultPercentage & "% (" & $segfaulted.len & ')'
+
+    info "It took " & $(secondsTaken / 60) & " minutes to run all of the " & $filesToExec & " tests."
 
 when isMainModule:
   main()

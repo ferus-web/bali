@@ -4,6 +4,7 @@
 import std/[logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
+import bali/grammar/errors
 import bali/runtime/normalize
 import bali/internal/sugar
 
@@ -24,22 +25,25 @@ proc jsException*(msg: string): JSException {.inline.} =
 
   exc
 
-proc logTracebackAndDie*(vm: PulsarInterpreter) =
+proc logTracebackAndDie*(vm: PulsarInterpreter, exitCode: int = 1) =
   let traceback = vm.generateTraceback()
   assert *traceback, "Mirage failed to generate traceback!"
 
   stderr.write &traceback & '\n'
-  quit(1)
+  quit(exitCode)
 
-proc typeError*(vm: PulsarInterpreter, message: string) {.inline.} =
+proc typeError*(vm: PulsarInterpreter, message: string, exitCode: int = 1) {.inline.} =
   ## Meant for other Bali stdlib methods to use.
   vm.throw(jsException("TypeError: " & message))
-  vm.logTracebackAndDie()
+  vm.logTracebackAndDie(exitCode)
 
-proc syntaxError*(vm: PulsarInterpreter, message: string) {.inline.} =
+proc syntaxError*(vm: PulsarInterpreter, message: string, exitCode: int = 1) {.inline.} =
   ## Meant for other Bali stdlib methods to use.
   vm.throw(jsException("SyntaxError: " & message))
-  vm.logTracebackAndDie()
+  vm.logTracebackAndDie(exitCode)
+
+proc syntaxError*(vm: PulsarInterpreter, error: ParseError, exitCode: int = 1) {.inline.} =
+  vm.syntaxError(error.message, exitCode)
 
 proc generateStdIr*(vm: PulsarInterpreter, ir: IRGenerator) =
   info "errors: generate IR interface"
