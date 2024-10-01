@@ -1,4 +1,5 @@
 import std/[options]
+import bali/grammar/errors
 import bali/internal/sugar
 import pretty
 import ./[statement, scopes]
@@ -6,6 +7,7 @@ import ./[statement, scopes]
 type AST* = ref object
   currentScope*: int
   scopes*: seq[Scope]
+  errors*: seq[ParseError]
 
   doNotEvaluate*: bool = false # For Test262
 

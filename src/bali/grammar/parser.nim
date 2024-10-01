@@ -3,23 +3,12 @@
 ## Copyright (C) 2024 Trayambak Rai
 
 import std/[options, logging, strutils, tables]
-import bali/grammar/[token, tokenizer, ast, statement, condition]
+import bali/grammar/[token, tokenizer, ast, errors, statement, condition]
 import bali/internal/sugar
 import mirage/atom
 import pretty
 
 type
-  ParseErrorKind* = enum
-    UnexpectedToken
-    Other
-
-  ParseError* = object
-    location*: SourceLocation
-    kind*: ParseErrorKind = Other
-    message*: string
-
-  SyntaxError* = object of CatchableError
-
   Parser* = ref object
     tokenizer*: Tokenizer
     ast: AST
@@ -703,6 +692,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     discard
   of TokenKind.Shebang, TokenKind.Semicolon:
     discard
+  of TokenKind.InvalidShebang:
+    parser.error Other, "Shebang cannot be preceded by whitespace"
   else:
     print token
     unreachable
@@ -718,7 +709,8 @@ proc parse*(parser: Parser): AST {.inline.} =
       statement.line = parser.tokenizer.location.line
       statement.col = parser.tokenizer.location.col
       parser.ast.appendToCurrentScope(statement)
-
+  
+  parser.ast.errors = deepCopy(parser.errors)
   parser.ast
 
 proc newParser*(input: string): Parser {.inline.} =
