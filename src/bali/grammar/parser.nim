@@ -153,7 +153,8 @@ proc parseExpression*(
   if term.binLeft != nil and term.binRight != nil:
     return some term
   else:
-    parser.error Other, "expected left term and right term to complete expression"
+    return
+    #parser.error Other, "expected left term and right term to complete expression"
 
 proc parseConstructor*(parser: Parser): Option[Statement] =
   let next = parser.tokenizer.nextExceptWhitespace()
