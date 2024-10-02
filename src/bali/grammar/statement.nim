@@ -46,7 +46,7 @@ type
 
   Function* = ref object of Scope
     name*: string = "outer"
-    arguments*: seq[string] ## expected arguments!
+    arguments*: seq[string] = @[] ## expected arguments!
 
   BinaryOperation* {.pure.} = enum
     Add

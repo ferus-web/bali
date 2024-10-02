@@ -437,6 +437,10 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
           # FIXME: make this less vague!
 
       args.pushAtom(&atom)
+    of TokenKind.True:
+      args.pushAtom(boolean(true))
+    of TokenKind.False:
+      args.pushAtom(boolean(false))
     of TokenKind.RParen:
       metEnd = true
       break
