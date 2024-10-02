@@ -123,7 +123,8 @@ proc parseExpression*(
       debug "parser: whilst parsing arithmetic expr, found potential right-hand expr"
       let expr = parser.parseExpression()
       if !expr:
-        parser.error Other, "failed to parse expression"
+        return
+        # parser.error Other, "failed to parse expression"
 
       term.binRight = &expr
     of TokenKind.RParen:
