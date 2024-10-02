@@ -6,6 +6,7 @@ import std/[strutils, math, options, logging, tables]
 import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/runtime/normalize
+import bali/runtime/abstract/to_string
 import bali/stdlib/errors
 import bali/internal/sugar
 import pretty
@@ -32,7 +33,7 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
     "TESTS_ASSERTSAMEVALUE",
     proc(op: Operation) =
       template no() =
-        vm.test262Error("Assert.sameValue(): " & a.crush() & " != " & b.crush())
+        vm.test262Error("Assert.sameValue(): " & a.crush() & " != " & b.crush() & ' ' & msg)
 
       template yes() =
         info "Assert.sameValue(): passed test! (" & a.crush() & " == " & b.crush() & ')'
@@ -41,6 +42,7 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
       let
         a = vm.registers.callArgs.pop()
         b = vm.registers.callArgs.pop()
+        msg = if vm.registers.callArgs.len > 0: vm.ToString(vm.registers.callArgs[0]) else: ""
 
       if a.kind == UnsignedInt:
         if b.kind == Integer:
