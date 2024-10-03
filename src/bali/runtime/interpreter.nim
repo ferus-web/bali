@@ -6,95 +6,9 @@ import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
-import bali/runtime/[normalize]
+import bali/runtime/[normalize, types]
 import bali/stdlib/prelude
 import crunchy, pretty
-
-type
-  ValueKind* = enum
-    vkGlobal
-    vkLocal
-    vkInternal ## or immediate
-
-  IndexParams* = object
-    priorities*: seq[ValueKind] = @[vkLocal, vkGlobal]
-
-    fn*: Option[Function]
-    stmt*: Option[Statement]
-
-  Value* = object
-    index*: uint
-    identifier*: string
-    case kind*: ValueKind
-    of vkLocal:
-      ownerFunc*: Hash
-    of vkInternal:
-      ownerStmt*: Hash
-    else:
-      discard
-
-  SemanticErrorKind* = enum
-    UnknownIdentifier
-    ImmutableReassignment
-
-  SemanticError* = object
-    line*, col*: uint
-    case kind*: SemanticErrorKind
-    of UnknownIdentifier:
-      unknown*: string
-    of ImmutableReassignment:
-      imIdent*: string
-      imNewValue*: MAtom
-
-  InterpreterOpts* = object
-    test262*: bool = false
-
-  Runtime* = ref object
-    ast: AST
-    ir: IRGenerator
-    vm*: PulsarInterpreter
-    opts*: InterpreterOpts
-
-    addrIdx: uint
-    values*: seq[Value]
-    semanticErrors*: seq[SemanticError]
-    clauses: seq[string]
-
-proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =
-  SemanticError(kind: UnknownIdentifier, unknown: identifier)
-
-proc immutableReassignmentAttempt*(stmt: Statement): SemanticError {.inline.} =
-  SemanticError(
-    kind: ImmutableReassignment,
-    imIdent: stmt.reIdentifier,
-    imNewValue: stmt.reAtom,
-    line: stmt.line,
-    col: stmt.col,
-  )
-
-proc defaultParams*(fn: Function): IndexParams {.inline.} =
-  IndexParams(fn: some fn)
-
-proc internalIndex*(stmt: Statement): IndexParams {.inline.} =
-  IndexParams(priorities: @[vkInternal], stmt: some stmt)
-
-proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
-  runtime.values &=
-    Value(
-      kind: vkInternal, index: runtime.addrIdx, identifier: ident, ownerStmt: hash(stmt)
-    )
-
-  info "Ident \"" & ident & "\" is being internally marked at index " & $runtime.addrIdx &
-    " with statement hash: " & $hash(stmt)
-
-  inc runtime.addrIdx
-
-proc markGlobal*(runtime: Runtime, ident: string) =
-  runtime.values &= Value(kind: vkGlobal, index: runtime.addrIdx, identifier: ident)
-
-  info "Ident \"" & ident & "\" is being globally marked at index " & $runtime.addrIdx
-
-  inc runtime.addrIdx
 
 proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
   runtime.values &=
@@ -343,6 +257,9 @@ proc generateIR*(
           opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.mutAtom]
         )
       ) # FIXME: mirage: loadFloat isn't implemented
+    of Null:
+      debug "emitter: generate IR for loading mutable null"
+      runtime.ir.loadNull(runtime.addrIdx)
     else:
       unreachable
 
@@ -580,6 +497,26 @@ proc generateIR*(
       falseJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
 
     runtime.generateIRForScope(stmt.branchTrue)
+  of CopyValMut:
+    debug "emitter: generate IR for copying value to a mutable address with source: " & stmt.cpMutSourceIdent & " and destination: " & stmt.cpMutDestIdent
+    runtime.generateIR(
+      fn,
+      createMutVal(stmt.cpMutDestIdent, null()),
+      internal = false
+    )
+    let dest = runtime.addrIdx - 1
+
+    runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
+  of CopyValImmut:
+    debug "emitter: generate IR for copying value to an immutable address with source: " & stmt.cpImmutSourceIdent & " and destination: " & stmt.cpImmutDestIdent
+    runtime.generateIR(
+      fn,
+      createMutVal(stmt.cpImmutDestIdent, null()),
+      internal = false
+    )
+    let dest = runtime.addrIdx - 1
+
+    runtime.ir.copyAtom(runtime.index(stmt.cpImmutSourceIdent, defaultParams(fn)), dest)
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -595,7 +532,7 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope) =
   let
-    fn = cast[Function](scope)
+    fn = cast[Function](scope) # FIXME: this is causing a bizzare memory corruption in certain cases...
     name = if fn.name.len > 0: fn.name else: "outer"
 
   debug "generateIRForScope(): function name: " & name
@@ -605,6 +542,8 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
 
   if name != "outer":
     runtime.loadArgumentsOntoStack(fn)
+  else:
+    constants.generateStdIR(runtime)
 
   for stmt in scope.stmts:
     runtime.generateIR(fn, stmt)
@@ -692,3 +631,5 @@ proc newRuntime*(
     vm: newPulsarInterpreter(""),
     opts: opts,
   )
+
+export types
