@@ -242,19 +242,20 @@ proc parseDeclaration*(
   assert not (*atom and *vIdent and *toCall),
     "Attempt to assign a value to nothing (something went wrong)"
 
-  if *vIdent:
-    parser.error Other, "assignment from another address is not supported yet"
-
   if not reassignment:
     case initialIdent
     of "let", "const":
       if *atom:
         return some(createImmutVal(ident, &atom))
+      elif *vIdent:
+        return some(copyValImmut(ident, &vIdent))
       elif *toCall:
         return some(callAndStoreImmut(ident, &toCall))
     of "var":
       if *atom:
         return some(createMutVal(ident, &atom))
+      elif *vIdent:
+        return some(copyValMut(ident, &vIdent))
       elif *toCall:
         return some(callAndStoreMut(ident, &toCall))
     else:
