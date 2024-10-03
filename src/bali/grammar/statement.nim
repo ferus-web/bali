@@ -19,6 +19,8 @@ type
     AtomHolder
     AccessField
     IfStmt
+    CopyValMut
+    CopyValImmut
 
   CallArgKind* = enum
     cakIdent
@@ -104,6 +106,12 @@ type
     of IfStmt:
       conditionExpr*: Statement
       branchTrue*: Scope
+    of CopyValMut:
+      cpMutSourceIdent*: string
+      cpMutDestIdent*: string
+    of CopyValImmut:
+      cpImmutSourceIdent*: string
+      cpImmutDestIdent*: string
 
 func hash*(fn: Function): Hash {.inline.} =
   when fn is Scope: # FIXME: really dumb fix to prevent a segfault
@@ -180,6 +188,12 @@ proc atomHolder*(atom: MAtom): Statement =
 
 proc identHolder*(ident: string): Statement =
   Statement(kind: IdentHolder, ident: ident)
+
+proc copyValMut*(dest, source: string): Statement =
+  Statement(kind: CopyValMut, cpMutSourceIdent: source, cpMutDestIdent: dest)
+
+proc copyValImmut*(dest, source: string): Statement =
+  Statement(kind: CopyValImmut, cpImmutSourceIdent: source, cpImmutDestIdent: dest)
 
 proc binOp*(
     op: BinaryOperation, left, right: Statement, storeIdent: string = ""
