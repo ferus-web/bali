@@ -10,7 +10,7 @@ backend = "cpp"
 # Dependencies
 
 requires "nim >= 2.0.2"
-requires "mirage >= 1.0.2"
+requires "mirage >= 1.0.3"
 requires "librng >= 0.1.3"
 requires "pretty >= 0.1.0"
 requires "colored_logger >= 0.1.0"
