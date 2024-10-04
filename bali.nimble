@@ -14,7 +14,7 @@ requires "mirage >= 1.0.3"
 requires "librng >= 0.1.3"
 requires "pretty >= 0.1.0"
 requires "colored_logger >= 0.1.0"
-requires "simdutf >= 0.1.0"
+requires "simdutf >= 5.5.0"
 
 task balde, "Compile the Bali debugger":
   when defined(release):
