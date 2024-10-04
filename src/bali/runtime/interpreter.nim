@@ -6,7 +6,7 @@ import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
-import bali/runtime/[normalize, types]
+import bali/runtime/[normalize, types, atom_helpers]
 import bali/stdlib/prelude
 import crunchy, pretty
 
@@ -329,6 +329,7 @@ proc generateIR*(
     let index = runtime.index(stmt.storeIdent, defaultParams(fn))
     debug "emitter: call-and-store result will be stored in ident \"" & stmt.storeIdent &
       "\" or index " & $index
+    runtime.ir.loadObject(index) # load `undefined` on that index
     runtime.ir.readRegister(index, Register.ReturnValue)
   of ConstructObject:
     runtime.expand(fn, stmt, internal)
