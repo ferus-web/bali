@@ -34,10 +34,10 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
     "TESTS_ASSERTSAMEVALUE",
     proc(op: Operation) =
       template no() =
-        vm.test262Error("Assert.sameValue(): " & a.crush() & " != " & b.crush() & ' ' & msg)
+        vm.test262Error("Assert.sameValue(): " & b.crush() & " != " & a.crush() & ' ' & msg)
 
       template yes() =
-        info "Assert.sameValue(): passed test! (" & a.crush() & " == " & b.crush() & ')'
+        info "Assert.sameValue(): passed test! (" & b.crush() & " == " & a.crush() & ')'
         return
 
       let
