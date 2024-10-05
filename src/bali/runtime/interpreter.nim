@@ -533,8 +533,11 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope) =
   let
-    fn = cast[Function](scope) # FIXME: this is causing a bizzare memory corruption in certain cases...
-    name = if fn.name.len > 0: fn.name else: "outer"
+    fn = if scope is Function:
+      Function(scope)
+    else:
+      Function(name: "outer", arguments: newSeq[string](0), prev: scope.prev, next: scope.next, stmts: scope.stmts) # FIXME: discriminate between scopes
+    name = fn.name
 
   debug "generateIRForScope(): function name: " & name
   if not runtime.clauses.contains(name):

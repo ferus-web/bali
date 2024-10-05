@@ -9,4 +9,3 @@ type
     location*: SourceLocation
     kind*: ParseErrorKind = Other
     message*: string
-
