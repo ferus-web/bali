@@ -44,6 +44,11 @@ func function*(
 ): Function {.inline.} =
   Function(name: name, stmts: stmts, arguments: args)
 
+func scope*(
+  stmts: seq[Statement]
+): Scope {.inline.} =
+  Scope(stmts: stmts)
+
 proc newAST*(): AST {.inline.} =
   AST(
     scopes:

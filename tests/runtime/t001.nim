@@ -3,24 +3,23 @@ import bali/grammar/prelude
 import bali/runtime/prelude
 import pretty
 
-#[ Should emit bytecode:
-  CLAUSE main
-    LOADI 1 32
-  END main
-]#
-
 var program = newAST()
 
 let fn = function(
-  some("outer"),
+  "do_smt",
   @[
-    createImmutVal("x", integer(32)), # equivalent to `const x = 32`
-    createImmutVal("y", integer(32)),
-    ifCond(lhs = "x", rhs = "y", ecEqual),
-    call("console.log", @[atomArg integer 32]),
+    call("console.log", @[identArg "arg"]),
   ],
+  @["arg"]
 )
-program &= fn
+let outer = scope(
+  @[
+    call("do_smt", @[atomArg integer 32])
+  ]
+)
+
+program.scopes[0] = outer
+program.appendFunctionToCurrentScope(fn)
 
 var runtime = newRuntime("t001.js", program)
 runtime.run()

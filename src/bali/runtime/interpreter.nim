@@ -533,9 +533,9 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope) =
   let
-    fn = if scope is Function:
+    fn = try:
       Function(scope)
-    else:
+    except ObjectConversionDefect:
       Function(name: "outer", arguments: newSeq[string](0), prev: scope.prev, next: scope.next, stmts: scope.stmts) # FIXME: discriminate between scopes
     name = fn.name
 
