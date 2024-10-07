@@ -1,4 +1,4 @@
 import mirage/atom
-import ./interpreter
+import ./[interpreter, atom_helpers]
 
-export atom, interpreter
+export atom, interpreter, atom_helpers
