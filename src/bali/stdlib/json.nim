@@ -5,12 +5,10 @@ import bali/internal/sugar
 import bali/runtime/[objects, normalize, atom_helpers, arguments]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
-import jsony
 import mirage/ir/generator
 import mirage/atom
 import mirage/runtime/[prelude]
-import sanchar/parse/url
-import pretty
+import jsony
 
 proc convertJsonNodeToAtom*(node: JsonNode): MAtom =
   if node.kind == JInt:
