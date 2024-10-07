@@ -2,7 +2,7 @@
 ## Copyright (C) 2024 Trayambak Rai and Ferus Authors
 import std/[json, options, logging, tables]
 import bali/internal/sugar
-import bali/runtime/[objects, normalize, atom_helpers]
+import bali/runtime/[objects, normalize, atom_helpers, arguments]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import jsony
@@ -101,13 +101,10 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
   vm.registerBuiltin(
     "BALI_JSONSTRINGIFY",
     proc(op: Operation) =
-      let atom = 
-        if vm.registers.callArgs.len != 0:
-          vm.registers.callArgs[0]
-        else:
-          undefined()
+      let 
+        atom = &vm.argument(0)
+        node = atomToJsonNode(atom)
 
-      let node = atomToJsonNode(atom)
       vm.registers.retVal = some(
         str(
           pretty node
