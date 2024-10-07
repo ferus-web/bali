@@ -5,7 +5,7 @@
 import std/[strutils, math, options, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
-import bali/runtime/normalize
+import bali/runtime/[arguments, normalize]
 import bali/internal/[sugar, trim_string]
 import pretty
 
@@ -23,7 +23,7 @@ proc parseIntGenerateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
         return
 
       let
-        inputString = vm.registers.callArgs[0]
+        inputString = &vm.argument(1)
           # 1. Let inputString be ? ToString(string).
         value = vm.trimString(inputString, TrimMode.Left)
           # 2. Let S be ! TrimString(inputString, start).

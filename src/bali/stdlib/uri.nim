@@ -1,7 +1,7 @@
 ## JavaScript URL API - uses sanchar's builtin URL parser
 import std/[options, logging, tables]
 import bali/internal/sugar
-import bali/runtime/[objects, normalize]
+import bali/runtime/[objects, normalize, arguments]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import mirage/ir/generator
@@ -14,7 +14,7 @@ var parser = newURLParser()
 
 proc transposeUrlToObject(parsed: URL, url: var MAtom, source: MAtom) =
   when not defined(danger):
-    assert url.kind == Object, $url.kind
+    assert url.kind == Object, "transposeUrlToObject() was given non-Object type: " & $url.kind
 
   url.objFields["hostname"] = 0 #str parsed.hostname()
   url.objFields["pathname"] = 1 #str parsed.path()
@@ -47,11 +47,12 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
   vm.registerBuiltin(
     "BALI_CONSTRUCTOR_URL",
     proc(op: Operation) =
-      let source =
-        if vm.registers.callArgs.len > 0:
-          vm.registers.callArgs[0]
-        else:
-          null()
+      var osource: Option[MAtom]
+
+      if (osource = vm.argument(1, true, "URL constructor: At least 1 argument required, but only {nargs} passed"); !osource):
+        return
+      
+      let source = &move(osource)
 
       if source.kind != String:
         vm.typeError(
@@ -67,7 +68,7 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
             ": " & pError.msg
           debug "url: this is a constructor, so a TypeError will be thrown."
           vm.typeError(pError.msg)
-          newURL("", "", "", "")
+          newURL("", "", "", "") # unreachable, no need to worry. this just exists to make the compiler happy.
 
       if parsed.scheme().len < 1:
         return
@@ -87,7 +88,12 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
         vm.registers.retVal = some null()
         return
 
-      let source = vm.registers.callArgs[0]
+      var osource: Option[MAtom]
+
+      if (osource = vm.argument(1, true, "URL.new: At least 1 argument required, but only {nargs} passed"); !osource):
+        return
+      
+      let source = &move(osource)
 
       if source.kind != String:
         vm.registers.retVal = some null()
