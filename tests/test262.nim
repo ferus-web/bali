@@ -14,8 +14,8 @@ type
     Error
     Segfault
 
-proc execJS(file: string): RunResult =
-  case execCmd("./balde run " & file & " --test262")
+proc execJS(file: string, dontEval: bool): RunResult =
+  case execCmd("./balde run " & file & " --test262" & $(if dontEval: " --dump-ast" else: ""))
   of 0: return Success
   of 1: return Error
   of 139: return Segfault
@@ -24,6 +24,7 @@ proc execJS(file: string): RunResult =
 proc main() {.inline.} =
   addHandler(newColoredLogger())
   addHandler(newFileLogger("test262.log"))
+
   let startTime = epochTime()
 
   if paramCount() < 1:
@@ -32,9 +33,13 @@ test262 [cmd] [arguments]
 
 Commands:
   run-all-tests-rec           Recursively run all tests in a directory using Balde
+
+Flags:
+  --dont-evaluate             All tests that can be parsed are marked as a success
 """
 
   let cmd = paramStr(1)
+  let dontEval = paramCount() >= 3 and paramStr(3) == "--dont-evaluate"
 
   discard existsOrCreateDir("outcomes")
 
@@ -62,7 +67,7 @@ Commands:
 
       inc filesToExec
 
-      case execJS(file)
+      case execJS(file, dontEval)
       of Success:
         info "Worker for file `" & file & "` has completed execution successfully."
         successful &= file
