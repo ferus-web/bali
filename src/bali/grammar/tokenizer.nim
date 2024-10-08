@@ -388,7 +388,8 @@ proc consumeHash*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
 
   if tokenizer.charAt() == some('!'):
-    if (tokenizer.pos - 2) >= 0 and tokenizer.source[tokenizer.pos - 2] in strutils.Whitespace:
+    if (tokenizer.pos - 2) >= 0 and
+        tokenizer.source[tokenizer.pos - 2] in strutils.Whitespace:
       tokenizer.advance()
       return Token(kind: TokenKind.InvalidShebang)
 

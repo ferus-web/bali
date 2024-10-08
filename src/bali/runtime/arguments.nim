@@ -5,10 +5,10 @@ import bali/runtime/atom_helpers
 import bali/stdlib/errors
 
 proc argument*(
-  vm: PulsarInterpreter, 
-  position: Natural, 
-  required: bool = false,
-  message: string = ""
+    vm: PulsarInterpreter,
+    position: Natural,
+    required: bool = false,
+    message: string = "",
 ): Option[MAtom] =
   ## Get an argument from the call arguments register.
   ## If `required` is `true`, then a TypeError with an error message of your choice will be thrown.
@@ -26,10 +26,8 @@ proc argument*(
       when not defined(danger):
         if message.len < 1:
           warn "runtime: FIXME: argument() was provided an empty error message for when an atom is required, this can make debugging more difficult for users."
-      
-      let msg = message.multiReplace({
-        "{nargs}": $vm.registers.callArgs.len
-      })
+
+      let msg = message.multiReplace({"{nargs}": $vm.registers.callArgs.len})
 
       vm.typeError(msg)
       return

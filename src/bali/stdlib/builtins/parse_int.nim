@@ -23,8 +23,7 @@ proc parseIntGenerateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
         return
 
       let
-        inputString = &vm.argument(1)
-          # 1. Let inputString be ? ToString(string).
+        inputString = &vm.argument(1) # 1. Let inputString be ? ToString(string).
         value = vm.trimString(inputString, TrimMode.Left)
           # 2. Let S be ! TrimString(inputString, start).
 

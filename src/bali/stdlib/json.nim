@@ -13,8 +13,10 @@ import jsony
 proc convertJsonNodeToAtom*(node: JsonNode): MAtom =
   if node.kind == JInt:
     let value = node.getInt()
-    if value > -1: return uinteger(value.uint())
-    else: return integer(value)
+    if value > -1:
+      return uinteger(value.uint())
+    else:
+      return integer(value)
   elif node.kind == JString:
     return str(node.getStr())
   elif node.kind == JNull:
@@ -25,7 +27,7 @@ proc convertJsonNodeToAtom*(node: JsonNode): MAtom =
     var arr = sequence(@[])
     for elem in node.getElems():
       arr.sequence &= elem.convertJsonNodeToAtom()
-    
+
     return arr
   elif node.kind == JFloat:
     return floating(node.getFloat())
@@ -51,14 +53,14 @@ proc atomToJsonNode*(atom: MAtom): JsonNode =
     return newJString(&atom.getStr())
   elif atom.kind == Sequence:
     var arr = newJArray()
-    
+
     for item in atom.sequence:
       arr &= item.atomToJsonNode()
 
     return arr
   elif atom.kind == Object:
     var jObj = newJObject()
-    
+
     for key, index in atom.objFields:
       jObj[key] = atom.objValues[index].atomToJsonNode()
 
@@ -76,9 +78,11 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
     "BALI_JSONPARSE",
     proc(op: Operation) =
       # 1. Let jsonString be ? ToString(text).
-      let jsonString = if vm.registers.callArgs.len != 0:
-        vm.ToString(vm.registers.callArgs[0])
-      else: ""
+      let jsonString =
+        if vm.registers.callArgs.len != 0:
+          vm.ToString(vm.registers.callArgs[0])
+        else:
+          ""
 
       let parsed =
         try:
@@ -99,14 +103,10 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
   vm.registerBuiltin(
     "BALI_JSONSTRINGIFY",
     proc(op: Operation) =
-      let 
+      let
         atom = &vm.argument(0)
         node = atomToJsonNode(atom)
 
-      vm.registers.retVal = some(
-        str(
-          pretty node
-        )
-      ),
+      vm.registers.retVal = some(str(pretty node)),
   )
   ir.call("BALI_JSONSTRINGIFY")

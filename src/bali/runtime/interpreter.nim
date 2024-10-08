@@ -493,27 +493,50 @@ proc generateIR*(
       )
   of IfStmt:
     info "emitter: emitting IR for if statement"
+
+    case stmt.conditionExpr.op
+    of Equal:
+      runtime.ir.equate(
+        runtime.index(stmt.conditionExpr.binLeft.ident, defaultParams(fn)),
+        runtime.index(stmt.conditionExpr.binLeft.ident, defaultParams(fn)),
+      )
+    else:
+      unreachable
+
     let
       trueJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
       falseJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
 
+    print stmt.branchTrue
+    proc getCurrOpNum(): int =
+      for module in runtime.ir.modules:
+        if module.name == runtime.ir.currModule:
+          return module.operations.len + 1
+
+      unreachable
+      0
+
+    echo "!!! before ir gen !!!"
+    print getCurrOpNum()
     runtime.generateIRForScope(stmt.branchTrue)
+    echo "!!! after ir gen !!!"
+    print getCurrOpNum()
+
+    runtime.ir.overrideArgs(falseJump, @[uinteger(getCurrOpNum().uint)])
+    runtime.ir.overrideArgs(trueJump, @[uinteger(falseJump + 2)])
+      # TODO: codegen for false branch
   of CopyValMut:
-    debug "emitter: generate IR for copying value to a mutable address with source: " & stmt.cpMutSourceIdent & " and destination: " & stmt.cpMutDestIdent
-    runtime.generateIR(
-      fn,
-      createMutVal(stmt.cpMutDestIdent, null()),
-      internal = false
-    )
+    debug "emitter: generate IR for copying value to a mutable address with source: " &
+      stmt.cpMutSourceIdent & " and destination: " & stmt.cpMutDestIdent
+    runtime.generateIR(fn, createMutVal(stmt.cpMutDestIdent, null()), internal = false)
     let dest = runtime.addrIdx - 1
 
     runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
   of CopyValImmut:
-    debug "emitter: generate IR for copying value to an immutable address with source: " & stmt.cpImmutSourceIdent & " and destination: " & stmt.cpImmutDestIdent
+    debug "emitter: generate IR for copying value to an immutable address with source: " &
+      stmt.cpImmutSourceIdent & " and destination: " & stmt.cpImmutDestIdent
     runtime.generateIR(
-      fn,
-      createMutVal(stmt.cpImmutDestIdent, null()),
-      internal = false
+      fn, createMutVal(stmt.cpImmutDestIdent, null()), internal = false
     )
     let dest = runtime.addrIdx - 1
 
@@ -533,10 +556,17 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope) =
   let
-    fn = try:
-      Function(scope)
-    except ObjectConversionDefect:
-      Function(name: "outer", arguments: newSeq[string](0), prev: scope.prev, next: scope.next, stmts: scope.stmts) # FIXME: discriminate between scopes
+    fn =
+      try:
+        Function(scope)
+      except ObjectConversionDefect:
+        Function(
+          name: "outer",
+          arguments: newSeq[string](0),
+          prev: scope.prev,
+          next: scope.next,
+          stmts: scope.stmts,
+        ) # FIXME: discriminate between scopes
     name = fn.name
 
   debug "generateIRForScope(): function name: " & name
@@ -546,8 +576,6 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
 
   if name != "outer":
     runtime.loadArgumentsOntoStack(fn)
-  else:
-    constants.generateStdIR(runtime)
 
   for stmt in scope.stmts:
     runtime.generateIR(fn, stmt)
@@ -597,6 +625,7 @@ proc run*(runtime: Runtime) =
   base64.generateStdIR(runtime.vm, runtime.ir)
   json.generateStdIR(runtime.vm, runtime.ir)
   parseIntGenerateStdIR(runtime.vm, runtime.ir)
+  constants.generateStdIR(runtime)
 
   runtime.generateInternalIR()
 

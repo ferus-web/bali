@@ -34,7 +34,9 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
     "TESTS_ASSERTSAMEVALUE",
     proc(op: Operation) =
       template no() =
-        vm.test262Error("Assert.sameValue(): " & b.crush() & " != " & a.crush() & ' ' & msg)
+        vm.test262Error(
+          "Assert.sameValue(): " & b.crush() & " != " & a.crush() & ' ' & msg
+        )
 
       template yes() =
         info "Assert.sameValue(): passed test! (" & b.crush() & " == " & a.crush() & ')'
@@ -43,19 +45,21 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
       let
         a = vm.registers.callArgs.pop()
         b = vm.registers.callArgs.pop()
-        msg = if vm.registers.callArgs.len > 0: vm.ToString(vm.registers.callArgs[0]) else: ""
+        msg =
+          if vm.registers.callArgs.len > 0:
+            vm.ToString(vm.registers.callArgs[0])
+          else:
+            ""
 
       if a.isUndefined() and b.isUndefined():
         yes
 
       if a.kind == UnsignedInt:
         if b.kind == Integer:
-          if int(&a.getUint()) == &b.getInt(): yes
-          else: no
+          if int(&a.getUint()) == &b.getInt(): yes else: no
       elif b.kind == UnsignedInt:
         if a.kind == Integer:
-          if &a.getInt() == int(&b.getUint()): yes
-          else: no
+          if &a.getInt() == int(&b.getUint()): yes else: no
 
       if a.kind != b.kind:
         no

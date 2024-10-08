@@ -48,13 +48,13 @@ proc ToString*(vm: PulsarInterpreter, value: MAtom): string {.inline.} =
   of Sequence:
     debug "runtime: toString(): atom is an object (sequence)."
     var buffer = "["
-    
+
     # FIXME: not spec compliant!
     for i, item in value.sequence:
       buffer &= vm.ToString(item)
       if i < value.sequence.len - 1:
         buffer &= ", "
-    
+
     buffer &= ']'
 
     return buffer

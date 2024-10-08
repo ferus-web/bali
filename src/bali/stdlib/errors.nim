@@ -37,12 +37,16 @@ proc typeError*(vm: PulsarInterpreter, message: string, exitCode: int = 1) {.inl
   vm.throw(jsException("TypeError: " & message))
   vm.logTracebackAndDie(exitCode)
 
-proc syntaxError*(vm: PulsarInterpreter, message: string, exitCode: int = 1) {.inline.} =
+proc syntaxError*(
+    vm: PulsarInterpreter, message: string, exitCode: int = 1
+) {.inline.} =
   ## Meant for other Bali stdlib methods to use.
   vm.throw(jsException("SyntaxError: " & message))
   vm.logTracebackAndDie(exitCode)
 
-proc syntaxError*(vm: PulsarInterpreter, error: ParseError, exitCode: int = 1) {.inline.} =
+proc syntaxError*(
+    vm: PulsarInterpreter, error: ParseError, exitCode: int = 1
+) {.inline.} =
   vm.syntaxError(error.message, exitCode)
 
 proc generateStdIr*(vm: PulsarInterpreter, ir: IRGenerator) =

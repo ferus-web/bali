@@ -8,11 +8,10 @@ import bali/internal/sugar
 import mirage/atom
 import pretty
 
-type
-  Parser* = ref object
-    tokenizer*: Tokenizer
-    ast: AST
-    errors*: seq[ParseError]
+type Parser* = ref object
+  tokenizer*: Tokenizer
+  ast: AST
+  errors*: seq[ParseError]
 
 template error(parser: Parser, kind: ParseErrorKind, msg: string) =
   parser.errors &= ParseError(location: parser.tokenizer.location, message: msg)
@@ -716,7 +715,7 @@ proc parse*(parser: Parser): AST {.inline.} =
       statement.line = parser.tokenizer.location.line
       statement.col = parser.tokenizer.location.col
       parser.ast.appendToCurrentScope(statement)
-  
+
   parser.ast.errors = deepCopy(parser.errors)
   parser.ast
 

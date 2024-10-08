@@ -14,7 +14,8 @@ var parser = newURLParser()
 
 proc transposeUrlToObject(parsed: URL, url: var MAtom, source: MAtom) =
   when not defined(danger):
-    assert url.kind == Object, "transposeUrlToObject() was given non-Object type: " & $url.kind
+    assert url.kind == Object,
+      "transposeUrlToObject() was given non-Object type: " & $url.kind
 
   url.objFields["hostname"] = 0 #str parsed.hostname()
   url.objFields["pathname"] = 1 #str parsed.path()
@@ -49,9 +50,15 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
     proc(op: Operation) =
       var osource: Option[MAtom]
 
-      if (osource = vm.argument(1, true, "URL constructor: At least 1 argument required, but only {nargs} passed"); !osource):
+      if (;
+        osource = vm.argument(
+          1, true,
+          "URL constructor: At least 1 argument required, but only {nargs} passed",
+        )
+        !osource
+      ):
         return
-      
+
       let source = &move(osource)
 
       if source.kind != String:
@@ -68,7 +75,8 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
             ": " & pError.msg
           debug "url: this is a constructor, so a TypeError will be thrown."
           vm.typeError(pError.msg)
-          newURL("", "", "", "") # unreachable, no need to worry. this just exists to make the compiler happy.
+          newURL("", "", "", "")
+            # unreachable, no need to worry. this just exists to make the compiler happy.
 
       if parsed.scheme().len < 1:
         return
@@ -90,9 +98,14 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
 
       var osource: Option[MAtom]
 
-      if (osource = vm.argument(1, true, "URL.new: At least 1 argument required, but only {nargs} passed"); !osource):
+      if (;
+        osource = vm.argument(
+          1, true, "URL.new: At least 1 argument required, but only {nargs} passed"
+        )
+        !osource
+      ):
         return
-      
+
       let source = &move(osource)
 
       if source.kind != String:
