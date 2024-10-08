@@ -412,6 +412,24 @@ proc consumeHash*(tokenizer: Tokenizer): Token =
 
   tokenizer.consumeInvalid()
 
+proc consumeGreaterThan*(tokenizer: Tokenizer): Token =
+  tokenizer.advance()
+
+  if tokenizer.charAt() == some('='):
+    tokenizer.advance()
+    return Token(kind: GreaterEqual)
+  else:
+    return Token(kind: GreaterThan)
+
+proc consumeLessThan*(tokenizer: Tokenizer): Token =
+  tokenizer.advance()
+
+  if tokenizer.charAt() == some('='):
+    tokenizer.advance()
+    return Token(kind: LessEqual)
+  else:
+    return Token(kind: LessThan)
+
 proc next*(tokenizer: Tokenizer): Token =
   let c = tokenizer.charAt()
 
@@ -469,6 +487,10 @@ proc next*(tokenizer: Tokenizer): Token =
     tokenizer.consumeAmpersand()
   of '|':
     tokenizer.consumePipe()
+  of '>':
+    tokenizer.consumeGreaterThan()
+  of '<':
+    tokenizer.consumeLessThan()
   of ';':
     tokenizer.advance()
     Token(kind: TokenKind.Semicolon)

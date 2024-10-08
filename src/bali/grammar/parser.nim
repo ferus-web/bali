@@ -111,6 +111,18 @@ proc parseExpression*(
     of TokenKind.Equal:
       debug "parser: whilst parsing arithmetic expr, found equality operand"
       term.op = BinaryOperation.Equal
+    of TokenKind.GreaterThan:
+      debug "parser: whilst parsing arithmetic expr, found greater-than operand"
+      term.op = BinaryOperation.GreaterThan
+    of TokenKind.GreaterEqual:
+      debug "parser: whilst parsing arithmetic expr, found greater-than-or-equal-to operand"
+      term.op = BinaryOperation.GreaterOrEqual
+    of TokenKind.LessThan:
+      debug "parser: whilst parsing arithmetic expr, found lesser-than operand"
+      term.op = BinaryOperation.LesserThan
+    of TokenKind.LessEqual:
+      debug "parser: whilst parsing arithmetic expr, found lesser-than-or-equal-to operand"
+      term.op = BinaryOperation.LesserOrEqual
     of TokenKind.NotEqual:
       term.op = BinaryOperation.NotEqual
     of TokenKind.Whitespace:
@@ -205,7 +217,6 @@ proc parseDeclaration*(
     parser.tokenizer = copiedTok
   else:
     debug "parser: an expression was successfully parsed, continuing in this state"
-    print expr
     return expr
 
   var
@@ -235,6 +246,8 @@ proc parseDeclaration*(
     of TokenKind.Number:
       if *tok.intVal:
         atom = some(uinteger uint32(&tok.intVal))
+      else:
+        atom = some(floating(tok.floatVal))
     of TokenKind.Whitespace:
       discard
     of TokenKind.New:
@@ -374,11 +387,15 @@ proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
 
   case token.kind
   of TokenKind.Number:
+    debug "parser: parseAtom: token is Number"
     if *token.intVal:
+      debug "parser: parseAtom: token contains integer value"
       return some integer(&token.intVal)
     else:
+      debug "parser: parseAtom: token contains floating-point value"
       return some floating(token.floatVal)
   of TokenKind.String:
+    debug "parser: parseAtom: token is String"
     return some str(token.str)
   else:
     unreachable
@@ -661,7 +678,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     # body parsing
     # TODO: make a generic function for anonymous scopes, functions, if statements, while/for statements and everything that takes in a body of statements
-    var body: seq[Statement]
+    var body, elseBody: seq[Statement]
     info "parser: parse if-statement body"
     while not parser.tokenizer.eof:
       let
@@ -687,12 +704,50 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       statement.col = parser.tokenizer.location.col
 
       body &= statement
+    
+    if not parser.tokenizer.eof and (let nextToken = parser.tokenizer.nextExceptWhitespace(); *nextToken and (&nextToken).kind == TokenKind.Else): # FIXME: untangle this shitshow
+      debug "parser: parse if-statement else-body"
+
+      var allowMultilineStmts = false # FIXME: currently unused, use this later on
+      if (let next = parser.tokenizer
+        .deepCopy()
+        .nextExceptWhitespace(); *next and (&next).kind == TokenKind.LCurly):
+        discard parser.tokenizer.nextExceptWhitespace()
+        allowMultilineStmts = true
+
+      while not parser.tokenizer.eof:
+        let
+          prevPos = parser.tokenizer.pos
+          prevLoc = parser.tokenizer.location
+          c = parser.tokenizer.nextExceptWhitespace()
+
+        if *c and (&c).kind == TokenKind.RCurly:
+          info "parser: met end of curly bracket block"
+          break
+        else:
+          parser.tokenizer.pos = prevPos
+          parser.tokenizer.location = prevLoc
+
+        let stmt = parser.parseStatement()
+
+        if not *stmt:
+          info "parser: can't find any more statements for if statement; body parsing complete"
+          break
+
+        var statement = &stmt
+        statement.line = parser.tokenizer.location.line
+        statement.col = parser.tokenizer.location.col
+
+        elseBody &= statement
+
 
     var lastScope = parser.ast.scopes[parser.ast.currentScope]
     var exprScope = Scope(stmts: body)
+    var elseScope = Scope(stmts: elseBody)
     exprScope.prev = some(lastScope)
+    elseScope.prev = some(lastScope)
 
-    return some ifStmt(&expr, exprScope)
+    return some ifStmt(&expr, exprScope, elseScope)
   of TokenKind.New:
     let expr = parser.parseConstructor()
     if !expr:

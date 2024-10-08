@@ -59,6 +59,10 @@ type
     Invalid
     Equal
     TrueEqual
+    GreaterThan
+    GreaterOrEqual
+    LesserThan
+    LesserOrEqual
     NotEqual
     NotTrueEqual
 
@@ -106,6 +110,7 @@ type
     of IfStmt:
       conditionExpr*: Statement
       branchTrue*: Scope
+      branchFalse*: Scope
     of CopyValMut:
       cpMutSourceIdent*: string
       cpMutDestIdent*: string
@@ -180,8 +185,8 @@ proc createImmutVal*(name: string, atom: MAtom): Statement =
 proc returnFunc*(): Statement =
   Statement(kind: ReturnFn)
 
-proc ifStmt*(condition: Statement, body: Scope): Statement =
-  Statement(kind: IfStmt, conditionExpr: condition, branchTrue: body)
+proc ifStmt*(condition: Statement, body, elseScope: Scope): Statement =
+  Statement(kind: IfStmt, conditionExpr: condition, branchTrue: body, branchFalse: elseScope)
 
 proc atomHolder*(atom: MAtom): Statement =
   Statement(kind: AtomHolder, atom: atom)
