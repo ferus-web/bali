@@ -120,6 +120,10 @@ proc parseExpression*(
         break
     of TokenKind.LParen:
       debug "parser: whilst parsing arithmetic expr, found potential right-hand expr"
+      if term.op == BinaryOperation.Invalid:
+        debug "parser: term.op == Invalid, this probably isn't an expression in the first place..."
+        return
+
       let expr = parser.parseExpression()
       if !expr:
         return
@@ -201,6 +205,7 @@ proc parseDeclaration*(
     parser.tokenizer = copiedTok
   else:
     debug "parser: an expression was successfully parsed, continuing in this state"
+    print expr
     return expr
 
   var
