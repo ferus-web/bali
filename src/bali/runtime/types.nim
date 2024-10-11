@@ -74,6 +74,14 @@ proc internalIndex*(stmt: Statement): IndexParams {.inline.} =
   IndexParams(priorities: @[vkInternal], stmt: some stmt)
 
 proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
+  var toRm: seq[int]
+  for i, value in runtime.values:
+    if value.identifier == ident and value.kind == vkInternal:
+      toRm &= i
+
+  for rm in toRm:
+    runtime.values.del(rm)
+    
   runtime.values &=
     Value(
       kind: vkInternal, index: runtime.addrIdx, identifier: ident, ownerStmt: hash(stmt)
@@ -85,8 +93,25 @@ proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
   inc runtime.addrIdx
 
 proc markGlobal*(runtime: Runtime, ident: string) =
+  var toRm: seq[int]
+  for i, value in runtime.values:
+    if value.identifier == ident and value.kind == vkGlobal:
+      toRm &= i
+
+  for rm in toRm:
+    runtime.values.del(rm)
+
   runtime.values &= Value(kind: vkGlobal, index: runtime.addrIdx, identifier: ident)
 
   info "Ident \"" & ident & "\" is being globally marked at index " & $runtime.addrIdx
 
   inc runtime.addrIdx
+
+proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
+  runtime.values &=
+    Value(kind: vkLocal, index: runtime.addrIdx, identifier: ident, ownerFunc: hash(fn))
+
+  info "Ident \"" & ident & "\" is being locally marked at index " & $runtime.addrIdx
+
+  inc runtime.addrIdx
+
