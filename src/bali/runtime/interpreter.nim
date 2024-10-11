@@ -133,7 +133,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         ownerStmt = some(stmt),
         internal = true,
       )
-    
+
     if stmt.conditionExpr.binRight.kind == AtomHolder:
       debug "ir: BinaryOp right term is an atom"
       runtime.generateIR(
@@ -144,9 +144,19 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
       )
   of ReturnFn:
     if *stmt.retVal:
-      runtime.generateIR(fn, createImmutVal("retval", &stmt.retVal), internal = true, ownerStmt = some(stmt))
+      runtime.generateIR(
+        fn,
+        createImmutVal("retval", &stmt.retVal),
+        internal = true,
+        ownerStmt = some(stmt),
+      )
     else:
-      runtime.generateIR(fn, createImmutVal("retval", undefined()), internal = true, ownerStmt = some(stmt)) # load undefined atom
+      runtime.generateIR(
+        fn,
+        createImmutVal("retval", undefined()),
+        internal = true,
+        ownerStmt = some(stmt),
+      ) # load undefined atom
   else:
     discard
 
@@ -515,32 +525,38 @@ proc generateIR*(
     runtime.expand(fn, stmt)
 
     let
-      lhsIdx = case stmt.conditionExpr.binLeft.kind
-      of IdentHolder:
-        debug "emitter: if-stmt: LHS is ident"
-        runtime.index(stmt.conditionExpr.binLeft.ident, defaultParams(fn))
-      of AtomHolder:
-        debug "emitter: if-stmt: LHS is atom"
-        runtime.index("left_term", internalIndex(stmt))
-      else: unreachable; 0
+      lhsIdx =
+        case stmt.conditionExpr.binLeft.kind
+        of IdentHolder:
+          debug "emitter: if-stmt: LHS is ident"
+          runtime.index(stmt.conditionExpr.binLeft.ident, defaultParams(fn))
+        of AtomHolder:
+          debug "emitter: if-stmt: LHS is atom"
+          runtime.index("left_term", internalIndex(stmt))
+        else:
+          unreachable
+          0
 
-      rhsIdx = case stmt.conditionExpr.binRight.kind
-      of IdentHolder:
-        debug "emitter: if-stmt: RHS is ident"
-        runtime.index(stmt.conditionExpr.binRight.ident, defaultParams(fn))
-      of AtomHolder:
-        debug "emitter: if-stmt: RHS is atom"
-        runtime.index("right_term", internalIndex(stmt))
-      else: unreachable; 0
+      rhsIdx =
+        case stmt.conditionExpr.binRight.kind
+        of IdentHolder:
+          debug "emitter: if-stmt: RHS is ident"
+          runtime.index(stmt.conditionExpr.binRight.ident, defaultParams(fn))
+        of AtomHolder:
+          debug "emitter: if-stmt: RHS is atom"
+          runtime.index("right_term", internalIndex(stmt))
+        else:
+          unreachable
+          0
 
     case stmt.conditionExpr.op
     of Equal, NotEqual:
-      runtime.ir.equate(
-        lhsIdx, rhsIdx
-      )
+      runtime.ir.equate(lhsIdx, rhsIdx)
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
-        IROperation(opcode: GreaterThanInt, arguments: @[uinteger lhsIdx, uinteger rhsIdx]) # FIXME: mirage doesn't have a nicer IR function for this.
+        IROperation(
+          opcode: GreaterThanInt, arguments: @[uinteger lhsIdx, uinteger rhsIdx]
+        ) # FIXME: mirage doesn't have a nicer IR function for this.
       )
     else:
       unreachable
@@ -558,13 +574,14 @@ proc generateIR*(
       0
 
     runtime.generateIRForScope(stmt.branchTrue) # generate branch one
-    let skipBranchTwoJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # jump beyond branch two, don't accidentally execute it
+    let skipBranchTwoJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+      # jump beyond branch two, don't accidentally execute it
     let endOfBranchOne = getCurrOpNum().uint
 
     runtime.generateIRForScope(stmt.branchFalse) # generate branch two
     let endOfBranchTwo = getCurrOpNum().uint
     runtime.ir.overrideArgs(skipBranchTwoJmp, @[uinteger(endOfBranchTwo)])
-    
+
     case stmt.conditionExpr.op
     of Equal, GreaterThan:
       runtime.ir.overrideArgs(falseJump, @[uinteger(endOfBranchOne)])
@@ -572,7 +589,8 @@ proc generateIR*(
     of NotEqual, LesserThan:
       runtime.ir.overrideArgs(trueJump, @[uinteger(getCurrOpNum().uint)])
       runtime.ir.overrideArgs(falseJump, @[uinteger(falseJump + 2)])
-    else: unreachable
+    else:
+      unreachable
   of CopyValMut:
     debug "emitter: generate IR for copying value to a mutable address with source: " &
       stmt.cpMutSourceIdent & " and destination: " & stmt.cpMutDestIdent

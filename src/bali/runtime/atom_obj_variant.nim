@@ -5,10 +5,9 @@ import std/options
 import bali/internal/sugar
 import mirage/atom
 
-type
-  AtomOrFunction*[F] = object
-    fn: Option[F]
-    atom: Option[MAtom]
+type AtomOrFunction*[F] = object
+  fn: Option[F]
+  atom: Option[MAtom]
 
 {.push inline.}
 func `fn=`*[F](af: var AtomOrFunction[F], fn: F) =
@@ -28,12 +27,18 @@ func fn*[F](af: AtomOrFunction[F]): F =
   &af.fn
 
 func isFn*[F](af: AtomOrFunction[F]): bool =
-  assert(not (*af.fn and *af.atom), "AtomOrFunction variant simultaneously contains atom and function!")
+  assert(
+    not (*af.fn and *af.atom),
+    "AtomOrFunction variant simultaneously contains atom and function!",
+  )
 
   *af.fn
 
 func isAtom*[F](af: AtomOrFunction[F]): bool =
-  assert(not (*af.fn and *af.atom), "AtomOrFunction variant simultaneously contains atom and function!")
+  assert(
+    not (*af.fn and *af.atom),
+    "AtomOrFunction variant simultaneously contains atom and function!",
+  )
 
   *af.atom
 
@@ -42,12 +47,8 @@ func atom*[F](af: AtomOrFunction[F]): MAtom =
   &af.atom
 
 func initAtomOrFunction*[F](fn: F): AtomOrFunction[F] =
-  AtomOrFunction[F](
-    fn: some(fn)
-  )
+  AtomOrFunction[F](fn: some(fn))
 
 func initAtomOrFunction*[F](atom: sink MAtom): AtomOrFunction[F] =
-  AtomOrFunction[F](
-    atom: some(move(atom))
-  )
+  AtomOrFunction[F](atom: some(move(atom)))
 {.pop.}

@@ -712,14 +712,18 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       statement.col = parser.tokenizer.location.col
 
       body &= statement
-    
-    if not parser.tokenizer.eof and (let nextToken = parser.tokenizer.nextExceptWhitespace(); *nextToken and (&nextToken).kind == TokenKind.Else): # FIXME: untangle this shitshow
+
+    if not parser.tokenizer.eof and (
+      let nextToken = parser.tokenizer.nextExceptWhitespace()
+      *nextToken and (&nextToken).kind == TokenKind.Else
+    ): # FIXME: untangle this shitshow
       debug "parser: parse if-statement else-body"
 
       var allowMultilineStmts = false # FIXME: currently unused, use this later on
-      if (let next = parser.tokenizer
-        .deepCopy()
-        .nextExceptWhitespace(); *next and (&next).kind == TokenKind.LCurly):
+      if (
+        let next = parser.tokenizer.deepCopy().nextExceptWhitespace()
+        *next and (&next).kind == TokenKind.LCurly
+      ):
         discard parser.tokenizer.nextExceptWhitespace()
         allowMultilineStmts = true
 
@@ -747,7 +751,6 @@ proc parseStatement*(parser: Parser): Option[Statement] =
         statement.col = parser.tokenizer.location.col
 
         elseBody &= statement
-
 
     var lastScope = parser.ast.scopes[parser.ast.currentScope]
     var exprScope = Scope(stmts: body)

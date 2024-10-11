@@ -81,7 +81,7 @@ proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
 
   for rm in toRm:
     runtime.values.del(rm)
-    
+
   runtime.values &=
     Value(
       kind: vkInternal, index: runtime.addrIdx, identifier: ident, ownerStmt: hash(stmt)
@@ -114,4 +114,3 @@ proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
   info "Ident \"" & ident & "\" is being locally marked at index " & $runtime.addrIdx
 
   inc runtime.addrIdx
-
