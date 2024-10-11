@@ -88,6 +88,14 @@ proc parseExpression*(
       else:
         debug "parser: atom will fill right term"
         term.binRight = atomHolder(&parser.parseAtom(next))
+    of TokenKind.String:
+      debug "parser: whilst parsing arithmetic expr, found String"
+      if term.binLeft != nil:
+        debug "parser: atom will fill left term"
+        term.binLeft = atomHolder(&parser.parseAtom(next))
+      else:
+        debug "parser: atom will fill right term"
+        term.binRight = atomHolder(&parser.parseAtom(next))
     of TokenKind.Identifier:
       debug "parser: whilst parsing arithmetic expr, found ident"
       if term.binLeft == nil:
