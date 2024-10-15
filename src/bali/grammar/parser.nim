@@ -13,6 +13,8 @@ type Parser* = ref object
   ast: AST
   errors*: seq[ParseError]
 
+  foundShebang: bool = false
+
 template error(parser: Parser, kind: ParseErrorKind, msg: string) =
   parser.errors &= ParseError(location: parser.tokenizer.location, message: msg)
 
@@ -767,8 +769,12 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     return expr
   of TokenKind.Comment, TokenKind.String, TokenKind.Number, TokenKind.Null:
     discard
-  of TokenKind.Shebang, TokenKind.Semicolon:
-    discard
+  of TokenKind.Shebang:
+    if parser.foundShebang:
+      parser.error Other, "One file cannot have two shebangs"
+    else:
+      parser.foundShebang = true
+  of TokenKind.Semicolon: discard
   of TokenKind.InvalidShebang:
     parser.error Other, "Shebang cannot be preceded by whitespace"
   else:
