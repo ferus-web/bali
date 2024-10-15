@@ -10,14 +10,6 @@ import bali/runtime/[normalize, types, atom_helpers]
 import bali/stdlib/prelude
 import crunchy, pretty
 
-proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
-  runtime.values &=
-    Value(kind: vkLocal, index: runtime.addrIdx, identifier: ident, ownerFunc: hash(fn))
-
-  info "Ident \"" & ident & "\" is being locally marked at index " & $runtime.addrIdx
-
-  inc runtime.addrIdx
-
 proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
   for value in runtime.values:
     for prio in params.priorities:
@@ -141,7 +133,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         ownerStmt = some(stmt),
         internal = true,
       )
-    
+
     if stmt.conditionExpr.binRight.kind == AtomHolder:
       debug "ir: BinaryOp right term is an atom"
       runtime.generateIR(
@@ -150,6 +142,21 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         ownerStmt = some(stmt),
         internal = true,
       )
+  of ReturnFn:
+    if *stmt.retVal:
+      runtime.generateIR(
+        fn,
+        createImmutVal("retval", &stmt.retVal),
+        internal = true,
+        ownerStmt = some(stmt),
+      )
+    else:
+      runtime.generateIR(
+        fn,
+        createImmutVal("retval", undefined()),
+        internal = true,
+        ownerStmt = some(stmt),
+      ) # load undefined atom
   else:
     discard
 
@@ -216,37 +223,40 @@ proc generateIR*(
 ) =
   case stmt.kind
   of CreateImmutVal:
-    info "emitter: generate IR for creating immutable value with identifier: " &
+    debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
 
     case stmt.imAtom.kind
     of Integer:
-      info "interpreter: generate IR for loading immutable integer"
+      debug "interpreter: generate IR for loading immutable integer"
       runtime.ir.loadInt(runtime.addrIdx, stmt.imAtom)
     of UnsignedInt:
-      info "interpreter: generate IR for loading immutable unsigned integer"
+      debug "interpreter: generate IR for loading immutable unsigned integer"
       runtime.ir.loadUint(
         runtime.addrIdx,
         &stmt.imAtom.getUint(),
           # FIXME: make all mirage integer ops work on unsigned integers whenever possible too.
       )
     of String:
-      info "interpreter: generate IR for loading immutable string"
+      debug "interpreter: generate IR for loading immutable string"
       discard runtime.ir.loadStr(runtime.addrIdx, stmt.imAtom)
         # FIXME: mirage: loadStr doesn't have the discardable pragma
     of Float:
-      info "interpreter: generate IR for loading immutable float"
+      debug "interpreter: generate IR for loading immutable float"
       discard runtime.ir.addOp(
         IROperation(
           opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.imAtom]
         )
       ) # FIXME: mirage: loadFloat isn't implemented
     of Boolean:
-      info "emitter: generate IR for loading immutable boolean"
+      debug "emitter: generate IR for loading immutable boolean"
       runtime.ir.loadBool(runtime.addrIdx, stmt.imAtom)
     of Null:
-      info "emitter: generate IR for loading immutable null"
+      debug "emitter: generate IR for loading immutable null"
       runtime.ir.loadNull(runtime.addrIdx)
+    of Object:
+      debug "emitter: generate IR for loading immutable object"
+      runtime.ir.loadObject(runtime.addrIdx)
     else:
       print stmt.imAtom
       unreachable
@@ -280,6 +290,9 @@ proc generateIR*(
     of Null:
       debug "emitter: generate IR for loading mutable null"
       runtime.ir.loadNull(runtime.addrIdx)
+    of Object:
+      debug "emitter: generate IR for loading mutable object"
+      runtime.ir.loadObject(runtime.addrIdx)
     else:
       unreachable
 
@@ -332,16 +345,12 @@ proc generateIR*(
     assert not (*stmt.retVal and *stmt.retIdent),
       "ReturnFn statement cannot have both return atom and return ident at once!"
 
-    if *stmt.retVal:
-      let name = $hash(fn) & "_retval"
-      runtime.generateIR(fn, createImmutVal(name, &stmt.retVal))
-      runtime.ir.returnFn(runtime.index(name, defaultParams(fn)).int)
-    elif *stmt.retIdent:
-      runtime.ir.returnFn(runtime.index(&stmt.retIdent, defaultParams(fn)).int)
+    runtime.expand(fn, stmt)
+
+    if !stmt.retIdent:
+      runtime.ir.returnFn(runtime.index("retval", internalIndex(stmt)).int)
     else:
-      let name = $hash(fn) & "_retval"
-      runtime.generateIR(fn, createImmutVal(name, null())) # load NULL atom
-      runtime.ir.returnFn(runtime.index(name, defaultParams(fn)).int)
+      runtime.ir.returnFn(runtime.index(&stmt.retIdent, internalIndex(stmt)).int)
   of CallAndStoreResult:
     runtime.markLocal(fn, stmt.storeIdent)
     runtime.generateIR(fn, stmt.storeFn)
@@ -515,29 +524,39 @@ proc generateIR*(
     info "emitter: emitting IR for if statement"
     runtime.expand(fn, stmt)
 
-    case stmt.conditionExpr.op
-    of Equal, NotEqual:
-      let 
-        lhsIdx = case stmt.conditionExpr.binLeft.kind
+    let
+      lhsIdx =
+        case stmt.conditionExpr.binLeft.kind
         of IdentHolder:
           debug "emitter: if-stmt: LHS is ident"
           runtime.index(stmt.conditionExpr.binLeft.ident, defaultParams(fn))
         of AtomHolder:
           debug "emitter: if-stmt: LHS is atom"
           runtime.index("left_term", internalIndex(stmt))
-        else: unreachable; 0
+        else:
+          unreachable
+          0
 
-        rhsIdx = case stmt.conditionExpr.binRight.kind
+      rhsIdx =
+        case stmt.conditionExpr.binRight.kind
         of IdentHolder:
           debug "emitter: if-stmt: RHS is ident"
           runtime.index(stmt.conditionExpr.binRight.ident, defaultParams(fn))
         of AtomHolder:
           debug "emitter: if-stmt: RHS is atom"
           runtime.index("right_term", internalIndex(stmt))
-        else: unreachable; 0
+        else:
+          unreachable
+          0
 
-      runtime.ir.equate(
-        lhsIdx, rhsIdx
+    case stmt.conditionExpr.op
+    of Equal, NotEqual:
+      runtime.ir.equate(lhsIdx, rhsIdx)
+    of GreaterThan, LesserThan:
+      discard runtime.ir.addOp(
+        IROperation(
+          opcode: GreaterThanInt, arguments: @[uinteger lhsIdx, uinteger rhsIdx]
+        ) # FIXME: mirage doesn't have a nicer IR function for this.
       )
     else:
       unreachable
@@ -554,17 +573,24 @@ proc generateIR*(
       unreachable
       0
 
-    runtime.generateIRForScope(stmt.branchTrue)
-    
+    runtime.generateIRForScope(stmt.branchTrue) # generate branch one
+    let skipBranchTwoJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+      # jump beyond branch two, don't accidentally execute it
+    let endOfBranchOne = getCurrOpNum().uint
+
+    runtime.generateIRForScope(stmt.branchFalse) # generate branch two
+    let endOfBranchTwo = getCurrOpNum().uint
+    runtime.ir.overrideArgs(skipBranchTwoJmp, @[uinteger(endOfBranchTwo)])
+
     case stmt.conditionExpr.op
-    of Equal:
-      runtime.ir.overrideArgs(falseJump, @[uinteger(getCurrOpNum().uint)])
+    of Equal, GreaterThan:
+      runtime.ir.overrideArgs(falseJump, @[uinteger(endOfBranchOne)])
       runtime.ir.overrideArgs(trueJump, @[uinteger(falseJump + 2)])
-      # TODO: codegen for false branch
-    of NotEqual:
+    of NotEqual, LesserThan:
       runtime.ir.overrideArgs(trueJump, @[uinteger(getCurrOpNum().uint)])
       runtime.ir.overrideArgs(falseJump, @[uinteger(falseJump + 2)])
-    else: unreachable
+    else:
+      unreachable
   of CopyValMut:
     debug "emitter: generate IR for copying value to a mutable address with source: " &
       stmt.cpMutSourceIdent & " and destination: " & stmt.cpMutDestIdent

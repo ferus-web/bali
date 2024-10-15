@@ -88,6 +88,14 @@ proc parseExpression*(
       else:
         debug "parser: atom will fill right term"
         term.binRight = atomHolder(&parser.parseAtom(next))
+    of TokenKind.String:
+      debug "parser: whilst parsing arithmetic expr, found String"
+      if term.binLeft != nil:
+        debug "parser: atom will fill left term"
+        term.binLeft = atomHolder(&parser.parseAtom(next))
+      else:
+        debug "parser: atom will fill right term"
+        term.binRight = atomHolder(&parser.parseAtom(next))
     of TokenKind.Identifier:
       debug "parser: whilst parsing arithmetic expr, found ident"
       if term.binLeft == nil:
@@ -704,14 +712,18 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       statement.col = parser.tokenizer.location.col
 
       body &= statement
-    
-    if not parser.tokenizer.eof and (let nextToken = parser.tokenizer.nextExceptWhitespace(); *nextToken and (&nextToken).kind == TokenKind.Else): # FIXME: untangle this shitshow
+
+    if not parser.tokenizer.eof and (
+      let nextToken = parser.tokenizer.nextExceptWhitespace()
+      *nextToken and (&nextToken).kind == TokenKind.Else
+    ): # FIXME: untangle this shitshow
       debug "parser: parse if-statement else-body"
 
       var allowMultilineStmts = false # FIXME: currently unused, use this later on
-      if (let next = parser.tokenizer
-        .deepCopy()
-        .nextExceptWhitespace(); *next and (&next).kind == TokenKind.LCurly):
+      if (
+        let next = parser.tokenizer.deepCopy().nextExceptWhitespace()
+        *next and (&next).kind == TokenKind.LCurly
+      ):
         discard parser.tokenizer.nextExceptWhitespace()
         allowMultilineStmts = true
 
@@ -739,7 +751,6 @@ proc parseStatement*(parser: Parser): Option[Statement] =
         statement.col = parser.tokenizer.location.col
 
         elseBody &= statement
-
 
     var lastScope = parser.ast.scopes[parser.ast.currentScope]
     var exprScope = Scope(stmts: body)

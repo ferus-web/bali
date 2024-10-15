@@ -186,7 +186,9 @@ proc returnFunc*(): Statement =
   Statement(kind: ReturnFn)
 
 proc ifStmt*(condition: Statement, body, elseScope: Scope): Statement =
-  Statement(kind: IfStmt, conditionExpr: condition, branchTrue: body, branchFalse: elseScope)
+  Statement(
+    kind: IfStmt, conditionExpr: condition, branchTrue: body, branchFalse: elseScope
+  )
 
 proc atomHolder*(atom: MAtom): Statement =
   Statement(kind: AtomHolder, atom: atom)

@@ -115,21 +115,21 @@ type
 
   Token* = object
     case kind*: TokenKind
-    of String:
+    of TokenKind.String:
       str*: string
       malformed*: bool
-    of Identifier:
+    of TokenKind.Identifier:
       ident*: string
-    of Number:
+    of TokenKind.Number:
       floatVal*: float
       hasSign*: bool
       intVal*: Option[int32]
-    of Whitespace:
+    of TokenKind.Whitespace:
       whitespace*: string
-    of Comment:
+    of TokenKind.Comment:
       comment*: string
       multiline*: bool
-    of Shebang:
+    of TokenKind.Shebang:
       shebang*: string
     else:
       discard
