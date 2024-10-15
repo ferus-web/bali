@@ -2,8 +2,8 @@
 ##
 ## Copyright (C) 2024 Trayambak Rai and Ferus Authors
 
-import std/[math, options, logging, strutils, tables]
-import ./token
+import std/[math, options, logging, strutils, tables, unicode]
+import bali/grammar/token
 import bali/internal/sugar
 import pretty
 
@@ -388,8 +388,7 @@ proc consumeHash*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
 
   if tokenizer.charAt() == some('!'):
-    if (tokenizer.pos - 2) >= 0 and
-        tokenizer.source[tokenizer.pos - 2] in strutils.Whitespace:
+    if tokenizer.pos >= 2 and tokenizer.source[tokenizer.pos - 2] in strutils.Whitespace:
       tokenizer.advance()
       return Token(kind: TokenKind.InvalidShebang)
 
