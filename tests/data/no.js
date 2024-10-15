@@ -1,7 +1,11 @@
-let x = 42
-let y = x != x
-let z = y == true && x != 0
+function main() {
+	let x = 32
+	if (x == x) {
+		console.log("32 == 32")
+		return
+	}
+	
+	console.log("32 != 32")
+}
 
-console.log(x)
-console.log(y)
-console.log(z)
+main()
