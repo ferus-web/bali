@@ -150,4 +150,5 @@ const Keywords* = {
   "throw": TokenKind.Throw,
   "function": TokenKind.Function,
   "return": TokenKind.Return,
+  "while": TokenKind.While
 }.toTable
