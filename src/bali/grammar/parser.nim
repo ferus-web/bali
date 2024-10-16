@@ -621,6 +621,30 @@ proc parseScope*(parser: Parser): seq[Statement] =
 
   stmts
 
+proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] =
+  ## Parse an expression that is currently wrapped in parenthesis
+  ## like `(x == 32)`. Used when parsing if statements and while loops.
+  debug "parser: parsing possible expression in parenthesis wrap for token kind: " & $token
+
+  if parser.tokenizer.eof:
+    parser.error Other, "expected conditions after if token, got EOF instead"
+
+  if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
+    if (&tok).kind != TokenKind.LParen:
+      parser.error Other, "expected left parenthesis after " & $token & " token"
+
+  let expr = parser.parseExpression()
+  if !expr:
+    parser.error Other, "expected expression, got nothing instead"
+
+  debug "parser: whilst parsing expression in parenthesis wrap: found expression!"
+
+  if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
+    if (&tok).kind != TokenKind.RParen:
+      parser.error Other, "expected right parenthesis after expression"
+
+  expr
+
 proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
@@ -707,25 +731,13 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
     info "parser: parse throw-expr"
     return parser.parseThrow()
   of TokenKind.If:
-    if parser.tokenizer.eof:
-      parser.error Other, "expected conditions after if token, got EOF instead"
-
-    if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
-      if (&tok).kind != TokenKind.LParen:
-        parser.error Other, "expected left parenthesis after if token"
-
-    let expr = parser.parseExpression()
+    let expr = parser.parseExprInParenWrap(TokenKind.If)
     if !expr:
-      parser.error Other, "expected expression, got nothing instead"
-
-    if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
-      if (&tok).kind != TokenKind.RParen:
-        parser.error Other, "expected right parenthesis after if token"
+      return
 
     # body parsing
     debug "parser: parse if-statement body"
     let body = parser.parseScope()
-
     var elseBody: seq[Statement]
 
     if not parser.tokenizer.eof and (
