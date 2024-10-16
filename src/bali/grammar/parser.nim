@@ -177,11 +177,11 @@ proc parseExpression*(
         " during tokenization, marking expression parse as failed"
       return
 
-  if term.binRight == nil:
+  #[ if term.binRight == nil:
     debug "parser: right term in arithmetic expr is empty but we need to fill it somehow, filling it with boolean `true`"
     debug "FIXME: parser: this is probably not the right thing to do!"
     term.op = BinaryOperation.Equal
-    term.binRight = atomHolder(boolean(true)) # TODO: is this the right thing to do in this case?
+    term.binRight = atomHolder(boolean(true)) # TODO: is this the right thing to do in this case? ]#
 
   if term.binLeft != nil and term.binRight != nil:
     return some term
