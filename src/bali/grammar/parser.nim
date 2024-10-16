@@ -154,6 +154,7 @@ proc parseExpression*(
       term.binRight = &expr
     of TokenKind.RParen:
       debug "parser: whilst parsing arithmetic expr, found right-paren to close off expr; aborting expr parsing"
+      parser.tokenizer.pos -= 1
       break
     of TokenKind.True:
       debug "parser: whilst parsing arithmetic expr, found boolean (true)"
@@ -175,6 +176,12 @@ proc parseExpression*(
       debug "parser: met unexpected token " & $next.kind &
         " during tokenization, marking expression parse as failed"
       return
+
+  if term.binRight == nil:
+    debug "parser: right term in arithmetic expr is empty but we need to fill it somehow, filling it with boolean `true`"
+    debug "FIXME: parser: this is probably not the right thing to do!"
+    term.op = BinaryOperation.Equal
+    term.binRight = atomHolder(boolean(true)) # TODO: is this the right thing to do in this case?
 
   if term.binLeft != nil and term.binRight != nil:
     return some term
@@ -643,6 +650,8 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
     if (&tok).kind != TokenKind.RParen:
       parser.error Other, "expected right parenthesis after expression"
 
+  debug "parser: whilst parsing expression in parenthesis wrap: grammar was satisfied, returning expression"
+
   expr
 
 proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] =
@@ -754,6 +763,17 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
     elseScope.prev = some(lastScope)
 
     return some ifStmt(&expr, exprScope, elseScope)
+  of TokenKind.While:
+    let expr = parser.parseExprInParenWrap(TokenKind.While)
+    if !expr:
+      return
+
+    let body = parser.parseScope()
+    let lastScope = parser.ast.scopes[parser.ast.currentScope]
+    var bodyScope = Scope(stmts: body)
+
+    bodyScope.prev = some(lastScope)
+    return some whileStmt(&expr, bodyScope)
   of TokenKind.New:
     let expr = parser.parseConstructor()
     if !expr:
