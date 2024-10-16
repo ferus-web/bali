@@ -299,7 +299,7 @@ proc parseDeclaration*(
       elif *toCall:
         return some(callAndStoreMut(ident, &toCall))
 
-proc parseStatement*(parser: Parser): Option[Statement]
+proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement]
 
 proc parseFunction*(parser: Parser): Option[Function] =
   info "parser: parse function"
@@ -362,7 +362,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
       discard # parameter parser goes here :3
 
   var body: seq[Statement]
-  info "parser: parse function body: " & &name
+  debug "parser: parse function body: " & &name
   while not parser.tokenizer.eof:
     let
       prevPos = parser.tokenizer.pos
@@ -376,12 +376,11 @@ proc parseFunction*(parser: Parser): Option[Function] =
       parser.tokenizer.pos = prevPos
       parser.tokenizer.location = prevLoc
 
-    let stmt = parser.parseStatement()
-
+    let stmt = parser.parseStatement(inFnBody = true)
     if not *stmt:
-      info "parser: can't find any more statements for function body: " & &name &
-        "; body parsing complete"
-      break
+      debug "parser: can't find any more statements for function body: " & &name &
+        "; body parsing complete. Waiting for right-curly bracket to finish block."
+      continue
 
     var statement = &stmt
     statement.line = parser.tokenizer.location.line
@@ -581,7 +580,7 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
   elif *toCall:
     return some(callAndStoreMut(ident, &toCall))
 
-proc parseStatement*(parser: Parser): Option[Statement] =
+proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
 
@@ -770,13 +769,16 @@ proc parseStatement*(parser: Parser): Option[Statement] =
   of TokenKind.Comment, TokenKind.String, TokenKind.Number, TokenKind.Null:
     discard
   of TokenKind.Shebang:
+    if inFnBody:
+      parser.error Other, "shebang is not allowed inside of a function body"
+
     if parser.foundShebang:
-      parser.error Other, "One file cannot have two shebangs"
+      parser.error Other, "one file cannot have two shebangs"
     else:
       parser.foundShebang = true
   of TokenKind.Semicolon: discard
   of TokenKind.InvalidShebang:
-    parser.error Other, "Shebang cannot be preceded by whitespace"
+    parser.error Other, "shebang cannot be preceded by whitespace"
   else:
     print token
     unreachable
