@@ -196,11 +196,7 @@ proc increment*(ident: string): Statement =
   Statement(kind: Increment, incIdent: ident)
 
 proc whileStmt*(condition: Statement, body: Scope): Statement =
-  Statement(
-    kind: WhileStmt,
-    whConditionExpr: condition,
-    whBranch: body
-  )
+  Statement(kind: WhileStmt, whConditionExpr: condition, whBranch: body)
 
 proc ifStmt*(condition: Statement, body, elseScope: Scope): Statement =
   Statement(

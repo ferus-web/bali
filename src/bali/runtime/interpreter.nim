@@ -662,7 +662,7 @@ proc generateIR*(
         else:
           unreachable
           0
-    
+
     let jmpIntoComparison = getCurrOpNum()
     case stmt.whConditionExpr.op
     of Equal, NotEqual:
@@ -677,15 +677,17 @@ proc generateIR*(
       unreachable
 
     let
-      trueJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # the jump into the body of the loop
-      escapeJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # the jump to "escape" out of the loop
-    
+      trueJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+        # the jump into the body of the loop
+      escapeJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+        # the jump to "escape" out of the loop
+
     let jmpIntoBody = getCurrOpNum()
     runtime.generateIRForScope(stmt.whBranch) # generate the body of the loop
     runtime.ir.jump(jmpIntoComparison.uint) # jump back to the comparison logic
 
     let jmpPastBody = getCurrOpNum()
-    
+
     case stmt.whConditionExpr.op
     of BinaryOperation.Equal, BinaryOperation.GreaterThan:
       runtime.ir.overrideArgs(trueJump, @[uinteger(jmpIntoBody.uint)])
@@ -693,7 +695,8 @@ proc generateIR*(
     of BinaryOperation.NotEqual, BinaryOperation.LesserThan:
       runtime.ir.overrideArgs(trueJump, @[uinteger(jmpPastBody.uint)])
       runtime.ir.overrideArgs(escapeJump, @[uinteger(jmpIntoBody.uint)])
-    else: unreachable
+    else:
+      unreachable
   of Increment:
     runtime.ir.incrementInt(runtime.index(stmt.incIdent, defaultParams(fn)))
   else:
@@ -799,7 +802,7 @@ proc run*(runtime: Runtime) =
 
   info "interpreter: setting entry point to `outer`"
   runtime.vm.setEntryPoint("outer")
-  
+
   for error in runtime.ast.errors:
     runtime.vm.syntaxError(error, if runtime.opts.test262: 0 else: 1)
 

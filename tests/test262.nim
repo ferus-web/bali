@@ -8,18 +8,23 @@ import colored_logger, pretty
 
 const BASE_DIR = "test262/test"
 
-type
-  RunResult = enum
-    Success
-    Error
-    Segfault
+type RunResult = enum
+  Success
+  Error
+  Segfault
 
 proc execJS(file: string, dontEval: bool): RunResult =
-  case execCmd("./balde run " & file & " --test262" & $(if dontEval: " --dump-ast" else: ""))
-  of 0: return Success
-  of 1: return Error
-  of 139: return Segfault
-  else: return Error
+  case execCmd(
+    "./balde run " & file & " --test262" & $(if dontEval: " --dump-ast" else: "")
+  )
+  of 0:
+    return Success
+  of 1:
+    return Error
+  of 139:
+    return Segfault
+  else:
+    return Error
 
 proc main() {.inline.} =
   addHandler(newColoredLogger())
@@ -77,7 +82,8 @@ Flags:
         failed &= file
         continue
       of Segfault:
-        warn "!!!! Test for `" & file & "` exited ungracefully with a segmentation fault !!!!"
+        warn "!!!! Test for `" & file &
+          "` exited ungracefully with a segmentation fault !!!!"
         segfaulted &= file
         continue
 
@@ -108,17 +114,18 @@ Flags:
         echo "  * " & seg
 
     if paramCount() > 1 and paramStr(2) == "json":
-      let data = $(
-        %*{
-          "total": $filesToExec,
-          "successful": $successful.len,
-          "skipped": $skipped.len,
-          "failed": $failed.len,
-          "segfaulted": $segfaulted.len,
-          "successful_percentage": $successPercentage,
-          "runtime_seconds": $secondsTaken
-        }
-      )
+      let data =
+        $(
+          %*{
+            "total": $filesToExec,
+            "successful": $successful.len,
+            "skipped": $skipped.len,
+            "failed": $failed.len,
+            "segfaulted": $segfaulted.len,
+            "successful_percentage": $successPercentage,
+            "runtime_seconds": $secondsTaken,
+          }
+        )
       echo data
       writeFile("test262.json", data)
     else:
@@ -127,7 +134,8 @@ Flags:
       info "Failed tests: " & $failedPercentage & "% (" & $failed.len & ')'
       info "Abnormal crashes: " & $segfaultPercentage & "% (" & $segfaulted.len & ')'
 
-    info "It took " & $(secondsTaken / 60) & " minutes to run all of the " & $filesToExec & " tests."
+    info "It took " & $(secondsTaken / 60) & " minutes to run all of the " & $filesToExec &
+      " tests."
 
 when isMainModule:
   main()

@@ -389,7 +389,8 @@ proc consumeHash*(tokenizer: Tokenizer): Token =
 
   if tokenizer.charAt() == some('!'):
     # shebang logic
-    if tokenizer.pos >= 2 and tokenizer.source[tokenizer.pos - 2] in strutils.Whitespace and '\n' notin tokenizer.source[tokenizer.pos - 2 ..< tokenizer.pos]:
+    if tokenizer.pos >= 2 and tokenizer.source[tokenizer.pos - 2] in strutils.Whitespace and
+        '\n' notin tokenizer.source[tokenizer.pos - 2 ..< tokenizer.pos]:
       # shebangs cannot be preceded by whitespace
       tokenizer.advance()
       return Token(kind: TokenKind.InvalidShebang)

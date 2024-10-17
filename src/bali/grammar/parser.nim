@@ -444,7 +444,7 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
       let
         prevPos = parser.tokenizer.pos
         prevLocation = parser.tokenizer.location
-      
+
       case parser.tokenizer.next().kind
       of TokenKind.LParen:
         # function!
@@ -632,7 +632,8 @@ proc parseScope*(parser: Parser): seq[Statement] =
 proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] =
   ## Parse an expression that is currently wrapped in parenthesis
   ## like `(x == 32)`. Used when parsing if statements and while loops.
-  debug "parser: parsing possible expression in parenthesis wrap for token kind: " & $token
+  debug "parser: parsing possible expression in parenthesis wrap for token kind: " &
+    $token
 
   if parser.tokenizer.eof:
     parser.error Other, "expected conditions after if token, got EOF instead"
@@ -793,7 +794,8 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
       parser.error Other, "one file cannot have two shebangs"
     else:
       parser.foundShebang = true
-  of TokenKind.Semicolon: discard
+  of TokenKind.Semicolon:
+    discard
   of TokenKind.InvalidShebang:
     parser.error Other, "shebang cannot be preceded by whitespace"
   else:
