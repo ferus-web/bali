@@ -15,7 +15,7 @@ As of 10th of September, 2024, Bali can successfully run 2% of the entire Test26
 # Running code with Bali
 You can compile Balde, the Bali debugger by running:
 ```
-$ nimble balde
+$ nimble build balde
 ```
 It is primarily used for debugging the engine as of right now, but it runs code fine too.
 
