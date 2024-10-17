@@ -444,8 +444,9 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
       let
         prevPos = parser.tokenizer.pos
         prevLocation = parser.tokenizer.location
-
-      if parser.tokenizer.next().kind == TokenKind.LParen:
+      
+      case parser.tokenizer.next().kind
+      of TokenKind.LParen:
         # function!
         let
           call = parser.parseFunctionCall(token.ident)
@@ -708,6 +709,8 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
         return parser.parseFunctionCall(token.ident) #some call(token.ident, arguments)
       of TokenKind.EqualSign:
         return parser.parseReassignment(token.ident)
+      of TokenKind.Increment:
+        return some increment(token.ident)
       else:
         parser.error UnexpectedToken,
           "expected left parenthesis or equal sign, got " & $(&next).kind
