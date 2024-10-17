@@ -33,11 +33,17 @@ import bali/grammar/prelude
 import bali/runtime/prelude
 
 const JS_SRC = """
-console.log(\"Hello world!\")
+console.log("Hello world!")
 console.log(13 + 37)
 
 var myUrl = new URL("https://github.com/ferus-web/bali")
 console.warn(myUrl.origin)
+
+var commitsToBali = 171
+while (commitsToBali < 2000) {
+    commitsToBali++
+    console.log(commitsToBali)
+}
 """
 
 let 
