@@ -10,7 +10,7 @@ Bali is still not in a usable state yet and is probably unstable. It is not mean
 You can join the [Ferus Discord Server](https://discord.gg/9MwfGn2Jkb) to discuss Bali and other components of the Ferus web engine.
 
 # Specification Compliance
-As of 10th of September, 2024, Bali can successfully run 1.57% of the entire Test262 suite. There's a lot of work to be done here, so don't shy away from sending in PRs. ;)
+As of 10th of September, 2024, Bali can successfully run 2% of the entire Test262 suite. There's a lot of work to be done here, so don't shy away from sending in PRs. ;)
 
 # Running code with Bali
 You can compile Balde, the Bali debugger by running:
@@ -33,11 +33,17 @@ import bali/grammar/prelude
 import bali/runtime/prelude
 
 const JS_SRC = """
-console.log(\"Hello world!\")
+console.log("Hello world!")
 console.log(13 + 37)
 
 var myUrl = new URL("https://github.com/ferus-web/bali")
 console.warn(myUrl.origin)
+
+var commitsToBali = 171
+while (commitsToBali < 2000) {
+    commitsToBali++
+    console.log(commitsToBali)
+}
 """
 
 let 
@@ -52,6 +58,11 @@ runtime.run()
 ```
 
 # Roadmap
-- Getting a grammar to AST parser      [ X ]
-- Getting the MIR emitter working      [ X ]
-- Get arithmetic operations working    [   ]
+- Getting a grammar to AST parser      [X]
+- Getting the MIR emitter working      [X]
+- Get arithmetic operations working    [X]
+- Console API                          [X]
+- While loops                          [X]
+- For loops                            [ ]
+- Modules                              [ ]
+- Async                                [ ]

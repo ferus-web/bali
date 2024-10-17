@@ -154,6 +154,7 @@ proc parseExpression*(
       term.binRight = &expr
     of TokenKind.RParen:
       debug "parser: whilst parsing arithmetic expr, found right-paren to close off expr; aborting expr parsing"
+      parser.tokenizer.pos -= 1
       break
     of TokenKind.True:
       debug "parser: whilst parsing arithmetic expr, found boolean (true)"
@@ -175,6 +176,12 @@ proc parseExpression*(
       debug "parser: met unexpected token " & $next.kind &
         " during tokenization, marking expression parse as failed"
       return
+
+  #[ if term.binRight == nil:
+    debug "parser: right term in arithmetic expr is empty but we need to fill it somehow, filling it with boolean `true`"
+    debug "FIXME: parser: this is probably not the right thing to do!"
+    term.op = BinaryOperation.Equal
+    term.binRight = atomHolder(boolean(true)) # TODO: is this the right thing to do in this case? ]#
 
   if term.binLeft != nil and term.binRight != nil:
     return some term
@@ -438,7 +445,8 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
         prevPos = parser.tokenizer.pos
         prevLocation = parser.tokenizer.location
 
-      if parser.tokenizer.next().kind == TokenKind.LParen:
+      case parser.tokenizer.next().kind
+      of TokenKind.LParen:
         # function!
         let
           call = parser.parseFunctionCall(token.ident)
@@ -580,6 +588,74 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
   elif *toCall:
     return some(callAndStoreMut(ident, &toCall))
 
+proc parseScope*(parser: Parser): seq[Statement] =
+  ## Firstly, parse the opening right-facing curly bracket (`{`), and then
+  ## add every statement that is parsed to a vector of statements until a left-facing
+  ## curly bracket (`}`) is encountered.
+
+  if parser.tokenizer.eof:
+    parser.error Other, "expected left curly bracket, got EOF instead"
+
+  if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
+    if (&tok).kind != TokenKind.LCurly:
+      parser.error Other, "expected left curly bracket"
+
+  var stmts: seq[Statement]
+
+  while not parser.tokenizer.eof:
+    let
+      prevPos = parser.tokenizer.pos
+      prevLoc = parser.tokenizer.location
+      c = parser.tokenizer.nextExceptWhitespace()
+
+    if *c and (&c).kind == TokenKind.RCurly:
+      debug "parser: met end of curly bracket block"
+      break
+    else:
+      parser.tokenizer.pos = prevPos
+      parser.tokenizer.location = prevLoc
+
+    let stmt = parser.parseStatement()
+
+    if not *stmt:
+      debug "parser: can't find any more statements for scope; body parsing complete"
+      break
+
+    var statement = &stmt
+    statement.line = parser.tokenizer.location.line
+    statement.col = parser.tokenizer.location.col
+
+    stmts &= statement
+
+  stmts
+
+proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] =
+  ## Parse an expression that is currently wrapped in parenthesis
+  ## like `(x == 32)`. Used when parsing if statements and while loops.
+  debug "parser: parsing possible expression in parenthesis wrap for token kind: " &
+    $token
+
+  if parser.tokenizer.eof:
+    parser.error Other, "expected conditions after if token, got EOF instead"
+
+  if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
+    if (&tok).kind != TokenKind.LParen:
+      parser.error Other, "expected left parenthesis after " & $token & " token"
+
+  let expr = parser.parseExpression()
+  if !expr:
+    parser.error Other, "expected expression, got nothing instead"
+
+  debug "parser: whilst parsing expression in parenthesis wrap: found expression!"
+
+  if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
+    if (&tok).kind != TokenKind.RParen:
+      parser.error Other, "expected right parenthesis after expression"
+
+  debug "parser: whilst parsing expression in parenthesis wrap: grammar was satisfied, returning expression"
+
+  expr
+
 proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
@@ -634,6 +710,8 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
         return parser.parseFunctionCall(token.ident) #some call(token.ident, arguments)
       of TokenKind.EqualSign:
         return parser.parseReassignment(token.ident)
+      of TokenKind.Increment:
+        return some increment(token.ident)
       else:
         parser.error UnexpectedToken,
           "expected left parenthesis or equal sign, got " & $(&next).kind
@@ -666,92 +744,21 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
     info "parser: parse throw-expr"
     return parser.parseThrow()
   of TokenKind.If:
-    if parser.tokenizer.eof:
-      parser.error Other, "expected conditions after if token, got EOF instead"
-
-    if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
-      if (&tok).kind != TokenKind.LParen:
-        parser.error Other, "expected left parenthesis after if token"
-
-    let expr = parser.parseExpression()
+    let expr = parser.parseExprInParenWrap(TokenKind.If)
     if !expr:
-      parser.error Other, "expected expression, got nothing instead"
-
-    if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
-      if (&tok).kind != TokenKind.RParen:
-        parser.error Other, "expected right parenthesis after conditional expression"
-
-    if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
-      if (&tok).kind != TokenKind.LCurly:
-        parser.error Other, "expected left curly bracket after right parenthesis"
+      return
 
     # body parsing
-    # TODO: make a generic function for anonymous scopes, functions, if statements, while/for statements and everything that takes in a body of statements
-    var body, elseBody: seq[Statement]
-    info "parser: parse if-statement body"
-    while not parser.tokenizer.eof:
-      let
-        prevPos = parser.tokenizer.pos
-        prevLoc = parser.tokenizer.location
-        c = parser.tokenizer.nextExceptWhitespace()
-
-      if *c and (&c).kind == TokenKind.RCurly:
-        info "parser: met end of curly bracket block"
-        break
-      else:
-        parser.tokenizer.pos = prevPos
-        parser.tokenizer.location = prevLoc
-
-      let stmt = parser.parseStatement()
-
-      if not *stmt:
-        info "parser: can't find any more statements for if statement; body parsing complete"
-        break
-
-      var statement = &stmt
-      statement.line = parser.tokenizer.location.line
-      statement.col = parser.tokenizer.location.col
-
-      body &= statement
+    debug "parser: parse if-statement body"
+    let body = parser.parseScope()
+    var elseBody: seq[Statement]
 
     if not parser.tokenizer.eof and (
       let nextToken = parser.tokenizer.nextExceptWhitespace()
       *nextToken and (&nextToken).kind == TokenKind.Else
     ): # FIXME: untangle this shitshow
       debug "parser: parse if-statement else-body"
-
-      var allowMultilineStmts = false # FIXME: currently unused, use this later on
-      if (
-        let next = parser.tokenizer.deepCopy().nextExceptWhitespace()
-        *next and (&next).kind == TokenKind.LCurly
-      ):
-        discard parser.tokenizer.nextExceptWhitespace()
-        allowMultilineStmts = true
-
-      while not parser.tokenizer.eof:
-        let
-          prevPos = parser.tokenizer.pos
-          prevLoc = parser.tokenizer.location
-          c = parser.tokenizer.nextExceptWhitespace()
-
-        if *c and (&c).kind == TokenKind.RCurly:
-          info "parser: met end of curly bracket block"
-          break
-        else:
-          parser.tokenizer.pos = prevPos
-          parser.tokenizer.location = prevLoc
-
-        let stmt = parser.parseStatement()
-
-        if not *stmt:
-          info "parser: can't find any more statements for if statement; body parsing complete"
-          break
-
-        var statement = &stmt
-        statement.line = parser.tokenizer.location.line
-        statement.col = parser.tokenizer.location.col
-
-        elseBody &= statement
+      elseBody = parser.parseScope()
 
     var lastScope = parser.ast.scopes[parser.ast.currentScope]
     var exprScope = Scope(stmts: body)
@@ -760,6 +767,17 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
     elseScope.prev = some(lastScope)
 
     return some ifStmt(&expr, exprScope, elseScope)
+  of TokenKind.While:
+    let expr = parser.parseExprInParenWrap(TokenKind.While)
+    if !expr:
+      return
+
+    let body = parser.parseScope()
+    let lastScope = parser.ast.scopes[parser.ast.currentScope]
+    var bodyScope = Scope(stmts: body)
+
+    bodyScope.prev = some(lastScope)
+    return some whileStmt(&expr, bodyScope)
   of TokenKind.New:
     let expr = parser.parseConstructor()
     if !expr:
@@ -776,7 +794,8 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
       parser.error Other, "one file cannot have two shebangs"
     else:
       parser.foundShebang = true
-  of TokenKind.Semicolon: discard
+  of TokenKind.Semicolon:
+    discard
   of TokenKind.InvalidShebang:
     parser.error Other, "shebang cannot be preceded by whitespace"
   else:

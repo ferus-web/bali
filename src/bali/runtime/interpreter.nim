@@ -135,10 +135,29 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
       )
 
     if stmt.conditionExpr.binRight.kind == AtomHolder:
-      debug "ir: BinaryOp right term is an atom"
+      debug "ir: if-stmt: right term is an atom"
       runtime.generateIR(
         fn,
         createImmutVal("right_term", stmt.conditionExpr.binRight.atom),
+        ownerStmt = some(stmt),
+        internal = true,
+      )
+  of WhileStmt:
+    debug "ir: expand WhileStmt"
+    if stmt.whConditionExpr.binLeft.kind == AtomHolder:
+      debug "ir: while-stmt: left term is an atom"
+      runtime.generateIR(
+        fn,
+        createImmutVal("left_term", stmt.whConditionExpr.binLeft.atom),
+        ownerStmt = some(stmt),
+        internal = true,
+      )
+
+    if stmt.whConditionExpr.binRight.kind == AtomHolder:
+      debug "ir: while-stmt: right term is an atom"
+      runtime.generateIR(
+        fn,
+        createImmutVal("right_term", stmt.whConditionExpr.binRight.atom),
         ownerStmt = some(stmt),
         internal = true,
       )
@@ -607,6 +626,79 @@ proc generateIR*(
     let dest = runtime.addrIdx - 1
 
     runtime.ir.copyAtom(runtime.index(stmt.cpImmutSourceIdent, defaultParams(fn)), dest)
+  of WhileStmt:
+    debug "emitter: generate IR for while loop"
+    runtime.expand(fn, stmt)
+
+    proc getCurrOpNum(): int =
+      for module in runtime.ir.modules:
+        if module.name == runtime.ir.currModule:
+          return module.operations.len + 1
+
+      unreachable
+      0
+
+    let
+      lhsIdx =
+        case stmt.whConditionExpr.binLeft.kind
+        of IdentHolder:
+          debug "emitter: if-stmt: LHS is ident"
+          runtime.index(stmt.whConditionExpr.binLeft.ident, defaultParams(fn))
+        of AtomHolder:
+          debug "emitter: if-stmt: LHS is atom"
+          runtime.index("left_term", internalIndex(stmt))
+        else:
+          unreachable
+          0
+
+      rhsIdx =
+        case stmt.whConditionExpr.binRight.kind
+        of IdentHolder:
+          debug "emitter: if-stmt: RHS is ident"
+          runtime.index(stmt.whConditionExpr.binRight.ident, defaultParams(fn))
+        of AtomHolder:
+          debug "emitter: if-stmt: RHS is atom"
+          runtime.index("right_term", internalIndex(stmt))
+        else:
+          unreachable
+          0
+
+    let jmpIntoComparison = getCurrOpNum()
+    case stmt.whConditionExpr.op
+    of Equal, NotEqual:
+      runtime.ir.equate(lhsIdx, rhsIdx)
+    of GreaterThan, LesserThan:
+      discard runtime.ir.addOp(
+        IROperation(
+          opcode: GreaterThanInt, arguments: @[uinteger lhsIdx, uinteger rhsIdx]
+        ) # FIXME: mirage doesn't have a nicer IR function for this.
+      )
+    else:
+      unreachable
+
+    let
+      trueJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+        # the jump into the body of the loop
+      escapeJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+        # the jump to "escape" out of the loop
+
+    let jmpIntoBody = getCurrOpNum()
+    runtime.generateIRForScope(stmt.whBranch) # generate the body of the loop
+    runtime.ir.jump(jmpIntoComparison.uint) # jump back to the comparison logic
+
+    let jmpPastBody = getCurrOpNum()
+
+    case stmt.whConditionExpr.op
+    of BinaryOperation.Equal, BinaryOperation.GreaterThan:
+      runtime.ir.overrideArgs(trueJump, @[uinteger(jmpIntoBody.uint)])
+      runtime.ir.overrideArgs(escapeJump, @[uinteger(jmpPastBody.uint)])
+    of BinaryOperation.NotEqual, BinaryOperation.LesserThan:
+      runtime.ir.overrideArgs(trueJump, @[uinteger(jmpPastBody.uint)])
+      runtime.ir.overrideArgs(escapeJump, @[uinteger(jmpIntoBody.uint)])
+    else:
+      unreachable
+  of Increment:
+    runtime.ir.incrementInt(runtime.index(stmt.incIdent, defaultParams(fn)))
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -681,9 +773,6 @@ proc generateInternalIR*(runtime: Runtime) =
   runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")
 
 proc run*(runtime: Runtime) =
-  if runtime.ast.doNotEvaluate and runtime.opts.test262:
-    quit(0)
-
   console.generateStdIR(runtime.vm, runtime.ir)
   math.generateStdIR(runtime.vm, runtime.ir)
   uri.generateStdIR(runtime.vm, runtime.ir)
@@ -713,10 +802,13 @@ proc run*(runtime: Runtime) =
 
   info "interpreter: setting entry point to `outer`"
   runtime.vm.setEntryPoint("outer")
-  
+
   for error in runtime.ast.errors:
     runtime.vm.syntaxError(error, if runtime.opts.test262: 0 else: 1)
 
+  if runtime.ast.doNotEvaluate and runtime.opts.test262:
+    debug "runtime: `doNotEvaluate` is set to `true` in Test262 mode - skipping execution."
+    quit(0)
   info "interpreter: passing over execution to VM"
   runtime.vm.run()
 

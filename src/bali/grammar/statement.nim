@@ -21,6 +21,8 @@ type
     IfStmt
     CopyValMut
     CopyValImmut
+    WhileStmt
+    Increment
 
   CallArgKind* = enum
     cakIdent
@@ -117,6 +119,11 @@ type
     of CopyValImmut:
       cpImmutSourceIdent*: string
       cpImmutDestIdent*: string
+    of WhileStmt:
+      whConditionExpr*: Statement
+      whBranch*: Scope
+    of Increment:
+      incIdent*: string
 
 func hash*(fn: Function): Hash {.inline.} =
   when fn is Scope: # FIXME: really dumb fix to prevent a segfault
@@ -184,6 +191,12 @@ proc createImmutVal*(name: string, atom: MAtom): Statement =
 
 proc returnFunc*(): Statement =
   Statement(kind: ReturnFn)
+
+proc increment*(ident: string): Statement =
+  Statement(kind: Increment, incIdent: ident)
+
+proc whileStmt*(condition: Statement, body: Scope): Statement =
+  Statement(kind: WhileStmt, whConditionExpr: condition, whBranch: body)
 
 proc ifStmt*(condition: Statement, body, elseScope: Scope): Statement =
   Statement(

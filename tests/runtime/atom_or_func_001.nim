@@ -6,9 +6,7 @@ var v1 = initAtomOrFunction(
     echo "Hi, " & name
 )
 
-var v2 = initAtomOrFunction[proc()](
-  integer(1337)
-)
+var v2 = initAtomOrFunction[proc()](integer(1337))
 
 v1.fn()("tray")
 echo v2.atom().crush()
