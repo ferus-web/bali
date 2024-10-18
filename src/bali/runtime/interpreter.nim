@@ -401,6 +401,7 @@ proc generateIR*(
         discard
 
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
+    runtime.ir.resetArgs()
   of ReassignVal:
     let index = runtime.index(stmt.reIdentifier, defaultParams(fn))
     if runtime.verifyNotOccupied(stmt.reIdentifier, fn):
