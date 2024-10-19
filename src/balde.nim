@@ -73,11 +73,10 @@ proc execFile(ctx: Context, file: string) {.inline.} =
     let parser = newParser(source)
 
   profileThis "parse source code":
-    let ast = parser.parse()
+    var ast = parser.parse()
 
   if ctx.cmdOptions.contains("dump-ast"):
-    print ast
-    quit(0)
+    ast.doNotEvaluate = true
 
   profileThis "allocate runtime":
     let runtime = newRuntime(
@@ -86,6 +85,9 @@ proc execFile(ctx: Context, file: string) {.inline.} =
 
   profileThis "execution time":
     runtime.run()
+
+  if ctx.cmdOptions.contains("dump-ast"):
+    print ast
 
   if ctx.cmdOptions.contains("dump-runtime-after-exec"):
     print runtime

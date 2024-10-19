@@ -15,7 +15,7 @@ type RunResult = enum
 
 proc execJS(file: string, dontEval: bool): RunResult =
   case execCmd(
-    "./balde run " & file & " --test262" & $(if dontEval: " --dump-ast" else: "")
+    "./bin/balde run " & file & " --test262" & $(if dontEval: " --dump-ast" else: "")
   )
   of 0:
     return Success
