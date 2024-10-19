@@ -721,6 +721,9 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
     parser.tokenizer.pos = prevPos
     parser.tokenizer.location = prevLoc
   of TokenKind.Return:
+    if not inFnBody:
+      parser.error Other, "return not in function"
+
     let
       prevPos = parser.tokenizer.pos
       prevLoc = parser.tokenizer.location
