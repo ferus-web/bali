@@ -431,19 +431,19 @@ proc consumeLessThan*(tokenizer: Tokenizer): Token =
 
 proc consumeMinus*(tokenizer: Tokenizer): Token =
   debug "tokenizer: consume minus sign"
-  if not tokenizer.eof and &tokenizer.charAt(1) in {'0' .. '9'}:
-    debug "tokenizer: minus sign is followed by numeric, consuming Number"
-    tokenizer.consumeNumeric(true)
-  else:
-    tokenizer.advance()
-
-    if tokenizer.charAt() == some('-'):
+  if not tokenizer.eof:
+    case &tokenizer.charAt(1)
+    of {'0' .. '9'}:
+      debug "tokenizer: minus sign is followed by numeric, consuming Number"
+      return tokenizer.consumeNumeric(true)
+    of '-':
       debug "tokenizer: minus sign is followed by another one, consuming Decrement"
-      tokenizer.advance()
       return Token(kind: TokenKind.Decrement)
-    else:
-      debug "tokenizer: minus sign is not followed by another minus, consuming Sub"
-      return Token(kind: TokenKind.Sub)
+    else: discard
+  
+  tokenizer.advance()
+  debug "tokenizer: minus sign is not followed by another minus, consuming Sub"
+  return Token(kind: TokenKind.Sub)
 
 proc next*(tokenizer: Tokenizer): Token =
   let c = tokenizer.charAt()
