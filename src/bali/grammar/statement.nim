@@ -23,6 +23,7 @@ type
     CopyValImmut
     WhileStmt
     Increment
+    Decrement
 
   CallArgKind* = enum
     cakIdent
@@ -124,6 +125,8 @@ type
       whBranch*: Scope
     of Increment:
       incIdent*: string
+    of Decrement:
+      decIdent*: string
 
 func hash*(fn: Function): Hash {.inline.} =
   when fn is Scope: # FIXME: really dumb fix to prevent a segfault
@@ -194,6 +197,9 @@ proc returnFunc*(): Statement =
 
 proc increment*(ident: string): Statement =
   Statement(kind: Increment, incIdent: ident)
+
+proc decrement*(ident: string): Statement =
+  Statement(kind: Decrement, decIdent: ident)
 
 proc whileStmt*(condition: Statement, body: Scope): Statement =
   Statement(kind: WhileStmt, whConditionExpr: condition, whBranch: body)

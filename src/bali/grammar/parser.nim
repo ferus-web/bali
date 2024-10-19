@@ -712,6 +712,8 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
         return parser.parseReassignment(token.ident)
       of TokenKind.Increment:
         return some increment(token.ident)
+      of TokenKind.Decrement:
+        return some decrement(token.ident)
       else:
         parser.error UnexpectedToken,
           "expected left parenthesis or equal sign, got " & $(&next).kind
@@ -735,6 +737,7 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
         if next.whitespace.contains(strutils.Newlines):
           return some returnFunc()
       else:
+        print next
         unreachable
 
     parser.tokenizer.pos = prevPos

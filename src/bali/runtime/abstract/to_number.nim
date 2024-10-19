@@ -1,4 +1,4 @@
-import std/[logging, strutils]
+import std/[logging]
 import mirage/runtime/prelude
 import bali/internal/sugar
 import bali/runtime/atom_helpers
@@ -6,7 +6,9 @@ import bali/stdlib/errors
 import bali/internal/[trim_string, parse_number]
 
 proc StringToNumber*(vm: PulsarInterpreter, value: MAtom): float =
+  # FIXME: non-compliant
   assert value.kind == String, "StringToNumber() was passed a " & $value.kind
+  debug "runtime: StringToNumber(" & value.crush() & ')'
   let text = vm.trimString(value, TrimMode.Both)
 
   if text.len < 1:

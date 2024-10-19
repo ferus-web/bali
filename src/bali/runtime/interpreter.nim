@@ -700,6 +700,8 @@ proc generateIR*(
       unreachable
   of Increment:
     runtime.ir.incrementInt(runtime.index(stmt.incIdent, defaultParams(fn)))
+  of Decrement:
+    runtime.ir.decrementInt(runtime.index(stmt.decIdent, defaultParams(fn)))
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
