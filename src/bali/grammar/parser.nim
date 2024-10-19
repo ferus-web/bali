@@ -737,8 +737,7 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
         if next.whitespace.contains(strutils.Newlines):
           return some returnFunc()
       else:
-        print next
-        unreachable
+        parser.error UnexpectedToken, "expected expression, got " & $next.kind
 
     parser.tokenizer.pos = prevPos
     parser.tokenizer.location = prevLoc
