@@ -1,12 +1,13 @@
 # Package
 
-version = "0.3.3"
-author = "xTrayambak"
-description = "The Bali JavaScript Engine"
-license = "MIT"
-srcDir = "src"
-backend = "cpp"
-bin = @["balde", "test262"]
+version         = "0.3.3"
+author          = "xTrayambak"
+description     = "The Bali JavaScript Engine"
+license         = "MIT"
+srcDir          = "src"
+backend         = "cpp"
+bin             = @["balde", "test262"]
+binDir          = "bin"
 
 # Dependencies
 
