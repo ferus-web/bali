@@ -793,7 +793,7 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
     discard
   of TokenKind.Shebang:
     if inFnBody:
-      parser.error Other, "shebang is not allowed inside of a function body"
+      parser.error Other, "shebangs are not allowed inside of a function body"
 
     if parser.foundShebang:
       parser.error Other, "one file cannot have two shebangs"
