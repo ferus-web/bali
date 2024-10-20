@@ -44,12 +44,27 @@ while (commitsToBali < 2000) {
     commitsToBali++
     console.log(commitsToBali)
 }
+
+let lemonade = fetchLemonade(4)
+console.log(lemonade)
 """
 
 let 
   parser = newParser(JS_SRC) # Feed your JavaScript code to Bali's JavaScript parser
   ast = parser.parse() # Parse an AST out of the tokens
   runtime = newRuntime("myfile.js", ast) # Instantiate the JavaScript runtime.
+
+# define a native function which is exposed to the JavaScript code
+runtime.defineFn(
+    "fetchLemonade",
+    proc =
+      let num = runtime.ToNumber(&runtime.argument(1))
+
+      if num == 0 or num > 1:
+        ret str("You have " & $num & " lemonades!")
+      else:
+        ret str("You have a lemonade!")
+)
 
 # Emit Mirage bytecode and pass over control to the Mirage VM.
 # NOTE: This is a blocking function and will block this thread until execution is completed (or an error is encountered and the
