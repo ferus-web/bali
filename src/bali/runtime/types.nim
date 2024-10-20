@@ -130,8 +130,27 @@ proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
   )
   runtime.ir.call(builtinName)
 
+proc defineConstructor*(
+  runtime: Runtime,
+  name: string,
+  fn: NativeFunction
+) {.inline.} =
+  debug "runtime: exposing constructor for type: " & name
+  ## Expose a constructor for a type to a JavaScript runtime.
+  runtime.vm.registerBuiltin(
+    "BALI_CONSTRUCTOR_" & name,
+    proc(_: Operation) =
+      fn()
+  )
+
 template ret*(atom: MAtom) =
   ## Shorthand for:
   ## ..code-block:: Nim
   ##  runtime.vm.registers.retVal = some(atom)
+  ##  return
   runtime.vm.registers.retVal = some(atom)
+  return
+
+func argumentCount*(runtime: Runtime): int {.inline.} =
+  ## Get the number of atoms in the `CallArgs` register
+  runtime.vm.registers.callArgs.len

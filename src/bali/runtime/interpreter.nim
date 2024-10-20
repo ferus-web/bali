@@ -776,9 +776,9 @@ proc generateInternalIR*(runtime: Runtime) =
   runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")
 
 proc run*(runtime: Runtime) =
-  console.generateStdIR(runtime.vm, runtime.ir)
+  console.generateStdIR(runtime)
   math.generateStdIR(runtime)
-  uri.generateStdIR(runtime.vm, runtime.ir)
+  uri.generateStdIR(runtime)
   errors.generateStdIR(runtime.vm, runtime.ir)
   base64.generateStdIR(runtime.vm, runtime.ir)
   json.generateStdIR(runtime.vm, runtime.ir)

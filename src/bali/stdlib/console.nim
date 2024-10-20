@@ -4,7 +4,7 @@
 import std/[options, tables, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
-import bali/runtime/normalize
+import bali/runtime/[normalize, arguments, types]
 import bali/runtime/abstract/coercion
 import bali/internal/sugar
 import pretty
@@ -28,77 +28,61 @@ var delegate: ConsoleDelegate = DefaultConsoleDelegate
 proc attachConsoleDelegate*(del: ConsoleDelegate) {.inline.} =
   delegate = del
 
-proc console(vm: PulsarInterpreter, level: ConsoleLevel) {.inline.} =
+proc console(runtime: Runtime, level: ConsoleLevel) {.inline.} =
   var accum: string
 
-  for arg in vm.registers.callArgs:
-    let value = vm.ToString(arg)
+  for i in 1 .. runtime.argumentCount():
+    let value = runtime.ToString(&runtime.argument(i))
     accum &= value & ' '
 
   delegate(level, accum)
 
-proc consoleLogIR*(vm: PulsarInterpreter, generator: IRGenerator) =
+proc consoleLogIR*(runtime: Runtime) =
   # generate binding interface
 
   # console.log
   # Perform Logger("log", data).
-  generator.newModule(normalizeIRName "console.log")
-
-  vm.registerBuiltin(
-    "BALI_CONSOLELOG",
-    proc(op: Operation) =
-      console(vm, ConsoleLevel.Log),
+  runtime.defineFn(
+    "console.log",
+    proc =
+      console(runtime, ConsoleLevel.Log)
   )
-
-  generator.call("BALI_CONSOLELOG")
 
   # console.warn
   # Perform Logger("warn", data).
-  generator.newModule(normalizeIRName "console.warn")
-  vm.registerBuiltin(
-    "BALI_CONSOLEWARN",
-    proc(op: Operation) =
-      console(vm, ConsoleLevel.Warn),
+  runtime.defineFn(
+    "console.warn",
+    proc =
+      console(runtime, ConsoleLevel.Warn)
   )
-
-  generator.call("BALI_CONSOLEWARN")
 
   # console.info
   # Perform Logger("info", data).
-  generator.newModule(normalizeIRName "console.info")
-  vm.registerBuiltin(
-    "BALI_CONSOLEINFO",
-    proc(op: Operation) =
-      console(vm, ConsoleLevel.Info),
+  runtime.defineFn(
+    "console.info",
+    proc =
+      console(runtime, ConsoleLevel.Info)
   )
-
-  generator.call("BALI_CONSOLEINFO")
 
   # console.error
   # Perform Logger("error", data).
-  generator.newModule(normalizeIRName "console.error")
-  vm.registerBuiltin(
-    "BALI_CONSOLEERROR",
-    proc(op: Operation) =
-      console(vm, ConsoleLevel.Error),
+  runtime.defineFn(
+    "console.error",
+    proc =
+      console(runtime, ConsoleLevel.Error),
   )
-
-  generator.call("BALI_CONSOLEERROR")
 
   # console.debug
   # Perform Logger("debug", data).
-  generator.newModule(normalizeIRName "console.debug")
-  vm.registerBuiltin(
-    "BALI_CONSOLEDEBUG",
-    proc(op: Operation) =
-      console(vm, ConsoleLevel.Debug),
+  runtime.defineFn(
+    "console.debug",
+    proc =
+      console(runtime, ConsoleLevel.Debug),
   )
-
-  generator.call("BALI_CONSOLEDEBUG")
 
   # TODO: implement the rest of the spec, mostly related to call traces and profiling later.
 
-proc generateStdIR*(vm: PulsarInterpreter, generator: IRGenerator) =
+proc generateStdIR*(runtime: Runtime) =
   info "console: generating IR interfaces"
 
-  consoleLogIR(vm, generator)
+  consoleLogIR(runtime)
