@@ -4,7 +4,7 @@ import std/[options, hashes, logging, strutils]
 import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/grammar/prelude
-import bali/runtime/normalize
+import bali/runtime/[normalize]
 
 type
   NativeFunction* = proc()

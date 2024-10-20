@@ -777,7 +777,7 @@ proc generateInternalIR*(runtime: Runtime) =
 
 proc run*(runtime: Runtime) =
   console.generateStdIR(runtime.vm, runtime.ir)
-  math.generateStdIR(runtime.vm, runtime.ir)
+  math.generateStdIR(runtime)
   uri.generateStdIR(runtime.vm, runtime.ir)
   errors.generateStdIR(runtime.vm, runtime.ir)
   base64.generateStdIR(runtime.vm, runtime.ir)
