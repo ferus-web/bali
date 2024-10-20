@@ -1,12 +1,11 @@
 import std/[logging]
 import mirage/runtime/prelude
 import bali/internal/sugar
-import bali/runtime/atom_helpers
+import bali/runtime/[atom_helpers, types]
 import bali/stdlib/errors
 import bali/internal/[trim_string, parse_number]
 
 proc StringToNumber*(vm: PulsarInterpreter, value: MAtom): float =
-  # FIXME: non-compliant
   assert value.kind == String, "StringToNumber() was passed a " & $value.kind
   debug "runtime: StringToNumber(" & value.crush() & ')'
   let text = vm.trimString(value, TrimMode.Both)
@@ -53,3 +52,6 @@ proc ToNumber*(vm: PulsarInterpreter, value: MAtom): float =
     return vm.StringToNumber(value)
   else:
     unreachable
+
+proc ToNumber*(runtime: Runtime, value: MAtom): float {.inline.} =
+  runtime.vm.ToNumber(value)

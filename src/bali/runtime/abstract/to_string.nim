@@ -1,10 +1,10 @@
 import std/[logging]
 import mirage/runtime/prelude
 import bali/internal/sugar
-import bali/runtime/atom_helpers
+import bali/runtime/[atom_helpers, types]
 import bali/stdlib/errors
 
-proc ToString*(vm: PulsarInterpreter, value: MAtom): string {.inline.} =
+proc ToString*(vm: PulsarInterpreter, value: MAtom): string =
   ## 7.1.17 ToString ( argument )
   ## The abstract operation ToString takes argument argument (an ECMAScript language value) and returns either a normal completion containing a String or a throw completion. It converts argument to a value of type String. It performs the following steps when called
   debug "runtime: toString(): " & value.crush()
@@ -58,3 +58,6 @@ proc ToString*(vm: PulsarInterpreter, value: MAtom): string {.inline.} =
     buffer &= ']'
 
     return buffer
+
+proc ToString*(runtime: Runtime, value: MAtom): string {.inline.} =
+  runtime.vm.ToString(value)

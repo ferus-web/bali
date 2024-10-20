@@ -1,7 +1,7 @@
 import std/[logging, options, strutils]
 import mirage/atom
 import mirage/runtime/pulsar/interpreter
-import bali/runtime/atom_helpers
+import bali/runtime/[atom_helpers, types]
 import bali/stdlib/errors
 
 proc argument*(
@@ -10,12 +10,7 @@ proc argument*(
     required: bool = false,
     message: string = "",
 ): Option[MAtom] =
-  ## Get an argument from the call arguments register.
-  ## If `required` is `true`, then a TypeError with an error message of your choice will be thrown.
-  ## This routine is guaranteed to return a value when `required` is set to `false`, which it is by default.
-  ##
-  ## Error message substitutions:
-  ## `{nargs}` - the number of arguments currently in the call arguments register
+  ## Internal method
   assert(position > 0, "argument() only accepts naturals.")
   debug "runtime: fetching argument #" & $position
 
@@ -36,3 +31,14 @@ proc argument*(
       return some(undefined())
 
   some(vm.registers.callArgs[position - 1])
+
+proc argument*(
+    runtime: Runtime, position: Natural, required: bool = false, message: string = ""
+): Option[MAtom] {.inline.} =
+  ## Get an argument from the call arguments register.
+  ## If `required` is `true`, then a TypeError with an error message of your choice will be thrown.
+  ## This routine is guaranteed to return a value when `required` is set to `false`, which it is by default.
+  ##
+  ## Error message substitutions:
+  ## `{nargs}` - the number of arguments currently in the call arguments register
+  runtime.vm.argument(position = position, required = required, message = message)

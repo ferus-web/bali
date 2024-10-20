@@ -439,8 +439,9 @@ proc consumeMinus*(tokenizer: Tokenizer): Token =
     of '-':
       debug "tokenizer: minus sign is followed by another one, consuming Decrement"
       return Token(kind: TokenKind.Decrement)
-    else: discard
-  
+    else:
+      discard
+
   tokenizer.advance()
   debug "tokenizer: minus sign is not followed by another minus, consuming Sub"
   return Token(kind: TokenKind.Sub)

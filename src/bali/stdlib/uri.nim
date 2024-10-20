@@ -1,7 +1,7 @@
 ## JavaScript URL API - uses sanchar's builtin URL parser
 import std/[options, logging, tables]
 import bali/internal/sugar
-import bali/runtime/[objects, normalize, arguments]
+import bali/runtime/[objects, normalize, arguments, types]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import mirage/ir/generator
@@ -41,17 +41,17 @@ proc transposeUrlToObject(parsed: URL, url: var MAtom, source: MAtom) =
       else: str newString(0)),
     ]
 
-proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
+proc generateStdIR*(runtime: Runtime) =
   info "url: generating IR interfaces"
 
-  # `new URL()` syntax
-  vm.registerBuiltin(
-    "BALI_CONSTRUCTOR_URL",
-    proc(op: Operation) =
+  # URL constructor (`new URL()` syntax)
+  runtime.defineConstructor(
+    "URL",
+    proc() =
       var osource: Option[MAtom]
 
       if (;
-        osource = vm.argument(
+        osource = runtime.argument(
           1, true,
           "URL constructor: At least 1 argument required, but only {nargs} passed",
         )
@@ -62,19 +62,19 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
       let source = &move(osource)
 
       if source.kind != String:
-        vm.typeError(
-          "URL constructor: " & ToString(vm, source) & " is not a valid URL."
+        runtime.vm.typeError(
+          "URL constructor: " & runtime.ToString(source) & " is not a valid URL."
         )
         return
 
       let parsed =
         try:
-          parser.parse(ToString(vm, source))
+          parser.parse(runtime.ToString(source))
         except URLParseError as pError:
           debug "url: encountered parse error whilst parsing url: " & &source.getStr() &
             ": " & pError.msg
           debug "url: this is a constructor, so a TypeError will be thrown."
-          vm.typeError(pError.msg)
+          runtime.vm.typeError(pError.msg)
           newURL("", "", "", "")
             # unreachable, no need to worry. this just exists to make the compiler happy.
 
@@ -85,21 +85,18 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
 
       transposeUrlToObject(parsed, url, source)
 
-      vm.registers.retVal = some(url),
+      ret url
+    ,
   )
 
-  ir.newModule(normalizeIRName "URL.parse")
-  vm.registerBuiltin(
-    "BALI_URLPARSE",
-    proc(op: Operation) =
-      if vm.registers.callArgs.len < 1:
-        vm.registers.retVal = some null()
-        return
-
+  # URL.parse()
+  runtime.defineFn(
+    "URL.parse",
+    proc() =
       var osource: Option[MAtom]
 
       if (;
-        osource = vm.argument(
+        osource = runtime.argument(
           1, true, "URL.new: At least 1 argument required, but only {nargs} passed"
         )
         !osource
@@ -109,8 +106,7 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
       let source = &move(osource)
 
       if source.kind != String:
-        vm.registers.retVal = some null()
-        return
+        ret null()
 
       var parsed =
         try:
@@ -125,6 +121,6 @@ proc generateStdIR*(vm: PulsarInterpreter, ir: IRGenerator) =
       var url = obj()
       transposeUrlToObject(parsed, url, source)
 
-      vm.registers.retVal = some(url),
+      ret url
+    ,
   )
-  ir.call("BALI_URLPARSE")
