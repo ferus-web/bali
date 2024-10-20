@@ -780,8 +780,8 @@ proc run*(runtime: Runtime) =
   math.generateStdIR(runtime)
   uri.generateStdIR(runtime)
   errors.generateStdIR(runtime.vm, runtime.ir)
-  base64.generateStdIR(runtime.vm, runtime.ir)
-  json.generateStdIR(runtime.vm, runtime.ir)
+  base64.generateStdIR(runtime)
+  json.generateStdIR(runtime)
   parseIntGenerateStdIR(runtime.vm, runtime.ir)
   constants.generateStdIR(runtime)
 

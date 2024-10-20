@@ -5,7 +5,7 @@
 import std/[options, logging, tables]
 import mirage/ir/generator
 import mirage/runtime/prelude
-import bali/runtime/normalize
+import bali/runtime/[arguments, normalize, types]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/internal/sugar
@@ -13,58 +13,46 @@ import pretty
 
 when not defined(baliUseStdBase64):
   import simdutf/base64
+  type Base64DecodeError = ValueError
 else:
   import std/base64
   from simdutf/base64 import Base64DecodeError
 
-proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
+proc generateStdIr*(runtime: Runtime) =
   info "builtins.base64: generating IR interfaces"
 
   # atob
   # Decode a base64 encoded string
-  generator.newModule("atob")
-  vm.registerBuiltin(
-    "BALI_ATOB",
-    proc(op: Operation) =
-      if vm.registers.callArgs.len < 1:
-        typeError(vm, "atob: At least 1 argument required, but only 0 passed")
+  runtime.defineFn(
+    "atob",
+    proc =
+      if runtime.argumentCount() < 1:
+        typeError(runtime.vm, "atob: At least 1 argument required, but only 0 passed")
         return
 
       template decodeError() =
         warn "atob: failed to decode string: " & exc.msg
-        typeError(vm, "atob: String contains an invalid character")
+        typeError(runtime.vm, "atob: String contains an invalid character")
         return
 
       let
-        value = vm.RequireObjectCoercible(vm.registers.callArgs[0])
-        strVal = vm.ToString(value)
+        value = runtime.RequireObjectCoercible(&runtime.argument(1))
+        strVal = runtime.ToString(value)
 
       try:
-        vm.registers.retVal = some(str decode(strVal))
+        ret str decode(strVal)
       except Base64DecodeError as exc:
-        when not defined(baliUseStdBase64):
-          decodeError
-      except ValueError as exc:
-        when defined(baliUseStdBase64):
-          decodeError
-    ,
+        decodeError
   )
-  generator.call("BALI_ATOB")
 
   # btoa
   # Encode a string into Base64 data
-  generator.newModule("btoa")
-  vm.registerBuiltin(
-    "BALI_BTOA",
-    proc(op: Operation) =
-      if vm.registers.callArgs.len < 1:
-        typeError(vm, "btoa: At least 1 argument required, but only 0 passed")
-        return
-
+  runtime.defineFn(
+    "btoa",
+    proc =
       let
-        value = vm.RequireObjectCoercible(vm.registers.callArgs[0])
-        str = vm.ToString(value)
+        value = runtime.RequireObjectCoercible(&runtime.argument(1, required = true, message = "btoa: At least 1 argument required, but only {nargs} passed"))
+        str = runtime.ToString(value)
 
-      vm.registers.retVal = some(str encode(str)),
+      ret str encode(str)
   )
-  generator.call("BALI_BTOA")
