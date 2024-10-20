@@ -126,21 +126,17 @@ proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
   runtime.vm.registerBuiltin(
     builtinName,
     proc(_: Operation) =
-      fn()
+      fn(),
   )
   runtime.ir.call(builtinName)
 
-proc defineConstructor*(
-  runtime: Runtime,
-  name: string,
-  fn: NativeFunction
-) {.inline.} =
+proc defineConstructor*(runtime: Runtime, name: string, fn: NativeFunction) {.inline.} =
   debug "runtime: exposing constructor for type: " & name
   ## Expose a constructor for a type to a JavaScript runtime.
   runtime.vm.registerBuiltin(
     "BALI_CONSTRUCTOR_" & name,
     proc(_: Operation) =
-      fn()
+      fn(),
   )
 
 template ret*(atom: MAtom) =

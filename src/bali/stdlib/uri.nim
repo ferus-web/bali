@@ -47,7 +47,7 @@ proc generateStdIR*(runtime: Runtime) =
   # URL constructor (`new URL()` syntax)
   runtime.defineConstructor(
     "URL",
-    proc =
+    proc() =
       var osource: Option[MAtom]
 
       if (;
@@ -86,12 +86,13 @@ proc generateStdIR*(runtime: Runtime) =
       transposeUrlToObject(parsed, url, source)
 
       ret url
+    ,
   )
-  
+
   # URL.parse()
   runtime.defineFn(
     "URL.parse",
-    proc =
+    proc() =
       var osource: Option[MAtom]
 
       if (;
@@ -121,4 +122,5 @@ proc generateStdIR*(runtime: Runtime) =
       transposeUrlToObject(parsed, url, source)
 
       ret url
+    ,
   )

@@ -35,146 +35,162 @@ proc generateStdIr*(runtime: Runtime) =
   # number generation algorithms that librng implements!
   runtime.defineFn(
     "Math.random",
-    proc =
+    proc() =
       let value = float64(rng.generator.next()) / 1.8446744073709552e+19'f64
       ret floating(value)
+    ,
   )
 
   # Math.pow
   runtime.defineFn(
     "Math.pow",
-    proc =
+    proc() =
       let
         value = runtime.ToNumber(&runtime.argument(1))
         exponent = runtime.ToNumber(&runtime.argument(2))
 
       ret floating pow(value, exponent)
+    ,
   )
 
   # Math.cos
   runtime.defineFn(
     "Math.cos",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
       ret floating cos(value)
+    ,
   )
 
   # Math.sqrt
   runtime.defineFn(
     "Math.sqrt",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
       ret floating sqrt(value)
+    ,
   )
 
   # Math.tanh
   runtime.defineFn(
     "Math.tanh",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
       ret floating tanh(value)
+    ,
   )
 
   # Math.sin
   runtime.defineFn(
     "Math.sin",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
       ret floating sin(value)
+    ,
   )
 
   # Math.sinh
   runtime.defineFn(
     "Math.sinh",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
       ret floating sinh(value)
+    ,
   )
 
   # Math.tan
   runtime.defineFn(
     "Math.tan",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
       ret floating tan(value)
+    ,
   )
 
   # Math.trunc
   runtime.defineFn(
     "Math.trunc",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
       ret floating trunc(value)
+    ,
   )
 
   # Math.floor
   runtime.defineFn(
     "Math.floor",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
       ret floating floor(value)
+    ,
   )
 
   # Math.ceil
   runtime.defineFn(
     "Math.ceil",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
       ret floating ceil(value)
+    ,
   )
 
   # Math.cbrt
   runtime.defineFn(
     "Math.cbrt",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
       ret floating cbrt(value)
+    ,
   )
 
   # Math.log
   runtime.defineFn(
     "Math.log",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
       ret floating ln(value)
+    ,
   )
 
   # Math.abs
   runtime.defineFn(
     "Math.abs",
-    proc =
+    proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
       ret floating abs(value)
+    ,
   )
 
   # Math.max
   runtime.defineFn(
     "Math.max",
-    proc =
-      let 
+    proc() =
+      let
         a = runtime.ToNumber(&runtime.argument(1))
         b = runtime.ToNumber(&runtime.argument(2))
 
       ret floating max(a, b)
+    ,
   )
 
   # Math.min
   runtime.defineFn(
     "Math.min",
-    proc =
-      let 
+    proc() =
+      let
         a = runtime.ToNumber(&runtime.argument(1))
         b = runtime.ToNumber(&runtime.argument(2))
 
       ret floating min(a, b)
+    ,
   )

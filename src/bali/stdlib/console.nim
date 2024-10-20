@@ -44,31 +44,31 @@ proc consoleLogIR*(runtime: Runtime) =
   # Perform Logger("log", data).
   runtime.defineFn(
     "console.log",
-    proc =
-      console(runtime, ConsoleLevel.Log)
+    proc() =
+      console(runtime, ConsoleLevel.Log),
   )
 
   # console.warn
   # Perform Logger("warn", data).
   runtime.defineFn(
     "console.warn",
-    proc =
-      console(runtime, ConsoleLevel.Warn)
+    proc() =
+      console(runtime, ConsoleLevel.Warn),
   )
 
   # console.info
   # Perform Logger("info", data).
   runtime.defineFn(
     "console.info",
-    proc =
-      console(runtime, ConsoleLevel.Info)
+    proc() =
+      console(runtime, ConsoleLevel.Info),
   )
 
   # console.error
   # Perform Logger("error", data).
   runtime.defineFn(
     "console.error",
-    proc =
+    proc() =
       console(runtime, ConsoleLevel.Error),
   )
 
@@ -76,7 +76,7 @@ proc consoleLogIR*(runtime: Runtime) =
   # Perform Logger("debug", data).
   runtime.defineFn(
     "console.debug",
-    proc =
+    proc() =
       console(runtime, ConsoleLevel.Debug),
   )
 

@@ -25,7 +25,7 @@ proc generateStdIr*(runtime: Runtime) =
   # Decode a base64 encoded string
   runtime.defineFn(
     "atob",
-    proc =
+    proc() =
       if runtime.argumentCount() < 1:
         typeError(runtime.vm, "atob: At least 1 argument required, but only 0 passed")
         return
@@ -42,17 +42,24 @@ proc generateStdIr*(runtime: Runtime) =
       try:
         ret str decode(strVal)
       except Base64DecodeError as exc:
-        decodeError
+        decodeError,
   )
 
   # btoa
   # Encode a string into Base64 data
   runtime.defineFn(
     "btoa",
-    proc =
+    proc() =
       let
-        value = runtime.RequireObjectCoercible(&runtime.argument(1, required = true, message = "btoa: At least 1 argument required, but only {nargs} passed"))
+        value = runtime.RequireObjectCoercible(
+          &runtime.argument(
+            1,
+            required = true,
+            message = "btoa: At least 1 argument required, but only {nargs} passed",
+          )
+        )
         str = runtime.ToString(value)
 
       ret str encode(str)
+    ,
   )

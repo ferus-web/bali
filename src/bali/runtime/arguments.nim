@@ -33,10 +33,7 @@ proc argument*(
   some(vm.registers.callArgs[position - 1])
 
 proc argument*(
-  runtime: Runtime,
-  position: Natural,
-  required: bool = false,
-  message: string = ""
+    runtime: Runtime, position: Natural, required: bool = false, message: string = ""
 ): Option[MAtom] {.inline.} =
   ## Get an argument from the call arguments register.
   ## If `required` is `true`, then a TypeError with an error message of your choice will be thrown.
