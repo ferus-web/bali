@@ -1,11 +1,14 @@
 ## Runtime types
 ## Copyright (C) 2024 Trayambak Rai and Ferus Authors
-import std/[options, hashes, logging]
+import std/[options, hashes, logging, strutils]
 import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/grammar/prelude
+import bali/runtime/normalize
 
 type
+  NativeFunction* = proc()
+
   ValueKind* = enum
     vkGlobal
     vkLocal
@@ -114,3 +117,21 @@ proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
   info "Ident \"" & ident & "\" is being locally marked at index " & $runtime.addrIdx
 
   inc runtime.addrIdx
+
+proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
+  ## Expose a native function to a JavaScript runtime.
+  debug "runtime: exposing native function to runtime: " & name
+  runtime.ir.newModule(normalizeIRName name)
+  let builtinName = "BALI_" & toUpperAscii(normalizeIRName(name))
+  runtime.vm.registerBuiltin(
+    builtinName,
+    proc(_: Operation) =
+      fn()
+  )
+  runtime.ir.call(builtinName)
+
+template ret*(atom: MAtom) =
+  ## Shorthand for:
+  ## ..code-block:: Nim
+  ##  runtime.vm.registers.retVal = some(atom)
+  runtime.vm.registers.retVal = some(atom)
