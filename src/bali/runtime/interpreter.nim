@@ -1,6 +1,6 @@
 ## Bali runtime (MIR emitter)
 ##
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 import std/[options, hashes, logging, sugar, strutils, tables, importutils]
 import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]

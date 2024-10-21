@@ -1,6 +1,6 @@
 ## Coercion abstract functions
 ##
-## Copyright (C) 2024 Trayambak Rai
+
 #[ 
 proc toPrimitive*(vm: PulsarInterpreter, value: MAtom, preferred: MAtomKind): MAtom =
   if not value.isObject():

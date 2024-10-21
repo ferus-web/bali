@@ -1,7 +1,7 @@
 ## TrimString( string, where )
 ## Implemented according to the ECMAScript spec.
 ## 
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 import std/[strutils, logging]
 import mirage/runtime/prelude
 import bali/internal/sugar

@@ -1,5 +1,5 @@
 ## Atom-or-function variant type
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 
 import std/options
 import bali/internal/sugar

@@ -1,6 +1,6 @@
 ## JavaScript tokenizer
 ##
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 
 import std/[math, options, logging, strutils, tables, unicode]
 import bali/grammar/token

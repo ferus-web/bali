@@ -3,7 +3,7 @@
 version         = "0.3.3"
 author          = "xTrayambak"
 description     = "The Bali JavaScript Engine"
-license         = "MIT"
+license         = "GPL3"
 srcDir          = "src"
 backend         = "cpp"
 bin             = @["balde", "test262"]

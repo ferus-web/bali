@@ -1,6 +1,6 @@
 ## Balde - the Bali Debugger
 ##
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 
 when not isMainModule:
   {.error: "This file is not meant to be separately imported!".}
