@@ -1,6 +1,6 @@
 ## `parseInt` builtin.
 ##
-## Copyright (C) 2024 Trayambak Rai
+
 
 import std/[strutils, math, options, logging]
 import mirage/ir/generator

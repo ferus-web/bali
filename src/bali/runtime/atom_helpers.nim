@@ -1,5 +1,5 @@
 ## Atom functions
-## Copyright (C) 2024 Trayambak Rai
+
 import std/tables
 import mirage/atom
 

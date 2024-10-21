@@ -1,5 +1,5 @@
 ## Implementation of the Web Math API
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 import std/[importutils, tables, math, options, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude

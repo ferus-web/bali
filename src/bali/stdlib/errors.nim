@@ -1,5 +1,5 @@
 ## Implementation of `throw` in MIR bytecode
-## Copyright (C) 2024 Trayambak Rai
+
 
 import std/[logging]
 import mirage/ir/generator

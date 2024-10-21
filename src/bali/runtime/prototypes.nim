@@ -1,5 +1,5 @@
 ## Object/value prototypes
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 import std/[logging]
 import mirage/ir/generator
 import mirage/atom

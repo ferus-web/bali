@@ -1,5 +1,5 @@
 ## Runtime types
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 import std/[options, hashes, logging, strutils]
 import mirage/ir/generator
 import mirage/runtime/prelude

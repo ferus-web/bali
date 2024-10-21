@@ -1,5 +1,5 @@
 ## Test262 runner for Bali
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 
 import std/[os, osproc, json, posix, strutils, logging, tables, times]
 import bali/grammar/prelude

@@ -1,7 +1,7 @@
 ## Base64 encoding/decoding
 ## These aren't part of the ECMAScript standard, but rather the HTML living spec.
 ##
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 import std/[options, logging, tables]
 import mirage/ir/generator
 import mirage/runtime/prelude

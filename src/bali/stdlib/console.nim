@@ -1,6 +1,6 @@
 ## JavaScript console API standard interface
 ## This uses a delegate system similar to that of V8's.
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 import std/[options, tables, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude

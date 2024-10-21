@@ -1,5 +1,5 @@
 ## Constant values (like NaN, undefined, null, etc.)
-## Copyright (C) 2024 Trayambak Rai and Ferus Authors
+
 import std/[options, logging, tables]
 import bali/internal/sugar
 import bali/runtime/[objects, normalize, atom_helpers]
