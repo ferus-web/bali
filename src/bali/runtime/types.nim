@@ -79,7 +79,7 @@ proc internalIndex*(stmt: Statement): IndexParams {.inline.} =
 proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
   var toRm: seq[int]
   for i, value in runtime.values:
-    if value.identifier == ident and value.kind == vkInternal:
+    if value.kind == vkInternal and value.identifier == ident:
       toRm &= i
 
   for rm in toRm:
@@ -98,7 +98,7 @@ proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
 proc markGlobal*(runtime: Runtime, ident: string) =
   var toRm: seq[int]
   for i, value in runtime.values:
-    if value.identifier == ident and value.kind == vkGlobal:
+    if value.kind == vkGlobal and value.identifier == ident:
       toRm &= i
 
   for rm in toRm:
@@ -111,6 +111,14 @@ proc markGlobal*(runtime: Runtime, ident: string) =
   inc runtime.addrIdx
 
 proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
+  var toRm: seq[int]
+  for i, value in runtime.values:
+    if value.kind == vkLocal and value.ownerFunc == hash(fn):
+      toRm &= i
+
+  for rm in toRm:
+    runtime.values.del(rm)
+
   runtime.values &=
     Value(kind: vkLocal, index: runtime.addrIdx, identifier: ident, ownerFunc: hash(fn))
 
