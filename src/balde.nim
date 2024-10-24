@@ -75,6 +75,10 @@ proc execFile(ctx: Context, file: string) {.inline.} =
   profileThis "parse source code":
     var ast = parser.parse()
 
+  if ctx.cmdOptions.contains("dump-no-eval"):
+    print ast
+    quit 0
+
   if ctx.cmdOptions.contains("dump-ast"):
     ast.doNotEvaluate = true
 

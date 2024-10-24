@@ -306,7 +306,7 @@ proc parseDeclaration*(
       elif *toCall:
         return some(callAndStoreMut(ident, &toCall))
 
-proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement]
+proc parseStatement*(parser: Parser): Option[Statement]
 
 proc parseFunction*(parser: Parser): Option[Function] =
   info "parser: parse function"
@@ -383,7 +383,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
       parser.tokenizer.pos = prevPos
       parser.tokenizer.location = prevLoc
 
-    let stmt = parser.parseStatement(inFnBody = true)
+    let stmt = parser.parseStatement()
     if not *stmt:
       debug "parser: can't find any more statements for function body: " & &name &
         "; body parsing complete. Waiting for right-curly bracket to finish block."
@@ -656,7 +656,7 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
 
   expr
 
-proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] =
+proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
 
@@ -721,9 +721,6 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
     parser.tokenizer.pos = prevPos
     parser.tokenizer.location = prevLoc
   of TokenKind.Return:
-    if not inFnBody:
-      parser.error Other, "return not in function"
-
     let
       prevPos = parser.tokenizer.pos
       prevLoc = parser.tokenizer.location
@@ -792,9 +789,6 @@ proc parseStatement*(parser: Parser, inFnBody: bool = false): Option[Statement] 
   of TokenKind.Comment, TokenKind.String, TokenKind.Number, TokenKind.Null:
     discard
   of TokenKind.Shebang:
-    if inFnBody:
-      parser.error Other, "shebangs are not allowed inside of a function body"
-
     if parser.foundShebang:
       parser.error Other, "one file cannot have two shebangs"
     else:

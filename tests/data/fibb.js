@@ -1,4 +1,4 @@
-function fibonacci(n) {
+function fibb(n) {
 	if (n == 0) {
 		return n
 	}
@@ -10,5 +10,5 @@ function fibonacci(n) {
 	return c
 }
 
-let fib = fibonacci(6)
+let fib = fibb(6)
 console.log(fib)
