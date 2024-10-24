@@ -369,7 +369,7 @@ proc generateIR*(
     if !stmt.retIdent:
       runtime.ir.returnFn(runtime.index("retval", internalIndex(stmt)).int)
     else:
-      runtime.ir.returnFn(runtime.index(&stmt.retIdent, internalIndex(stmt)).int)
+      runtime.ir.returnFn(runtime.index(&stmt.retIdent, defaultParams(fn)).int)
   of CallAndStoreResult:
     runtime.markLocal(fn, stmt.storeIdent)
     runtime.generateIR(fn, stmt.storeFn)
@@ -707,6 +707,7 @@ proc generateIR*(
 
 proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
   info "emitter: loading up function signature arguments onto stack via IR: " & fn.name
+  print fn
 
   for i, arg in fn.arguments:
     runtime.markLocal(fn, arg)
@@ -714,6 +715,7 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
       runtime.index(arg, defaultParams(fn)), Register.CallArgument
     )
     runtime.ir.resetArgs() # reset the call param register
+    print runtime.values
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope) =
   let
