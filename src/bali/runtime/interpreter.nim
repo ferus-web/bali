@@ -707,7 +707,6 @@ proc generateIR*(
 
 proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
   info "emitter: loading up function signature arguments onto stack via IR: " & fn.name
-  print fn
 
   for i, arg in fn.arguments:
     runtime.markLocal(fn, arg)
@@ -715,7 +714,6 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
       runtime.index(arg, defaultParams(fn)), Register.CallArgument
     )
     runtime.ir.resetArgs() # reset the call param register
-    print runtime.values
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope) =
   let
@@ -762,13 +760,13 @@ proc generateInternalIR*(runtime: Runtime) =
         # FIXME: weird bug with mirage, `get` returns a NULL atom.
 
       if atom.kind != Object:
-        debug "runtime: atom is not an object, returning null."
+        debug "runtime: atom is not an object, returning undefined."
         runtime.vm.addAtom(obj(), storeAt)
         return
 
       if not atom.objFields.contains(&ident.getStr()):
         debug "runtime: atom does not have any field \"" & &ident.getStr() &
-          "\"; returning null."
+          "\"; returning undefined."
         runtime.vm.addAtom(obj(), storeAt)
         return
 
