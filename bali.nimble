@@ -7,6 +7,7 @@ license         = "GPL3"
 srcDir          = "src"
 backend         = "cpp"
 bin             = @["balde", "test262"]
+installExt      = @["nim"]
 binDir          = "bin"
 
 # Dependencies
