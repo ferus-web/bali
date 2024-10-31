@@ -5,6 +5,7 @@ import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/runtime/[normalize, arguments, types]
 import bali/runtime/abstract/[to_number]
+import bali/stdlib/errors
 import bali/internal/sugar
 import pretty, librng, librng/generator
 
@@ -24,17 +25,26 @@ let Algorithm =
   of "splitmix": Splitmix64
   else: Xoroshiro128
 
+type
+  JSMath = object
+
 # Global RNG source
 var rng = newRNG(algo = Algorithm)
 
 proc generateStdIr*(runtime: Runtime) =
   info "math: generating IR interfaces"
 
+  runtime.registerType("Math", JSMath)
+  runtime.defineConstructor("Math", proc =
+    runtime.vm.typeError("Math is not a constructor")
+  )
+
   # Math.random
   # WARN: Do not use this for cryptography! This uses one of eight highly predictable pseudo-random
   # number generation algorithms that librng implements!
   runtime.defineFn(
-    "Math.random",
+    JSMath,
+    "random",
     proc() =
       let value = float64(rng.generator.next()) / 1.8446744073709552e+19'f64
       ret floating(value)
