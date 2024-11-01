@@ -35,9 +35,6 @@ proc generateStdIr*(runtime: Runtime) =
   info "math: generating IR interfaces"
 
   runtime.registerType("Math", JSMath)
-  runtime.defineConstructor("Math", proc =
-    runtime.vm.typeError("Math is not a constructor")
-  )
 
   # Math.random
   # WARN: Do not use this for cryptography! This uses one of eight highly predictable pseudo-random
