@@ -42,6 +42,9 @@ proc convertJsonNodeToAtom*(node: JsonNode): MAtom =
 
   null()
 
+type
+  JSON = object
+
 proc atomToJsonNode*(atom: MAtom): JsonNode =
   if atom.kind == Integer:
     return newJInt(&atom.getInt())
@@ -71,10 +74,13 @@ proc atomToJsonNode*(atom: MAtom): JsonNode =
 proc generateStdIR*(runtime: Runtime) =
   info "json: generating IR interfaces"
 
+  runtime.registerType("JSON", JSON)
+
   ## 25.5.1 JSON.parse ( text [ , reviver ] )
   ## This function parses a JSON text (a JSON-formatted String) and produces an ECMAScript language value. The JSON format represents literals, arrays, and objects with a syntax similar to the syntax for ECMAScript literals, Array Initializers, and Object Initializers. After parsing, JSON objects are realized as ECMAScript objects. JSON arrays are realized as ECMAScript Array instances. JSON strings, numbers, booleans, and null are realized as ECMAScript Strings, Numbers, Booleans, and null.
   runtime.defineFn(
-    "JSON.parse",
+    JSON,
+    "parse",
     proc() =
       # 1. Let jsonString be ? ToString(text).
       let jsonString =
@@ -99,7 +105,8 @@ proc generateStdIR*(runtime: Runtime) =
   # FIXME: not compliant yet!
   ## This function returns a String in UTF-16 encoded JSON format representing an ECMAScript language value, or undefined. It can take three parameters. The value parameter is an ECMAScript language value, which is usually an object or array, although it can also be a String, Boolean, Number or null. The optional replacer parameter is either a function that alters the way objects and arrays are stringified, or an array of Strings and Numbers that acts as an inclusion list for selecting the object properties that will be stringified. The optional space parameter is a String or Number that allows the result to have white space injected into it to improve human readability.
   runtime.defineFn(
-    "JSON.stringify",
+    JSON,
+    "stringify",
     proc() =
       let
         atom = &runtime.argument(1)
