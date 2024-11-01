@@ -1,7 +1,7 @@
 ## JavaScript URL API - uses sanchar's builtin URL parser
 import std/[options, logging, tables]
 import bali/internal/sugar
-import bali/runtime/[objects, normalize, arguments, types]
+import bali/runtime/[objects, normalize, arguments, types, atom_helpers]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import mirage/ir/generator
@@ -12,37 +12,37 @@ import pretty
 
 var parser = newURLParser()
 
-proc transposeUrlToObject(parsed: URL, url: var MAtom, source: MAtom) =
-  when not defined(danger):
-    assert url.kind == Object,
-      "transposeUrlToObject() was given non-Object type: " & $url.kind
+type
+  JSURL = object
+    host*: string
+    hostname*: string
+    pathname*: string
+    port*: int
+    protocol*: string
+    search*: string
+    href*: string
+    origin*: string
+    source*: string
+    hash*: string
 
-  url.objFields["hostname"] = 0 #str parsed.hostname()
-  url.objFields["pathname"] = 1 #str parsed.path()
-  url.objFields["port"] = 2 #integer parsed.port()
-  url.objFields["protocol"] = 3 #str parsed.scheme()
-  url.objFields["search"] = 4 #str parsed.query()
-  url.objFields["host"] = 5 #str parsed.hostname()
-  url.objFields["href"] = 6 #source
-  url.objFields["origin"] = 7
-  url.objFields["hash"] = 8
+proc transposeUrlToObject(runtime: Runtime, parsed: URL, source: string): MAtom =
+  var url = runtime.createObjFromType(JSURL)
+  url["hostname"] = str(parsed.hostname())
+  url["pathname"] = parsed.path().str()
+  url["port"] = parsed.port().int.integer()
+  url["protocol"] = str(parsed.scheme() & ':')
+  url["search"] = parsed.query().str()
+  url["hostname"] = parsed.hostname().str()
+  url["source"] = source.str()
+  url["origin"] = str(parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port())
+  url["hash"] = (if parsed.fragment().len > 0: str '#' & parsed.fragment() else: str newString(0))
 
-  url.objValues =
-    @[
-      str parsed.hostname(),
-      str parsed.path(),
-      integer parsed.port().int,
-      str parsed.scheme(),
-      str parsed.query(),
-      str parsed.hostname(),
-      source,
-      str(parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port()),
-      (if parsed.fragment().len > 0: str '#' & parsed.fragment()
-      else: str newString(0)),
-    ]
+  url
 
 proc generateStdIR*(runtime: Runtime) =
   info "url: generating IR interfaces"
+
+  runtime.registerType("URL", JSURL)
 
   # URL constructor (`new URL()` syntax)
   runtime.defineConstructor(
@@ -81,17 +81,14 @@ proc generateStdIR*(runtime: Runtime) =
       if parsed.scheme().len < 1:
         return
 
-      var url = obj()
-
-      transposeUrlToObject(parsed, url, source)
-
-      ret url
+      ret transposeUrlToObject(runtime, parsed, &source.getStr())
     ,
   )
 
   # URL.parse()
   runtime.defineFn(
-    "URL.parse",
+    JSURL,
+    "parse",
     proc() =
       var osource: Option[MAtom]
 
@@ -117,10 +114,6 @@ proc generateStdIR*(runtime: Runtime) =
           debug "url: this is the function variant, so no error will be thrown."
           URL()
 
-      # allocate object
-      var url = obj()
-      transposeUrlToObject(parsed, url, source)
-
-      ret url
+      ret transposeUrlToObject(runtime, parsed, &source.getStr())
     ,
   )

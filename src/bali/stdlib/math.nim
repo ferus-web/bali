@@ -5,6 +5,7 @@ import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/runtime/[normalize, arguments, types]
 import bali/runtime/abstract/[to_number]
+import bali/stdlib/errors
 import bali/internal/sugar
 import pretty, librng, librng/generator
 
@@ -24,17 +25,23 @@ let Algorithm =
   of "splitmix": Splitmix64
   else: Xoroshiro128
 
+type
+  JSMath = object
+
 # Global RNG source
 var rng = newRNG(algo = Algorithm)
 
 proc generateStdIr*(runtime: Runtime) =
   info "math: generating IR interfaces"
 
+  runtime.registerType("Math", JSMath)
+
   # Math.random
   # WARN: Do not use this for cryptography! This uses one of eight highly predictable pseudo-random
   # number generation algorithms that librng implements!
   runtime.defineFn(
-    "Math.random",
+    JSMath,
+    "random",
     proc() =
       let value = float64(rng.generator.next()) / 1.8446744073709552e+19'f64
       ret floating(value)
@@ -43,7 +50,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.pow
   runtime.defineFn(
-    "Math.pow",
+    JSMath,
+    "pow",
     proc() =
       let
         value = runtime.ToNumber(&runtime.argument(1))
@@ -55,7 +63,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.cos
   runtime.defineFn(
-    "Math.cos",
+    JSMath,
+    "cos",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
       ret floating cos(value)
@@ -64,7 +73,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.sqrt
   runtime.defineFn(
-    "Math.sqrt",
+    JSMath,
+    "sqrt",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
       ret floating sqrt(value)
@@ -73,7 +83,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.tanh
   runtime.defineFn(
-    "Math.tanh",
+    JSMath,
+    "tanh",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
@@ -83,7 +94,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.sin
   runtime.defineFn(
-    "Math.sin",
+    JSMath,
+    "sin",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
@@ -93,7 +105,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.sinh
   runtime.defineFn(
-    "Math.sinh",
+    JSMath,
+    "sinh",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
@@ -103,7 +116,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.tan
   runtime.defineFn(
-    "Math.tan",
+    JSMath,
+    "tan",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
@@ -113,7 +127,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.trunc
   runtime.defineFn(
-    "Math.trunc",
+    JSMath,
+    "trunc",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
@@ -123,7 +138,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.floor
   runtime.defineFn(
-    "Math.floor",
+    JSMath,
+    "floor",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
@@ -133,7 +149,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.ceil
   runtime.defineFn(
-    "Math.ceil",
+    JSMath,
+    "ceil",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
@@ -143,7 +160,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.cbrt
   runtime.defineFn(
-    "Math.cbrt",
+    JSMath,
+    "cbrt",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
@@ -153,7 +171,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.log
   runtime.defineFn(
-    "Math.log",
+    JSMath,
+    "log",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
@@ -163,7 +182,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.abs
   runtime.defineFn(
-    "Math.abs",
+    JSMath,
+    "abs",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
@@ -173,7 +193,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.max
   runtime.defineFn(
-    "Math.max",
+    JSMath,
+    "max",
     proc() =
       let
         a = runtime.ToNumber(&runtime.argument(1))
@@ -185,7 +206,8 @@ proc generateStdIr*(runtime: Runtime) =
 
   # Math.min
   runtime.defineFn(
-    "Math.min",
+    JSMath,
+    "min",
     proc() =
       let
         a = runtime.ToNumber(&runtime.argument(1))

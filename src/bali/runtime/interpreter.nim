@@ -341,7 +341,7 @@ proc generateIR*(
         of cakIdent:
           info "interpreter: passing ident parameter to function with ident: " &
             arg.ident
-
+          
           runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
         of cakAtom: # already loaded via the statement expander
           let ident = $i
@@ -737,6 +737,14 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
 
   if name != "outer":
     runtime.loadArgumentsOntoStack(fn)
+  else:
+    constants.generateStdIr(runtime)
+
+    for typ in runtime.types:
+      let idx = runtime.addrIdx
+      runtime.markGlobal(typ.name)
+      runtime.ir.loadObject(idx)
+      runtime.ir.markGlobal(idx)
 
   for stmt in scope.stmts:
     runtime.generateIR(fn, stmt)
@@ -769,7 +777,7 @@ proc generateInternalIR*(runtime: Runtime) =
           "\"; returning undefined."
         runtime.vm.addAtom(obj(), storeAt)
         return
-
+      
       let value = atom.objValues[atom.objFields[&ident.getStr()]]
       runtime.vm.addAtom(value, storeAt),
   )
@@ -783,7 +791,6 @@ proc run*(runtime: Runtime) =
   base64.generateStdIR(runtime)
   json.generateStdIR(runtime)
   parseIntGenerateStdIR(runtime.vm, runtime.ir)
-  constants.generateStdIR(runtime)
 
   runtime.generateInternalIR()
 
@@ -791,6 +798,8 @@ proc run*(runtime: Runtime) =
     test262.generateStdIR(runtime.vm, runtime.ir)
 
   runtime.generateIRForScope(runtime.ast.scopes[0])
+
+  constants.generateStdIR(runtime)
 
   let source = runtime.ir.emit()
 

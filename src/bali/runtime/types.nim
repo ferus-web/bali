@@ -1,10 +1,12 @@
 ## Runtime types
 
-import std/[options, hashes, logging, strutils]
+import std/[options, hashes, logging, strutils, tables]
 import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/grammar/prelude
-import bali/runtime/[normalize]
+import bali/internal/sugar
+import bali/runtime/[normalize, atom_obj_variant, atom_helpers]
+import pretty
 
 type
   NativeFunction* = proc()
@@ -47,6 +49,13 @@ type
   InterpreterOpts* = object
     test262*: bool = false
 
+  JSType* = object
+    name*: string
+    constructor*: NativeFunction
+    members*: Table[string, AtomOrFunction[NativeFunction]]
+
+    proto*: Hash
+
   Runtime* = ref object
     ast*: AST
     ir*: IRGenerator
@@ -57,6 +66,8 @@ type
     values*: seq[Value]
     semanticErrors*: seq[SemanticError]
     clauses*: seq[string]
+
+    types*: seq[JSType]
 
 proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =
   SemanticError(kind: UnknownIdentifier, unknown: identifier)
@@ -113,7 +124,7 @@ proc markGlobal*(runtime: Runtime, ident: string) =
 proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
   var toRm: seq[int]
   for i, value in runtime.values:
-    if value.kind == vkLocal and value.ownerFunc == hash(fn):
+    if value.kind == vkLocal and value.ownerFunc == hash(fn) and value.identifier == ident:
       toRm &= i
 
   for rm in toRm:
@@ -138,14 +149,81 @@ proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
   )
   runtime.ir.call(builtinName)
 
+proc createAtom*(typ: JSType): MAtom =
+  var atom = obj()
+  
+  for name, member in typ.members:
+    if member.isAtom():
+      let idx = atom.objValues.len
+      atom.objValues &= undefined()
+      atom.objFields[name] = idx
+
+  atom
+
+proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): MAtom =
+  for etyp in runtime.types:
+    if etyp.proto == hash($typ):
+      return etyp.createAtom()
+
+  raise newException(ValueError, "No such registered type: `" & $typ & '`')
+
+proc defineFn*[T](runtime: Runtime, prototype: typedesc[T], name: string, fn: NativeFunction) =
+  ## Expose a method to the JavaScript runtime for a particular type.
+  
+  let typName = (proc: Option[string] =
+    for typ in runtime.types:
+      if typ.proto == hash($prototype):
+        return typ.name.some()
+
+    none(string)
+  )()
+
+  if not *typName:
+    raise newException(ValueError, "Attempt to define function `" & name & "` for undefined prototype")
+    
+  let moduleName = normalizeIRName(&typName & '.' & name)
+  runtime.ir.newModule(moduleName)
+  let name = "BALI_" & toUpperAscii((&typName).normalizeIRName()) & '_' & toUpperAscii(normalizeIRName name)
+  runtime.vm.registerBuiltin(name,
+    proc(_: Operation) =
+      fn()
+  )
+  runtime.ir.call(name)
+
+proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
+  var jsType: JSType
+  
+  for fname, fatom in prototype().fieldPairs:
+    jsType.members[fname] = initAtomOrFunction[NativeFunction](undefined())
+
+  jsType.proto = hash($prototype)
+  jsType.name = name
+
+  runtime.types &= jsType.move()
+  let typIdx = runtime.types.len - 1
+  
+  runtime.vm.registerBuiltin(
+    "BALI_CONSTRUCTOR_" & name.toUpperAscii(),
+    proc(_: Operation) =
+      if runtime.types[typIdx].constructor == nil:
+        runtime.vm.typeError(runtime.types[typIdx].name & " is not a constructor")
+
+      runtime.types[typIdx].constructor()
+  )
+
 proc defineConstructor*(runtime: Runtime, name: string, fn: NativeFunction) {.inline.} =
   debug "runtime: exposing constructor for type: " & name
   ## Expose a constructor for a type to a JavaScript runtime.
-  runtime.vm.registerBuiltin(
-    "BALI_CONSTRUCTOR_" & name,
-    proc(_: Operation) =
-      fn(),
-  )
+  
+  var found = false
+  for i, jtype in runtime.types:
+    if jtype.name == name:
+      found = true
+      runtime.types[i].constructor = fn
+      break
+  
+  if not found:
+    raise newException(ValueError, "Attempt to define constructor for unknown type: " & name)
 
 template ret*(atom: MAtom) =
   ## Shorthand for:
