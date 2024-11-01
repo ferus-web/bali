@@ -162,7 +162,7 @@ proc createAtom*(typ: JSType): MAtom =
 
 proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): MAtom =
   for etyp in runtime.types:
-    if etyp.proto == hash(typ()):
+    if etyp.proto == hash($typ):
       return etyp.createAtom()
 
   raise newException(ValueError, "No such registered type: `" & $typ & '`')
@@ -172,7 +172,7 @@ proc defineFn*[T](runtime: Runtime, prototype: typedesc[T], name: string, fn: Na
   
   let typName = (proc: Option[string] =
     for typ in runtime.types:
-      if typ.proto == hash(prototype()):
+      if typ.proto == hash($prototype):
         return typ.name.some()
 
     none(string)
@@ -196,7 +196,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   for fname, fatom in prototype().fieldPairs:
     jsType.members[fname] = initAtomOrFunction[NativeFunction](undefined())
 
-  jsType.proto = hash(prototype())
+  jsType.proto = hash($prototype)
   jsType.name = name
 
   runtime.types &= jsType.move()

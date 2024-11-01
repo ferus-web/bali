@@ -341,7 +341,7 @@ proc generateIR*(
         of cakIdent:
           info "interpreter: passing ident parameter to function with ident: " &
             arg.ident
-
+          
           runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
         of cakAtom: # already loaded via the statement expander
           let ident = $i
