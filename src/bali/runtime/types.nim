@@ -5,6 +5,7 @@ import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/grammar/prelude
 import bali/internal/sugar
+import bali/stdlib/errors
 import bali/runtime/[normalize, atom_obj_variant, atom_helpers]
 import pretty
 

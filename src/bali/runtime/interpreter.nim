@@ -7,7 +7,6 @@ import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/[normalize, types, atom_helpers]
-import bali/stdlib/errors
 import bali/stdlib/prelude
 import crunchy, pretty
 
