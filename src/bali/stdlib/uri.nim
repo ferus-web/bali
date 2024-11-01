@@ -87,7 +87,8 @@ proc generateStdIR*(runtime: Runtime) =
 
   # URL.parse()
   runtime.defineFn(
-    "URL.parse",
+    JSURL,
+    "parse",
     proc() =
       var osource: Option[MAtom]
 
