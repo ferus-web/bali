@@ -1,7 +1,6 @@
 ## JavaScript parser
 ##
 
-
 import std/[options, logging, strutils, tables]
 import bali/grammar/[token, tokenizer, ast, errors, statement, condition]
 import bali/internal/sugar

@@ -42,8 +42,7 @@ proc convertJsonNodeToAtom*(node: JsonNode): MAtom =
 
   null()
 
-type
-  JSON = object
+type JSON = object
 
 proc atomToJsonNode*(atom: MAtom): JsonNode =
   if atom.kind == Integer:

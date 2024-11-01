@@ -12,18 +12,17 @@ import pretty
 
 var parser = newURLParser()
 
-type
-  JSURL = object
-    host*: string
-    hostname*: string
-    pathname*: string
-    port*: int
-    protocol*: string
-    search*: string
-    href*: string
-    origin*: string
-    source*: string
-    hash*: string
+type JSURL = object
+  host*: string
+  hostname*: string
+  pathname*: string
+  port*: int
+  protocol*: string
+  search*: string
+  href*: string
+  origin*: string
+  source*: string
+  hash*: string
 
 proc transposeUrlToObject(runtime: Runtime, parsed: URL, source: string): MAtom =
   var url = runtime.createObjFromType(JSURL)
@@ -34,8 +33,11 @@ proc transposeUrlToObject(runtime: Runtime, parsed: URL, source: string): MAtom 
   url["search"] = parsed.query().str()
   url["hostname"] = parsed.hostname().str()
   url["source"] = source.str()
-  url["origin"] = str(parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port())
-  url["hash"] = (if parsed.fragment().len > 0: str '#' & parsed.fragment() else: str newString(0))
+  url["origin"] =
+    str(parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port())
+  url["hash"] =
+    (if parsed.fragment().len > 0: str '#' & parsed.fragment()
+    else: str newString(0))
 
   url
 

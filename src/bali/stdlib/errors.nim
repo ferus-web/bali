@@ -1,6 +1,5 @@
 ## Implementation of `throw` in MIR bytecode
 
-
 import std/[logging]
 import mirage/ir/generator
 import mirage/runtime/prelude

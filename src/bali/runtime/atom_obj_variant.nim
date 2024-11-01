@@ -1,6 +1,5 @@
 ## Atom-or-function variant type
 
-
 import std/options
 import bali/internal/sugar
 import mirage/atom

@@ -1,6 +1,5 @@
 ## Some syntactical sugar for making code less clunky.
 
-
 import std/options
 
 {.push checks: off, inline.}

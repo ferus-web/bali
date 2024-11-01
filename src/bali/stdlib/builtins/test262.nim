@@ -1,7 +1,6 @@
 ## Test262 required builtins
 ##
 
-
 import std/[strutils, math, options, logging, tables]
 import mirage/ir/generator
 import mirage/runtime/prelude

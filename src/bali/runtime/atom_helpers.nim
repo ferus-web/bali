@@ -15,7 +15,7 @@ func isNull*(atom: MAtom): bool {.inline.} =
 proc `[]`*(atom: MAtom, name: string): MAtom {.inline.} =
   if atom.kind != Object:
     raise newException(ValueError, $atom.kind & " does not have field access methods")
-  
+
   atom.objValues[atom.objFields[name]]
 
 proc `[]=`*(atom: var MAtom, name: string, value: sink MAtom) {.inline.} =

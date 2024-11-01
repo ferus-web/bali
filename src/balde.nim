@@ -1,7 +1,6 @@
 ## Balde - the Bali Debugger
 ##
 
-
 when not isMainModule:
   {.error: "This file is not meant to be separately imported!".}
 

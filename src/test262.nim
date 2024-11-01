@@ -1,6 +1,5 @@
 ## Test262 runner for Bali
 
-
 import std/[os, osproc, json, posix, strutils, logging, tables, times]
 import bali/grammar/prelude
 import bali/runtime/prelude

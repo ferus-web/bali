@@ -1,7 +1,6 @@
 ## `parseInt` builtin.
 ##
 
-
 import std/[strutils, math, options, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude

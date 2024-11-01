@@ -25,8 +25,7 @@ let Algorithm =
   of "splitmix": Splitmix64
   else: Xoroshiro128
 
-type
-  JSMath = object
+type JSMath = object
 
 # Global RNG source
 var rng = newRNG(algo = Algorithm)

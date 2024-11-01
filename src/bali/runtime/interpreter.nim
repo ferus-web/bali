@@ -341,7 +341,7 @@ proc generateIR*(
         of cakIdent:
           info "interpreter: passing ident parameter to function with ident: " &
             arg.ident
-          
+
           runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
         of cakAtom: # already loaded via the statement expander
           let ident = $i
@@ -777,7 +777,7 @@ proc generateInternalIR*(runtime: Runtime) =
           "\"; returning undefined."
         runtime.vm.addAtom(obj(), storeAt)
         return
-      
+
       let value = atom.objValues[atom.objFields[&ident.getStr()]]
       runtime.vm.addAtom(value, storeAt),
   )
