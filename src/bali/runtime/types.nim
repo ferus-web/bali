@@ -6,6 +6,7 @@ import mirage/runtime/prelude
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/[normalize, atom_obj_variant, atom_helpers]
+import pretty
 
 type
   NativeFunction* = proc()
@@ -123,7 +124,7 @@ proc markGlobal*(runtime: Runtime, ident: string) =
 proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
   var toRm: seq[int]
   for i, value in runtime.values:
-    if value.kind == vkLocal and value.ownerFunc == hash(fn):
+    if value.kind == vkLocal and value.ownerFunc == hash(fn) and value.identifier == ident:
       toRm &= i
 
   for rm in toRm:
@@ -205,7 +206,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
     "BALI_CONSTRUCTOR_" & name.toUpperAscii(),
     proc(_: Operation) =
       if runtime.types[typIdx].constructor == nil:
-        raise newException(Defect, "BUG: Constructor for type `" & name & "` was not defined prior to execution!")
+        runtime.vm.typeError(runtime.types[typIdx].name & " is not a constructor")
 
       runtime.types[typIdx].constructor()
   )
