@@ -6,6 +6,9 @@ I repeat,
 
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
 
+# Usage
+Whilst not a "real-world usage", Bali is integrated into the [Ferus web engine](https://github.com/ferus-web/ferus) and used as the JavaScript runtime's primary execution backend.
+
 # Contact Me
 You can join the [Ferus Discord Server](https://discord.gg/9MwfGn2Jkb) to discuss Bali and other components of the Ferus web engine.
 
