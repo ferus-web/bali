@@ -39,7 +39,7 @@ type
     ImmutableReassignment
 
   SemanticError* = object
-    line*, col*: uint
+    line*, col*: uint = 1
     case kind*: SemanticErrorKind
     of UnknownIdentifier:
       unknown*: string
@@ -54,6 +54,7 @@ type
     name*: string
     constructor*: NativeFunction
     members*: Table[string, AtomOrFunction[NativeFunction]]
+    singletonId*: uint
 
     proto*: Hash
 
@@ -224,7 +225,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
 proc setProperty*[T](runtime: Runtime, prototype: typedesc[T], name: string, value: MAtom) =
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
-      runtime.types[i].members[name] = initAtomOrFunction(value)
+      runtime.types[i].members[name] = initAtomOrFunction[NativeFunction](value)
 
 proc defineConstructor*(runtime: Runtime, name: string, fn: NativeFunction) {.inline.} =
   debug "runtime: exposing constructor for type: " & name

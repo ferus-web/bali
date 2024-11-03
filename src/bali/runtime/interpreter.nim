@@ -6,7 +6,7 @@ import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
-import bali/runtime/[normalize, types, atom_helpers]
+import bali/runtime/[normalize, types, atom_helpers, atom_obj_variant]
 import bali/stdlib/prelude
 import crunchy, pretty
 
@@ -740,11 +740,11 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
   else:
     constants.generateStdIr(runtime)
 
-    for typ in runtime.types:
+    for i, typ in runtime.types:
       let idx = runtime.addrIdx
       runtime.markGlobal(typ.name)
       runtime.ir.loadObject(idx)
-      runtime.ir.markGlobal(idx)
+      runtime.types[i].singletonId = idx
 
   for stmt in scope.stmts:
     runtime.generateIR(fn, stmt)
@@ -763,7 +763,7 @@ proc generateInternalIR*(runtime: Runtime) =
         ident = runtime.vm.registers.callArgs.pop()
         index = uint(&getInt(runtime.vm.registers.callArgs.pop()))
         storeAt = uint(&getInt(runtime.vm.registers.callArgs.pop()))
-
+      
       let atom = runtime.vm.stack[index]
         # FIXME: weird bug with mirage, `get` returns a NULL atom.
 
@@ -771,6 +771,20 @@ proc generateInternalIR*(runtime: Runtime) =
         debug "runtime: atom is not an object, returning undefined."
         runtime.vm.addAtom(obj(), storeAt)
         return
+
+      for typ in runtime.types:
+        if typ.singletonId == index:
+          debug "runtime: singleton ID for type `" & typ.name & "` matches field access index"
+          for field, member in typ.members:
+            if field == &ident.getStr():
+              debug "runtime: found field in singleton `" & typ.name & "`: " & field
+              if member.isFn:
+                error "runtime: FIXME: field access into functions is not supported yet!"
+                runtime.vm.typeError("FIXME: Field access into functions is not supported yet!")
+                return
+              else:
+                runtime.vm.addAtom(member.atom(), storeAt)
+                return
 
       if not atom.objFields.contains(&ident.getStr()):
         debug "runtime: atom does not have any field \"" & &ident.getStr() &
