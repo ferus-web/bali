@@ -70,7 +70,7 @@ type
     NotTrueEqual
 
   Statement* = ref object
-    line*, col*: uint = 0
+    line*, col*: uint = 1
     case kind*: StatementKind
     of CreateMutVal:
       mutIdentifier*: string
