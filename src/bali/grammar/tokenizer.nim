@@ -84,9 +84,156 @@ proc consumeInvalid*(tokenizer: Tokenizer): Token =
 
 {.pop.}
 
+proc charToDecimalDigit*(c: char): Option[uint32] {.inline.} =
+  ## Convert characters to decimal digits
+  if c >= '0' and c <= '9':
+    return some((c.ord - '0'.ord).uint32)
+
+proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
+  var
+    hasSign: bool
+    sign = 1f
+
+  if negative:
+    hasSign = true
+    sign = -1f
+  else:
+    case tokenizer.consume()
+    of '-':
+      hasSign = true
+      sign = -1f
+    of '+':
+      hasSign = true
+      sign = 1f
+    else:
+      hasSign = false
+      sign = 1f
+      tokenizer.pos -= 1
+
+  if hasSign:
+    tokenizer.advance(1)
+
+  var
+    integralPart: float64
+    digit: uint32
+
+  while not tokenizer.eof and unpack(charToDecimalDigit(&tokenizer.charAt()), digit):
+    integralPart = integralPart * 10'f64 + digit.float64
+    tokenizer.advance(1)
+
+  var
+    isInteger = true
+    fractionalPart: float64 = 0'f64
+
+  if tokenizer.charAt() == some('.') and &tokenizer.charAt(1) in {'0' .. '9'}:
+    isInteger = false
+    tokenizer.advance(1)
+
+    var factor = 0.1'f64
+
+    while not tokenizer.eof() and unpack(charToDecimalDigit(tokenizer.consume()), digit):
+      fractionalPart += digit.float64 * factor
+      factor *= 0.1'f64
+      tokenizer.advance(1)
+
+  var value = sign * (integralPart + fractionalPart)
+  if tokenizer.charAt(1) in [some 'e', some 'E']:
+    if &tokenizer.charAt(1) in {'0' .. '9'} or
+        tokenizer.hasAtleast(2) and &tokenizer.charAt(1) in ['+', '-'] and
+        &tokenizer.charAt(2) in {'0' .. '9'}:
+      isInteger = false
+      tokenizer.advance(1)
+
+      let (hasSign, sign) =
+        case tokenizer.consume()
+        of '-':
+          (true, -1f)
+        of '+':
+          (true, 1f)
+        else:
+          (false, 1f)
+
+      if hasSign:
+        tokenizer.advance(1)
+
+      var exponent: float64 = 0'f64
+
+      while unpack(charToDecimalDigit(tokenizer.consume()), digit):
+        exponent = exponent * 10'f64 + digit.float64
+        tokenizer.advance(1)
+        if tokenizer.eof():
+          break
+
+      value *= pow(10'f64, sign * exponent)
+
+  let intValue: Option[int32] =
+    case isInteger
+    of true:
+      some(
+        if value >= int32.high.float64:
+          int32.high
+        elif value <= int32.low.float64:
+          int32.low
+        else:
+          value.int32
+      )
+    else:
+      none(int32)
+
+  let valF32 = value.float64
+  Token(kind: TokenKind.Number, hasSign: hasSign, floatVal: valF32, intVal: intValue)
+
+proc consumeBackslash*(tokenizer: Tokenizer): Option[char] =
+  debug "tokenizer: consume backslash"
+  discard tokenizer.consume()
+
+  if tokenizer.eof:
+    debug "tokenizer: `\\` is abruptly ended by the end of the stream, returning Invalid"
+    return
+  
+  case &tokenizer.charAt()
+  of 'u':
+    debug "tokenizer: backslash starts unicode sequence"
+    discard tokenizer.consume()
+    if not tokenizer.eof and &tokenizer.charAt() == '{':
+      debug "tokenizer: getting numeric unicode codepoint"
+      discard tokenizer.consume()
+      let numeric = tokenizer.consumeNumeric(negative = false)
+      let uniHex =
+        if numeric.kind != TokenKind.Number or not *numeric.intVal:
+          debug "tokenizer: unicode escape is followed by non-number, setting codepoint to zero"
+          0'i32
+        else:
+          debug "tokenizer: unicode escape is followed by a number: " & $(&numeric.intVal)
+          &numeric.intVal
+      
+      assert(uniHex >= 0'i32, "Unicode codepoint cannot be less than zero")
+      assert(uniHex <= 0x10FFFF'i32, "Unicode codepoint must not be greater than 0x10FFFF in escape sequence") # TODO: make this a parser error
+      
+      if tokenizer.eof:
+        debug "tokenizer: hit EOF before seeing closing bracket of unicode escape codepoint"
+        return
+      
+      tokenizer.pos -= 1 # FIXME: this is stupid. For some reason the tokenizer goes a bit too ahead after consuming a number,
+                         # so we have to manually rewind it
+      let brace = tokenizer.consume()
+      if brace != '}':
+        debug "tokenizer: expected `}`, got `" & brace & "` instead when interpreting unicode escape codepoint"
+        return
+      else:
+        debug "tokenizer: got `}` to successfully complete off unicode escape codepoint"
+        tokenizer.pos += 1 # FIXME: same crap as above
+      
+      return some(parseHexStr($uniHex)[0])
+  else:
+    debug "tokenizer: got ANSI escape `\\"  & &tokenizer.charAt() & '`'
+    return some(('\\' & &tokenizer.charAt())[0])
+
 proc consumeIdentifier*(tokenizer: Tokenizer): Token =
   debug "tokenizer: consume identifier"
-  var ident: string
+  var 
+    ident: string
+    containsUnicodeEsc = false
 
   while not tokenizer.eof():
     let c = &tokenizer.charAt()
@@ -95,17 +242,24 @@ proc consumeIdentifier*(tokenizer: Tokenizer): Token =
     of {'a' .. 'z'}, {'A' .. 'Z'}, '_', '.', '$':
       ident &= c
       tokenizer.advance()
+    of '\\':
+      debug "tokenizer: found backslash whilst consuming identifier, checking if it's a unicode escape"
+      let codepoint = tokenizer.consumeBackslash()
+      if *codepoint:
+        debug "tokenizer: identifier contains unicode escape"
+        containsUnicodeEsc = true
+        ident &= &codepoint
     else:
       break
-
+  
   if not Keywords.contains(ident):
     debug "tokenizer: consumed identifier \"" & ident & "\""
-    Token(kind: TokenKind.Identifier, ident: ident)
+    Token(kind: TokenKind.Identifier, ident: ident, containsUnicodeEsc: containsUnicodeEsc)
   else:
     let keyword = Keywords[ident]
     debug "tokenizer: consumed keyword: " & $keyword
 
-    Token(kind: keyword)
+    Token(kind: keyword, containsUnicodeEsc: containsUnicodeEsc)
 
 proc consumeWhitespace*(tokenizer: Tokenizer): Token =
   debug "tokenizer: consume whitespace"
@@ -238,105 +392,6 @@ proc consumeExclaimation*(tokenizer: Tokenizer): Token =
       return Token(kind: TokenKind.NotTrueEqual)
   else:
     return Token(kind: TokenKind.Invalid)
-
-proc charToDecimalDigit*(c: char): Option[uint32] {.inline.} =
-  ## Convert characters to decimal digits
-  if c >= '0' and c <= '9':
-    return some((c.ord - '0'.ord).uint32)
-
-proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
-  var
-    hasSign: bool
-    sign = 1f
-
-  if negative:
-    hasSign = true
-    sign = -1f
-  else:
-    case tokenizer.consume()
-    of '-':
-      hasSign = true
-      sign = -1f
-    of '+':
-      hasSign = true
-      sign = 1f
-    else:
-      hasSign = false
-      sign = 1f
-      tokenizer.pos -= 1
-
-  if hasSign:
-    tokenizer.advance(1)
-
-  var
-    integralPart: float64
-    digit: uint32
-
-  while not tokenizer.eof and unpack(charToDecimalDigit(&tokenizer.charAt()), digit):
-    integralPart = integralPart * 10'f64 + digit.float64
-    tokenizer.advance(1)
-
-  var
-    isInteger = true
-    fractionalPart: float64 = 0'f64
-
-  if tokenizer.charAt() == some('.') and &tokenizer.charAt(1) in {'0' .. '9'}:
-    isInteger = false
-    tokenizer.advance(1)
-
-    var factor = 0.1'f64
-
-    while not tokenizer.eof() and unpack(charToDecimalDigit(tokenizer.consume()), digit):
-      fractionalPart += digit.float64 * factor
-      factor *= 0.1'f64
-      tokenizer.advance(1)
-
-  var value = sign * (integralPart + fractionalPart)
-  if tokenizer.charAt(1) in [some 'e', some 'E']:
-    if &tokenizer.charAt(1) in {'0' .. '9'} or
-        tokenizer.hasAtleast(2) and &tokenizer.charAt(1) in ['+', '-'] and
-        &tokenizer.charAt(2) in {'0' .. '9'}:
-      isInteger = false
-      tokenizer.advance(1)
-
-      let (hasSign, sign) =
-        case tokenizer.consume()
-        of '-':
-          (true, -1f)
-        of '+':
-          (true, 1f)
-        else:
-          (false, 1f)
-
-      if hasSign:
-        tokenizer.advance(1)
-
-      var exponent: float64 = 0'f64
-
-      while unpack(charToDecimalDigit(tokenizer.consume()), digit):
-        exponent = exponent * 10'f64 + digit.float64
-        tokenizer.advance(1)
-        if tokenizer.eof():
-          break
-
-      value *= pow(10'f64, sign * exponent)
-
-  let intValue: Option[int32] =
-    case isInteger
-    of true:
-      some(
-        if value >= int32.high.float64:
-          int32.high
-        elif value <= int32.low.float64:
-          int32.low
-        else:
-          value.int32
-      )
-    else:
-      none(int32)
-
-  let valF32 = value.float64
-  Token(kind: TokenKind.Number, hasSign: hasSign, floatVal: valF32, intVal: intValue)
 
 proc consumePlus*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
@@ -510,6 +565,18 @@ proc next*(tokenizer: Tokenizer): Token =
   of '*':
     tokenizer.advance()
     return Token(kind: TokenKind.Mul)
+  of '\\':
+    let codepoint = tokenizer.consumeBackslash()
+
+    if *codepoint:
+      var token = tokenizer.consumeIdentifier()
+
+      debug "tokenizer: prepending " & &codepoint & " to identifier " & token.ident
+      token.ident = &codepoint & token.ident
+
+      token
+    else:
+      tokenizer.consumeInvalid()
   else:
     tokenizer.consumeInvalid()
 

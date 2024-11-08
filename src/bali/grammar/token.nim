@@ -114,12 +114,15 @@ type
     InvalidShebang
 
   Token* = object
+    containsUnicodeEsc*: bool
+
     case kind*: TokenKind
     of TokenKind.String:
       str*: string
       malformed*: bool
     of TokenKind.Identifier:
       ident*: string
+      identHasMalformedUnicodeSeq*: bool
     of TokenKind.Number:
       floatVal*: float
       hasSign*: bool
