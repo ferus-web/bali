@@ -270,7 +270,7 @@ proc parseDeclaration*(
       toCall = parser.parseConstructor()
       break
     else:
-      unreachable
+      parser.error UnexpectedToken, $tok.kind
 
   assert not (*atom and *vIdent and *toCall),
     "Attempt to assign a value to nothing (something went wrong)"
@@ -292,7 +292,7 @@ proc parseDeclaration*(
       elif *toCall:
         return some(callAndStoreMut(ident, &toCall))
     else:
-      unreachable
+      parser.error UnexpectedToken, "identifier"
   else:
     if not reassignment:
       if *atom:
@@ -484,8 +484,7 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
       metEnd = true
       break
     else:
-      print token
-      unreachable
+      parser.error UnexpectedToken, $token.kind
 
   if not metEnd:
     parser.error Other, "missing ) after argument list."
@@ -580,7 +579,7 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
       toCall = some(constructObject((&next).ident, &parser.parseArguments()))
       break
     else:
-      unreachable
+      parser.error UnexpectedToken, $tok.kind
 
   if *atom:
     return some(reassignVal(ident, &atom))
@@ -769,6 +768,9 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     return some ifStmt(&expr, exprScope, elseScope)
   of TokenKind.While:
+    if token.containsUnicodeEsc:
+      parser.error Other, ""
+
     let expr = parser.parseExprInParenWrap(TokenKind.While)
     if !expr:
       return
@@ -797,8 +799,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
   of TokenKind.InvalidShebang:
     parser.error Other, "shebang cannot be preceded by whitespace"
   else:
-    print token
-    unreachable
+    parser.error UnexpectedToken, $token.kind
 
 proc parse*(parser: Parser): AST {.inline.} =
   parser.ast = newAST()
