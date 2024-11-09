@@ -28,5 +28,31 @@ proc `[]=`*(atom: var MAtom, name: string, value: sink MAtom) {.inline.} =
   else:
     atom.objValues[atom.objFields[name]] = move(value)
 
+{.push inline.}
+func wrap*(val: int | uint | string | float): MAtom =
+  when val is int:
+    return integer(val)
+
+  when val is uint:
+    return uinteger(val)
+
+  when val is string:
+    return str(val)
+
+  when val is float:
+    return floating(val)
+
+func wrap*[T: not MAtom](val: openArray[T]): MAtom =
+  var vec = sequence(newSeq[MAtom](0))
+
+  for v in val:
+    vec.sequence &= v.wrap()
+
+  vec
+
+func wrap*(val: seq[MAtom]): MAtom =
+  sequence(val)
+{.pop.}
+
 func undefined*(): MAtom {.inline.} =
   obj()
