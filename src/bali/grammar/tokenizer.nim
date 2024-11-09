@@ -317,9 +317,15 @@ proc consumeString*(tokenizer: Tokenizer): Token =
       break
 
     if c == '\\':
-      ignoreNextQuote = true
-      tokenizer.advance()
-      continue
+      if not tokenizer.eof and &tokenizer.charAt(1) == 'u':
+        let escaped = tokenizer.consumeBackslash()
+        if *escaped:
+          str &= &escaped
+          continue
+      else:
+        ignoreNextQuote = true
+        tokenizer.advance()
+        continue
 
     str &= c
     tokenizer.advance()
