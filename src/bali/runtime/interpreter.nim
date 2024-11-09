@@ -763,7 +763,7 @@ proc generateInternalIR*(runtime: Runtime) =
         ident = runtime.vm.registers.callArgs.pop()
         index = uint(&getInt(runtime.vm.registers.callArgs.pop()))
         storeAt = uint(&getInt(runtime.vm.registers.callArgs.pop()))
-      
+
       let atom = runtime.vm.stack[index]
         # FIXME: weird bug with mirage, `get` returns a NULL atom.
 
@@ -774,13 +774,16 @@ proc generateInternalIR*(runtime: Runtime) =
 
       for typ in runtime.types:
         if typ.singletonId == index:
-          debug "runtime: singleton ID for type `" & typ.name & "` matches field access index"
+          debug "runtime: singleton ID for type `" & typ.name &
+            "` matches field access index"
           for field, member in typ.members:
             if field == &ident.getStr():
               debug "runtime: found field in singleton `" & typ.name & "`: " & field
               if member.isFn:
                 error "runtime: FIXME: field access into functions is not supported yet!"
-                runtime.vm.typeError("FIXME: Field access into functions is not supported yet!")
+                runtime.vm.typeError(
+                  "FIXME: Field access into functions is not supported yet!"
+                )
                 return
               else:
                 runtime.vm.addAtom(member.atom(), storeAt)

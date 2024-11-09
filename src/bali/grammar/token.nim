@@ -112,11 +112,10 @@ type
     Invalid
     Shebang
     InvalidShebang
-  
+
   MalformedStringReason* {.pure.} = enum
     UnclosedString
     BadUnicodeEscape
-
     UnicodeEscapeIntTooBig
     UnicodeEscapeIntTooSmall
 
@@ -160,10 +159,12 @@ func getError*(token: Token): Option[string] =
     of MalformedStringReason.BadUnicodeEscape:
       return some("malformed Unicode character escape sequence")
     of MalformedStringReason.UnicodeEscapeIntTooBig:
-      return some("Unicode codepoint must not be greater than 0x10FFFF in escape sequence")
+      return
+        some("Unicode codepoint must not be greater than 0x10FFFF in escape sequence")
     of MalformedStringReason.UnicodeEscapeIntTooSmall:
       return some("Unicode codepoint cannot be less than zero")
-  else: discard
+  else:
+    discard
 
 const Keywords* = {
   "const": TokenKind.Const,

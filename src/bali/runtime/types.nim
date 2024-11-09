@@ -222,7 +222,9 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
       runtime.types[typIdx].constructor(),
   )
 
-proc setProperty*[T](runtime: Runtime, prototype: typedesc[T], name: string, value: MAtom) =
+proc setProperty*[T](
+    runtime: Runtime, prototype: typedesc[T], name: string, value: MAtom
+) =
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
       runtime.types[i].members[name] = initAtomOrFunction[NativeFunction](value)
