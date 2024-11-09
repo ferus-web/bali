@@ -24,6 +24,10 @@ type
     WhileStmt
     Increment
     Decrement
+  
+  FieldAccess* = ref object
+    prev*, next*: FieldAccess
+    identifier*: string
 
   CallArgKind* = enum
     cakIdent
@@ -38,8 +42,7 @@ type
     of cakAtom:
       atom*: MAtom
     of cakFieldAccess:
-      fIdent*: string
-      fField*: string
+      access*: FieldAccess
     of cakImmediateExpr:
       expr*: Statement
 
@@ -134,6 +137,9 @@ func hash*(fn: Function): Hash {.inline.} =
   else:
     hash((fn.name, fn.arguments))
 
+func hash*(access: FieldAccess): Hash {.inline.} =
+  hash((access.identifier))
+
 proc hash*(stmt: Statement): Hash {.inline.} =
   var hash: Hash
 
@@ -165,10 +171,26 @@ proc hash*(stmt: Statement): Hash {.inline.} =
 proc pushIdent*(args: var PositionedArguments, ident: string) {.inline.} =
   args &= CallArg(kind: cakIdent, ident: ident)
 
+func createFieldAccess*(splitted: seq[string]): FieldAccess =
+  ## From a sequence of identifiers (assuming they are in sorted order of accesses),
+  ## create a `FieldAccess`, which has a "view" of the top of the field access chain.
+  var 
+    top = FieldAccess(identifier: splitted[0])
+    curr = top
+
+  for ident in splitted[1 ..< splitted.len]:
+    var acc = FieldAccess(identifier: ident)
+    curr.next = acc
+    acc.prev = curr
+
+    curr = acc
+
+  top
+
 proc pushFieldAccess*(
-    args: var PositionedArguments, ident: string, field: string
+  args: var PositionedArguments, access: FieldAccess
 ) {.inline.} =
-  args &= CallArg(kind: cakFieldAccess, fIdent: ident, fField: field)
+  args &= CallArg(kind: cakFieldAccess, access: access)
 
 proc pushAtom*(args: var PositionedArguments, atom: MAtom) {.inline.} =
   args &= CallArg(kind: cakAtom, atom: atom)
@@ -256,9 +278,6 @@ proc createMutVal*(name: string, atom: MAtom): Statement =
 
 proc identArg*(ident: string): CallArg =
   CallArg(kind: cakIdent, ident: ident)
-
-proc fieldAccessArg*(ident: string, field: string): CallArg =
-  CallArg(kind: cakFieldAccess, fIdent: ident, fField: field)
 
 proc atomArg*(atom: MAtom): CallArg =
   CallArg(kind: cakAtom, atom: atom)
