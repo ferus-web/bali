@@ -3,23 +3,22 @@
 import std/options
 
 {.push checks: off, inline.}
-proc `&`*[T](opt: Option[T]): T =
-  opt.unsafeGet()
-
-proc `*`*[T](opt: Option[T]): bool =
+func `*`*[T](opt: Option[T]): bool =
   opt.isSome
 
-proc `!`*[T](opt: Option[T]): bool =
+func `!`*[T](opt: Option[T]): bool =
   opt.isNone
+{.pop.}
 
-proc unpack*[T](opt: Option[T], x: var T): bool =
+func `&`*[T](opt: Option[T]): T {.inline.} =
+  opt.unsafeGet()
+
+func unpack*[T](opt: Option[T], x: var T): bool {.inline.} =
   if *opt:
     x = unsafeGet(opt)
     return true
 
   false
-
-{.pop.}
 
 template unreachable*() =
   assert false, "Unreachable"
