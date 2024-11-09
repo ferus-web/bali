@@ -1,6 +1,7 @@
 ## Atom functions
 
 import std/tables
+import bali/grammar/statement
 import mirage/atom
 
 func isUndefined*(atom: MAtom): bool {.inline.} =
@@ -24,7 +25,7 @@ proc `[]=`*(atom: var MAtom, name: string, value: sink MAtom) {.inline.} =
 
   if not atom.objFields.contains(name):
     atom.objValues &= move(value)
-    atom.objFields[name] = atom.objValues.len
+    atom.objFields[name] = atom.objValues.len - 1
   else:
     atom.objValues[atom.objFields[name]] = move(value)
 
@@ -49,6 +50,14 @@ func wrap*[T: not MAtom](val: openArray[T]): MAtom =
     vec.sequence &= v.wrap()
 
   vec
+
+func wrap*[T: object](obj: T): MAtom =
+  var mObj = atom.obj()
+
+  for name, field in obj.fieldPairs:
+    mObj[name] = field.wrap()
+
+  mObj
 
 func wrap*(val: seq[MAtom]): MAtom =
   sequence(val)
