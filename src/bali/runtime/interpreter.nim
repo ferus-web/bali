@@ -6,7 +6,7 @@ import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
-import bali/runtime/[normalize, types, atom_helpers, atom_obj_variant]
+import bali/runtime/[normalize, types, atom_helpers, atom_obj_variant, arguments]
 import bali/stdlib/prelude
 import crunchy, pretty
 
@@ -202,27 +202,41 @@ proc semanticError*(runtime: Runtime, error: SemanticError) =
 
   runtime.semanticErrors &= error
 
+proc loadFieldAccessStrings*(runtime: Runtime, access: FieldAccess) =
+  var curr = access.next
+  assert(
+    curr != nil,
+    "Field access on single ident (or top of access chain was not provided)",
+  )
+
+  while curr != nil:
+    runtime.ir.loadStr(runtime.addrIdx, curr.identifier)
+    runtime.ir.passArgument(runtime.addrIdx)
+    inc runtime.addrIdx
+
+    curr = curr.next
+
 proc resolveFieldAccess*(
-    runtime: Runtime, fn: Function, stmt: Statement, address: int, field: string
+    runtime: Runtime, fn: Function, stmt: Statement, address: uint, access: FieldAccess
 ): uint =
-  let internalName = $(hash(stmt) !& hash(ident) !& hash(field))
+  let internalName = $(hash(stmt) !& hash(ident) !& hash(access.identifier))
   runtime.generateIR(
     fn, createImmutVal(internalName, null()), internal = true, ownerStmt = some(stmt)
   )
-  let accessResult = runtime.addrIdx - 1
+  let accessResult = runtime.addrIdx - 1 # index where the value will be stored
 
-  # start preparing for call to internal field resolver
+  # Pass the index at which the atom is located
+  inc runtime.addrIdx
+  runtime.ir.loadUint(runtime.addrIdx, address)
+  runtime.ir.passArgument(runtime.addrIdx)
+
+  # Pass the index at wbich the result is to be stored
   inc runtime.addrIdx
   runtime.ir.loadUint(runtime.addrIdx, accessResult)
-  inc runtime.addrIdx
-  runtime.ir.loadInt(runtime.addrIdx, address)
-  inc runtime.addrIdx
-  runtime.ir.loadStr(runtime.addrIdx, field)
-  inc runtime.addrIdx
+  runtime.ir.passArgument(runtime.addrIdx)
 
-  runtime.ir.passArgument(runtime.addrIdx - 3) # pass `accessResult`
-  runtime.ir.passArgument(runtime.addrIdx - 2) # pass `address`
-  runtime.ir.passArgument(runtime.addrIdx - 1) # pass `field`
+  # Pass all the fields
+  runtime.loadFieldAccessStrings(access)
 
   runtime.ir.call("BALI_RESOLVEFIELD")
   runtime.ir.resetArgs()
@@ -349,7 +363,10 @@ proc generateIR*(
           runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
         of cakFieldAccess:
           let index = runtime.resolveFieldAccess(
-            fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField
+            fn,
+            stmt,
+            runtime.index(arg.access.identifier, defaultParams(fn)),
+            arg.access,
           )
           runtime.ir.markGlobal(index)
           runtime.ir.passArgument(index)
@@ -393,7 +410,7 @@ proc generateIR*(
         runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
       of cakFieldAccess:
         let index = runtime.resolveFieldAccess(
-          fn, stmt, int runtime.index(arg.fIdent, defaultParams(fn)), arg.fField
+          fn, stmt, runtime.index(arg.access.identifier, defaultParams(fn)), arg.access
         )
         runtime.ir.markGlobal(index)
         runtime.ir.passArgument(index)
@@ -754,15 +771,36 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
     curr = &curr.next
     runtime.generateIRForScope(curr)
 
+proc findField*(atom: MAtom, accesses: FieldAccess): MAtom =
+  if accesses.identifier in atom.objFields:
+    if accesses.next == nil:
+      return atom.objValues[atom.objFields[accesses.identifier]]
+    else:
+      return atom.findField(accesses.next)
+  else:
+    return undefined()
+
 proc generateInternalIR*(runtime: Runtime) =
   runtime.ir.newModule("BALI_RESOLVEFIELD")
   runtime.vm.registerBuiltin(
     "BALI_RESOLVEFIELD_INTERNAL",
     proc(op: Operation) =
       let
-        ident = runtime.vm.registers.callArgs.pop()
-        index = uint(&getInt(runtime.vm.registers.callArgs.pop()))
-        storeAt = uint(&getInt(runtime.vm.registers.callArgs.pop()))
+        index = uint(&(&runtime.argument(1)).getInt())
+        storeAt = uint(&(&runtime.argument(2)).getInt())
+        accesses = createFieldAccess(
+          (
+            proc(): seq[string] =
+              if runtime.argumentCount() < 3:
+                return
+
+              var accesses: seq[string]
+              for i in 3 .. runtime.argumentCount():
+                accesses.add(&(&runtime.argument(i)).getStr())
+
+              accesses
+          )()
+        )
 
       let atom = runtime.vm.stack[index]
         # FIXME: weird bug with mirage, `get` returns a NULL atom.
@@ -776,27 +814,21 @@ proc generateInternalIR*(runtime: Runtime) =
         if typ.singletonId == index:
           debug "runtime: singleton ID for type `" & typ.name &
             "` matches field access index"
-          for field, member in typ.members:
-            if field == &ident.getStr():
-              debug "runtime: found field in singleton `" & typ.name & "`: " & field
-              if member.isFn:
-                error "runtime: FIXME: field access into functions is not supported yet!"
-                runtime.vm.typeError(
-                  "FIXME: Field access into functions is not supported yet!"
-                )
-                return
-              else:
-                runtime.vm.addAtom(member.atom(), storeAt)
-                return
 
-      if not atom.objFields.contains(&ident.getStr()):
-        debug "runtime: atom does not have any field \"" & &ident.getStr() &
-          "\"; returning undefined."
-        runtime.vm.addAtom(obj(), storeAt)
-        return
+          for name, member in typ.members:
+            if member.isFn:
+              continue
+            if name != accesses.identifier:
+              continue
 
-      let value = atom.objValues[atom.objFields[&ident.getStr()]]
-      runtime.vm.addAtom(value, storeAt),
+            if accesses.next != nil:
+              assert(member.atom().kind == Object)
+              runtime.vm.addAtom(member.atom().findField(accesses.next), storeAt)
+            else:
+              runtime.vm.addAtom(member.atom(), storeAt)
+            return
+
+      runtime.vm.addAtom(atom.findField(accesses), storeAt),
   )
   runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")
 

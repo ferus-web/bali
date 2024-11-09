@@ -352,7 +352,7 @@ proc consumeString*(tokenizer: Tokenizer): Token =
     str &= c
     tokenizer.advance()
 
-  if not malformed and not str.endsWith(closesWith):
+  if not malformed and (not tokenizer.eof and &tokenizer.charAt() != closesWith):
     debug "tokenizer: string does not end with expected closing character"
     malformed = true
     malformationReason = MalformedStringReason.UnclosedString

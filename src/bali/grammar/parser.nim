@@ -469,10 +469,8 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
           let splitted = token.ident.split('.')
           if splitted.len < 2:
             parser.error Other, "expected name after . operator"
-          elif splitted.len > 2:
-            parser.error Other, "nested field access is not supported yet. Sorry!"
 
-          args.pushFieldAccess(splitted[0], splitted[1])
+          args.pushFieldAccess(createFieldAccess(splitted))
         else:
           args.pushIdent(token.ident)
     of TokenKind.Number, TokenKind.String:
