@@ -22,5 +22,4 @@ requires "https://github.com/ferus-web/sanchar >= 2.0.0"
 requires "jsony >= 1.1.5"
 requires "crunchy >= 0.1.11"
 requires "climate >= 1.1.1"
-
 requires "results >= 0.5.0"

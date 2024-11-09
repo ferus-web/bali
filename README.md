@@ -13,7 +13,8 @@ Whilst not a "real-world usage", Bali is integrated into the [Ferus web engine](
 You can join the [Ferus Discord Server](https://discord.gg/9MwfGn2Jkb) to discuss Bali and other components of the Ferus web engine.
 
 # Specification Compliance
-As of 10th of September, 2024, Bali can successfully run 2% of the entire Test262 suite. There's a lot of work to be done here, so don't shy away from sending in PRs. ;)
+As of 9th of November, 2024, Bali can successfully run 35% of the entire Test262 suite* (I believe that our test runner is broken, but that's what it currently tells me about the number of passing tests). 
+There's a lot of work to be done here, so don't shy away from sending in PRs. ;)
 
 # Running code with Bali
 You can compile Balde, the Bali debugger by running:
