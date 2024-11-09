@@ -24,7 +24,7 @@ type
     WhileStmt
     Increment
     Decrement
-  
+
   FieldAccess* = ref object
     prev*, next*: FieldAccess
     identifier*: string
@@ -174,7 +174,7 @@ proc pushIdent*(args: var PositionedArguments, ident: string) {.inline.} =
 func createFieldAccess*(splitted: seq[string]): FieldAccess =
   ## From a sequence of identifiers (assuming they are in sorted order of accesses),
   ## create a `FieldAccess`, which has a "view" of the top of the field access chain.
-  var 
+  var
     top = FieldAccess(identifier: splitted[0])
     curr = top
 
@@ -187,9 +187,7 @@ func createFieldAccess*(splitted: seq[string]): FieldAccess =
 
   top
 
-proc pushFieldAccess*(
-  args: var PositionedArguments, access: FieldAccess
-) {.inline.} =
+proc pushFieldAccess*(args: var PositionedArguments, access: FieldAccess) {.inline.} =
   args &= CallArg(kind: cakFieldAccess, access: access)
 
 proc pushAtom*(args: var PositionedArguments, atom: MAtom) {.inline.} =

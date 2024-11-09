@@ -204,7 +204,10 @@ proc semanticError*(runtime: Runtime, error: SemanticError) =
 
 proc loadFieldAccessStrings*(runtime: Runtime, access: FieldAccess) =
   var curr = access.next
-  assert(curr != nil, "Field access on single ident (or top of access chain was not provided)")
+  assert(
+    curr != nil,
+    "Field access on single ident (or top of access chain was not provided)",
+  )
 
   while curr != nil:
     runtime.ir.loadStr(runtime.addrIdx, curr.identifier)
@@ -214,7 +217,7 @@ proc loadFieldAccessStrings*(runtime: Runtime, access: FieldAccess) =
     curr = curr.next
 
 proc resolveFieldAccess*(
-  runtime: Runtime, fn: Function, stmt: Statement, address: uint, access: FieldAccess
+    runtime: Runtime, fn: Function, stmt: Statement, address: uint, access: FieldAccess
 ): uint =
   let internalName = $(hash(stmt) !& hash(ident) !& hash(access.identifier))
   runtime.generateIR(
@@ -226,7 +229,7 @@ proc resolveFieldAccess*(
   inc runtime.addrIdx
   runtime.ir.loadUint(runtime.addrIdx, address)
   runtime.ir.passArgument(runtime.addrIdx)
-  
+
   # Pass the index at wbich the result is to be stored
   inc runtime.addrIdx
   runtime.ir.loadUint(runtime.addrIdx, accessResult)
@@ -234,7 +237,7 @@ proc resolveFieldAccess*(
 
   # Pass all the fields
   runtime.loadFieldAccessStrings(access)
-  
+
   runtime.ir.call("BALI_RESOLVEFIELD")
   runtime.ir.resetArgs()
 
@@ -360,7 +363,10 @@ proc generateIR*(
           runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
         of cakFieldAccess:
           let index = runtime.resolveFieldAccess(
-            fn, stmt, runtime.index(arg.access.identifier, defaultParams(fn)), arg.access
+            fn,
+            stmt,
+            runtime.index(arg.access.identifier, defaultParams(fn)),
+            arg.access,
           )
           runtime.ir.markGlobal(index)
           runtime.ir.passArgument(index)
@@ -783,15 +789,16 @@ proc generateInternalIR*(runtime: Runtime) =
         index = uint(&(&runtime.argument(1)).getInt())
         storeAt = uint(&(&runtime.argument(2)).getInt())
         accesses = createFieldAccess(
-          (proc: seq[string] =
-            if runtime.argumentCount() < 3:
-              return
-            
-            var accesses: seq[string]
-            for i in 3 .. runtime.argumentCount():
-              accesses.add(&(&runtime.argument(i)).getStr())
+          (
+            proc(): seq[string] =
+              if runtime.argumentCount() < 3:
+                return
 
-            accesses
+              var accesses: seq[string]
+              for i in 3 .. runtime.argumentCount():
+                accesses.add(&(&runtime.argument(i)).getStr())
+
+              accesses
           )()
         )
 
@@ -807,10 +814,12 @@ proc generateInternalIR*(runtime: Runtime) =
         if typ.singletonId == index:
           debug "runtime: singleton ID for type `" & typ.name &
             "` matches field access index"
-          
+
           for name, member in typ.members:
-            if member.isFn: continue
-            if name != accesses.identifier: continue
+            if member.isFn:
+              continue
+            if name != accesses.identifier:
+              continue
 
             if accesses.next != nil:
               assert(member.atom().kind == Object)
