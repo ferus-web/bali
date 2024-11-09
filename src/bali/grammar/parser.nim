@@ -90,6 +90,10 @@ proc parseExpression*(
         debug "parser: atom will fill right term"
         term.binRight = atomHolder(&parser.parseAtom(next))
     of TokenKind.String:
+      if (let err = next.getError(); *err):
+        debug "parser: whilst parsing arithmetic expr, found String with error. Adding to syntax error and aborting parsing."
+        parser.error Other, &err
+
       debug "parser: whilst parsing arithmetic expr, found String"
       if term.binLeft != nil:
         debug "parser: atom will fill left term"
@@ -245,8 +249,8 @@ proc parseDeclaration*(
 
     case tok.kind
     of TokenKind.String:
-      if tok.malformed:
-        error Other, "string literal is malformed"
+      if (let err = tok.getError(); *err):
+        parser.error Other, &err
 
       atom = some(str tok.str)
       break
@@ -410,6 +414,9 @@ proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
       debug "parser: parseAtom: token contains floating-point value"
       return some floating(token.floatVal)
   of TokenKind.String:
+    if (let err = token.getError(); *err):
+      parser.error Other, &err
+
     debug "parser: parseAtom: token is String"
     return some str(token.str)
   else:
@@ -545,8 +552,8 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
 
     case tok.kind
     of TokenKind.String:
-      if tok.malformed:
-        error Other, "string literal is malformed"
+      if (let err = tok.getError(); *err):
+        parser.error Other, &err
 
       atom = some(str tok.str)
       break

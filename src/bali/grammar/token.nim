@@ -112,6 +112,13 @@ type
     Invalid
     Shebang
     InvalidShebang
+  
+  MalformedStringReason* {.pure.} = enum
+    UnclosedString
+    BadUnicodeEscape
+
+    UnicodeEscapeIntTooBig
+    UnicodeEscapeIntTooSmall
 
   Token* = object
     containsUnicodeEsc*: bool
@@ -120,6 +127,7 @@ type
     of TokenKind.String:
       str*: string
       malformed*: bool
+      strMalformedReason*: MalformedStringReason
     of TokenKind.Identifier:
       ident*: string
       identHasMalformedUnicodeSeq*: bool
@@ -139,6 +147,23 @@ type
 
 func isNewline*(token: Token): bool {.inline.} =
   token.kind == TokenKind.Whitespace and token.whitespace.contains(strutils.Newlines)
+
+func getError*(token: Token): Option[string] =
+  case token.kind
+  of TokenKind.String:
+    if not token.malformed:
+      return
+
+    case token.strMalformedReason
+    of MalformedStringReason.UnclosedString:
+      return some("string literal contains an unescaped line break")
+    of MalformedStringReason.BadUnicodeEscape:
+      return some("malformed Unicode character escape sequence")
+    of MalformedStringReason.UnicodeEscapeIntTooBig:
+      return some("Unicode codepoint must not be greater than 0x10FFFF in escape sequence")
+    of MalformedStringReason.UnicodeEscapeIntTooSmall:
+      return some("Unicode codepoint cannot be less than zero")
+  else: discard
 
 const Keywords* = {
   "const": TokenKind.Const,

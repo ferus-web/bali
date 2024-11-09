@@ -4,6 +4,7 @@
 import std/[math, options, logging, strutils, tables, unicode]
 import bali/grammar/token
 import bali/internal/sugar
+import results
 import pretty
 
 type
@@ -183,7 +184,7 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
   let valF32 = value.float64
   Token(kind: TokenKind.Number, hasSign: hasSign, floatVal: valF32, intVal: intValue)
 
-proc consumeBackslash*(tokenizer: Tokenizer): Option[char] =
+proc consumeBackslash*(tokenizer: Tokenizer): Result[char, MalformedStringReason] =
   debug "tokenizer: consume backslash"
   discard tokenizer.consume()
 
@@ -198,6 +199,12 @@ proc consumeBackslash*(tokenizer: Tokenizer): Option[char] =
     if not tokenizer.eof and &tokenizer.charAt() == '{':
       debug "tokenizer: getting numeric unicode codepoint"
       discard tokenizer.consume()
+      if not tokenizer.eof and &tokenizer.charAt(1) notin {'0' .. '9'}:
+        # FIXME: `consumeNumeric` is stupid and will return zero when it can't parse a number ahead.
+        # Fix that crap, this is a temporary solution.
+        debug "tokenizer: wanted to get numeric unicode codepoint, got `" & &tokenizer.charAt(1) & "` instead."
+        return
+
       let numeric = tokenizer.consumeNumeric(negative = false)
       let uniHex =
         if numeric.kind != TokenKind.Number or not *numeric.intVal:
@@ -207,27 +214,30 @@ proc consumeBackslash*(tokenizer: Tokenizer): Option[char] =
           debug "tokenizer: unicode escape is followed by a number: " & $(&numeric.intVal)
           &numeric.intVal
       
-      assert(uniHex >= 0'i32, "Unicode codepoint cannot be less than zero")
-      assert(uniHex <= 0x10FFFF'i32, "Unicode codepoint must not be greater than 0x10FFFF in escape sequence") # TODO: make this a parser error
+      if uniHex < 0'i32:
+        return err(MalformedStringReason.UnicodeEscapeIntTooSmall)
+
+      if uniHex >= 0x10FFFF'i32:
+        return err(MalformedStringReason.UnicodeEscapeIntTooBig)
       
       if tokenizer.eof:
         debug "tokenizer: hit EOF before seeing closing bracket of unicode escape codepoint"
-        return
+        return err(MalformedStringReason.BadUnicodeEscape)
       
       tokenizer.pos -= 1 # FIXME: this is stupid. For some reason the tokenizer goes a bit too ahead after consuming a number,
                          # so we have to manually rewind it
       let brace = tokenizer.consume()
       if brace != '}':
         debug "tokenizer: expected `}`, got `" & brace & "` instead when interpreting unicode escape codepoint"
-        return
+        return err(MalformedStringReason.BadUnicodeEscape)
       else:
         debug "tokenizer: got `}` to successfully complete off unicode escape codepoint"
         tokenizer.pos += 1 # FIXME: same crap as above
       
-      return some(parseHexStr($uniHex)[0])
+      return ok(parseHexStr($uniHex)[0])
   else:
     debug "tokenizer: got ANSI escape `\\"  & &tokenizer.charAt() & '`'
-    return some(('\\' & &tokenizer.charAt())[0])
+    return ok(('\\' & &tokenizer.charAt())[0])
 
 proc consumeIdentifier*(tokenizer: Tokenizer): Token =
   debug "tokenizer: consume identifier"
@@ -309,6 +319,8 @@ proc consumeString*(tokenizer: Tokenizer): Token =
   var
     str: string
     ignoreNextQuote = false
+    malformed = false
+    malformationReason: MalformedStringReason
 
   while not tokenizer.eof():
     let c = &tokenizer.charAt()
@@ -322,6 +334,10 @@ proc consumeString*(tokenizer: Tokenizer): Token =
         if *escaped:
           str &= &escaped
           continue
+        else:
+          debug "tokenizer: got malformed unicode escape whilst consuming string"
+          malformed = true
+          malformationReason = @escaped
       else:
         ignoreNextQuote = true
         tokenizer.advance()
@@ -329,17 +345,19 @@ proc consumeString*(tokenizer: Tokenizer): Token =
 
     str &= c
     tokenizer.advance()
-
-  let malformed = str.endsWith(closesWith)
+  
+  if not malformed and not str.endsWith(closesWith):
+    debug "tokenizer: string does not end with expected closing character"
+    malformed = true
+    malformationReason = MalformedStringReason.UnclosedString
 
   tokenizer.advance() # consume ending quote
   if not malformed:
     debug "tokenizer: consumed string \"" & str & '\"'
   else:
     warn "tokenizer: consumed malformed string: " & str
-    warn "tokenizer: this string does not end with the ending character: " & closesWith
 
-  Token(kind: TokenKind.String, malformed: malformed, str: str)
+  Token(kind: TokenKind.String, malformed: malformed, str: str, strMalformedReason: malformationReason)
 
 proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
   debug "tokenizer: consuming comment"
