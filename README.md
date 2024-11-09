@@ -82,6 +82,7 @@ runtime.run()
 - Get arithmetic operations working    [X]
 - Console API                          [X]
 - While loops                          [X]
+- Nested object field access           [X]
 - For loops                            [ ]
 - Modules                              [ ]
 - Async                                [ ]
