@@ -206,7 +206,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
 
   for fname, fatom in prototype().fieldPairs:
     jsType.members[fname] = initAtomOrFunction[NativeFunction](
-      fname.wrap()
+      fatom.wrap()
     )
 
   jsType.proto = hash($prototype)
