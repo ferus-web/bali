@@ -24,6 +24,7 @@ type
     WhileStmt
     Increment
     Decrement
+    Break
 
   FieldAccess* = ref object
     prev*, next*: FieldAccess
@@ -130,15 +131,12 @@ type
       incIdent*: string
     of Decrement:
       decIdent*: string
-
-func hash*(fn: Function): Hash {.inline.} =
-  when fn is Scope: # FIXME: really dumb fix to prevent a segfault
-    hash(0)
-  else:
-    hash((fn.name, fn.arguments))
+    of Break: discard
 
 func hash*(access: FieldAccess): Hash {.inline.} =
   hash((access.identifier))
+
+proc hash*(scope: Scope): Hash {.inline.}
 
 proc hash*(stmt: Statement): Hash {.inline.} =
   var hash: Hash
@@ -163,8 +161,27 @@ proc hash*(stmt: Statement): Hash {.inline.} =
     hash = hash !& hash(stmt.atom)
   of IdentHolder:
     hash = hash !& hash(stmt.ident)
+  of WhileStmt:
+    hash = hash !& hash((stmt.whConditionExpr, stmt.whBranch))
   else:
     discard
+
+  hash
+
+proc hash*(fn: Function): Hash {.inline.} =
+  when fn is Scope: # FIXME: really dumb fix to prevent a segfault
+    hash(0)
+  else:
+    hash((fn.name, fn.arguments))
+
+proc hash*(scope: Scope): Hash {.inline.} =
+  var hash = hash(scope.stmts)
+
+  if *scope.next:
+    hash = hash(&scope.next)
+
+  if *scope.prev:
+    hash = hash(&scope.prev)
 
   hash
 
@@ -199,7 +216,7 @@ proc pushImmExpr*(args: var PositionedArguments, expr: Statement) {.inline.} =
 
 {.push checks: off, inline.}
 proc throwError*(
-    errorStr: Option[string], errorExc: Option[void], # TODO: implement
+    errorStr: Option[string], errorExc: Option[void],
 ): Statement =
   if *errorStr and *errorExc:
     raise newException(
@@ -211,6 +228,9 @@ proc throwError*(
 
 proc createImmutVal*(name: string, atom: MAtom): Statement =
   Statement(kind: CreateImmutVal, imIdentifier: name, imAtom: atom)
+
+proc breakStmt*: Statement =
+  Statement(kind: Break)
 
 proc returnFunc*(): Statement =
   Statement(kind: ReturnFn)
