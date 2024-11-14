@@ -823,7 +823,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       parser.error Other, "one file cannot have two shebangs"
     else:
       parser.foundShebang = true
-  of TokenKind.Semicolon:
+  of TokenKind.Semicolon, TokenKind.Comma:
     discard
   of TokenKind.InvalidShebang:
     parser.error Other, "shebang cannot be preceded by whitespace"
