@@ -40,6 +40,7 @@ proc generateIR*(
   ownerStmt: Option[Statement] = none(Statement),
   exprStoreIn: Option[string] = none(string),
   parentStmt: Option[Statement] = none(Statement),
+  index: Option[uint] = none(uint)
 )
 
 proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false) =
@@ -49,7 +50,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
     for i, arg in stmt.arguments:
       if arg.kind == cakAtom:
         debug "ir: load immutable value to expand Call's immediate arguments: " &
-          arg.atom.crush("")
+          arg.atom.crush()
         runtime.generateIR(
           fn, createImmutVal($i, arg.atom), ownerStmt = some(stmt), internal = true
         ) # XXX: should this be mutable?
@@ -64,7 +65,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
     for i, arg in stmt.args:
       if arg.kind == cakAtom:
         debug "ir: load immutable value to ConstructObject's immediate arguments: " &
-          arg.atom.crush("")
+          arg.atom.crush()
         runtime.generateIR(
           fn,
           createImmutVal($hash(stmt) & '_' & $i, arg.atom),
@@ -253,6 +254,7 @@ proc generateIR*(
     ownerStmt: Option[Statement] = none(Statement),
     exprStoreIn: Option[string] = none(string),
     parentStmt: Option[Statement] = none(Statement),
+    index: Option[uint] = none(uint)
 ) =
   case stmt.kind
   of CreateImmutVal:
@@ -426,7 +428,7 @@ proc generateIR*(
       return
 
     info "emitter: reassign value at index " & $index & " with ident \"" &
-      stmt.reIdentifier & "\" to " & stmt.reAtom.crush("")
+      stmt.reIdentifier & "\" to " & stmt.reAtom.crush()
 
     case stmt.reAtom.kind
     of Integer:
@@ -680,7 +682,7 @@ proc generateIR*(
         else:
           unreachable
           0
-
+    
     let jmpIntoComparison = getCurrOpNum()
     case stmt.whConditionExpr.op
     of Equal, NotEqual:
@@ -697,14 +699,23 @@ proc generateIR*(
     let
       trueJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
         # the jump into the body of the loop
+      dummyJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+        # this will just point to its own address in the event that it isn't modified
+        # if it is modified, it'll likely point to wherever `escapeJump` points to
       escapeJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
         # the jump to "escape" out of the loop
-
+    
     let jmpIntoBody = getCurrOpNum()
     runtime.generateIRForScope(stmt.whBranch) # generate the body of the loop
     runtime.ir.jump(jmpIntoComparison.uint) # jump back to the comparison logic
 
     let jmpPastBody = getCurrOpNum()
+
+    if runtime.irHints.breaksGeneratedAt.len > 0:
+      for brk in runtime.irHints.breaksGeneratedAt:
+        runtime.ir.overrideArgs(brk, @[uinteger(jmpPastBody.uint)])
+
+    runtime.irHints.breaksGeneratedAt.reset()
 
     case stmt.whConditionExpr.op
     of BinaryOperation.Equal, BinaryOperation.GreaterThan:
@@ -719,6 +730,8 @@ proc generateIR*(
     runtime.ir.incrementInt(runtime.index(stmt.incIdent, defaultParams(fn)))
   of Decrement:
     runtime.ir.decrementInt(runtime.index(stmt.decIdent, defaultParams(fn)))
+  of Break:
+    runtime.irHints.breaksGeneratedAt &= runtime.ir.addOp(IROperation(opcode: Jump)) - 1
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -763,8 +776,8 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
       runtime.ir.loadObject(idx)
       runtime.types[i].singletonId = idx
 
-  for stmt in scope.stmts:
-    runtime.generateIR(fn, stmt)
+  for i, stmt in scope.stmts:
+    runtime.generateIR(fn, stmt, index = i.uint.some)
 
   var curr = scope
   while *curr.next:

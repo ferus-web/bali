@@ -672,15 +672,27 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
   case token.kind
   of TokenKind.Let:
+    if token.containsUnicodeEsc:
+      parser.error Other, "keyword `let` cannot contain unicode escape(s)"
+
     info "parser: parse let-expr"
     return parser.parseDeclaration("let")
   of TokenKind.Const:
+    if token.containsUnicodeEsc:
+      parser.error Other, "keyword `const` cannot contain unicode escape(s)"
+
     info "parser: parse const-expr"
     return parser.parseDeclaration("const")
   of TokenKind.Var:
+    if token.containsUnicodeEsc:
+      parser.error Other, "keyword `var` cannot contain unicode escape(s)"
+
     info "parser: parse var-expr"
     return parser.parseDeclaration("var")
   of TokenKind.Function:
+    if token.containsUnicodeEsc:
+      parser.error Other, "keyword `function` cannot contain unicode escape(s)"
+
     info "parser: parse function declaration"
     let fnOpt = parser.parseFunction()
 
@@ -724,6 +736,9 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     parser.tokenizer.pos = prevPos
     parser.tokenizer.location = prevLoc
   of TokenKind.Return:
+    if token.containsUnicodeEsc:
+      parser.error Other, "keyword `return` cannot contain unicode escape(s)"
+
     let
       prevPos = parser.tokenizer.pos
       prevLoc = parser.tokenizer.location
@@ -746,9 +761,15 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     parser.tokenizer.location = prevLoc
     return some returnFunc()
   of TokenKind.Throw:
+    if token.containsUnicodeEsc:
+      parser.error Other, "keyword `throw` cannot contain unicode escape(s)"
+
     info "parser: parse throw-expr"
     return parser.parseThrow()
   of TokenKind.If:
+    if token.containsUnicodeEsc:
+      parser.error Other, "keyword `if` cannot contain unicode escape(s)"
+
     let expr = parser.parseExprInParenWrap(TokenKind.If)
     if !expr:
       return
@@ -774,7 +795,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     return some ifStmt(&expr, exprScope, elseScope)
   of TokenKind.While:
     if token.containsUnicodeEsc:
-      parser.error Other, ""
+      parser.error Other, "keyword `while` cannot contain unicode escape(s)"
 
     let expr = parser.parseExprInParenWrap(TokenKind.While)
     if !expr:
@@ -787,6 +808,9 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     bodyScope.prev = some(lastScope)
     return some whileStmt(&expr, bodyScope)
   of TokenKind.New:
+    if token.containsUnicodeEsc:
+      parser.error Other, "keyword `new` cannot contain unicode escape(s)"
+
     let expr = parser.parseConstructor()
     if !expr:
       parser.error Other, "expected expression for `new`"
@@ -803,8 +827,10 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     discard
   of TokenKind.InvalidShebang:
     parser.error Other, "shebang cannot be preceded by whitespace"
+  of TokenKind.Break:
+    return some breakStmt()
   else:
-    parser.error UnexpectedToken, $token.kind
+    parser.error UnexpectedToken, "unexpected token: " & $token.kind
 
 proc parse*(parser: Parser): AST {.inline.} =
   parser.ast = newAST()

@@ -57,12 +57,20 @@ type
     singletonId*: uint
 
     proto*: Hash
+  
+  IRLabel* = object
+    start*, dummy*, ending*: uint
+
+  IRHints* = object
+    breaksGeneratedAt*: seq[uint]
 
   Runtime* = ref object
     ast*: AST
     ir*: IRGenerator
     vm*: PulsarInterpreter
     opts*: InterpreterOpts
+
+    irHints*: IRHints
 
     addrIdx*: uint
     values*: seq[Value]
