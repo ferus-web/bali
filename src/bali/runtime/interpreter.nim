@@ -50,7 +50,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
     for i, arg in stmt.arguments:
       if arg.kind == cakAtom:
         debug "ir: load immutable value to expand Call's immediate arguments: " &
-          arg.atom.crush("")
+          arg.atom.crush()
         runtime.generateIR(
           fn, createImmutVal($i, arg.atom), ownerStmt = some(stmt), internal = true
         ) # XXX: should this be mutable?
@@ -65,7 +65,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
     for i, arg in stmt.args:
       if arg.kind == cakAtom:
         debug "ir: load immutable value to ConstructObject's immediate arguments: " &
-          arg.atom.crush("")
+          arg.atom.crush()
         runtime.generateIR(
           fn,
           createImmutVal($hash(stmt) & '_' & $i, arg.atom),
@@ -428,7 +428,7 @@ proc generateIR*(
       return
 
     info "emitter: reassign value at index " & $index & " with ident \"" &
-      stmt.reIdentifier & "\" to " & stmt.reAtom.crush("")
+      stmt.reIdentifier & "\" to " & stmt.reAtom.crush()
 
     case stmt.reAtom.kind
     of Integer:
@@ -682,7 +682,7 @@ proc generateIR*(
         else:
           unreachable
           0
-
+    
     let jmpIntoComparison = getCurrOpNum()
     case stmt.whConditionExpr.op
     of Equal, NotEqual:
@@ -704,12 +704,18 @@ proc generateIR*(
         # if it is modified, it'll likely point to wherever `escapeJump` points to
       escapeJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
         # the jump to "escape" out of the loop
-
+    
     let jmpIntoBody = getCurrOpNum()
     runtime.generateIRForScope(stmt.whBranch) # generate the body of the loop
     runtime.ir.jump(jmpIntoComparison.uint) # jump back to the comparison logic
 
     let jmpPastBody = getCurrOpNum()
+
+    if runtime.irHints.breaksGeneratedAt.len > 0:
+      for brk in runtime.irHints.breaksGeneratedAt:
+        runtime.ir.overrideArgs(brk, @[uinteger(jmpPastBody.uint)])
+
+    runtime.irHints.breaksGeneratedAt.reset()
 
     case stmt.whConditionExpr.op
     of BinaryOperation.Equal, BinaryOperation.GreaterThan:
@@ -720,34 +726,12 @@ proc generateIR*(
       runtime.ir.overrideArgs(escapeJump, @[uinteger(jmpIntoBody.uint)])
     else:
       unreachable
-
-    runtime.irHints.addLabel(stmt, IRLabel(start: jmpIntoBody.uint, dummy: dummyJump.uint, ending: jmpPastBody.uint))
   of Increment:
     runtime.ir.incrementInt(runtime.index(stmt.incIdent, defaultParams(fn)))
   of Decrement:
     runtime.ir.decrementInt(runtime.index(stmt.decIdent, defaultParams(fn)))
   of Break:
-    assert(*index, "IR Generation Bug: Statement index not provided to `break`, effectively making it anonymous!")
-
-    # backtrack and find the last iterator
-    var iter: Option[Statement]
-    for i in countDown(&index, 0):
-      let stmt = fn.stmts[i]
-
-      if stmt.kind == WhileStmt:
-        iter = some(stmt)
-        break
-    
-    if !iter:
-      # could not find iterator in first pass, keep backtracking recursively
-      if *fn.prev:
-        (&fn.prev).findRecursively()
-
-    assert(*iter, "`break` called but cannot find any iterator") # TODO: turn this into a parsing error
-    
-    let label = runtime.irHints.getLabel(&iter)
-    print label
-    quit 1
+    runtime.irHints.breaksGeneratedAt &= runtime.ir.addOp(IROperation(opcode: Jump)) - 1
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
