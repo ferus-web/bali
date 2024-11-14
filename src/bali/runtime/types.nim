@@ -57,12 +57,21 @@ type
     singletonId*: uint
 
     proto*: Hash
+  
+  IRLabel* = object
+    start*, dummy*, ending*: uint
+
+  IRHints* = object
+    ## Hints generated during the IR emission
+    labels*: Table[Hash, IRLabel]
 
   Runtime* = ref object
     ast*: AST
     ir*: IRGenerator
     vm*: PulsarInterpreter
     opts*: InterpreterOpts
+
+    irHints*: IRHints
 
     addrIdx*: uint
     values*: seq[Value]
@@ -107,6 +116,12 @@ proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
     " with statement hash: " & $hash(stmt)
 
   inc runtime.addrIdx
+
+proc addLabel*(hints: var IRHints, stmt: Statement, label: sink IRLabel) =
+  hints.labels[hash stmt] = move(label)
+
+proc getLabel*(hints: IRHints, stmt: Statement): IRLabel =
+  hints.labels[hash stmt]
 
 proc markGlobal*(runtime: Runtime, ident: string) =
   var toRm: seq[int]

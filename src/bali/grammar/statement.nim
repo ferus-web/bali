@@ -175,7 +175,7 @@ proc hash*(fn: Function): Hash {.inline.} =
     hash((fn.name, fn.arguments))
 
 proc hash*(scope: Scope): Hash {.inline.} =
-  var hash = hash(scope.stmts)
+  var hash: Hash
 
   if *scope.next:
     hash = hash(&scope.next)

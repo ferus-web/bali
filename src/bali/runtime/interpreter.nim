@@ -40,6 +40,7 @@ proc generateIR*(
   ownerStmt: Option[Statement] = none(Statement),
   exprStoreIn: Option[string] = none(string),
   parentStmt: Option[Statement] = none(Statement),
+  index: Option[uint] = none(uint)
 )
 
 proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false) =
@@ -253,6 +254,7 @@ proc generateIR*(
     ownerStmt: Option[Statement] = none(Statement),
     exprStoreIn: Option[string] = none(string),
     parentStmt: Option[Statement] = none(Statement),
+    index: Option[uint] = none(uint)
 ) =
   case stmt.kind
   of CreateImmutVal:
@@ -697,6 +699,9 @@ proc generateIR*(
     let
       trueJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
         # the jump into the body of the loop
+      dummyJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+        # this will just point to its own address in the event that it isn't modified
+        # if it is modified, it'll likely point to wherever `escapeJump` points to
       escapeJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
         # the jump to "escape" out of the loop
 
@@ -715,10 +720,34 @@ proc generateIR*(
       runtime.ir.overrideArgs(escapeJump, @[uinteger(jmpIntoBody.uint)])
     else:
       unreachable
+
+    runtime.irHints.addLabel(stmt, IRLabel(start: jmpIntoBody.uint, dummy: dummyJump.uint, ending: jmpPastBody.uint))
   of Increment:
     runtime.ir.incrementInt(runtime.index(stmt.incIdent, defaultParams(fn)))
   of Decrement:
     runtime.ir.decrementInt(runtime.index(stmt.decIdent, defaultParams(fn)))
+  of Break:
+    assert(*index, "IR Generation Bug: Statement index not provided to `break`, effectively making it anonymous!")
+
+    # backtrack and find the last iterator
+    var iter: Option[Statement]
+    for i in countDown(&index, 0):
+      let stmt = fn.stmts[i]
+
+      if stmt.kind == WhileStmt:
+        iter = some(stmt)
+        break
+    
+    if !iter:
+      # could not find iterator in first pass, keep backtracking recursively
+      if *fn.prev:
+        (&fn.prev).findRecursively()
+
+    assert(*iter, "`break` called but cannot find any iterator") # TODO: turn this into a parsing error
+    
+    let label = runtime.irHints.getLabel(&iter)
+    print label
+    quit 1
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -763,8 +792,8 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
       runtime.ir.loadObject(idx)
       runtime.types[i].singletonId = idx
 
-  for stmt in scope.stmts:
-    runtime.generateIR(fn, stmt)
+  for i, stmt in scope.stmts:
+    runtime.generateIR(fn, stmt, index = i.uint.some)
 
   var curr = scope
   while *curr.next:
