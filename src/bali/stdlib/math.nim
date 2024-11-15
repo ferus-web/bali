@@ -26,6 +26,8 @@ let Algorithm =
   else: Xoroshiro128
 
 type JSMath = object
+  E*: float = math.E
+  PI*: float = math.PI
 
 # Global RNG source
 var rng = newRNG(algo = Algorithm)
@@ -34,6 +36,12 @@ proc generateStdIr*(runtime: Runtime) =
   info "math: generating IR interfaces"
 
   runtime.registerType("Math", JSMath)
+  runtime.setProperty(JSMath, "LN10", floating(math.ln(10'f64)))
+  runtime.setProperty(JSMath, "LN2", floating(math.ln(2'f64)))
+  runtime.setProperty(JSMath, "LOG10E", floating(math.log10(math.E)))
+  runtime.setProperty(JSMath, "LOG2E", floating(math.log2(math.E)))
+  runtime.setProperty(JSMath, "SQRT1_2", floating(math.sqrt(1 / 2)))
+  runtime.setProperty(JSMath, "SQRT2", floating(math.sqrt(2'f64)))
 
   # Math.random
   # WARN: Do not use this for cryptography! This uses one of eight highly predictable pseudo-random
