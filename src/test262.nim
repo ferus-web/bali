@@ -1,6 +1,6 @@
 ## Test262 runner for Bali
 
-import std/[os, osproc, json, posix, strutils, logging, tables, times]
+import std/[os, osproc, json, posix, strutils, logging, tables, math, times]
 import bali/grammar/prelude
 import bali/runtime/prelude
 import colored_logger, pretty
@@ -12,8 +12,8 @@ type RunResult = enum
   Error
   Segfault
 
-proc execJS(file: string, dontEval: bool): RunResult =
-  info "Executing JavaScript file: " & file
+proc execJS(file: string, dontEval: bool, num, total: uint): RunResult =
+  info " [ " & $num & " / " & $total & " / " & $(round(num.int / total.int * 100, 1)) & "% ] " & file
   case execCmd(
     "./bin/balde run " & file & " --test262" & $(if dontEval: " --dump-ast" else: "")
   )
@@ -55,7 +55,7 @@ Flags:
 
     let head = paramStr(2)
 
-    var filesToExec = 0
+    var files: seq[string]
 
     if not dirExists(BASE_DIR / head):
       error "Invalid testing category: " & head
@@ -66,13 +66,16 @@ Flags:
     for file in walkDirRec(BASE_DIR / head):
       if not fileExists(file):
         continue
+      if file.contains("harness"):
+        continue
       if not file.endsWith(".js"):
         skipped &= file
         continue
 
-      inc filesToExec
+      files &= file
 
-      case execJS(file, dontEval)
+    for i, file in files:
+      case execJS(file, dontEval, i.uint, files.len.uint)
       of Success:
         info "Worker for file `" & file & "` has completed execution successfully."
         successful &= file
@@ -83,7 +86,7 @@ Flags:
         continue
       of Segfault:
         warn "!!!! Test for `" & file &
-          "` exited ungracefully with a segmentation fault !!!!"
+          "` exited ungracefully with a segmentation fault !!!!:7"
         segfaulted &= file
         continue
 
@@ -91,9 +94,9 @@ Flags:
     let secondsTaken = endTime - startTime
 
     let
-      successPercentage = (successful.len / filesToExec) * 100f
-      segfaultPercentage = (segfaulted.len / filesToExec) * 100f
-      failedPercentage = (failed.len / filesToExec) * 100f
+      successPercentage = (successful.len / files.len) * 100f
+      segfaultPercentage = (segfaulted.len / files.len) * 100f
+      failedPercentage = (failed.len / files.len) * 100f
 
     if failed.len > 0:
       info "The following tests have failed:"
@@ -117,7 +120,7 @@ Flags:
       let data =
         $(
           %*{
-            "total": $filesToExec,
+            "total": $files.len,
             "successful": $successful.len,
             "skipped": $skipped.len,
             "failed": $failed.len,
@@ -129,12 +132,12 @@ Flags:
       echo data
       writeFile("test262.json", data)
     else:
-      info "Total tests: " & $filesToExec
+      info "Total tests: " & $files.len
       info "Successful tests: " & $successPercentage & "% (" & $successful.len & ')'
       info "Failed tests: " & $failedPercentage & "% (" & $failed.len & ')'
       info "Abnormal crashes: " & $segfaultPercentage & "% (" & $segfaulted.len & ')'
 
-    info "It took " & $(secondsTaken / 60) & " minutes to run all of the " & $filesToExec &
+    info "It took " & $(secondsTaken / 60) & " minutes to run all of the " & $files.len &
       " tests."
 
 when isMainModule:
