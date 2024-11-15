@@ -13,6 +13,7 @@ type RunResult = enum
   Segfault
 
 proc execJS(file: string, dontEval: bool): RunResult =
+  info "Executing JavaScript file: " & file
   case execCmd(
     "./bin/balde run " & file & " --test262" & $(if dontEval: " --dump-ast" else: "")
   )
