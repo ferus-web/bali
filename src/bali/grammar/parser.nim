@@ -206,6 +206,46 @@ proc parseConstructor*(parser: Parser): Option[Statement] =
 
   return some(constructObject((&next).ident, &parser.parseArguments()))
 
+proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
+  if parser.tokenizer.eof:
+    parser.error Other, "expected expression, got EOF"
+
+  let 
+    tokenizer = parser.tokenizer.deepCopy()
+    next = parser.tokenizer.nextExceptWhitespace()
+    mustEndWithParen = *next and (&next).kind == TokenKind.LParen
+
+  var metParen = false
+  
+  if not mustEndWithParen:
+    parser.tokenizer = tokenizer
+
+  var args: PositionedArguments 
+  while not parser.tokenizer.eof and (mustEndWithParen and not metParen):
+    let atomTok = parser.tokenizer.nextExceptWhitespace()
+    if !atomTok:
+      parser.error Other, "expected expression, got EOF"
+
+    let token = &atomTok
+
+    if token.kind == TokenKind.RParen:
+      metParen = true
+      break
+
+    if token.kind == TokenKind.Identifier:
+      args.pushIdent(token.ident)
+    else:
+      let atom = parser.parseAtom(token)
+      if !atom:
+        parser.error UnexpectedToken, "expected value or identifier, got " & $token.kind
+
+      args.pushAtom(&atom)
+
+  if mustEndWithParen and not metParen:
+    parser.error Other, "missing ) in parenthetical"
+  
+  some(args)
+
 proc parseDeclaration*(
     parser: Parser, initialIdent: string, reassignment: bool = false
 ): Option[Statement] =
@@ -276,6 +316,9 @@ proc parseDeclaration*(
       atom = some(boolean(false))
     of TokenKind.New:
       toCall = parser.parseConstructor()
+      break
+    of TokenKind.Typeof:
+      toCall = some(call("BALI_INTERNAL_TYPEOF", &parser.parseTypeofCall()))
       break
     else:
       parser.error UnexpectedToken, $tok.kind
@@ -496,6 +539,10 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
     of TokenKind.RParen:
       metEnd = true
       break
+    of TokenKind.Typeof:
+      let resIdent = "@0_" & $idx
+      let args = parser.parseTypeofCall()
+      parser.ast.appendToCurrentScope(callAndStoreMut(resIdent, call("BALI_INTERNAL_TYPEOF", &args)))
     else:
       parser.error UnexpectedToken, $token.kind
 
@@ -748,8 +795,12 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       of TokenKind.Decrement:
         return some decrement(token.ident)
       else:
+        echo '='
+        print token
+        print &next
+        echo '='
         parser.error UnexpectedToken,
-          "expected left parenthesis or equal sign, got " & $(&next).kind
+          "expected left parenthesis, increment, decrement or equal sign, got " & $(&next).kind
 
     parser.tokenizer.pos = prevPos
     parser.tokenizer.location = prevLoc
