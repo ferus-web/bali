@@ -270,6 +270,10 @@ proc parseDeclaration*(
         atom = some(floating(tok.floatVal))
     of TokenKind.Whitespace:
       discard
+    of TokenKind.True:
+      atom = some(boolean(true))
+    of TokenKind.False:
+      atom = some(boolean(false))
     of TokenKind.New:
       toCall = parser.parseConstructor()
       break
@@ -278,7 +282,7 @@ proc parseDeclaration*(
 
   assert not (*atom and *vIdent and *toCall),
     "Attempt to assign a value to nothing (something went wrong)"
-
+  
   if not reassignment:
     case initialIdent
     of "let", "const":
@@ -419,8 +423,12 @@ proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
 
     debug "parser: parseAtom: token is String"
     return some str(token.str)
+  of TokenKind.True:
+    return some boolean(true)
+  of TokenKind.False:
+    return some boolean(false)
   else:
-    unreachable
+    parser.error UnexpectedToken, "expected value, got " & $token.kind & " instead."
 
 proc parseArguments*(parser: Parser): Option[PositionedArguments] =
   info "parser: parse arguments for function call"
@@ -644,10 +652,20 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
   if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
     if (&tok).kind != TokenKind.LParen:
       parser.error Other, "expected left parenthesis after " & $token & " token"
-
-  let expr = parser.parseExpression()
+  
+  let copiedTok = parser.tokenizer.deepCopy()
+  var expr = parser.parseExpression()
   if !expr:
-    parser.error Other, "expected expression, got nothing instead"
+    let copiedTokPhase2 = parser.tokenizer.deepCopy()
+    parser.tokenizer = copiedTok
+
+    let atom = parser.parseAtom(parser.tokenizer.next())
+    if !atom:
+      parser.tokenizer = copiedTokPhase2
+      parser.error Other, "expected expression, got nothing instead"
+    else:
+      let holder = atomHolder(&atom)
+      expr = some Statement(kind: BinaryOp, binLeft: holder, binRight: holder, op: BinaryOperation.Equal)
 
   debug "parser: whilst parsing expression in parenthesis wrap: found expression!"
 
