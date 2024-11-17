@@ -83,6 +83,8 @@ runtime.run()
 - Console API                          [X]
 - While loops                          [X]
 - Nested object field access           [X]
+- `typeof`                             [X]
+- Arrays                               [ ]
 - For loops                            [ ]
 - Modules                              [ ]
 - Async                                [ ]
