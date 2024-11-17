@@ -221,12 +221,17 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
     parser.tokenizer = tokenizer
 
   var args: PositionedArguments 
-  while not parser.tokenizer.eof and (mustEndWithParen and not metParen):
-    let atomTok = parser.tokenizer.nextExceptWhitespace()
-    if !atomTok:
-      parser.error Other, "expected expression, got EOF"
+  while not parser.tokenizer.eof:
+    if mustEndWithParen and metParen:
+      break
 
-    let token = &atomTok
+    let token = parser.tokenizer.next()
+
+    if token.isNewline():
+      break
+
+    if token.kind == TokenKind.Whitespace:
+      continue
 
     if token.kind == TokenKind.RParen:
       metParen = true
@@ -238,7 +243,7 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
       let atom = parser.parseAtom(token)
       if !atom:
         parser.error UnexpectedToken, "expected value or identifier, got " & $token.kind
-
+      
       args.pushAtom(&atom)
 
   if mustEndWithParen and not metParen:
@@ -249,7 +254,7 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
 proc parseDeclaration*(
     parser: Parser, initialIdent: string, reassignment: bool = false
 ): Option[Statement] =
-  info "parser: parse declaration"
+  debug "parser: parse declaration"
   var ident = initialIdent
 
   if not reassignment:
@@ -539,10 +544,6 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
     of TokenKind.RParen:
       metEnd = true
       break
-    of TokenKind.Typeof:
-      let resIdent = "@0_" & $idx
-      let args = parser.parseTypeofCall()
-      parser.ast.appendToCurrentScope(callAndStoreMut(resIdent, call("BALI_INTERNAL_TYPEOF", &args)))
     else:
       parser.error UnexpectedToken, $token.kind
 
@@ -795,10 +796,6 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       of TokenKind.Decrement:
         return some decrement(token.ident)
       else:
-        echo '='
-        print token
-        print &next
-        echo '='
         parser.error UnexpectedToken,
           "expected left parenthesis, increment, decrement or equal sign, got " & $(&next).kind
 
