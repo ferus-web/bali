@@ -793,6 +793,18 @@ proc findField*(atom: MAtom, accesses: FieldAccess): MAtom =
   else:
     return undefined()
 
+proc computeTypeof*(runtime: Runtime, atom: MAtom): string =
+  case atom.kind
+  of String:
+    return "string"
+  of Integer, Float, UnsignedInt:
+    return "number"
+  of Null, Object, Sequence:
+    return "object"
+  of Boolean:
+    return "boolean"
+  else: unreachable
+
 proc generateInternalIR*(runtime: Runtime) =
   runtime.ir.newModule("BALI_RESOLVEFIELD")
   runtime.vm.registerBuiltin(
@@ -844,6 +856,16 @@ proc generateInternalIR*(runtime: Runtime) =
       runtime.vm.addAtom(atom.findField(accesses), storeAt),
   )
   runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")
+
+  runtime.ir.newModule(normalizeIRName "BALI_INTERNAL_TYPEOF")
+  runtime.vm.registerBuiltin(
+    "BALI_TYPEOF_INTERNAL",
+    proc(op: Operation) =
+      let atom = runtime.argument(1)
+      assert(*atom, "BUG: Atom was empty when calling BALI_TYPEOF_INTERNAL!")
+      ret runtime.computeTypeof(&atom)
+  )
+  runtime.ir.call("BALI_TYPEOF_INTERNAL")
 
 proc run*(runtime: Runtime) =
   console.generateStdIR(runtime)
