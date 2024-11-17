@@ -261,6 +261,14 @@ template ret*(atom: MAtom) =
   runtime.vm.registers.retVal = some(atom)
   return
 
+template ret*[T](value: T) =
+  ## Shorthand for:
+  ## ..code-block:: Nim
+  ##  runtime.vm.registers.retVal = some(wrap(value))
+  ##  return
+  runtime.vm.registers.retVal = some(wrap(value))
+  return
+
 func argumentCount*(runtime: Runtime): int {.inline.} =
   ## Get the number of atoms in the `CallArgs` register
   runtime.vm.registers.callArgs.len

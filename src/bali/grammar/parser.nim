@@ -206,10 +206,55 @@ proc parseConstructor*(parser: Parser): Option[Statement] =
 
   return some(constructObject((&next).ident, &parser.parseArguments()))
 
+proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
+  if parser.tokenizer.eof:
+    parser.error Other, "expected expression, got EOF"
+
+  let 
+    tokenizer = parser.tokenizer.deepCopy()
+    next = parser.tokenizer.nextExceptWhitespace()
+    mustEndWithParen = *next and (&next).kind == TokenKind.LParen
+
+  var metParen = false
+  
+  if not mustEndWithParen:
+    parser.tokenizer = tokenizer
+
+  var args: PositionedArguments 
+  while not parser.tokenizer.eof:
+    if mustEndWithParen and metParen:
+      break
+
+    let token = parser.tokenizer.next()
+
+    if token.isNewline():
+      break
+
+    if token.kind == TokenKind.Whitespace:
+      continue
+
+    if token.kind == TokenKind.RParen:
+      metParen = true
+      break
+
+    if token.kind == TokenKind.Identifier:
+      args.pushIdent(token.ident)
+    else:
+      let atom = parser.parseAtom(token)
+      if !atom:
+        parser.error UnexpectedToken, "expected value or identifier, got " & $token.kind
+      
+      args.pushAtom(&atom)
+
+  if mustEndWithParen and not metParen:
+    parser.error Other, "missing ) in parenthetical"
+  
+  some(args)
+
 proc parseDeclaration*(
     parser: Parser, initialIdent: string, reassignment: bool = false
 ): Option[Statement] =
-  info "parser: parse declaration"
+  debug "parser: parse declaration"
   var ident = initialIdent
 
   if not reassignment:
@@ -276,6 +321,9 @@ proc parseDeclaration*(
       atom = some(boolean(false))
     of TokenKind.New:
       toCall = parser.parseConstructor()
+      break
+    of TokenKind.Typeof:
+      toCall = some(call("BALI_INTERNAL_TYPEOF", &parser.parseTypeofCall()))
       break
     else:
       parser.error UnexpectedToken, $tok.kind
@@ -749,7 +797,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
         return some decrement(token.ident)
       else:
         parser.error UnexpectedToken,
-          "expected left parenthesis or equal sign, got " & $(&next).kind
+          "expected left parenthesis, increment, decrement or equal sign, got " & $(&next).kind
 
     parser.tokenizer.pos = prevPos
     parser.tokenizer.location = prevLoc
