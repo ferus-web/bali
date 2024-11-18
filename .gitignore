@@ -8,3 +8,4 @@ balde
 *.log
 
 outcomes/
+test262/
