@@ -1,3 +1,3 @@
-import ./[ast, statement, token, tokenizer, parser]
+import ./[ast, statement, token, tokenizer, parser, errors]
 
-export ast, statement, token, tokenizer, parser
+export ast, statement, token, tokenizer, parser, errors
