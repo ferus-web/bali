@@ -254,6 +254,7 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
 
 proc parseArray*(parser: Parser): Option[MAtom] =
   # We are assuming that the starting bracket (`[`) has been consumed.
+  debug "parser: parsing array"
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
@@ -264,16 +265,23 @@ proc parseArray*(parser: Parser): Option[MAtom] =
 
   while not parser.tokenizer.eof and not metRBracket:
     let token = parser.tokenizer.next()
-    if token.kind == TokenKind.Whitespace: continue
+    if token.kind == TokenKind.Whitespace:
+      debug "parser: encountered whitespace whilst parsing array elements, ignoring."
+      continue
+
     if token.kind == TokenKind.RBracket:
+      debug "parser: found right bracket whilst parsing array elements, stopping array parsing."
       metRBracket = true
       break
 
     if token.kind == TokenKind.Comma:
+      debug "parser: found comma whilst parsing array elements"
       if prev in { TokenKind.LBracket, TokenKind.Comma }:
+        debug "parser: previous token was left bracket or comma, appending `undefined` to array"
         prev = TokenKind.Comma
         arr &= undefined()
       else:
+        debug "parser: previous token wasn't those two, continuing."
         prev = TokenKind.Comma
 
       continue
@@ -281,7 +289,8 @@ proc parseArray*(parser: Parser): Option[MAtom] =
     let atom = parser.parseAtom(token)
     if !atom:
       parser.error UnexpectedToken, "expected expression, value or name, got " & $token.kind & " instead."
-
+    
+    debug "parser: appending atom to array: " & (&atom).crush()
     arr &= &atom
 
     prev = token.kind

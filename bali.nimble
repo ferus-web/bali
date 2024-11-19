@@ -23,3 +23,7 @@ requires "jsony >= 1.1.5"
 requires "crunchy >= 0.1.11"
 requires "climate >= 1.1.1"
 requires "results >= 0.5.0"
+
+taskRequires "fmt", "nph#head"
+task fmt, "Format code":
+  exec "nph src/ tests/"
