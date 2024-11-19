@@ -246,6 +246,41 @@ proc resolveFieldAccess*(
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope)
 
+proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
+  case atom.kind
+  of Integer:
+    runtime.ir.loadInt(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of UnsignedInt:
+    runtime.ir.loadUint(runtime.addrIdx, &atom.getUint())
+    return runtime.addrIdx
+  of String:
+    runtime.ir.loadStr(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of Null:
+    runtime.ir.loadNull(runtime.addrIdx)
+    return runtime.addrIdx
+  of Ident: unreachable
+  of Boolean:
+    runtime.ir.loadBool(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of Object:
+    if atom.isUndefined():
+      runtime.ir.loadObject(runtime.addrIdx)
+      return runtime.addrIdx
+    else: unreachable # FIXME
+  of Float:
+    runtime.ir.loadFloat(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of Sequence:
+    runtime.ir.loadList(runtime.addrIdx)
+    result = runtime.addrIdx
+
+    for item in atom.sequence:
+      inc runtime.addrIdx
+      let idx = runtime.loadIRAtom(item)
+      runtime.ir.appendList(result, idx)
+
 proc generateIR*(
     runtime: Runtime,
     fn: Function,
@@ -261,79 +296,32 @@ proc generateIR*(
     debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
 
-    case stmt.imAtom.kind
-    of Integer:
-      debug "interpreter: generate IR for loading immutable integer"
-      runtime.ir.loadInt(runtime.addrIdx, stmt.imAtom)
-    of UnsignedInt:
-      debug "interpreter: generate IR for loading immutable unsigned integer"
-      runtime.ir.loadUint(
-        runtime.addrIdx,
-        &stmt.imAtom.getUint(),
-          # FIXME: make all mirage integer ops work on unsigned integers whenever possible too.
-      )
-    of String:
-      debug "interpreter: generate IR for loading immutable string"
-      discard runtime.ir.loadStr(runtime.addrIdx, stmt.imAtom)
-        # FIXME: mirage: loadStr doesn't have the discardable pragma
-    of Float:
-      debug "interpreter: generate IR for loading immutable float"
-      discard runtime.ir.addOp(
-        IROperation(
-          opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.imAtom]
-        )
-      ) # FIXME: mirage: loadFloat isn't implemented
-    of Boolean:
-      debug "emitter: generate IR for loading immutable boolean"
-      runtime.ir.loadBool(runtime.addrIdx, stmt.imAtom)
-    of Null:
-      debug "emitter: generate IR for loading immutable null"
-      runtime.ir.loadNull(runtime.addrIdx)
-    of Object:
-      debug "emitter: generate IR for loading immutable object"
-      runtime.ir.loadObject(runtime.addrIdx)
-    else:
-      print stmt.imAtom
-      unreachable
+    let idx = runtime.loadIRAtom(stmt.imAtom)
 
     if not internal:
       if fn.name.len < 1:
-        runtime.ir.markGlobal(runtime.addrIdx)
-
+        runtime.ir.markGlobal(idx)
+      
+      let before = runtime.addrIdx
+      runtime.addrIdx = idx
       runtime.markLocal(fn, stmt.imIdentifier)
+      runtime.addrIdx = before
     else:
       assert *ownerStmt
+      let before = runtime.addrIdx
+      runtime.addrIdx = idx
       runtime.markInternal(&ownerStmt, stmt.imIdentifier)
+      runtime.addrIdx = before
   of CreateMutVal:
-    case stmt.mutAtom.kind
-    of Integer:
-      info "emitter: generate IR for loading mutable integer"
-      runtime.ir.loadInt(runtime.addrIdx, stmt.mutAtom)
-    of UnsignedInt:
-      info "emitter: generate IR for loading mutable unsigned integer"
-      runtime.ir.loadUint(runtime.addrIdx, &stmt.mutAtom.getUint())
-    of String:
-      info "emitter: generate IR for loading mutable string"
-      discard runtime.ir.loadStr(runtime.addrIdx, stmt.mutAtom)
-    of Float:
-      info "emitter: generate IR for loading mutable float"
-      discard runtime.ir.addOp(
-        IROperation(
-          opcode: LoadFloat, arguments: @[uinteger runtime.addrIdx, stmt.mutAtom]
-        )
-      ) # FIXME: mirage: loadFloat isn't implemented
-    of Null:
-      debug "emitter: generate IR for loading mutable null"
-      runtime.ir.loadNull(runtime.addrIdx)
-    of Object:
-      debug "emitter: generate IR for loading mutable object"
-      runtime.ir.loadObject(runtime.addrIdx)
-    else:
-      unreachable
+    let idx = runtime.loadIRAtom(stmt.mutAtom)
 
     if fn.name.len < 1:
-      runtime.ir.markGlobal(runtime.addrIdx)
+      runtime.ir.markGlobal(idx)
+
+    let before = runtime.addrIdx
+    runtime.addrIdx = idx
     runtime.markLocal(fn, stmt.mutIdentifier)
+    runtime.addrIdx = before
   of Call:
     if runtime.vm.hasBuiltin(stmt.fn):
       info "interpreter: generate IR for calling builtin: " & stmt.fn
@@ -829,6 +817,9 @@ proc generateInternalIR*(runtime: Runtime) =
 
       let atom = runtime.vm.stack[index]
         # FIXME: weird bug with mirage, `get` returns a NULL atom.
+      
+      if atom.isUndefined():
+        runtime.vm.typeError("value is undefined")
 
       if atom.kind != Object:
         debug "runtime: atom is not an object, returning undefined."
