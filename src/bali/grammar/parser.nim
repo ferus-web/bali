@@ -4,6 +4,7 @@
 import std/[options, logging, strutils, tables]
 import bali/grammar/[token, tokenizer, ast, errors, statement]
 import bali/internal/sugar
+import bali/runtime/atom_helpers
 import mirage/atom
 import pretty
 
@@ -251,6 +252,45 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
   
   some(args)
 
+proc parseArray*(parser: Parser): Option[MAtom] =
+  # We are assuming that the starting bracket (`[`) has been consumed.
+  if parser.tokenizer.eof:
+    parser.error Other, "expected expression, got EOF"
+
+  var
+    arr: seq[MAtom]
+    prev = TokenKind.LBracket
+    metRBracket = false
+
+  while not parser.tokenizer.eof and not metRBracket:
+    let token = parser.tokenizer.next()
+    if token.kind == TokenKind.Whitespace: continue
+    if token.kind == TokenKind.RBracket:
+      metRBracket = true
+      break
+
+    if token.kind == TokenKind.Comma:
+      if prev in { TokenKind.LBracket, TokenKind.Comma }:
+        prev = TokenKind.Comma
+        arr &= undefined()
+      else:
+        prev = TokenKind.Comma
+
+      continue
+    
+    let atom = parser.parseAtom(token)
+    if !atom:
+      parser.error UnexpectedToken, "expected expression, value or name, got " & $token.kind & " instead."
+
+    arr &= &atom
+
+    prev = token.kind
+
+  if not metRBracket:
+    parser.error Other, "array is not closed off by bracket"
+
+  some sequence(arr)
+
 proc parseDeclaration*(
     parser: Parser, initialIdent: string, reassignment: bool = false
 ): Option[Statement] =
@@ -324,6 +364,9 @@ proc parseDeclaration*(
       break
     of TokenKind.Typeof:
       toCall = some(call("BALI_INTERNAL_TYPEOF", &parser.parseTypeofCall()))
+      break
+    of TokenKind.LBracket:
+      atom = parser.parseArray()
       break
     else:
       parser.error UnexpectedToken, $tok.kind
@@ -475,6 +518,8 @@ proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
     return some boolean(true)
   of TokenKind.False:
     return some boolean(false)
+  of TokenKind.LBracket:
+    return parser.parseArray()
   else:
     parser.error UnexpectedToken, "expected value, got " & $token.kind & " instead."
 
