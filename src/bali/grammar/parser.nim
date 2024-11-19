@@ -2,7 +2,7 @@
 ##
 
 import std/[options, logging, strutils, tables]
-import bali/grammar/[token, tokenizer, ast, errors, statement, condition]
+import bali/grammar/[token, tokenizer, ast, errors, statement]
 import bali/internal/sugar
 import mirage/atom
 import pretty
@@ -551,24 +551,6 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
     parser.error Other, "missing ) after argument list."
 
   some args
-
-proc parseConditions*(parser: Parser): Option[Condition] =
-  var
-    metLParen = false
-    lastGate: Gate
-    cond: Condition
-
-  while not parser.tokenizer.eof:
-    let next = parser.tokenizer.next()
-    case next.kind
-    of TokenKind.LParen:
-      cond.append(&parser.parseConditions(), lastGate)
-    of TokenKind.And:
-      lastGate = Gate.And
-    else:
-      unreachable
-
-  some(cond)
 
 proc parseThrow*(parser: Parser): Option[Statement] =
   info "parser: parsing throw-expr"

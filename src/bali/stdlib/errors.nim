@@ -48,7 +48,7 @@ proc syntaxError*(
 ) {.inline.} =
   vm.syntaxError(error.message, exitCode)
 
-proc generateStdIr*(vm: PulsarInterpreter, ir: IRGenerator) =
+proc generateErrorsStdIr*(vm: PulsarInterpreter, ir: IRGenerator) =
   info "errors: generate IR interface"
 
   vm.registerBuiltin(

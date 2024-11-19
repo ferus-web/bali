@@ -871,7 +871,7 @@ proc run*(runtime: Runtime) =
   console.generateStdIR(runtime)
   math.generateStdIR(runtime)
   uri.generateStdIR(runtime)
-  errors.generateStdIR(runtime.vm, runtime.ir)
+  generateErrorsStdIR(runtime.vm, runtime.ir)
   base64.generateStdIR(runtime)
   json.generateStdIR(runtime)
   parseIntGenerateStdIR(runtime.vm, runtime.ir)

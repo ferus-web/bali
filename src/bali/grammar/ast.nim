@@ -2,7 +2,7 @@ import std/[options]
 import bali/grammar/errors
 import bali/internal/sugar
 import pretty
-import ./[statement, scopes]
+import ./[statement]
 
 type AST* = ref object
   currentScope*: int
