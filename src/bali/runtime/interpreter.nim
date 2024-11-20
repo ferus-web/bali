@@ -720,6 +720,10 @@ proc generateIR*(
     runtime.ir.decrementInt(runtime.index(stmt.decIdent, defaultParams(fn)))
   of Break:
     runtime.irHints.breaksGeneratedAt &= runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+  of Waste:
+    let idx = runtime.loadIRAtom(stmt.wstAtom)
+    if runtime.opts.repl:
+      runtime.ir.call("console.log", @[uinteger idx])
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -830,7 +834,7 @@ proc generateInternalIR*(runtime: Runtime) =
         if typ.singletonId == index:
           debug "runtime: singleton ID for type `" & typ.name &
             "` matches field access index"
-
+          
           for name, member in typ.members:
             if member.isFn:
               continue

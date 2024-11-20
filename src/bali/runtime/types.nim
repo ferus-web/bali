@@ -49,6 +49,7 @@ type
 
   InterpreterOpts* = object
     test262*: bool = false
+    repl*: bool = false
 
   JSType* = object
     name*: string
@@ -214,7 +215,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
 
   for fname, fatom in prototype().fieldPairs:
     jsType.members[fname] = initAtomOrFunction[NativeFunction](fatom.wrap())
-
+  
   jsType.proto = hash($prototype)
   jsType.name = name
 
