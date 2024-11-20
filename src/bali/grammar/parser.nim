@@ -13,6 +13,7 @@ type Parser* = ref object
   ast: AST
   errors*: seq[ParseError]
 
+  precededByMultilineComment: bool = false
   foundShebang: bool = false
 
 template error(parser: Parser, kind: ParseErrorKind, msg: string) =
@@ -918,12 +919,16 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       parser.error Other, "expected expression for `new`"
 
     return expr
-  of TokenKind.Comment, TokenKind.String, TokenKind.Number, TokenKind.Null:
-    discard
   of TokenKind.Shebang:
     if parser.foundShebang:
       parser.error Other, "one file cannot have two shebangs"
     else:
+      if parser.ast.scopes[parser.ast.currentScope].stmts.len > 0:
+        parser.error Other, "shebang must be placed prior to other directives"
+
+      if parser.precededByMultilineComment:
+        parser.error Other, "shebang cannot be preceded by multiline comment"
+
       parser.foundShebang = true
   of TokenKind.Semicolon, TokenKind.Comma:
     discard
@@ -931,6 +936,11 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     parser.error Other, "shebang cannot be preceded by whitespace"
   of TokenKind.Break:
     return some breakStmt()
+  of TokenKind.String, TokenKind.Number, TokenKind.Null:
+    return some waste(&parser.parseAtom(token))
+  of TokenKind.Comment:
+    if token.multiline:
+      parser.precededByMultilineComment = true
   else:
     parser.error UnexpectedToken, "unexpected token: " & $token.kind
 

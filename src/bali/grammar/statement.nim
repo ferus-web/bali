@@ -25,6 +25,7 @@ type
     Increment
     Decrement
     Break
+    Waste
 
   FieldAccess* = ref object
     prev*, next*: FieldAccess
@@ -131,6 +132,8 @@ type
       incIdent*: string
     of Decrement:
       decIdent*: string
+    of Waste:
+      wstAtom*: MAtom
     of Break: discard
 
 func hash*(access: FieldAccess): Hash {.inline.} =
@@ -234,6 +237,9 @@ proc breakStmt*: Statement =
 
 proc returnFunc*(): Statement =
   Statement(kind: ReturnFn)
+
+proc waste*(atom: MAtom): Statement =
+  Statement(kind: Waste, wstAtom: atom)
 
 proc increment*(ident: string): Statement =
   Statement(kind: Increment, incIdent: ident)
