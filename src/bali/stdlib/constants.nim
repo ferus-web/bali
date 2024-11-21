@@ -14,6 +14,11 @@ import sanchar/parse/url
 import pretty
 
 proc generateStdIr*(runtime: Runtime) =
+  if runtime.constantsGenerated:
+    return
+
+  runtime.constantsGenerated = true
+
   debug "constants: generating constant values"
   runtime.ir.loadObject(runtime.addrIdx)
   runtime.ir.markGlobal(runtime.addrIdx)

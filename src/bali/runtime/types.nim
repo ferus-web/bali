@@ -72,6 +72,7 @@ type
     opts*: InterpreterOpts
 
     irHints*: IRHints
+    constantsGenerated*: bool = false
 
     addrIdx*: uint
     values*: seq[Value]

@@ -295,23 +295,21 @@ proc generateIR*(
   of CreateImmutVal:
     debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
-
+    
+    print stmt.imAtom
+    print runtime.addrIdx
     let idx = runtime.loadIRAtom(stmt.imAtom)
 
     if not internal:
       if fn.name.len < 1:
         runtime.ir.markGlobal(idx)
       
-      let before = runtime.addrIdx
-      runtime.addrIdx = idx
       runtime.markLocal(fn, stmt.imIdentifier)
-      runtime.addrIdx = before
     else:
       assert *ownerStmt
-      let before = runtime.addrIdx
-      runtime.addrIdx = idx
       runtime.markInternal(&ownerStmt, stmt.imIdentifier)
-      runtime.addrIdx = before
+
+    print runtime.addrIdx
   of CreateMutVal:
     let idx = runtime.loadIRAtom(stmt.mutAtom)
 
@@ -575,7 +573,7 @@ proc generateIR*(
         else:
           unreachable
           0
-
+    
     case stmt.conditionExpr.op
     of Equal, NotEqual:
       runtime.ir.equate(lhsIdx, rhsIdx)
@@ -645,15 +643,16 @@ proc generateIR*(
 
       unreachable
       0
-
+    
+    print stmt.whConditionExpr
     let
       lhsIdx =
         case stmt.whConditionExpr.binLeft.kind
         of IdentHolder:
-          debug "emitter: if-stmt: LHS is ident"
+          debug "emitter: while-stmt: LHS is ident"
           runtime.index(stmt.whConditionExpr.binLeft.ident, defaultParams(fn))
         of AtomHolder:
-          debug "emitter: if-stmt: LHS is atom"
+          debug "emitter: while-stmt: LHS is atom"
           runtime.index("left_term", internalIndex(stmt))
         else:
           unreachable
@@ -662,15 +661,15 @@ proc generateIR*(
       rhsIdx =
         case stmt.whConditionExpr.binRight.kind
         of IdentHolder:
-          debug "emitter: if-stmt: RHS is ident"
+          debug "emitter: while-stmt: RHS is ident"
           runtime.index(stmt.whConditionExpr.binRight.ident, defaultParams(fn))
         of AtomHolder:
-          debug "emitter: if-stmt: RHS is atom"
+          debug "emitter: while-stmt: RHS is atom"
           runtime.index("right_term", internalIndex(stmt))
         else:
           unreachable
           0
-    
+
     let jmpIntoComparison = getCurrOpNum()
     case stmt.whConditionExpr.op
     of Equal, NotEqual:
@@ -702,6 +701,8 @@ proc generateIR*(
     if runtime.irHints.breaksGeneratedAt.len > 0:
       for brk in runtime.irHints.breaksGeneratedAt:
         runtime.ir.overrideArgs(brk, @[uinteger(jmpPastBody.uint)])
+    else:
+      runtime.ir.overrideArgs(dummyJump, @[uinteger(jmpPastBody.uint)])
 
     runtime.irHints.breaksGeneratedAt.reset()
 
@@ -761,6 +762,7 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
     runtime.loadArgumentsOntoStack(fn)
   else:
     constants.generateStdIr(runtime)
+    inc runtime.addrIdx
 
     for i, typ in runtime.types:
       let idx = runtime.addrIdx
