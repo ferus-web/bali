@@ -1,7 +1,7 @@
 ## JavaScript URL API - uses sanchar's builtin URL parser
 import std/[options, logging, tables]
 import bali/internal/sugar
-import bali/runtime/[objects, normalize, arguments, types, atom_helpers]
+import bali/runtime/[normalize, arguments, types, atom_helpers]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import mirage/ir/generator

@@ -2,7 +2,7 @@
 
 import std/[options, logging, tables]
 import bali/internal/sugar
-import bali/runtime/[objects, normalize, atom_helpers]
+import bali/runtime/[normalize, atom_helpers]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import jsony
