@@ -373,7 +373,7 @@ proc parseDeclaration*(
       toCall = parser.parseConstructor()
       break
     of TokenKind.Typeof:
-      toCall = some(call("BALI_INTERNAL_TYPEOF", &parser.parseTypeofCall()))
+      toCall = some(call("BALI_TYPEOF", &parser.parseTypeofCall(), mangle = false))
       break
     of TokenKind.LBracket:
       atom = parser.parseArray()

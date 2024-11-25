@@ -86,6 +86,7 @@ type
     of Call:
       fn*: string
       arguments*: PositionedArguments
+      mangle*: bool
     of NewFunction:
       fnName*: string
       body*: Scope
@@ -309,7 +310,7 @@ proc atomArg*(atom: MAtom): CallArg =
 proc constructObject*(name: string, args: PositionedArguments): Statement =
   Statement(kind: ConstructObject, objName: name, args: args)
 
-proc call*(fn: string, arguments: PositionedArguments): Statement =
-  Statement(kind: Call, fn: fn, arguments: arguments)
+proc call*(fn: string, arguments: PositionedArguments, mangle: bool = true): Statement =
+  Statement(kind: Call, fn: fn, arguments: arguments, mangle: mangle)
 
 {.pop.}

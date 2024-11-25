@@ -261,7 +261,7 @@ proc generateIR*(
     runtime.markLocal(fn, stmt.mutIdentifier)
     runtime.addrIdx = before
   of Call:
-    if runtime.vm.hasBuiltin(stmt.fn):
+    #[if runtime.vm.hasBuiltin(stmt.fn):
       info "interpreter: generate IR for calling builtin: " & stmt.fn
       let args = (
         proc(): seq[MAtom] =
@@ -273,38 +273,38 @@ proc generateIR*(
       )()
 
       runtime.ir.call(stmt.fn, args)
-    else:
-      let nam = stmt.fn.normalizeIRName()
-      info "interpreter: generate IR for calling function (normalized): " & nam
-      runtime.expand(fn, stmt, internal)
+    else: ]#
+    let nam = if stmt.mangle: stmt.fn.normalizeIRName() else: stmt.fn
+    info "interpreter: generate IR for calling function: " & nam & (if stmt.mangle: " (mangled)" else: newString 0)
+    runtime.expand(fn, stmt, internal)
 
-      for i, arg in stmt.arguments:
-        case arg.kind
-        of cakIdent:
-          info "interpreter: passing ident parameter to function with ident: " &
-            arg.ident
+    for i, arg in stmt.arguments:
+      case arg.kind
+      of cakIdent:
+        info "interpreter: passing ident parameter to function with ident: " &
+          arg.ident
 
-          runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
-        of cakAtom: # already loaded via the statement expander
-          let ident = $i
-          info "interpreter: passing atom parameter to function with ident: " & ident
-          runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
-        of cakFieldAccess:
-          let index = runtime.resolveFieldAccess(
-            fn,
-            stmt,
-            runtime.index(arg.access.identifier, defaultParams(fn)),
-            arg.access,
-          )
-          runtime.ir.markGlobal(index)
-          runtime.ir.passArgument(index)
-        of cakImmediateExpr:
-          let index = runtime.index($i, internalIndex(stmt))
-          runtime.ir.markGlobal(index)
-          runtime.ir.passArgument(index)
+        runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
+      of cakAtom: # already loaded via the statement expander
+        let ident = $i
+        info "interpreter: passing atom parameter to function with ident: " & ident
+        runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
+      of cakFieldAccess:
+        let index = runtime.resolveFieldAccess(
+          fn,
+          stmt,
+          runtime.index(arg.access.identifier, defaultParams(fn)),
+          arg.access,
+        )
+        runtime.ir.markGlobal(index)
+        runtime.ir.passArgument(index)
+      of cakImmediateExpr:
+        let index = runtime.index($i, internalIndex(stmt))
+        runtime.ir.markGlobal(index)
+        runtime.ir.passArgument(index)
 
-      runtime.ir.call(nam)
-      runtime.ir.resetArgs()
+    runtime.ir.call(nam)
+    runtime.ir.resetArgs()
   of ReturnFn:
     assert not (*stmt.retVal and *stmt.retIdent),
       "ReturnFn statement cannot have both return atom and return ident at once!"
@@ -802,7 +802,7 @@ proc generateInternalIR*(runtime: Runtime) =
   )
   runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")
 
-  runtime.ir.newModule(normalizeIRName "BALI_INTERNAL_TYPEOF")
+  runtime.ir.newModule("BALI_TYPEOF")
   runtime.vm.registerBuiltin(
     "BALI_TYPEOF_INTERNAL",
     proc(op: Operation) =
@@ -838,10 +838,10 @@ proc run*(runtime: Runtime) =
   debug "interpreter: the following bytecode will now be executed"
   debug source
 
-  info "interpreter: begin VM analyzer"
+  debug "interpreter: begin VM analyzer"
   runtime.vm.analyze()
 
-  info "interpreter: setting entry point to `outer`"
+  debug "interpreter: setting entry point to `outer`"
   runtime.vm.setEntryPoint("outer")
 
   for error in runtime.ast.errors:
@@ -850,7 +850,7 @@ proc run*(runtime: Runtime) =
   if runtime.ast.doNotEvaluate and runtime.opts.test262:
     debug "runtime: `doNotEvaluate` is set to `true` in Test262 mode - skipping execution."
     quit(0)
-  info "interpreter: passing over execution to VM"
+  debug "interpreter: passing over execution to VM - here goes nothing!"
   runtime.vm.run()
 
 proc newRuntime*(
