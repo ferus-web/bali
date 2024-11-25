@@ -6,31 +6,10 @@ import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
-import bali/runtime/[normalize, types, atom_helpers, atom_obj_variant, arguments]
+import bali/runtime/[normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils]
+import bali/runtime/optimize/[mutator_loops]
 import bali/stdlib/prelude
 import crunchy, pretty
-
-proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
-  for value in runtime.values:
-    for prio in params.priorities:
-      if value.kind != prio:
-        continue
-
-      let cond =
-        case value.kind
-        of vkGlobal:
-          value.identifier == ident
-        of vkLocal:
-          assert *params.fn
-          value.identifier == ident and value.ownerFunc == hash(&params.fn)
-        of vkInternal:
-          assert *params.stmt
-          value.identifier == ident and value.ownerStmt == hash(&params.stmt)
-
-      if cond:
-        return value.index
-
-  raise newException(ValueError, "No such ident: " & ident)
 
 proc generateIR*(
   runtime: Runtime,
@@ -246,41 +225,6 @@ proc resolveFieldAccess*(
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope)
 
-proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
-  case atom.kind
-  of Integer:
-    runtime.ir.loadInt(runtime.addrIdx, atom)
-    return runtime.addrIdx
-  of UnsignedInt:
-    runtime.ir.loadUint(runtime.addrIdx, &atom.getUint())
-    return runtime.addrIdx
-  of String:
-    runtime.ir.loadStr(runtime.addrIdx, atom)
-    return runtime.addrIdx
-  of Null:
-    runtime.ir.loadNull(runtime.addrIdx)
-    return runtime.addrIdx
-  of Ident: unreachable
-  of Boolean:
-    runtime.ir.loadBool(runtime.addrIdx, atom)
-    return runtime.addrIdx
-  of Object:
-    if atom.isUndefined():
-      runtime.ir.loadObject(runtime.addrIdx)
-      return runtime.addrIdx
-    else: unreachable # FIXME
-  of Float:
-    runtime.ir.loadFloat(runtime.addrIdx, atom)
-    return runtime.addrIdx
-  of Sequence:
-    runtime.ir.loadList(runtime.addrIdx)
-    result = runtime.addrIdx
-
-    for item in atom.sequence:
-      inc runtime.addrIdx
-      let idx = runtime.loadIRAtom(item)
-      runtime.ir.appendList(result, idx)
-
 proc generateIR*(
     runtime: Runtime,
     fn: Function,
@@ -296,8 +240,6 @@ proc generateIR*(
     debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
     
-    print stmt.imAtom
-    print runtime.addrIdx
     let idx = runtime.loadIRAtom(stmt.imAtom)
 
     if not internal:
@@ -308,8 +250,6 @@ proc generateIR*(
     else:
       assert *ownerStmt
       runtime.markInternal(&ownerStmt, stmt.imIdentifier)
-
-    print runtime.addrIdx
   of CreateMutVal:
     let idx = runtime.loadIRAtom(stmt.mutAtom)
 
@@ -634,6 +574,14 @@ proc generateIR*(
     runtime.ir.copyAtom(runtime.index(stmt.cpImmutSourceIdent, defaultParams(fn)), dest)
   of WhileStmt:
     debug "emitter: generate IR for while loop"
+    when not defined(baliEmitterDontElideLoops):
+      if stmt.whStmtOnlyMutatesItsState(stmt.whBranch.getValueCaptures()):
+        debug "emitter: while loop only mutates its own state - eliding it away"
+        if runtime.optimizeAwayStateMutatorLoop(fn, stmt):
+          return  # we can fully skip creating all of the expensive comparison checks! :D
+        else:
+          warn "emitter: failed to elide state mutator loop :("
+
     runtime.expand(fn, stmt)
 
     proc getCurrOpNum(): int =
@@ -644,7 +592,6 @@ proc generateIR*(
       unreachable
       0
     
-    print stmt.whConditionExpr
     let
       lhsIdx =
         case stmt.whConditionExpr.binLeft.kind
@@ -686,13 +633,14 @@ proc generateIR*(
     let
       trueJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
         # the jump into the body of the loop
+      escapeJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+        # the jump to "escape" out of the loop
       dummyJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
         # this will just point to its own address in the event that it isn't modified
         # if it is modified, it'll likely point to wherever `escapeJump` points to
-      escapeJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
-        # the jump to "escape" out of the loop
     
     let jmpIntoBody = getCurrOpNum()
+
     runtime.generateIRForScope(stmt.whBranch) # generate the body of the loop
     runtime.ir.jump(jmpIntoComparison.uint) # jump back to the comparison logic
 

@@ -150,6 +150,28 @@ proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
 
   inc runtime.addrIdx
 
+proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
+  for value in runtime.values:
+    for prio in params.priorities:
+      if value.kind != prio:
+        continue
+
+      let cond =
+        case value.kind
+        of vkGlobal:
+          value.identifier == ident
+        of vkLocal:
+          assert *params.fn
+          value.identifier == ident and value.ownerFunc == hash(&params.fn)
+        of vkInternal:
+          assert *params.stmt
+          value.identifier == ident and value.ownerStmt == hash(&params.stmt)
+
+      if cond:
+        return value.index
+
+  raise newException(ValueError, "No such ident: " & ident)
+
 proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
   ## Expose a native function to a JavaScript runtime.
   debug "runtime: exposing native function to runtime: " & name
@@ -172,6 +194,41 @@ proc createAtom*(typ: JSType): MAtom =
       atom.objFields[name] = idx
 
   atom
+
+proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
+  case atom.kind
+  of Integer:
+    runtime.ir.loadInt(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of UnsignedInt:
+    runtime.ir.loadUint(runtime.addrIdx, &atom.getUint())
+    return runtime.addrIdx
+  of String:
+    runtime.ir.loadStr(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of Null:
+    runtime.ir.loadNull(runtime.addrIdx)
+    return runtime.addrIdx
+  of Ident: unreachable
+  of Boolean:
+    runtime.ir.loadBool(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of Object:
+    if atom.isUndefined():
+      runtime.ir.loadObject(runtime.addrIdx)
+      return runtime.addrIdx
+    else: unreachable # FIXME
+  of Float:
+    runtime.ir.loadFloat(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of Sequence:
+    runtime.ir.loadList(runtime.addrIdx)
+    result = runtime.addrIdx
+
+    for item in atom.sequence:
+      inc runtime.addrIdx
+      let idx = runtime.loadIRAtom(item)
+      runtime.ir.appendList(result, idx)
 
 proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): MAtom =
   for etyp in runtime.types:

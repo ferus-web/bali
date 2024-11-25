@@ -9,11 +9,22 @@ Bali is still not in a usable state yet and is probably unstable. It is not mean
 # Usage
 Whilst not a "real-world usage", Bali is integrated into the [Ferus web engine](https://github.com/ferus-web/ferus) and used as the JavaScript runtime's primary execution backend.
 
+# How fast is it?
+With some recent codegen optimizations, Bali is already pretty fast on cherry-picked benchmarks.
+
+## Iterating 999999999 times and incrementing an integer each loop
+Bali has some loop elision optimizations in place which can fully eliminate an expensive loop when it sees the opportunity. \
+Node is run without a JIT compiler just to be fair to Bali and QuickJS. QuickJS turns out to be the slowest whilst Bali
+outperforms both of them by a huge margin.
+
+**Try it for yourself**: [Source code](tests/data/iterate-for-no-reason-001.js) \
+![Image](assets/bali-vs-node-vs-qjs-001.png)
+
 # Contact Me
 You can join the [Ferus Discord Server](https://discord.gg/9MwfGn2Jkb) to discuss Bali and other components of the Ferus web engine.
 
 # Specification Compliance
-As of 9th of November, 2024, Bali can successfully run 35% of the entire Test262 suite* (I believe that our test runner is broken, but that's what it currently tells me about the number of passing tests). 
+As of 9th of November, 2024, Bali can successfully run 35% of the entire Test262 suite* (I believe that our test runner is broken, but that's what it currently tells me about the number of passing tests).
 There's a lot of work to be done here, so don't shy away from sending in PRs. ;)
 
 # Running code with Bali
