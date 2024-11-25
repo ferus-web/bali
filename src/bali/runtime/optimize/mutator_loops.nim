@@ -32,6 +32,11 @@ proc optimizeAwayStateMutatorLoop*(runtime: Runtime, fn: Function, stmt: Stateme
       return true
 
     if rightTrav.kind == IdentHolder and rightTrav.ident == mut:
-      assert false
+      if leftTrav.kind != AtomHolder:
+        return false # FIXME: same as above
+      
+      let idx = runtime.loadIRAtom(leftTrav.atom)
+      runtime.markLocal(fn, rightTrav.ident)
+      return true
 
   return false
