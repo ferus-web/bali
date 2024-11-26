@@ -58,4 +58,8 @@ proc whStmtOnlyMutatesItsState*(stmt: Statement, captures: seq[string]): bool =
   when not defined(danger): assert(stmt.kind == WhileStmt)
 
   let mutators = stmt.whConditionExpr.getStateMutators()
+  for op in stmt.whBranch.stmts:
+    if op.kind notin [Increment, Decrement]:
+      return false
+
   mutators == captures
