@@ -257,10 +257,15 @@ proc generateIR*(
     if fn.name.len < 1:
       runtime.ir.markGlobal(idx)
 
-    let before = runtime.addrIdx
-    runtime.addrIdx = idx
-    runtime.markLocal(fn, stmt.mutIdentifier)
-    runtime.addrIdx = before
+    if not internal:
+      if fn.name == "outer":
+        debug "emitter: marking index as global because it's in outer-most scope: " & $idx
+        runtime.ir.markGlobal(idx)
+
+      runtime.markLocal(fn, stmt.mutIdentifier, index = some(idx))
+    else:
+      assert *ownerStmt
+      runtime.markInternal(&ownerStmt, stmt.mutIdentifier)
   of Call:
     #[if runtime.vm.hasBuiltin(stmt.fn):
       info "interpreter: generate IR for calling builtin: " & stmt.fn
