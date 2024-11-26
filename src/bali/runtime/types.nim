@@ -118,7 +118,7 @@ proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
 
   inc runtime.addrIdx
 
-proc markGlobal*(runtime: Runtime, ident: string) =
+proc markGlobal*(runtime: Runtime, ident: string, index: Option[uint] = none(uint)) =
   var toRm: seq[int]
   for i, value in runtime.values:
     if value.kind == vkGlobal and value.identifier == ident:
@@ -127,13 +127,15 @@ proc markGlobal*(runtime: Runtime, ident: string) =
   for rm in toRm:
     runtime.values.del(rm)
 
-  runtime.values &= Value(kind: vkGlobal, index: runtime.addrIdx, identifier: ident)
+  let idx = if *index: &index else: runtime.addrIdx
+
+  runtime.values &= Value(kind: vkGlobal, index: idx, identifier: ident)
 
   info "Ident \"" & ident & "\" is being globally marked at index " & $runtime.addrIdx
 
   inc runtime.addrIdx
 
-proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
+proc markLocal*(runtime: Runtime, fn: Function, ident: string, index: Option[uint] = none(uint)) =
   var toRm: seq[int]
   for i, value in runtime.values:
     if value.kind == vkLocal and value.ownerFunc == hash(fn) and
@@ -143,8 +145,10 @@ proc markLocal*(runtime: Runtime, fn: Function, ident: string) =
   for rm in toRm:
     runtime.values.del(rm)
 
+  let idx = if *index: &index else: runtime.addrIdx
+
   runtime.values &=
-    Value(kind: vkLocal, index: runtime.addrIdx, identifier: ident, ownerFunc: hash(fn))
+    Value(kind: vkLocal, index: idx, identifier: ident, ownerFunc: hash(fn))
 
   info "Ident \"" & ident & "\" is being locally marked at index " & $runtime.addrIdx
 

@@ -245,8 +245,8 @@ proc generateIR*(
     if not internal:
       if fn.name.len < 1:
         runtime.ir.markGlobal(idx)
-      
-      runtime.markLocal(fn, stmt.imIdentifier)
+
+      runtime.markLocal(fn, stmt.imIdentifier, index = some(idx))
     else:
       assert *ownerStmt
       runtime.markInternal(&ownerStmt, stmt.imIdentifier)
