@@ -54,6 +54,8 @@ proc getStateMutators*(expr: Statement): seq[string] =
 
 proc whStmtOnlyMutatesItsState*(stmt: Statement, captures: seq[string]): bool =
   ## Returns `true` if the statement only mutates its own state and nothing else.
+  ## Returns `false` if the statement either does more than that, or:
+  ## * It has clashing/confusing operators (say x < 9999 but body has x--)
   
   when not defined(danger): assert(stmt.kind == WhileStmt)
 
@@ -61,5 +63,10 @@ proc whStmtOnlyMutatesItsState*(stmt: Statement, captures: seq[string]): bool =
   for op in stmt.whBranch.stmts:
     if op.kind notin [Increment, Decrement]:
       return false
+
+    if op.kind == Increment:
+      return stmt.whConditionExpr.op in [BinaryOperation.LesserThan, BinaryOperation.LesserOrEqual, BinaryOperation.Equal]
+    elif op.kind == Decrement:
+      return stmt.whConditionExpr.op in [BinaryOperation.GreaterThan, BinaryOperatioN.GreaterOrEqual, BinaryOperation.Equal]
 
   mutators == captures

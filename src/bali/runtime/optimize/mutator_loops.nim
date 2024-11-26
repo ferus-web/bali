@@ -27,16 +27,18 @@ proc optimizeAwayStateMutatorLoop*(runtime: Runtime, fn: Function, stmt: Stateme
       if rightTrav.kind != AtomHolder:
         return false # FIXME: also implement this optimization for identifiers
       
-      let idx = runtime.loadIRAtom(rightTrav.atom)
-      runtime.markLocal(fn, leftTrav.ident)
-      return true
+      if stmt.whConditionExpr.op == BinaryOperation.LesserThan:
+        let idx = runtime.loadIRAtom(rightTrav.atom)
+        runtime.markLocal(fn, leftTrav.ident)
+        return true
 
     if rightTrav.kind == IdentHolder and rightTrav.ident == mut:
       if leftTrav.kind != AtomHolder:
         return false # FIXME: same as above
       
-      let idx = runtime.loadIRAtom(leftTrav.atom)
-      runtime.markLocal(fn, rightTrav.ident)
-      return true
+      if stmt.whConditionExpr.op == BinaryOperation.LesserThan:
+        let idx = runtime.loadIRAtom(leftTrav.atom)
+        runtime.markLocal(fn, rightTrav.ident)
+        return true
 
   return false
