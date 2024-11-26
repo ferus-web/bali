@@ -243,7 +243,8 @@ proc generateIR*(
     let idx = runtime.loadIRAtom(stmt.imAtom)
 
     if not internal:
-      if fn.name.len < 1:
+      if fn.name == "outer":
+        debug "emitter: marking index as global because it's in outer-most scope: " & $idx
         runtime.ir.markGlobal(idx)
 
       runtime.markLocal(fn, stmt.imIdentifier, index = some(idx))
