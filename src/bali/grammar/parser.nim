@@ -301,6 +301,29 @@ proc parseArray*(parser: Parser): Option[MAtom] =
 
   some sequence(arr)
 
+proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
+  # We are assuming that the starting bracket (`[`) has been consumed.
+  if parser.tokenizer.eof:
+    parser.error Other, "expected expression, got EOF"
+
+  if (let indexToken = parser.tokenizer.nextExceptWhitespace(); *indexToken):
+    let
+      token = &indexToken
+      atom = parser.parseAtom(token)
+
+    if !atom:
+      parser.error UnexpectedToken, "expected expression, got " & $token.kind
+    
+    let closing = parser.tokenizer.nextExceptWhitespace()
+    if !closing or (&closing).kind != TokenKind.RBracket:
+      parser.error Other, "missing ] in index expression"
+
+    return some(
+      arrayAccess(ident, &atom)
+    )
+  else:
+    parser.error Other, "expected expression, got EOF"
+
 proc parseDeclaration*(
     parser: Parser, initialIdent: string, reassignment: bool = false
 ): Option[Statement] =
@@ -350,10 +373,18 @@ proc parseDeclaration*(
       atom = some(str tok.str)
       break
     of TokenKind.Identifier:
-      if not parser.tokenizer.eof() and parser.tokenizer.next().kind == TokenKind.LParen:
-        # this is a function call!
-        toCall = parser.parseFunctionCall(tok.ident)
-        break
+      if not parser.tokenizer.eof():
+        let next = parser.tokenizer.next()
+        case next.kind
+        of TokenKind.LParen:
+          # this is a function call!
+          toCall = parser.parseFunctionCall(tok.ident)
+          break
+        of TokenKind.LBracket:
+          # array access, probably
+          toCall = parser.parseArrayIndex(tok.ident)
+          break
+        else: discard
       else:
         # just an ident copy
         vIdent = some(tok.ident)
@@ -649,10 +680,14 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
       atom = some(str tok.str)
       break
     of TokenKind.Identifier:
-      if not parser.tokenizer.eof() and parser.tokenizer.next().kind == TokenKind.LParen:
-        # this is a function call!
-        toCall = parser.parseFunctionCall(tok.ident)
-        break
+      if not parser.tokenizer.eof():
+        let next = parser.tokenizer.next()
+        if next.kind == TokenKind.LParen:
+          # this is a function call!
+          toCall = parser.parseFunctionCall(tok.ident)
+          break
+        elif next.kind == TokenKind.RBracket:
+          assert off
       else:
         # just an ident copy
         vIdent = some(tok.ident)

@@ -26,6 +26,7 @@ type
     Decrement
     Break
     Waste
+    AccessArrayIndex
 
   FieldAccess* = ref object
     prev*, next*: FieldAccess
@@ -136,6 +137,9 @@ type
     of Waste:
       wstAtom*: MAtom
     of Break: discard
+    of AccessArrayIndex:
+      arrAccIdent*: string
+      arrAccIndex*: MAtom
 
 func hash*(access: FieldAccess): Hash {.inline.} =
   hash((access.identifier))
@@ -244,6 +248,9 @@ proc waste*(atom: MAtom): Statement =
 
 proc increment*(ident: string): Statement =
   Statement(kind: Increment, incIdent: ident)
+
+proc arrayAccess*(ident: string, index: MAtom): Statement =
+  Statement(kind: AccessArrayIndex, arrAccIdent: ident, arrAccIndex: index)
 
 proc decrement*(ident: string): Statement =
   Statement(kind: Decrement, decIdent: ident)
