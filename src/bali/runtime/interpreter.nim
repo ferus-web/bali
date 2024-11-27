@@ -679,6 +679,14 @@ proc generateIR*(
     let idx = runtime.loadIRAtom(stmt.wstAtom)
     if runtime.opts.repl:
       runtime.ir.call("console.log", @[uinteger idx])
+  of AccessArrayIndex:
+    let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
+    let fieldIndex = runtime.loadIRAtom(stmt.arrAccIndex)
+    
+    runtime.ir.passArgument(atomIdx)
+    runtime.ir.passArgument(fieldIndex)
+    runtime.ir.call("BALI_INDEX")
+    runtime.ir.resetArgs()
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -817,6 +825,26 @@ proc generateInternalIR*(runtime: Runtime) =
       ret runtime.computeTypeof(&atom)
   )
   runtime.ir.call("BALI_TYPEOF_INTERNAL")
+
+  runtime.ir.newModule("BALI_INDEX")
+  runtime.vm.registerBuiltin(
+    "BALI_INDEX_INTERNAL",
+    proc(op: Operation) =
+      let
+        atom = runtime.argument(1)
+        index = runtime.argument(2)
+
+      assert(*atom, "BUG: Atom was empty when calling BALI_INDEX_INTERNAL!")
+      assert((&atom).kind == Sequence, "BUG: BALI_INDEX_INTERNAL was passed a non-seq.")
+      
+      let idx = &(&index).getInt()
+      let vec = (&atom).sequence
+      if idx < 0 or idx > vec.len - 1:
+        ret undefined()
+
+      ret vec[idx] # TODO: add indexing for tables/object fields
+  )
+  runtime.ir.call("BALI_INDEX_INTERNAL")
 
 proc run*(runtime: Runtime) =
   console.generateStdIR(runtime)
