@@ -95,7 +95,7 @@ runtime.run()
 - While loops                          [X]
 - Nested object field access           [X]
 - `typeof`                             [X]
-- Arrays                               [ ]
+- Arrays                               [X]
 - For loops                            [ ]
 - Modules                              [ ]
 - Async                                [ ]
