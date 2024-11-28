@@ -1,4 +1,4 @@
-import std/[logging]
+import std/[logging, tables]
 import bali/grammar/statement
 import pretty
 
@@ -64,9 +64,9 @@ proc whStmtOnlyMutatesItsState*(stmt: Statement, captures: seq[string]): bool =
     if op.kind notin [Increment, Decrement]:
       return false
 
-    if op.kind == Increment:
-      return stmt.whConditionExpr.op in [BinaryOperation.LesserThan, BinaryOperation.LesserOrEqual, BinaryOperation.Equal]
-    elif op.kind == Decrement:
-      return stmt.whConditionExpr.op in [BinaryOperation.GreaterThan, BinaryOperatioN.GreaterOrEqual, BinaryOperation.Equal]
-
+    if op.kind == Increment and stmt.whConditionExpr.op notin [BinaryOperation.LesserThan, BinaryOperation.LesserOrEqual, BinaryOperation.Equal]:
+      return false
+    elif op.kind == Decrement and stmt.whConditionExpr.op in [BinaryOperation.GreaterThan, BinaryOperatioN.GreaterOrEqual, BinaryOperation.Equal]:
+      return false
+  
   mutators == captures
