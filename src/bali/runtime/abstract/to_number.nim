@@ -50,6 +50,8 @@ proc ToNumber*(vm: PulsarInterpreter, value: MAtom): float =
       return 1f # 5. If argument is true, return 1𝔽.
   of String:
     return vm.StringToNumber(value)
+  of Float:
+    return &value.getFloat()
   else:
     unreachable
 
