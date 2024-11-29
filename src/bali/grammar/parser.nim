@@ -8,13 +8,14 @@ import bali/runtime/atom_helpers
 import mirage/atom
 import pretty
 
-type Parser* = ref object
-  tokenizer*: Tokenizer
-  ast: AST
-  errors*: seq[ParseError]
+type
+  Parser* = ref object
+    tokenizer*: Tokenizer
+    ast: AST
+    errors*: seq[ParseError]
 
-  precededByMultilineComment: bool = false
-  foundShebang: bool = false
+    precededByMultilineComment: bool = false
+    foundShebang: bool = false
 
 template error(parser: Parser, kind: ParseErrorKind, msg: string) =
   parser.errors &= ParseError(location: parser.tokenizer.location, message: msg)
@@ -687,7 +688,6 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
           toCall = parser.parseFunctionCall(tok.ident)
           break
         elif next.kind == TokenKind.RBracket:
-          assert off
       else:
         # just an ident copy
         vIdent = some(tok.ident)

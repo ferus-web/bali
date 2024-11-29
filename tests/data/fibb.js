@@ -1,10 +1,11 @@
 function fibb(n) {
-	if (n == 0) {
+	console.log(n)
+	if (n < 1) {
 		return n
 	}
 
-	let a = fibonacci(n - 1)
-	let b = fibonacci(n - 2)
+	let a = fibb(n - 1)
+	let b = fibb(n - 2)
 	let c = a + b
 
 	return c

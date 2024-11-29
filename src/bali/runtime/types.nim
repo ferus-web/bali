@@ -50,6 +50,7 @@ type
   InterpreterOpts* = object
     test262*: bool = false
     repl*: bool = false
+    dumpBytecode*: bool = false
 
   JSType* = object
     name*: string

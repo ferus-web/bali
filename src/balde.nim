@@ -82,8 +82,8 @@ proc execFile(ctx: Context, file: string) {.inline.} =
     ast.doNotEvaluate = true
 
   profileThis "allocate runtime":
-    let runtime = newRuntime(
-      file, ast, InterpreterOpts(test262: ctx.cmdOptions.contains("test262"))
+    var runtime = newRuntime(
+      file, ast, InterpreterOpts(test262: ctx.cmdOptions.contains("test262"), dumpBytecode: ctx.cmdOptions.contains("dump-bytecode"))
     )
 
   profileThis "execution time":

@@ -870,7 +870,12 @@ proc run*(runtime: Runtime) =
   runtime.vm.tokenizer = tokenizer.newTokenizer(source)
 
   debug "interpreter: the following bytecode will now be executed"
-  debug source
+  
+  if not runtime.opts.dumpBytecode:
+    debug source
+  else:
+    echo source
+    quit(0)
 
   debug "interpreter: begin VM analyzer"
   runtime.vm.analyze()
