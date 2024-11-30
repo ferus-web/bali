@@ -7,7 +7,9 @@ I repeat,
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
 
 # Usage
-Whilst not a "real-world usage", Bali is integrated into the [Ferus web engine](https://github.com/ferus-web/ferus) and used as the JavaScript runtime's primary execution backend.
+* Bali is integrated into the [Ferus web engine](https://github.com/ferus-web/ferus) and used as the JavaScript runtime's backend
+* It is integrated into [Basket](https://github.com/xTrayambak/basket), a fast app launcher for Wayland compositors for configuration.
+Have a cool project that you use Bali in? Open a PR and add it here! :^)
 
 # How fast is it?
 With some recent codegen optimizations, Bali is already pretty fast on cherry-picked benchmarks.
@@ -32,6 +34,7 @@ You can compile Balde, the Bali debugger by running:
 ```
 $ nimble build balde
 ```
+You can run it with no arguments and it'll start up in a REPL. \
 It is primarily used for debugging the engine as of right now, but it runs code fine too.
 
 # Integrating Bali into your applications
@@ -96,6 +99,7 @@ runtime.run()
 - Nested object field access           [X]
 - `typeof`                             [X]
 - Arrays                               [X]
+- REPL                                 [X]
 - For loops                            [ ]
 - Modules                              [ ]
 - Async                                [ ]
