@@ -111,8 +111,8 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
       sign = 1f
       tokenizer.pos -= 1
 
-  if hasSign:
-    tokenizer.advance(1)
+  #if hasSign:
+  #  tokenizer.advance(1)
 
   var
     integralPart: float64

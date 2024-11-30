@@ -4,12 +4,14 @@
 when not isMainModule:
   {.error: "This file is not meant to be separately imported!".}
 
-import std/[times, tables, os, monotimes, logging]
+import std/[terminal, times, tables, os, monotimes, logging]
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/prelude
 import bali/private/argparser
-import colored_logger, jsony, pretty
+import pkg/[colored_logger, jsony, pretty, noise, fuzzy]
+
+const Version {.strdefine: "NimblePkgVersion".} = "<version not defined>"
 
 var
   enableProfiler = false
@@ -110,6 +112,67 @@ proc baldeRun(ctx: Input) =
   let arg = ctx.arguments[0]
   execFile(ctx, arg)
 
+proc baldeRepl(ctx: Input) =
+  var prevRuntime: Runtime
+  var noise = Noise.init()
+
+  template evaluateSource(line: string) =
+    let ast = newParser(line).parse()
+    var runtime = newRuntime("<repl>", ast, opts = InterpreterOpts(repl: true))
+    if prevRuntime != nil:
+      runtime.values = prevRuntime.values
+      runtime.vm.stack = prevRuntime.vm.stack # Copy all atoms of the previous runtime to the new one
+    runtime.run()
+    prevRuntime = runtime
+
+  echo "Welcome to Balde, with Bali v" & Version
+  echo "Keep in mind that this is still a heavily work-in-progress feature. Bugs are bound to occur."
+  echo "Start typing JavaScript expressions to evaluate them."
+  echo "Type .quit to exit the REPL."
+
+  let prompt = Styler.init(fgYellow, "REPL", resetStyle, " > ")
+  noise.setPrompt(prompt)
+
+  when promptCompletion:
+    proc completionHook(noise: var Noise, text: string): int =
+      if prevRuntime == nil:
+        return
+
+      for ident in prevRuntime.values:
+        if ident.kind != vkInternal and fuzzyMatchSmart(text, ident.identifier) >= 0.5f:
+          noise.addCompletion(ident.identifier)
+
+    noise.setCompletionHook(completionHook)
+
+  when promptHistory:
+    var file = getHomeDir() / ".balde_history"
+    discard noise.historyLoad(file)
+
+  while true:
+    let ok = noise.readLine()
+    if not ok: break
+
+    let line = noise.getLine()
+    case line
+    of ".quit":
+      discard noise.historySave(file)
+      quit(0)
+    of ".clear_history":
+      noise.historyClear()
+    else:
+      let parser = newParser(line)
+      let ast = parser.parse()
+
+      if ast.errors.len > 0:
+        for error in ast.errors:
+          styledWriteLine(stdout, fgRed, "Parse Error", resetStyle, ": ", styleBright, error.message, resetStyle)
+      else:
+        noise.historyAdd(line)
+        evaluateSource line
+
+  when promptHistory:
+    discard noise.historySave(file)
+
 proc main() {.inline.} =
   enableLogging()
   
@@ -118,7 +181,11 @@ proc main() {.inline.} =
     setLogFilter(lvlAll)
 
   if input.command.len < 1:
-    assert off, "TODO: implement repl"
+    if not input.enabled("verbose", "v"):
+      setLogFilter(lvlNone)
+
+    baldeRepl(input)
+    quit(0)
 
   case input.command
   of "run": baldeRun(input)

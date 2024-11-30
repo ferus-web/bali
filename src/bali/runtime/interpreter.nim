@@ -678,7 +678,8 @@ proc generateIR*(
   of Waste:
     let idx = runtime.loadIRAtom(stmt.wstAtom)
     if runtime.opts.repl:
-      runtime.ir.call("console.log", @[uinteger idx])
+      runtime.ir.passArgument(idx)
+      runtime.ir.call(normalizeIRName "console.log")
   of AccessArrayIndex:
     let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
     let fieldIndex = runtime.loadIRAtom(stmt.arrAccIndex)

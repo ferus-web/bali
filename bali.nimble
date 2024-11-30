@@ -1,6 +1,6 @@
 # Package
 
-version         = "0.4.0"
+version         = "0.4.1"
 author          = "xTrayambak"
 description     = "The Bali JavaScript Engine"
 license         = "GPL3"
@@ -26,3 +26,6 @@ requires "results >= 0.5.0"
 taskRequires "fmt", "nph#head"
 task fmt, "Format code":
   exec "nph src/ tests/"
+
+requires "noise >= 0.1.10"
+requires "fuzzy >= 0.1.0"
