@@ -8,7 +8,8 @@ import std/[times, tables, os, monotimes, logging]
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/prelude
-import climate, colored_logger, jsony, pretty
+import bali/private/argparser
+import colored_logger, jsony, pretty
 
 var
   enableProfiler = false
@@ -16,6 +17,7 @@ var
 
 proc enableLogging() {.inline.} =
   addHandler newColoredLogger()
+  setLogFilter(lvlInfo)
 
 template profileThis(task: string, body: untyped) =
   var start: MonoTime
@@ -37,7 +39,7 @@ proc die(msg: varargs[string]) {.inline, noReturn.} =
   error(str)
   quit(1)
 
-proc execFile(ctx: Context, file: string) {.inline.} =
+proc execFile(ctx: Input, file: string) {.inline.} =
   profileThis "execFile() sanity checks":
     if not fileExists(file):
       die "file not found:", file
@@ -54,8 +56,8 @@ proc execFile(ctx: Context, file: string) {.inline.} =
         die "failed to open file:", exc.msg
         ""
 
-  if ctx.cmdOptions.contains("dump-tokens"):
-    let excludeWs = ctx.cmdOptions.contains("no-whitespace")
+  if ctx.enabled("dump-tokens"):
+    let excludeWs = ctx.enabled("no-whitespace")
     let tok = newTokenizer(source)
     while not tok.eof:
       if excludeWs:
@@ -74,50 +76,57 @@ proc execFile(ctx: Context, file: string) {.inline.} =
   profileThis "parse source code":
     var ast = parser.parse()
 
-  if ctx.cmdOptions.contains("dump-no-eval"):
+  if ctx.enabled("dump-no-eval"):
     print ast
     quit 0
 
-  if ctx.cmdOptions.contains("dump-ast"):
+  if ctx.enabled("dump-ast"):
     ast.doNotEvaluate = true
 
   profileThis "allocate runtime":
     var runtime = newRuntime(
-      file, ast, InterpreterOpts(test262: ctx.cmdOptions.contains("test262"), dumpBytecode: ctx.cmdOptions.contains("dump-bytecode"))
+      file, ast, InterpreterOpts(test262: ctx.enabled("test262"), dumpBytecode: ctx.enabled("dump-bytecode"))
     )
 
   profileThis "execution time":
     runtime.run()
 
-  if ctx.cmdOptions.contains("dump-ast"):
+  if ctx.enabled("dump-ast"):
     print ast
 
-  if ctx.cmdOptions.contains("dump-runtime-after-exec"):
+  if ctx.enabled("dump-runtime-after-exec"):
     print runtime
 
-proc baldeRun(ctx: Context): int =
-  if not ctx.cmdOptions.contains("verbose") or ctx.cmdOptions.contains("v"):
+proc baldeRun(ctx: Input) =
+  if not ctx.enabled("verbose", "v"):
     setLogFilter(lvlWarn)
 
   enableProfiler =
-    ctx.cmdOptions.contains("enable-profiler") or ctx.cmdOptions.contains("P")
-
-  ctx.arg:
-    execFile(ctx, arg)
-  do:
+    ctx.enabled("enable-profiler", "P")
+  
+  if ctx.arguments.len < 1:
     die "`run` requires a file to evaluate."
+  
+  let arg = ctx.arguments[0]
+  execFile(ctx, arg)
 
 proc main() {.inline.} =
   enableLogging()
+  
+  let input = parseInput()
+  if input.enabled("verbose", "v"):
+    setLogFilter(lvlAll)
 
-  const commands = {"run": baldeRun}
+  if input.command.len < 1:
+    assert off, "TODO: implement repl"
 
-  let value = parseCommands(commands)
+  case input.command
+  of "run": baldeRun(input)
+  else:
+    die "invalid command: " & input.command
 
   if enableProfiler:
     writeFile("balde_profiler.txt", toJson profile)
-
-  quit(value)
 
 when isMainModule:
   main()

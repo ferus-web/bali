@@ -687,7 +687,6 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
           # this is a function call!
           toCall = parser.parseFunctionCall(tok.ident)
           break
-        elif next.kind == TokenKind.RBracket:
       else:
         # just an ident copy
         vIdent = some(tok.ident)
