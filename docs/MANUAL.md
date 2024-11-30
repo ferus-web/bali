@@ -5,13 +5,13 @@ This manual is largely inspired by Monoucha's manual.
 **This manual is largely under construction. Report problems if you can.**
 
 # Table of Contents
-* Introduction (#introduction)
-    - Terms to learn (#terms-to-learn)
-        - Atom
-    - Baby's first scripts (#babys-first-scripts)
-* Creating new types (#creating-new-types)
-    - Wrapping primitives (#wrapping-primitives)
-    - Exposing types to the JavaScript runtime
+* [Introduction](#introduction)
+    - [Terms to learn](#terms-to-learn)
+        - [Atom](#atom)
+    - [Baby's first scripts](#babys-first-scripts)
+* [Creating new types](#creating-new-types)
+    - [Wrapping primitives](#wrapping-primitives)
+    - [Wrapping our type](#wrapping-our-type)
 
 # Introduction
 Bali is a JavaScript engine written from scratch in Nim for the [Ferus web engine](https://github.com/ferus-web/ferus). It is designed to be convenient to interface with whilst being fast and compliant. It provides you high-level abstractions as far as humanly possible.
