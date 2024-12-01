@@ -4,7 +4,7 @@
 when not isMainModule:
   {.error: "This file is not meant to be separately imported!".}
 
-import std/[terminal, times, tables, os, monotimes, logging]
+import std/[strutils, terminal, times, tables, os, monotimes, logging]
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/prelude
@@ -153,12 +153,22 @@ proc baldeRepl(ctx: Input) =
     if not ok: break
 
     let line = noise.getLine()
+
     case line
     of ".quit":
       discard noise.historySave(file)
       quit(0)
     of ".clear_history":
       noise.historyClear()
+    of ".dump_stack":
+      if prevRuntime == nil:
+        echo "Nothing has been evaluated yet."
+        continue
+
+      for i, value in prevRuntime.vm.stack:
+        echo $i & ": " & prevRuntime.ToString(value) & " <" & $value.kind & '>'
+    of ".dump_gc":
+      echo GC_getStatistics()
     else:
       let parser = newParser(line)
       let ast = parser.parse()
