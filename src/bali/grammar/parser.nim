@@ -338,6 +338,7 @@ proc parseDeclaration*(
       case tok.kind
       of TokenKind.Identifier:
         ident = tok.ident
+        break
       of TokenKind.EqualSign:
         break # weird quirky javascript feature :3 (I hate brendan eich)
       of TokenKind.Whitespace:
@@ -346,6 +347,16 @@ proc parseDeclaration*(
         parser.error UnexpectedToken, "numeric literal"
       else:
         parser.error UnexpectedToken, $tok.kind
+
+  if parser.tokenizer.eof():
+    if ident == initialIdent:
+      parser.error Other, "identifier not defined"
+    else:
+      case initialIdent
+      of "let", "const":
+        return some(createImmutVal(ident, undefined()))
+      of "var":
+        return some(createMutVal(ident, undefined()))
 
   let
     copiedTok = parser.tokenizer.deepCopy()
@@ -766,7 +777,7 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
     $token
 
   if parser.tokenizer.eof:
-    parser.error Other, "expected conditions after if token, got EOF instead"
+    parser.error Other, "expected conditions after control-flow token, got EOF instead"
 
   if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
     if (&tok).kind != TokenKind.LParen:

@@ -155,51 +155,6 @@ proc markLocal*(runtime: Runtime, fn: Function, ident: string, index: Option[uin
 
   inc runtime.addrIdx
 
-proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
-  for value in runtime.values:
-    for prio in params.priorities:
-      if value.kind != prio:
-        continue
-
-      let cond =
-        case value.kind
-        of vkGlobal:
-          value.identifier == ident
-        of vkLocal:
-          assert *params.fn
-          value.identifier == ident and value.ownerFunc == hash(&params.fn)
-        of vkInternal:
-          assert *params.stmt
-          value.identifier == ident and value.ownerStmt == hash(&params.stmt)
-
-      if cond:
-        return value.index
-
-  raise newException(ValueError, "No such ident: " & ident)
-
-proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
-  ## Expose a native function to a JavaScript runtime.
-  debug "runtime: exposing native function to runtime: " & name
-  runtime.ir.newModule(normalizeIRName name)
-  let builtinName = "BALI_" & toUpperAscii(normalizeIRName(name))
-  runtime.vm.registerBuiltin(
-    builtinName,
-    proc(_: Operation) =
-      fn(),
-  )
-  runtime.ir.call(builtinName)
-
-proc createAtom*(typ: JSType): MAtom =
-  var atom = obj()
-
-  for name, member in typ.members:
-    if member.isAtom():
-      let idx = atom.objValues.len
-      atom.objValues &= undefined()
-      atom.objFields[name] = idx
-
-  atom
-
 proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   case atom.kind
   of Integer:
@@ -234,6 +189,51 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
       inc runtime.addrIdx
       let idx = runtime.loadIRAtom(item)
       runtime.ir.appendList(result, idx)
+
+proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
+  for value in runtime.values:
+    for prio in params.priorities:
+      if value.kind != prio:
+        continue
+
+      let cond =
+        case value.kind
+        of vkGlobal:
+          value.identifier == ident
+        of vkLocal:
+          assert *params.fn
+          value.identifier == ident and value.ownerFunc == hash(&params.fn)
+        of vkInternal:
+          assert *params.stmt
+          value.identifier == ident and value.ownerStmt == hash(&params.stmt)
+
+      if cond:
+        return value.index
+  
+  raise newException(ValueError, "No such ident: " & ident)
+
+proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
+  ## Expose a native function to a JavaScript runtime.
+  debug "runtime: exposing native function to runtime: " & name
+  runtime.ir.newModule(normalizeIRName name)
+  let builtinName = "BALI_" & toUpperAscii(normalizeIRName(name))
+  runtime.vm.registerBuiltin(
+    builtinName,
+    proc(_: Operation) =
+      fn(),
+  )
+  runtime.ir.call(builtinName)
+
+proc createAtom*(typ: JSType): MAtom =
+  var atom = obj()
+
+  for name, member in typ.members:
+    if member.isAtom():
+      let idx = atom.objValues.len
+      atom.objValues &= undefined()
+      atom.objFields[name] = idx
+
+  atom
 
 proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): MAtom =
   for etyp in runtime.types:
