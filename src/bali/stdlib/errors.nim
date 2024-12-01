@@ -36,6 +36,10 @@ proc typeError*(vm: PulsarInterpreter, message: string, exitCode: int = 1) {.inl
   vm.throw(jsException("TypeError: " & message))
   vm.logTracebackAndDie(exitCode)
 
+proc referenceError*(vm: PulsarInterpreter, message: string, exitCode: int = 1) {.inline.} =
+  vm.throw(jsException("ReferenceError: " & message))
+  vm.logTracebackAndDie(exitCode)
+
 proc syntaxError*(
     vm: PulsarInterpreter, message: string, exitCode: int = 1
 ) {.inline.} =
