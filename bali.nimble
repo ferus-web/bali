@@ -1,6 +1,6 @@
 # Package
 
-version         = "0.4.1"
+version         = "0.4.12"
 author          = "xTrayambak"
 description     = "The Bali JavaScript Engine"
 license         = "GPL3"
