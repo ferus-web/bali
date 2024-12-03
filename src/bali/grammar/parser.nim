@@ -6,7 +6,7 @@ import bali/grammar/[token, tokenizer, ast, errors, statement]
 import bali/internal/sugar
 import bali/runtime/atom_helpers
 import mirage/atom
-import pretty
+import pkg/[results, pretty]
 
 type
   Parser* = ref object
@@ -325,6 +325,25 @@ proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
   else:
     parser.error Other, "expected expression, got EOF"
 
+proc expectEqualsSign*(
+  parser: Parser,
+  stubDef: proc(): Result[Option[Statement], void]
+): Result[Option[Statement], void] =
+  # FIXME: this is utterly fucking deranged.
+  let nextTok = parser.tokenizer.next()
+  case nextTok.kind
+  of TokenKind.Semicolon:
+    return stubDef()
+  of TokenKind.EqualSign:
+    return ok(none(Statement))
+  of TokenKind.Whitespace:
+    if isNewline(nextTok):
+      return stubDef()
+    else:
+      expectEqualsSign parser, stubDef
+  else:
+    parser.error UnexpectedToken, "expected semicolon or equal sign after identifier, got " & $nextTok.kind
+
 proc parseDeclaration*(
     parser: Parser, initialIdent: string, reassignment: bool = false
 ): Option[Statement] =
@@ -348,15 +367,29 @@ proc parseDeclaration*(
       else:
         parser.error UnexpectedToken, $tok.kind
 
+  proc stubDef: Result[Option[Statement], void] =
+    case initialIdent
+    of "let", "const":
+      return ok(some(createImmutVal(ident, undefined())))
+    of "var":
+      return ok(some(createMutVal(ident, undefined())))
+
   if parser.tokenizer.eof():
     if ident == initialIdent:
       parser.error Other, "identifier not defined"
     else:
-      case initialIdent
-      of "let", "const":
-        return some(createImmutVal(ident, undefined()))
-      of "var":
-        return some(createMutVal(ident, undefined()))
+      return &stubDef()
+
+    unreachable
+
+  let gotEquals = parser.expectEqualsSign(stubDef)
+  if *gotEquals: # what the fuck?
+    if *(&gotEquals): 
+      return &gotEquals
+    else:
+      discard
+  else:
+    return
 
   let
     copiedTok = parser.tokenizer.deepCopy()
@@ -374,7 +407,7 @@ proc parseDeclaration*(
     vIdent: Option[string]
     toCall: Option[Statement]
 
-  while not parser.tokenizer.eof and !vIdent and !atom:
+  while not parser.tokenizer.eof and !vIdent and !atom and !toCall:
     let tok = parser.tokenizer.next()
 
     case tok.kind
@@ -386,8 +419,9 @@ proc parseDeclaration*(
       break
     of TokenKind.Identifier:
       if not parser.tokenizer.eof():
-        let next = parser.tokenizer.next()
-        case next.kind
+        let copiedTok = parser.tokenizer.deepCopy()
+        let next = parser.tokenizer.nextExceptWhitespace()
+        case (&next).kind
         of TokenKind.LParen:
           # this is a function call!
           toCall = parser.parseFunctionCall(tok.ident)
@@ -396,11 +430,12 @@ proc parseDeclaration*(
           # array access, probably
           toCall = parser.parseArrayIndex(tok.ident)
           break
-        else: discard
-      else:
-        # just an ident copy
-        vIdent = some(tok.ident)
-        break
+        else:
+          parser.tokenizer = copiedTok
+
+      # just an ident copy
+      vIdent = some(tok.ident)
+      break
     of TokenKind.Number:
       if *tok.intVal:
         atom = some(uinteger uint32(&tok.intVal))
