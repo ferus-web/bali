@@ -42,7 +42,7 @@ proc consume*(tokenizer: Tokenizer): char =
   c
 
 func hasAtleast*(tokenizer: Tokenizer, num: uint): bool =
-  (tokenizer.pos + num) > tokenizer.source.len.uint - 1
+  (tokenizer.pos + num) < (tokenizer.source.len.uint - 1)
 
 func charAt*(tokenizer: Tokenizer, offset: uint = 0): Option[char] =
   if (tokenizer.pos + offset) > tokenizer.source.len.uint - 1:
@@ -51,6 +51,7 @@ func charAt*(tokenizer: Tokenizer, offset: uint = 0): Option[char] =
   tokenizer.source[tokenizer.pos + offset].some()
 
 proc advance*(tokenizer: Tokenizer, offset: uint = 1) =
+  # FIXME: this newline checking can be done accurately in a for-loop
   if tokenizer.charAt() == some('\n'):
     inc tokenizer.location.line
     tokenizer.location.col = 0
@@ -91,11 +92,17 @@ proc charToDecimalDigit*(c: char): Option[uint32] {.inline.} =
     return some((c.ord - '0'.ord).uint32)
 
 proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
+  if not tokenizer.hasAtleast(1):
+    let value = parseInt($(&tokenizer.charAt()))
+    tokenizer.advance()
+    return Token(kind: Number, hasSign: false, floatVal: value.float, intVal: some(value.int32))
+
   var
     hasSign: bool
     sign = 1f
-
+  
   if negative:
+    tokenizer.advance() # skip `-`
     hasSign = true
     sign = -1f
   else:
