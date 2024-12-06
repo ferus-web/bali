@@ -397,6 +397,7 @@ proc parseDeclaration*(
 
   if !expr:
     debug "parser: no expression was parsed, reverting back to old tokenizer state"
+    debug "parser: old (now current) = " & $copiedTok.pos & "; new (now old) = " & $parser.tokenizer.pos
     parser.tokenizer = copiedTok
   else:
     debug "parser: an expression was successfully parsed, continuing in this state"
