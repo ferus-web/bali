@@ -476,7 +476,7 @@ proc generateIR*(
       warn "emitter: unimplemented binary operation: " & $stmt.op
 
     if *stmt.binStoreIn:
-      runtime.ir.moveAtom(
+      runtime.ir.copyAtom(
         leftIdx,
         runtime.index(
           &stmt.binStoreIn,
@@ -488,7 +488,7 @@ proc generateIR*(
       )
     elif *exprStoreIn:
       assert *parentStmt
-      runtime.ir.moveAtom(
+      runtime.ir.copyAtom(
         leftIdx, runtime.index(&exprStoreIn, internalIndex(&parentStmt))
       )
   of IfStmt:

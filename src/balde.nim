@@ -41,6 +41,36 @@ proc die(msg: varargs[string]) {.inline, noReturn.} =
   error(str)
   quit(1)
 
+proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = true): Runtime =
+  var runtime = newRuntime(
+    file, ast, InterpreterOpts(test262: ctx.enabled("test262"), dumpBytecode: ctx.enabled("dump-bytecode"), repl: repl)
+  )
+  let expStr = ctx.flag("enable-experiments")
+    
+  var success = true
+  let exps =
+    if *expStr: 
+      split(&expStr, ';')
+    else:
+      newSeq[string](0)
+
+  for experiment in exps:
+    if not runtime.opts.experiments.setExperiment(experiment, true):
+      success = false
+      break
+
+  if not success:
+    assert(*expStr)
+    error "Failed to enable certain experiments."
+    quit(1)
+
+  if *expStr and not ctx.enabled("disable-experiment-warning"):
+    info "You have enabled certain experiments."
+    info "By enabling them, you know that the engine will be more unstable than it already is."
+    info "These features are not production ready!"
+
+  runtime
+
 proc execFile(ctx: Input, file: string) {.inline.} =
   profileThis "execFile() sanity checks":
     if not fileExists(file):
@@ -86,9 +116,7 @@ proc execFile(ctx: Input, file: string) {.inline.} =
     ast.doNotEvaluate = true
 
   profileThis "allocate runtime":
-    var runtime = newRuntime(
-      file, ast, InterpreterOpts(test262: ctx.enabled("test262"), dumpBytecode: ctx.enabled("dump-bytecode"))
-    )
+    var runtime = allocRuntime(ctx, file = file, ast = ast)
 
   profileThis "execution time":
     runtime.run()
@@ -118,7 +146,7 @@ proc baldeRepl(ctx: Input) =
 
   template evaluateSource(line: string) =
     let ast = newParser(line).parse()
-    var runtime = newRuntime("<repl>", ast, opts = InterpreterOpts(repl: true))
+    var runtime = allocRuntime(ctx, "<repl>", ast, repl = true)
     if prevRuntime != nil:
       runtime.values = prevRuntime.values
       runtime.vm.stack = prevRuntime.vm.stack # Copy all atoms of the previous runtime to the new one

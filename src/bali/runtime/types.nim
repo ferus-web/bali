@@ -46,11 +46,16 @@ type
     of ImmutableReassignment:
       imIdent*: string
       imNewValue*: MAtom
+  
+  ExperimentOpts* = object
+    dateRoutines*: bool
 
   InterpreterOpts* = object
     test262*: bool = false
     repl*: bool = false
     dumpBytecode*: bool = false
+
+    experiments*: ExperimentOpts
 
   JSType* = object
     name*: string
@@ -81,6 +86,16 @@ type
     clauses*: seq[string]
 
     types*: seq[JSType]
+
+proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
+  case name
+  of "date-routines": opts.dateRoutines = value
+  else:
+    warn "Unrecognized experiment \"" & name & "\"!"
+    return false
+  
+  info "Enabling experiemnt \"" & name & '"'
+  true
 
 proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =
   SemanticError(kind: UnknownIdentifier, unknown: identifier)
