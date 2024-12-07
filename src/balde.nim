@@ -41,12 +41,12 @@ proc die(msg: varargs[string]) {.inline, noReturn.} =
   error(str)
   quit(1)
 
-proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = true): Runtime =
+proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runtime =
   var runtime = newRuntime(
     file, ast, InterpreterOpts(test262: ctx.enabled("test262"), dumpBytecode: ctx.enabled("dump-bytecode"), repl: repl)
   )
   let expStr = ctx.flag("enable-experiments")
-    
+
   var success = true
   let exps =
     if *expStr: 
@@ -220,7 +220,7 @@ proc main() {.inline.} =
 
   if input.command.len < 1:
     if not input.enabled("verbose", "v"):
-      setLogFilter(lvlNone)
+      setLogFilter(lvlError)
 
     baldeRepl(input)
     quit(0)
