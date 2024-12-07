@@ -854,6 +854,10 @@ proc run*(runtime: Runtime) =
   generateErrorsStdIR(runtime.vm, runtime.ir)
   base64.generateStdIR(runtime)
   json.generateStdIR(runtime)
+  
+  if runtime.opts.experiments.dateRoutines:
+    date.generateStdIR(runtime)
+
   parseIntGenerateStdIR(runtime.vm, runtime.ir)
 
   runtime.generateInternalIR()

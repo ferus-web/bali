@@ -292,7 +292,10 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   var jsType: JSType
 
   for fname, fatom in prototype().fieldPairs:
-    jsType.members[fname] = initAtomOrFunction[NativeFunction](fatom.wrap())
+    if not fname.startsWith('@'):
+      jsType.members[fname] = initAtomOrFunction[NativeFunction](fatom.wrap())
+    else:
+      debug "runtime: registerType(): field name starts with at-the-rate (@); not exposing it to the JS runtime."
   
   jsType.proto = hash($prototype)
   jsType.name = name
