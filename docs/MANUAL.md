@@ -1,6 +1,7 @@
 # Bali Manual
-This manual is largely inspired by Monoucha's manual.
-**WARNING**: Bali is only tested with the default memory management strategy (ORC). It _should_ work with others, but they aren't tested. You are on your own if you use them.
+This manual is largely inspired by Monoucha's manual. \
+**WARNING**: Bali is only tested with the default memory management strategy (ORC). It _should_ work with others, but they aren't tested. You are on your own if you use them. \
+**WARNING**: If you embed Bali in your program, you must compile it with the C++ backend as Bali relies on some C++ libraries.
 
 **This manual is largely under construction. Report problems if you can.**
 
@@ -12,6 +13,15 @@ This manual is largely inspired by Monoucha's manual.
 * [Creating new types](#creating-new-types)
     - [Wrapping primitives](#wrapping-primitives)
     - [Wrapping our type](#wrapping-our-type)
+* [Supported ECMAScript APIs](#supported-ecmascript-apis)
+    - [The Math type](#the-math-type)
+    - [The JSON type (Incomplete)](#the-json-type) 
+    - [The URL type (Incomplete)](#the-url-type)
+* [Using Balde](#using-balde)
+    - [Running scripts](#running-scripts)
+    - [Flags](#flags)
+    - [Using the REPL](#using-the-repl)
+    - [Experiments](#experiments)
 
 # Introduction
 Bali is a JavaScript engine written from scratch in Nim for the [Ferus web engine](https://github.com/ferus-web/ferus). It is designed to be convenient to interface with whilst being fast and compliant. It provides you high-level abstractions as far as humanly possible.
@@ -125,3 +135,84 @@ console.log(Person.name) // Log: John Doe
 console.log(Person.age) // Log: 24
 console.log(Person.likes) // Log: [Skating, Tennis, Programming]
 ```
+
+# Supported ECMAScript APIs
+Bali supports the following ECMAScript APIs.
+
+## The Math Type
+The `Math` type contains the following methods.
+
+### `Math.random`
+This function uses the global RNG instance created via [librng](https://github.com/xTrayambak/librng) to generate a float between 0 and 1.
+**WARNING**: Do _NOT_ use this function in places like cryptography! All of the PRNG algorithms used are highly predictable!
+
+#### Using another RNG algorithm
+You can pass the following values as arguments for `--define:BaliRNGAlgorithm`:
+- `xoroshiro128`: Xoroshiro128
+- `xoroshiro128pp`: Xoroshiro128++
+- `xoroshiro128ss`: Xoroshiro128**
+- `mersenne_twister`: Mersenne Twister
+- `marsaglia`: Marsaglia 69069
+- `pcg`: PCG
+- `lehmer`: Lehmer64
+- `splitmix`: Splitmix64
+
+All of them vary in terms of quality, footprint and speed. Bali defaults to `xoroshiro128` as it provides a nice balance between all of those.
+
+### The rest of the functions
+All of the functions apart from `Math.hypot` have been implemented.
+
+# Using Balde
+Balde, short for "**Bal**i **de**bugger" is a CLI tool that acts both as a script runner and a REPL.
+
+## Running Scripts
+Running a JavaScript source file is as simple as:
+```command
+$ balde run path/to/your/file.js
+```
+
+## Flags
+Balde supports a few flags for easier debugging.
+
+### `--dump-ast`
+This flag lets the runtime evaluate the AST for any errors, but does not allow for its execution. Instead, it prints out the AST instead. \
+This allows for semantic errors to be thrown out. If you want an immediate AST dump, use `--dump-no-eval`.
+```command
+$ balde run path/to/your/file.js --dump-ast
+<AST representation>
+```
+
+### `--dump-no-eval`
+This flag dumps the parsed representation (or AST) of the provided JavaScript source without any further evaluation. It also includes the parsing errors.
+```command
+$ balde run path/to/your/file.js --dump-no-eval
+<AST representation>
+```
+
+### `--verbose`
+This flag allows all debug logs to be shown, which can be used to diagnose bugs in the engine's multiple phases (tokenization, parsing, bytecode generation and runtime). \
+Beware that this gets very spammy.
+```command
+$ balde run path/to/your/file.js --verbose
+<A boat load of logs>
+```
+
+### `--dump-tokens`
+This flag dumps all of the tokens of a JavaScript source file.
+```command
+$ balde run path/to/your/file.js --dump-tokens
+```
+
+## Using the REPL
+**WARNING**: The REPL is still a very unstable feature. It is known to have several bugs. \
+To run the REPL, simply run Balde with no arguments.
+
+## Experiments
+Experiments are unstable Bali features that are locked behind an interpreter flag. In order to use them, you need to use the `--enable-experiments` flag. \
+`--enable-experiments` expects a syntax like this:
+```
+--enable-experiments:<experiment1>;<experiment2>
+```
+
+### Current Experiments
+- Date Routines (internal name: `date-routines`): Provides access to some of the JavaScript `Date` API.

@@ -61,7 +61,11 @@ func wrap*[T: object](obj: T): MAtom =
 
 func wrap*(val: seq[MAtom]): MAtom =
   sequence(val)
+
+proc `[]=`*[T: not MAtom](atom: var MAtom, name: string, value: T) {.inline.} =
+  atom[name] = wrap(value)
 {.pop.}
 
 func undefined*(): MAtom {.inline.} =
   obj()
+

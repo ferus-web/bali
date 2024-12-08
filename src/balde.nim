@@ -1,5 +1,7 @@
 ## Balde - the Bali Debugger
 ##
+## Author(s):
+## Trayambak Rai (xtrayambak at disroot dot org)
 
 when not isMainModule:
   {.error: "This file is not meant to be separately imported!".}
