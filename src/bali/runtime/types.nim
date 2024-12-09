@@ -225,7 +225,9 @@ proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
       if cond:
         return value.index
   
-  raise newException(ValueError, "No such ident: " & ident)
+  debug "runtime: cannot find identifier \"" & ident & "\" in index search, returning pointer to undefined()"
+  runtime.index("undefined", params)
+  # raise newException(ValueError, "No such ident: " & ident)
 
 proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
   ## Expose a native function to a JavaScript runtime.
