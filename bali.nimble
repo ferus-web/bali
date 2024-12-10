@@ -6,7 +6,7 @@ description     = "The Bali JavaScript Engine"
 license         = "GPL3"
 srcDir          = "src"
 backend         = "cpp"
-bin             = @["balde", "test262"]
+bin             = @["balde", "test262_v2", "test262"]
 installExt      = @["nim"]
 binDir          = "bin"
 
@@ -23,7 +23,7 @@ requires "jsony >= 1.1.5"
 requires "crunchy >= 0.1.11"
 requires "results >= 0.5.0"
 
-taskRequires "fmt", "nph#head"
+taskRequires "fmt", "nph#master"
 task fmt, "Format code":
   exec "nph src/ tests/"
 
