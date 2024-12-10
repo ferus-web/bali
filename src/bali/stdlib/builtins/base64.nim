@@ -13,10 +13,9 @@ import pretty
 
 when not defined(baliUseStdBase64):
   import simdutf/base64
-  type Base64DecodeError = ValueError
 else:
   import std/base64
-  from simdutf/base64 import Base64DecodeError
+  type Base64DecodeError = ValueError
 
 proc generateStdIr*(runtime: Runtime) =
   info "builtins.base64: generating IR interfaces"
