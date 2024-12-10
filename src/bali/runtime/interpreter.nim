@@ -6,7 +6,7 @@ import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
-import bali/runtime/[normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils]
+import bali/runtime/[normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils, bridge]
 import bali/runtime/optimize/[mutator_loops]
 import bali/stdlib/prelude
 import crunchy, pretty

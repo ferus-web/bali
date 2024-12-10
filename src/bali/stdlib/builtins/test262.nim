@@ -4,7 +4,7 @@
 import std/[strutils, math, options, logging, tables]
 import mirage/ir/generator
 import mirage/runtime/prelude
-import bali/runtime/normalize
+import bali/runtime/[normalize, bridge]
 import bali/runtime/abstract/to_string
 import bali/runtime/[arguments, types, atom_helpers]
 import bali/stdlib/errors

@@ -3,7 +3,7 @@
 import std/[importutils, tables, math, options, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
-import bali/runtime/[normalize, arguments, types]
+import bali/runtime/[normalize, arguments, types, bridge]
 import bali/runtime/abstract/[to_number]
 import bali/stdlib/errors
 import bali/internal/sugar

@@ -6,7 +6,7 @@ import std/[math, times, logging]
 import bali/internal/sugar
 import bali/stdlib/errors
 import mirage/atom
-import bali/runtime/[normalize, atom_helpers, arguments, types]
+import bali/runtime/[normalize, atom_helpers, arguments, types, bridge]
 import bali/runtime/abstract/coercion
 
 ## 21.4.1.1 Time Values and Time Range

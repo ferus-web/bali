@@ -1,7 +1,7 @@
 ## Implementation of encodeURI()
 ## Author(s):
 ## Trayambak Rai (xtrayambak at disroot dot org)
-import bali/runtime/[arguments, atom_helpers, types]
+import bali/runtime/[arguments, atom_helpers, bridge, types]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/internal/[sugar, uri_coding]

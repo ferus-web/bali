@@ -4,7 +4,7 @@
 import std/[options, tables, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
-import bali/runtime/[normalize, arguments, types]
+import bali/runtime/[normalize, arguments, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/internal/sugar
 import pretty
