@@ -1,18 +1,22 @@
 ## JavaScript parser
 ##
 
-import std/[options, logging, strutils, tables]
+import std/[options, logging, strutils, streams, tables]
 import bali/grammar/[token, tokenizer, ast, errors, statement]
 import bali/internal/sugar
 import bali/runtime/atom_helpers
-import mirage/atom
-import pkg/[results, pretty]
+import pkg/mirage/atom
+import pkg/[results, pretty, yaml]
 
 type
+  ParserOpts* = object
+    test262*: bool = false ## Whether to scan for Test262 directives
+
   Parser* = ref object
     tokenizer*: Tokenizer
     ast: AST
     errors*: seq[ParseError]
+    opts*: ParserOpts
 
     precededByMultilineComment: bool = false
     foundShebang: bool = false
@@ -1022,6 +1026,14 @@ proc parseStatement*(parser: Parser): Option[Statement] =
   of TokenKind.Comment:
     if token.multiline:
       parser.precededByMultilineComment = true
+    
+    if parser.opts.test262:
+      try:
+        yaml.load(
+          token.comment, parser.ast.test262
+        )
+      except CatchableError as exc:
+        discard
   else:
     parser.error UnexpectedToken, "unexpected token: " & $token.kind
 
@@ -1040,5 +1052,5 @@ proc parse*(parser: Parser): AST {.inline.} =
   parser.ast.errors = deepCopy(parser.errors)
   parser.ast
 
-proc newParser*(input: string): Parser {.inline.} =
-  Parser(tokenizer: newTokenizer(input))
+proc newParser*(input: string, opts: ParserOpts = default(ParserOpts)): Parser {.inline.} =
+  Parser(tokenizer: newTokenizer(input), opts: opts)

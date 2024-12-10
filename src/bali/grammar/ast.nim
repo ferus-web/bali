@@ -4,12 +4,27 @@ import bali/internal/sugar
 import pretty
 import ./[statement]
 
-type AST* = ref object
-  currentScope*: int
-  scopes*: seq[Scope]
-  errors*: seq[ParseError]
+type
+  Test262Negativity* = object
+    phase*: string
+    `type`*: string
 
-  doNotEvaluate*: bool = false # For Test262
+  Test262Opts* = object
+    ## Information inferred from the Test262 YAML metadata
+    description*: string
+    esid*: string
+    features*: seq[string]
+    flags*: seq[string]
+    negative*: Test262Negativity
+    info*: string
+
+  AST* = ref object
+    currentScope*: int
+    scopes*: seq[Scope]
+    errors*: seq[ParseError]
+
+    doNotEvaluate*: bool = false # For Test262
+    test262*: Test262Opts
 
 proc `&=`*(ast: AST, scope: Scope) =
   ast.scopes &= scope

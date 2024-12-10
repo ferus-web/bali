@@ -83,6 +83,7 @@ type
     values*: seq[Value]
     semanticErrors*: seq[SemanticError]
     clauses*: seq[string]
+    test262*: Test262Opts
 
     types*: seq[JSType]
 
@@ -93,7 +94,7 @@ proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
     warn "Unrecognized experiment \"" & name & "\"!"
     return false
   
-  info "Enabling experiemnt \"" & name & '"'
+  info "Enabling experiment \"" & name & '"'
   true
 
 proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =

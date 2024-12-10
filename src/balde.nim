@@ -106,7 +106,7 @@ proc execFile(ctx: Input, file: string) {.inline.} =
     quit(0)
 
   profileThis "allocate parser":
-    let parser = newParser(source)
+    let parser = newParser(source, opts = ParserOpts(test262: ctx.enabled("test262")))
 
   profileThis "parse source code":
     var ast = parser.parse()
