@@ -19,7 +19,7 @@ proc execJS(file: string, dontEval: bool, num, total: uint): RunResult =
   )
   of 0:
     return Success
-  of 1:
+  of 44:
     return Error
   of 139:
     return Segfault

@@ -33,3 +33,5 @@ info: |
 	Einmal, zweimal, dreimal, viermal, fünfmal, sechsmal, und
 	Siebenmal in der Woche zu viele Hausaufgaben
 */
+
+throw "SyntaxError: du bist ein Maus"

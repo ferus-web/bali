@@ -11,6 +11,8 @@ import bali/runtime/optimize/[mutator_loops]
 import bali/stdlib/prelude
 import crunchy, pretty
 
+privateAccess(PulsarInterpreter)
+
 proc generateIR*(
   runtime: Runtime,
   fn: Function,
@@ -848,6 +850,7 @@ proc generateInternalIR*(runtime: Runtime) =
   runtime.ir.call("BALI_INDEX_INTERNAL")
 
 proc run*(runtime: Runtime) =
+  runtime.test262 = runtime.ast.test262
   console.generateStdIR(runtime)
   math.generateStdIR(runtime)
   uri.generateStdIR(runtime)
@@ -865,6 +868,13 @@ proc run*(runtime: Runtime) =
 
   if runtime.opts.test262:
     test262.generateStdIR(runtime)
+    setDeathCallback(
+      proc(vm: PulsarInterpreter, exitCode: int) =
+        if vm.trace.exception.message.contains(runtime.test262.negative.`type`):
+          quit(44)
+        else:
+          quit(0)
+    )
 
   runtime.generateIRForScope(runtime.ast.scopes[0])
 
