@@ -26,7 +26,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Balde
-          path: bin/balde
+          path: bin/balde bin/test262
           
-          name: Test262 Runner
-          path: bin/test26t2
