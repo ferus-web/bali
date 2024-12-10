@@ -22,9 +22,14 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: nimble build --define:release --out:./ --define:baliUseStdBase64 # TODO: get simdutf working here
 
-      - name: Upload Build Artifacts
+      - name: Upload Build Artifact (balde)
         uses: actions/upload-artifact@v4
         with:
           name: Balde
-          path: balde test262
-          
+          path: balde 
+
+      - name: Upload Build Artifacts (test262)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Test262
+          path: test262
