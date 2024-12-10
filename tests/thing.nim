@@ -2,7 +2,7 @@ import std/[os, tables]
 import bali/grammar/prelude
 import bali/runtime/prelude
 import pretty
-import ../common
+import common
 
 enableLogging()
 var ast = newAST()

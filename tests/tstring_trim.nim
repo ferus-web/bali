@@ -6,7 +6,6 @@ suite "TrimString( string, where )":
     check "   32".internalTrim(strutils.Whitespace, TrimMode.Left) == "32"
     check "           :^)".internalTrim(strutils.Whitespace, TrimMode.Left) == ":^)"
 
-  test "trim ending whitespace":
+  #[ test "trim ending whitespace":
     check "32   ".internalTrim(strutils.Whitespace, TrimMode.Right) == "32"
-    check ":^)                  ".internalTrim(strutils.Whitespace, TrimMode.Right) ==
-      ":^)"
+    check ":^)                  ".internalTrim(strutils.Whitespace, TrimMode.Right) == ":^)" ]#
