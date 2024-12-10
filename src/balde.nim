@@ -44,8 +44,9 @@ proc die(msg: varargs[string]) {.inline, noReturn.} =
   quit(1)
 
 proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runtime =
+  let test262 = ctx.enabled("test262")
   var runtime = newRuntime(
-    file, ast, InterpreterOpts(test262: ctx.enabled("test262"), dumpBytecode: ctx.enabled("dump-bytecode"), repl: repl)
+    file, ast, InterpreterOpts(test262: test262, dumpBytecode: ctx.enabled("dump-bytecode"), repl: repl)
   )
   let expStr = ctx.flag("enable-experiments")
 

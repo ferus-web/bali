@@ -788,7 +788,7 @@ proc generateInternalIR*(runtime: Runtime) =
         # FIXME: weird bug with mirage, `get` returns a NULL atom.
       
       if atom.isUndefined():
-        runtime.vm.typeError("value is undefined")
+        runtime.typeError("value is undefined")
 
       if atom.kind != Object:
         debug "runtime: atom is not an object, returning undefined."
@@ -851,7 +851,7 @@ proc run*(runtime: Runtime) =
   console.generateStdIR(runtime)
   math.generateStdIR(runtime)
   uri.generateStdIR(runtime)
-  generateErrorsStdIR(runtime.vm, runtime.ir)
+  generateErrorsStdIR(runtime)
   base64.generateStdIR(runtime)
   json.generateStdIR(runtime)
   encodeUri.generateStdIR(runtime)
@@ -859,12 +859,12 @@ proc run*(runtime: Runtime) =
   if runtime.opts.experiments.dateRoutines:
     date.generateStdIR(runtime)
 
-  parseIntGenerateStdIR(runtime.vm, runtime.ir)
+  parseIntGenerateStdIR(runtime)
 
   runtime.generateInternalIR()
 
   if runtime.opts.test262:
-    test262.generateStdIR(runtime.vm, runtime.ir)
+    test262.generateStdIR(runtime)
 
   runtime.generateIRForScope(runtime.ast.scopes[0])
 
@@ -890,7 +890,7 @@ proc run*(runtime: Runtime) =
   runtime.vm.setEntryPoint("outer")
 
   for error in runtime.ast.errors:
-    runtime.vm.syntaxError(error, if runtime.opts.test262: 0 else: 1)
+    runtime.syntaxError(error, if runtime.opts.test262: 0 else: 1)
 
   if runtime.ast.doNotEvaluate and runtime.opts.test262:
     debug "runtime: `doNotEvaluate` is set to `true` in Test262 mode - skipping execution."

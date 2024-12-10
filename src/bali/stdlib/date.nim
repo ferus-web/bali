@@ -37,9 +37,9 @@ proc generateStdIR*(runtime: Runtime) =
         of Integer:
           date.`@epoch` = 3
         of String:
-          runtime.vm.typeError("Date constructor does not parse dates yet.")
+          runtime.typeError("Date constructor does not parse dates yet.")
         else:
-          runtime.vm.typeError($atom.kind)
+          runtime.typeError($atom.kind)
   )
 
   runtime.defineFn(

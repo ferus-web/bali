@@ -64,7 +64,7 @@ proc generateStdIR*(runtime: Runtime) =
       let source = &move(osource)
 
       if source.kind != String:
-        runtime.vm.typeError(
+        runtime.typeError(
           "URL constructor: " & runtime.ToString(source) & " is not a valid URL."
         )
         return
@@ -76,7 +76,7 @@ proc generateStdIR*(runtime: Runtime) =
           debug "url: encountered parse error whilst parsing url: " & &source.getStr() &
             ": " & pError.msg
           debug "url: this is a constructor, so a TypeError will be thrown."
-          runtime.vm.typeError(pError.msg)
+          runtime.typeError(pError.msg)
           newURL("", "", "", "")
             # unreachable, no need to worry. this just exists to make the compiler happy.
 

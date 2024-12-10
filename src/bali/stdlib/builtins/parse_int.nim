@@ -4,32 +4,31 @@
 import std/[strutils, math, options, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
-import bali/runtime/[arguments, normalize]
+import bali/runtime/[arguments, normalize, types]
 import bali/internal/[sugar, trim_string]
 import pretty
 
-proc parseIntGenerateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
+proc parseIntGenerateStdIr*(runtime: Runtime) =
   info "builtins.parse_int: generating IR interfaces"
 
   # parseInt
   # The parseInt() function parses a string argument and returns an integer of the specified radix (the base in mathematical numeral systems).
-  generator.newModule("parseInt")
-  vm.registerBuiltin(
-    "BALI_PARSEINT",
-    proc(op: Operation) =
-      if vm.registers.callArgs.len < 1:
-        vm.registers.retVal = some floating NaN
+  runtime.defineFn(
+    "parseInt",
+    proc =
+      if runtime.vm.registers.callArgs.len < 1:
+        runtime.vm.registers.retVal = some floating NaN
         return
 
       let
-        inputString = &vm.argument(1) # 1. Let inputString be ? ToString(string).
-        value = vm.trimString(inputString, TrimMode.Left)
+        inputString = &runtime.argument(1) # 1. Let inputString be ? ToString(string).
+        value = runtime.trimString(inputString, TrimMode.Left)
           # 2. Let S be ! TrimString(inputString, start).
 
         # FIXME: should we interpret the rest as according to the spec or should we leave it to the Nim standard library? It seems to work as intended...
         radix =
-          if vm.registers.callArgs.len > 1: # 8. If R ≠ 0, then
-            vm.registers.callArgs[1].getInt()
+          if runtime.vm.registers.callArgs.len > 1: # 8. If R ≠ 0, then
+            runtime.vm.registers.callArgs[1].getInt()
           else:
             # We don't remove the first two chars from the beginning of the string as `parseInt` in std/strutils does it itself when the radix is set to 16.
             if value.startsWith("0x"):
@@ -39,7 +38,7 @@ proc parseIntGenerateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
               some(10) # a. Set R to 10.
 
       try:
-        vm.registers.retVal = some(
+        runtime.vm.registers.retVal = some(
           case &radix
           of 2:
             integer parseBinInt(value)
@@ -57,6 +56,5 @@ proc parseIntGenerateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
         )
       except ValueError as exc:
         warn "builtins.parse_int(" & $value & "): " & exc.msg & " (radix=" & $radix & ')'
-        vm.registers.retVal = some floating NaN,
+        runtime.vm.registers.retVal = some floating NaN,
   )
-  generator.call("BALI_PARSEINT")

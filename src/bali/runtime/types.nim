@@ -5,7 +5,6 @@ import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/grammar/prelude
 import bali/internal/sugar
-import bali/stdlib/errors
 import bali/runtime/[normalize, atom_obj_variant, atom_helpers]
 import pretty
 
@@ -309,7 +308,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
     "BALI_CONSTRUCTOR_" & name.toUpperAscii(),
     proc(_: Operation) =
       if runtime.types[typIdx].constructor == nil:
-        runtime.vm.typeError(runtime.types[typIdx].name & " is not a constructor")
+        runtime.typeError(runtime.types[typIdx].name & " is not a constructor")
 
       runtime.types[typIdx].constructor(),
   )

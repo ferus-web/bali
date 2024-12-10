@@ -5,10 +5,10 @@ import bali/runtime/[atom_helpers, types]
 import bali/stdlib/errors
 import bali/internal/[trim_string, parse_number]
 
-proc StringToNumber*(vm: PulsarInterpreter, value: MAtom): float =
+proc StringToNumber*(runtime: Runtime, value: MAtom): float =
   assert value.kind == String, "StringToNumber() was passed a " & $value.kind
   debug "runtime: StringToNumber(" & value.crush() & ')'
-  let text = vm.trimString(value, TrimMode.Both)
+  let text = runtime.trimString(value, TrimMode.Both)
 
   if text.len < 1:
     return 0f
@@ -25,7 +25,7 @@ proc StringToNumber*(vm: PulsarInterpreter, value: MAtom): float =
 
   return &parsed
 
-proc ToNumber*(vm: PulsarInterpreter, value: MAtom): float =
+proc ToNumber*(runtime: Runtime, value: MAtom): float =
   ## 7.1.4 ToNumber ( argument )
   ## The abstract operation ToNumber takes argument argument (an ECMAScript language value) and returns either
   ## a normal completion containing a Number or a throw completion. It converts argument to a value of type Number.
@@ -40,7 +40,7 @@ proc ToNumber*(vm: PulsarInterpreter, value: MAtom): float =
     if value.isUndefined():
       return NaN # 3. If argument is undefined, return NaN.
     else:
-      vm.typeError("ToPrimitive() is not implemented yet!")
+      runtime.typeError("ToPrimitive() is not implemented yet!")
   of Null:
     return 0f # 4. If argument is either null or false, return +0𝔽.
   of Boolean:
@@ -49,11 +49,8 @@ proc ToNumber*(vm: PulsarInterpreter, value: MAtom): float =
     else:
       return 1f # 5. If argument is true, return 1𝔽.
   of String:
-    return vm.StringToNumber(value)
+    return runtime.StringToNumber(value)
   of Float:
     return &value.getFloat()
   else:
     unreachable
-
-proc ToNumber*(runtime: Runtime, value: MAtom): float {.inline.} =
-  runtime.vm.ToNumber(value)

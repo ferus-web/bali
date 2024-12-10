@@ -6,34 +6,37 @@ import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/runtime/normalize
 import bali/runtime/abstract/to_string
-import bali/runtime/atom_helpers
+import bali/runtime/[arguments, types, atom_helpers]
 import bali/stdlib/errors
 import bali/internal/sugar
 import pretty
 
-proc test262Error*(vm: PulsarInterpreter, msg: string) =
-  vm.throw(jsException(msg))
-  logTracebackAndDie(vm)
+proc test262Error*(runtime: Runtime, msg: string) =
+  runtime.vm.throw(jsException(msg))
+  logTracebackAndDie(runtime)
 
-proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
+type
+  JSAssert* = object
+
+proc generateStdIr*(runtime: Runtime) =
   info "builtins.test262: generating IR interfaces"
 
   # $DONOTEVALUATE (stub)
-  generator.newModule(normalizeIRName "$DONOTEVALUATE")
-  vm.registerBuiltin(
-    "TESTS_DONOTEVALUATE",
-    proc(op: Operation) =
-      return ,
+  runtime.defineFn(
+    "$DONOTEVALUATE",
+    proc =
+      return
   )
-  generator.call("TESTS_DONOTEVALUATE")
+
+  runtime.registerType(prototype = JSAssert, name = "assert")
 
   # assert.sameValue
-  generator.newModule(normalizeIRName "assert.sameValue")
-  vm.registerBuiltin(
-    "TESTS_ASSERTSAMEVALUE",
-    proc(op: Operation) =
+  runtime.defineFn(
+    JSAssert,
+    "sameValue",
+    proc =
       template no() =
-        vm.test262Error(
+        runtime.test262Error(
           "Assert.sameValue(): " & b.crush() & " != " & a.crush() & ' ' & msg
         )
 
@@ -42,11 +45,11 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
         return
 
       let
-        a = vm.registers.callArgs.pop()
-        b = vm.registers.callArgs.pop()
+        a = &runtime.argument(1)
+        b = &runtime.argument(2)
         msg =
-          if vm.registers.callArgs.len > 0:
-            vm.ToString(vm.registers.callArgs[0])
+          if runtime.argumentCount() > 2:
+            runtime.ToString(&runtime.argument(3))
           else:
             ""
 
@@ -75,4 +78,3 @@ proc generateStdIr*(vm: PulsarInterpreter, generator: IRGenerator) =
       else:
         no,
   )
-  generator.call("TESTS_ASSERTSAMEVALUE")

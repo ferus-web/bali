@@ -92,7 +92,7 @@ proc generateStdIR*(runtime: Runtime) =
         try:
           fromJson(jsonString)
         except jsony.JsonError as exc:
-          runtime.vm.syntaxError(exc.msg)
+          runtime.syntaxError(exc.msg)
           JsonNode()
 
       let atom = convertJsonNodeToAtom(parsed)

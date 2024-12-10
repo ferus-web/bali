@@ -27,12 +27,12 @@ proc generateStdIr*(runtime: Runtime) =
     "atob",
     proc() =
       if runtime.argumentCount() < 1:
-        typeError(runtime.vm, "atob: At least 1 argument required, but only 0 passed")
+        typeError(runtime, "atob: At least 1 argument required, but only 0 passed")
         return
 
       template decodeError() =
         warn "atob: failed to decode string: " & exc.msg
-        typeError(runtime.vm, "atob: String contains an invalid character")
+        typeError(runtime, "atob: String contains an invalid character")
         return
 
       let

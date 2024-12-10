@@ -6,9 +6,20 @@ import mirage/runtime/prelude
 import bali/grammar/errors
 import bali/runtime/normalize
 import bali/internal/sugar
+import bali/runtime/types
 
-type JSException* = ref object of RuntimeException
-  name: string = ""
+type
+  DeathCallback* = proc(vm: PulsarInterpreter, exitCode: int = 1)
+  JSException* = ref object of RuntimeException
+    name: string = ""
+
+proc DefaultDeathCallback(vm: PulsarInterpreter, exitCode: int = 1) =
+  quit(exitCode)
+
+var deathCallback*: DeathCallback = DefaultDeathCallback
+
+proc setDeathCallback*(fn: DeathCallback) {.inline.} =
+  deathCallback = fn
 
 proc generateMessage*(exc: JSException, err: string): string =
   var msg = "Uncaught "
@@ -24,40 +35,40 @@ proc jsException*(msg: string): JSException {.inline.} =
 
   exc
 
-proc logTracebackAndDie*(vm: PulsarInterpreter, exitCode: int = 1) =
-  let traceback = vm.generateTraceback()
+proc logTracebackAndDie*(runtime: Runtime, exitCode: int = 1) =
+  let traceback = runtime.vm.generateTraceback()
   assert *traceback, "Mirage failed to generate traceback!"
 
   stderr.write &traceback & '\n'
-  quit(exitCode)
+  deathCallback(runtime.vm, exitCode)
 
-proc typeError*(vm: PulsarInterpreter, message: string, exitCode: int = 1) {.inline.} =
+proc typeError*(runtime: Runtime, message: string, exitCode: int = 1) {.inline.} =
   ## Meant for other Bali stdlib methods to use.
-  vm.throw(jsException("TypeError: " & message))
-  vm.logTracebackAndDie(exitCode)
+  runtime.vm.throw(jsException("TypeError: " & message))
+  runtime.logTracebackAndDie(exitCode)
 
-proc referenceError*(vm: PulsarInterpreter, message: string, exitCode: int = 1) {.inline.} =
-  vm.throw(jsException("ReferenceError: " & message))
-  vm.logTracebackAndDie(exitCode)
+proc referenceError*(runtime: Runtime, message: string, exitCode: int = 1) {.inline.} =
+  runtime.vm.throw(jsException("ReferenceError: " & message))
+  runtime.logTracebackAndDie(exitCode)
 
 proc syntaxError*(
-    vm: PulsarInterpreter, message: string, exitCode: int = 1
+  runtime: Runtime, message: string, exitCode: int = 1
 ) {.inline.} =
   ## Meant for other Bali stdlib methods to use.
-  vm.throw(jsException("SyntaxError: " & message))
-  vm.logTracebackAndDie(exitCode)
+  runtime.vm.throw(jsException("SyntaxError: " & message))
+  runtime.logTracebackAndDie(exitCode)
 
 proc syntaxError*(
-    vm: PulsarInterpreter, error: ParseError, exitCode: int = 1
+  runtime: Runtime, error: ParseError, exitCode: int = 1
 ) {.inline.} =
-  vm.syntaxError(error.message, exitCode)
+  runtime.syntaxError(error.message, exitCode)
 
-proc generateErrorsStdIr*(vm: PulsarInterpreter, ir: IRGenerator) =
+proc generateErrorsStdIr*(runtime: Runtime) =
   info "errors: generate IR interface"
 
-  vm.registerBuiltin(
+  runtime.vm.registerBuiltin(
     "BALI_THROWERROR",
     proc(op: Operation) =
-      vm.throw(jsException(&vm.registers.callArgs[0].getStr()))
-      vm.logTracebackAndDie(),
+      runtime.vm.throw(jsException(&runtime.vm.registers.callArgs[0].getStr()))
+      runtime.logTracebackAndDie(),
   )

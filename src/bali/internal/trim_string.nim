@@ -5,6 +5,7 @@
 import std/[strutils, logging]
 import mirage/runtime/prelude
 import bali/internal/sugar
+import bali/runtime/types
 import bali/runtime/abstract/[coercible, to_string]
 
 import pretty
@@ -46,12 +47,12 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
 
   str[substringStart ..< str.len]
 
-proc trimString*(vm: PulsarInterpreter, input: MAtom, where: TrimMode): string =
+proc trimString*(runtime: Runtime, input: MAtom, where: TrimMode): string =
   # 1. Let str be ? RequireObjectCoercible(string).
-  let inputString = RequireObjectCoercible(vm, input)
+  let inputString = RequireObjectCoercible(runtime, input)
 
   # 2. Let S be ? ToString(str).
-  let str = ToString(vm, input)
+  let str = ToString(runtime, input)
 
   # 3. If where is start, let T be the String value that is a copy of S with leading white space removed.
   # 4. Else if where is end, let T be the String value that is a copy of S with trailing white space removed.

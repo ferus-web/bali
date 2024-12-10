@@ -4,7 +4,7 @@ import bali/internal/sugar
 import bali/runtime/[atom_helpers, types]
 import bali/stdlib/errors
 
-proc ToString*(vm: PulsarInterpreter, value: MAtom): string =
+proc ToString*(runtime: Runtime, value: MAtom): string =
   ## 7.1.17 ToString ( argument )
   ## The abstract operation ToString takes argument argument (an ECMAScript language value) and returns either a normal completion containing a String or a throw completion. It converts argument to a value of type String. It performs the following steps when called
   debug "runtime: toString(): " & value.crush()
@@ -51,7 +51,7 @@ proc ToString*(vm: PulsarInterpreter, value: MAtom): string =
 
     # FIXME: not spec compliant!
     for i, item in value.sequence:
-      buffer &= vm.ToString(item)
+      buffer &= runtime.ToString(item)
       if i < value.sequence.len - 1:
         buffer &= ", "
 
@@ -59,5 +59,3 @@ proc ToString*(vm: PulsarInterpreter, value: MAtom): string =
 
     return buffer
 
-proc ToString*(runtime: Runtime, value: MAtom): string {.inline.} =
-  runtime.vm.ToString(value)
