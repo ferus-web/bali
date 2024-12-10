@@ -1,19 +1,22 @@
-name: Testing
+name: Run internal tests
 on: push
 
-steps:
-  - uses: actions/checkout@v4
-  - name: Cache nimble
-    id: cache-nimble
-    uses: actions/cache@v4
-    with:
-      path: ~/.nimble
-      key: ${{ runner.os }}-nimble-${{ hashFiles('*.nimble') }}
-      restore-keys: |
-        ${{ runner.os }}-nimble-
-  - uses: jiro4989/setup-nim-action@v2
-    with:
-      nim-version: '2.2.0'
-      repo-token: ${{ secrets.GITHUB_TOKEN }}
-  - run: nimble build
-  - run: nimble test
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache nimble
+        id: cache-nimble
+        uses: actions/cache@v4
+        with:
+          path: ~/.nimble
+          key: ${{ runner.os }}-nimble-${{ hashFiles('*.nimble') }}
+          restore-keys: |
+            ${{ runner.os }}-nimble-
+      - uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: '2.2.0'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: nimble build --define:baliUseStdBase64 # TODO: get simdutf working here
+      - run: nimble test
