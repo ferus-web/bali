@@ -1,6 +1,6 @@
 # Used for test262.fyi
 
-name: Run internal tests
+name: Build artifacts
 on: push
 
 jobs:
