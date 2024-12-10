@@ -20,11 +20,11 @@ jobs:
         with:
           nim-version: '2.2.0'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: nimble build --define:release --define:baliUseStdBase64 # TODO: get simdutf working here
+      - run: nimble build --define:release --out:./ --define:baliUseStdBase64 # TODO: get simdutf working here
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Balde
-          path: bin/balde bin/test262
+          path: balde test262
           
