@@ -872,7 +872,7 @@ proc run*(runtime: Runtime) =
     setDeathCallback(
       proc(vm: PulsarInterpreter, exitCode: int) =
         if vm.trace.exception.message.contains(runtime.test262.negative.`type`):
-          quit(44)
+          quit(1)
         else:
           quit(0)
     )
