@@ -764,6 +764,8 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
 
   if *atom:
     return some(reassignVal(ident, &atom))
+  elif *vIdent:
+    return some(copyValMut(ident, &vIdent))
   elif *toCall:
     return some(callAndStoreMut(ident, &toCall))
 
