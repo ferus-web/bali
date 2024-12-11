@@ -23,8 +23,6 @@ proc execJS(file: string, dontEval: bool, num, total: uint, timeout: uint = 10):
   )
   of 0:
     return Success
-  of 44:
-    return Error
   of 139:
     return Segfault
   else:

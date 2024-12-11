@@ -1034,6 +1034,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
         )
       except CatchableError as exc:
         discard
+  of TokenKind.Typeof:
+    return some(call("BALI_TYPEOF", &parser.parseTypeofCall(), mangle = false))
   else:
     parser.error UnexpectedToken, "unexpected token: " & $token.kind
 
