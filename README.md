@@ -26,7 +26,7 @@ outperforms both of them by a huge margin.
 You can join the [Ferus Discord Server](https://discord.gg/9MwfGn2Jkb) to discuss Bali and other components of the Ferus web engine.
 
 # Specification Compliance
-As of 9th of November, 2024, Bali can successfully run 35% of the entire Test262 suite* (I believe that our test runner is broken, but that's what it currently tells me about the number of passing tests).
+As of 9th of November, 2024, Bali can successfully run 1% of the entire Test262 suite* (I believe that our test runner is currently under-estimating).
 There's a lot of work to be done here, so don't shy away from sending in PRs. ;)
 
 # Running code with Bali
@@ -100,6 +100,6 @@ runtime.run()
 - `typeof`                             [X]
 - Arrays                               [X]
 - REPL                                 [X]
-- For loops                            [ ]
+- For-loops                            [ ]
 - Modules                              [ ]
 - Async                                [ ]
