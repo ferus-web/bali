@@ -18,7 +18,8 @@ import bali/runtime/abstract/coercion
 
 type
   JSDate* = object
-    `@epoch`*: float
+    `@epoch`*: int64
+    `@invalid`*: bool = false
 
 proc generateStdIR*(runtime: Runtime) =
   info "date: generating IR interfaces"
@@ -27,7 +28,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.defineConstructor(
     "Date",
     proc =
-      var epoch = epochTime()
+      var epoch = inNanoseconds(cast[Duration](getTime()))
       var date: JSDate
       let value = runtime.argument(1)
 
@@ -35,11 +36,11 @@ proc generateStdIR*(runtime: Runtime) =
         let atom = &value
         case atom.kind
         of Integer:
-          date.`@epoch` = 3
+          date.`@epoch` = epoch
         of String:
           runtime.typeError("Date constructor does not parse dates yet.")
         else:
-          runtime.typeError($atom.kind)
+          date.`@invalid` = true
   )
 
   runtime.defineFn(
