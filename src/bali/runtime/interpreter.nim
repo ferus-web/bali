@@ -356,6 +356,7 @@ proc generateIR*(
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
     runtime.ir.resetArgs()
   of ReassignVal:
+    assert off
     let index = runtime.index(stmt.reIdentifier, defaultParams(fn))
     if runtime.verifyNotOccupied(stmt.reIdentifier, fn):
       runtime.semanticError(immutableReassignmentAttempt(stmt))

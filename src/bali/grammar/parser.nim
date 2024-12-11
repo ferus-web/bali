@@ -714,7 +714,7 @@ proc parseThrow*(parser: Parser): Option[Statement] =
   some(throwError(throwStr, throwErr))
 
 proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
-  info "parser: parsing re-assignment"
+  info "parser: parsing re-assignment to identifier: " & ident
 
   var
     atom: Option[MAtom]
@@ -725,26 +725,24 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
     let tok = parser.tokenizer.next()
 
     case tok.kind
-    of TokenKind.String:
-      if (let err = tok.getError(); *err):
-        parser.error Other, &err
-
-      atom = some(str tok.str)
-      break
+    of TokenKind.String, TokenKind.Number, TokenKind.Null:
+      debug "parser: whilst parsing re-assignment, found atom token: " & $tok.kind
+      atom = parser.parseAtom(tok)
     of TokenKind.Identifier:
+      debug "parser: whilst parsing re-assignment, found identifier: " & tok.ident
       if not parser.tokenizer.eof():
-        let next = parser.tokenizer.next()
-        if next.kind == TokenKind.LParen:
+        let copied = parser.tokenizer.deepCopy()
+        let next = parser.tokenizer.nextExceptWhitespace()
+        if *next and (&next).kind == TokenKind.LParen:
           # this is a function call!
           toCall = parser.parseFunctionCall(tok.ident)
           break
-      else:
-        # just an ident copy
-        vIdent = some(tok.ident)
-        break
-    of TokenKind.Number:
-      if *tok.intVal:
-        atom = some(uinteger uint32(&tok.intVal))
+        else:
+          parser.tokenizer = copied
+
+      # just an ident copy
+      vIdent = some(tok.ident)
+      break
     of TokenKind.Whitespace:
       discard
     of TokenKind.New:
