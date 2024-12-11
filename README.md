@@ -8,7 +8,7 @@ Bali is still not in a usable state yet and is probably unstable. It is not mean
 
 # Usage
 * Bali is integrated into the [Ferus web engine](https://github.com/ferus-web/ferus) and used as the JavaScript runtime's backend
-* It is integrated into [Basket](https://github.com/xTrayambak/basket), a fast app launcher for Wayland compositors for configuration.
+* It is integrated into [Basket](https://github.com/xTrayambak/basket), a fast app launcher for Wayland compositors for configuration. \
 Have a cool project that you use Bali in? Open a PR and add it here! :^)
 
 # How fast is it?
