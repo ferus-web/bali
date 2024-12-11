@@ -230,6 +230,7 @@ proc main() {.inline.} =
 
   case input.command
   of "run": baldeRun(input)
+  of "version": echo Version
   else:
     die "invalid command: " & input.command
 
