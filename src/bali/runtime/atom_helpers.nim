@@ -30,12 +30,15 @@ proc `[]=`*(atom: var MAtom, name: string, value: sink MAtom) {.inline.} =
     atom.objValues[atom.objFields[name]] = move(value)
 
 {.push inline.}
-func wrap*(val: int | uint | string | float): MAtom =
-  when val is int:
-    return integer(val)
+func wrap*(val: SomeSignedInt | SomeUnsignedInt | string | float | bool): MAtom =
+  when val is SomeSignedInt:
+    return integer(val.int)
 
-  when val is uint:
-    return uinteger(val)
+  when val is bool:
+    return boolean(val)
+
+  when val is SomeUnsignedInt:
+    return uinteger(val.uint)
 
   when val is string:
     return str(val)
