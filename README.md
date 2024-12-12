@@ -11,6 +11,10 @@ Bali is still not in a usable state yet and is probably unstable. It is not mean
 * It is integrated into [Basket](https://github.com/xTrayambak/basket), a fast app launcher for Wayland compositors for configuration. \
 Have a cool project that you use Bali in? Open a PR and add it here! :^)
 
+# How compliant is it?
+Thanks to [@CanadaHonk](https://github.com/CanadaHonk), Bali is now on [https://test262.fyi](test262.fyi)! \
+You can check how much Bali progresses/regresses by each day's run.
+
 # How fast is it?
 With some recent codegen optimizations, Bali is already pretty fast on cherry-picked benchmarks.
 
