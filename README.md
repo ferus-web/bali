@@ -12,7 +12,7 @@ Bali is still not in a usable state yet and is probably unstable. It is not mean
 Have a cool project that you use Bali in? Open a PR and add it here! :^)
 
 # How compliant is it?
-Thanks to [@CanadaHonk](https://github.com/CanadaHonk), Bali is now on [https://test262.fyi](test262.fyi)! \
+Thanks to [@CanadaHonk](https://github.com/CanadaHonk), Bali is now on [test262.fyi](https://test262.fyi)! \
 You can check how much Bali progresses/regresses by each day's run.
 
 # How fast is it?
