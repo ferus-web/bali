@@ -1,4 +1,4 @@
-## Test262 required builtins
+## Test262 required builtins/harnesses
 ##
 
 import std/[strutils, math, options, logging, tables]
@@ -7,7 +7,7 @@ import mirage/runtime/prelude
 import bali/runtime/[normalize, bridge]
 import bali/runtime/abstract/to_string
 import bali/runtime/[arguments, types, atom_helpers]
-import bali/stdlib/errors
+import bali/stdlib/errors_common
 import bali/internal/sugar
 import pretty
 

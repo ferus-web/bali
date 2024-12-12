@@ -391,6 +391,11 @@ proc generateIR*(
 
       runtime.ir.passArgument(runtime.index("error_msg", internalIndex(stmt)))
       runtime.ir.call("BALI_THROWERROR")
+    elif *stmt.error.ident:
+      runtime.ir.passArgument(runtime.index(&stmt.error.ident, defaultParams(fn)))
+      runtime.ir.call("BALI_THROWERROR")
+    else:
+      unreachable
   of BinaryOp:
     info "emitter: emitting IR for binary operation"
     runtime.expand(fn, stmt, internal)
@@ -855,7 +860,7 @@ proc run*(runtime: Runtime) =
   console.generateStdIR(runtime)
   math.generateStdIR(runtime)
   uri.generateStdIR(runtime)
-  generateErrorsStdIR(runtime)
+  errors_ir.generateStdIR(runtime)
   base64.generateStdIR(runtime)
   json.generateStdIR(runtime)
   encodeUri.generateStdIR(runtime)

@@ -105,7 +105,7 @@ type
       reIdentifier*: string
       reAtom*: MAtom
     of ThrowError:
-      error*: tuple[str: Option[string], exc: Option[void]]
+      error*: tuple[str: Option[string], exc: Option[void], ident: Option[string]]
     of BinaryOp:
       binLeft*, binRight*: Statement
       op*: BinaryOperation = BinaryOperation.Invalid
@@ -225,14 +225,15 @@ proc pushImmExpr*(args: var PositionedArguments, expr: Statement) {.inline.} =
 {.push checks: off, inline.}
 proc throwError*(
     errorStr: Option[string], errorExc: Option[void],
+    errorIdent: Option[string]
 ): Statement =
-  if *errorStr and *errorExc:
+  if *errorStr and *errorExc and *errorIdent:
     raise newException(
       ValueError,
       "Both `errorStr` and `errorExc` are full containers - something has went horribly wrong.",
     )
 
-  Statement(kind: ThrowError, error: (str: errorStr, exc: errorExc))
+  Statement(kind: ThrowError, error: (str: errorStr, exc: errorExc, ident: errorIdent))
 
 proc createImmutVal*(name: string, atom: MAtom): Statement =
   Statement(kind: CreateImmutVal, imIdentifier: name, imAtom: atom)

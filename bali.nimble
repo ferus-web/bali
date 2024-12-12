@@ -6,7 +6,7 @@ description     = "The Bali JavaScript Engine"
 license         = "GPL3"
 srcDir          = "src"
 backend         = "cpp"
-bin             = @["balde", "test262_v2", "test262"]
+bin             = @["balde", "test262"]
 installExt      = @["nim"]
 binDir          = "bin"
 

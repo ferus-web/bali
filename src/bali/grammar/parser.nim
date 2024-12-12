@@ -695,12 +695,13 @@ proc parseThrow*(parser: Parser): Option[Statement] =
 
   var
     throwStr: Option[string]
+    throwIdent: Option[string]
     throwErr: Option[void] # TODO: implement stuff like `throw new URIError();`
 
   while not parser.tokenizer.eof:
     let next = parser.tokenizer.next()
 
-    if next.kind == TokenKind.Whitespace and next.whitespace.contains(strutils.Newlines):
+    if next.kind == TokenKind.Whitespace and next.isNewline():
       parser.error UnexpectedToken,
         "no line break is allowed between 'throw' and its expression"
 
@@ -708,10 +709,14 @@ proc parseThrow*(parser: Parser): Option[Statement] =
       throwStr = some(next.str)
       break
 
-  if !throwStr and !throwErr:
+    if next.kind == TokenKind.Identifier:
+      throwIdent = some(next.ident)
+      break
+
+  if !throwStr and !throwErr and !throwIdent:
     parser.error Other, "throw statement is missing an expression"
 
-  some(throwError(throwStr, throwErr))
+  some(throwError(throwStr, throwErr, throwIdent))
 
 proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
   info "parser: parsing re-assignment to identifier: " & ident
