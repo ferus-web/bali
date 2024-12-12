@@ -139,6 +139,16 @@ Flags:
       info "Failed tests: " & $failedPercentage & "% (" & $failed.len & ')'
       info "Abnormal crashes: " & $segfaultPercentage & "% (" & $segfaulted.len & ')'
 
+    var dumpBufferFail, dumpBufferSucc: string
+    for passed in successful:
+      dumpBufferSucc &= passed & '\n'
+
+    for fail in failed:
+      dumpBufferFail &= fail & '\n'
+
+    writeFile("failed.txt", dumpBufferFail)
+    writeFile("success.txt", dumpBufferSucc)
+
     info "It took " & $(secondsTaken / 60) & " minutes to run all of the " & $files.len &
       " tests."
 
