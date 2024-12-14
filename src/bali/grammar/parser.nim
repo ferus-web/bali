@@ -47,11 +47,22 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
         &args
       else:
         newSeq[CallArg](0)
-
+  
   if name == "$DONOTEVALUATE":
     parser.ast.doNotEvaluate = true
 
-  return some call(name, arguments)
+  if name.contains('.'):
+    let access = createFieldAccess(name.split('.'))
+    var name: string
+    var curr = access
+
+    while curr.next != nil:
+      curr = curr.next
+
+    name = curr.identifier
+    return some call(callFunction(name, access), arguments)
+  else:
+    return some call(name.callFunction, arguments)
 
 proc parseAtom*(parser: Parser, token: Token): Option[MAtom]
 
@@ -456,7 +467,7 @@ proc parseDeclaration*(
       toCall = parser.parseConstructor()
       break
     of TokenKind.Typeof:
-      toCall = some(call("BALI_TYPEOF", &parser.parseTypeofCall(), mangle = false))
+      toCall = some(call("BALI_TYPEOF".callFunction, &parser.parseTypeofCall(), mangle = false))
       break
     of TokenKind.LBracket:
       atom = parser.parseArray()
@@ -1040,7 +1051,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       except CatchableError as exc:
         discard
   of TokenKind.Typeof:
-    return some(call("BALI_TYPEOF", &parser.parseTypeofCall(), mangle = false))
+    return some(call("BALI_TYPEOF".callFunction, &parser.parseTypeofCall(), mangle = false))
   else:
     parser.error UnexpectedToken, "unexpected token: " & $token.kind
 

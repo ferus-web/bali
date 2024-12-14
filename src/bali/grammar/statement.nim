@@ -1,5 +1,6 @@
 import std/[hashes, logging, options, tables]
 import mirage/atom
+import bali/runtime/normalize
 import bali/internal/sugar
 import pretty
 
@@ -74,6 +75,11 @@ type
     LesserOrEqual
     NotEqual
     NotTrueEqual
+  
+  FunctionCall* = object
+    field*: Option[FieldAccess]
+    ident*: Option[string]
+    function*: string
 
   Statement* = ref object
     line*, col*: uint = 1
@@ -85,7 +91,7 @@ type
       imIdentifier*: string
       imAtom*: MAtom
     of Call:
-      fn*: string
+      fn*: FunctionCall
       arguments*: PositionedArguments
       mangle*: bool
     of NewFunction:
@@ -318,7 +324,27 @@ proc atomArg*(atom: MAtom): CallArg =
 proc constructObject*(name: string, args: PositionedArguments): Statement =
   Statement(kind: ConstructObject, objName: name, args: args)
 
-proc call*(fn: string, arguments: PositionedArguments, mangle: bool = true): Statement =
+proc call*(fn: FunctionCall, arguments: PositionedArguments, mangle: bool = true): Statement =
   Statement(kind: Call, fn: fn, arguments: arguments, mangle: mangle)
 
+proc callFunction*(name: string): FunctionCall =
+  FunctionCall(
+    function: name
+  )
+
+proc callFunction*(name: string, ident: string): FunctionCall =
+  FunctionCall(
+    function: name,
+    ident: some(ident)
+  )
+
+proc callFunction*(name: string, field: FieldAccess): FunctionCall =
+  FunctionCall(
+    function: name,
+    field: some field
+  )
+
 {.pop.}
+
+proc normalizeIRName*(call: FunctionCall): string =
+  return normalizeIRName(call.function)
