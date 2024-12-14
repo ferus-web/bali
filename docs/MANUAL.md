@@ -168,7 +168,7 @@ Balde, short for "**Bal**i **de**bugger" is a CLI tool that acts both as a scrip
 ## Running Scripts
 Running a JavaScript source file is as simple as:
 ```command
-$ balde run path/to/your/file.js
+$ balde path/to/your/file.js
 ```
 
 ## Flags
@@ -178,14 +178,14 @@ Balde supports a few flags for easier debugging.
 This flag lets the runtime evaluate the AST for any errors, but does not allow for its execution. Instead, it prints out the AST instead. \
 This allows for semantic errors to be thrown out. If you want an immediate AST dump, use `--dump-no-eval`.
 ```command
-$ balde run path/to/your/file.js --dump-ast
+$ balde path/to/your/file.js --dump-ast
 <AST representation>
 ```
 
 ### `--dump-no-eval`
 This flag dumps the parsed representation (or AST) of the provided JavaScript source without any further evaluation. It also includes the parsing errors.
 ```command
-$ balde run path/to/your/file.js --dump-no-eval
+$ balde path/to/your/file.js --dump-no-eval
 <AST representation>
 ```
 
@@ -193,14 +193,14 @@ $ balde run path/to/your/file.js --dump-no-eval
 This flag allows all debug logs to be shown, which can be used to diagnose bugs in the engine's multiple phases (tokenization, parsing, bytecode generation and runtime). \
 Beware that this gets very spammy.
 ```command
-$ balde run path/to/your/file.js --verbose
+$ balde path/to/your/file.js --verbose
 <A boat load of logs>
 ```
 
 ### `--dump-tokens`
 This flag dumps all of the tokens of a JavaScript source file.
 ```command
-$ balde run path/to/your/file.js --dump-tokens
+$ balde path/to/your/file.js --dump-tokens
 ```
 
 ## Using the REPL

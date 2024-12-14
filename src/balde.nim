@@ -137,10 +137,7 @@ proc baldeRun(ctx: Input) =
   enableProfiler =
     ctx.enabled("enable-profiler", "P")
   
-  if ctx.arguments.len < 1:
-    die "`run` requires a file to evaluate."
-  
-  let arg = ctx.arguments[0]
+  let arg = ctx.command
   execFile(ctx, arg)
 
 proc baldeRepl(ctx: Input) =
@@ -218,6 +215,10 @@ proc main() {.inline.} =
   enableLogging()
   
   let input = parseInput()
+  if input.enabled("version", "V"):
+    echo Version
+    quit(0)
+
   if input.enabled("verbose", "v"):
     setLogFilter(lvlAll)
 
@@ -227,12 +228,11 @@ proc main() {.inline.} =
 
     baldeRepl(input)
     quit(0)
-
-  case input.command
-  of "run": baldeRun(input)
-  of "version": echo Version
+  
+  if input.command.len > 0:
+    baldeRun(input)
   else:
-    die "invalid command: " & input.command
+    baldeRepl(input)
 
   if enableProfiler:
     writeFile("balde_profiler.txt", toJson profile)
