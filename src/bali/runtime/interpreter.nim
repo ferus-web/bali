@@ -741,6 +741,7 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
       let idx = runtime.addrIdx
       runtime.markGlobal(typ.name)
       runtime.ir.loadObject(idx)
+      runtime.ir.markGlobal(idx)
       runtime.types[i].singletonId = idx
 
   for i, stmt in scope.stmts:
