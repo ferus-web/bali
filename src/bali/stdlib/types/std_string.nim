@@ -7,7 +7,10 @@ import bali/runtime/[arguments, bridge, atom_helpers, types]
 import bali/runtime/abstract/to_string
 import bali/internal/sugar
 import mirage/atom
-import pkg/kaleidoscope/search
+when defined(baliUseStdFind):
+  import std/strutils
+else:
+  import pkg/kaleidoscope/search
 import pretty
 
 type
