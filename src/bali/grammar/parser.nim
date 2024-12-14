@@ -60,6 +60,7 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
       curr = curr.next
 
     name = curr.identifier
+
     return some call(callFunction(name, access), arguments)
   else:
     return some call(name.callFunction, arguments)

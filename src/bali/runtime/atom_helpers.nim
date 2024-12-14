@@ -1,6 +1,6 @@
 ## Atom functions
 
-import std/tables
+import std/[options, tables]
 import bali/grammar/statement
 import mirage/atom
 
@@ -28,6 +28,13 @@ proc `[]=`*(atom: var MAtom, name: string, value: sink MAtom) {.inline.} =
     atom.objFields[name] = atom.objValues.len - 1
   else:
     atom.objValues[atom.objFields[name]] = move(value)
+
+proc contains*(atom: MAtom, name: string): bool {.inline.} =
+  atom.objFields.contains(name)
+
+proc tagged*(atom: MAtom, tag: string): Option[MAtom] {.inline.} =
+  if atom.contains('@' & tag):
+    return some atom['@' & tag]
 
 {.push inline.}
 func wrap*(val: SomeSignedInt | SomeUnsignedInt | string | float | bool): MAtom =
@@ -67,6 +74,9 @@ func wrap*(val: seq[MAtom]): MAtom =
 
 proc `[]=`*[T: not MAtom](atom: var MAtom, name: string, value: T) {.inline.} =
   atom[name] = wrap(value)
+
+proc tag*[T](atom: var MAtom, tag: string, value: T) {.inline.} =
+  atom['@' & tag] = value.wrap()
 {.pop.}
 
 func undefined*(): MAtom {.inline.} =

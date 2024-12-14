@@ -4,6 +4,7 @@ import mirage/ir/generator
 import bali/runtime/[atom_obj_variant, atom_helpers, types, normalize]
 import bali/stdlib/errors
 import bali/internal/sugar
+import pretty
 
 proc defineFn*[T](
     runtime: Runtime, prototype: typedesc[T], name: string, fn: NativeFunction
@@ -55,6 +56,16 @@ proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
   )
   runtime.ir.call(builtinName)
 
+proc definePrototypeFn*[T](runtime: Runtime, prototype: typedesc[T], name: string, fn: NativePrototypeFunction) =
+  runtime.vm.registerBuiltin(
+    name,
+    proc(_: Operation) =
+      fn(runtime.vm.registers.callArgs.pop())
+  )
+  for i, typ in runtime.types:
+    if typ.proto == hash($prototype):
+      runtime.types[i].prototypeFunctions[name] = fn
+
 proc createAtom*(typ: JSType): MAtom =
   var atom = obj()
 
@@ -63,6 +74,8 @@ proc createAtom*(typ: JSType): MAtom =
       let idx = atom.objValues.len
       atom.objValues &= undefined()
       atom.objFields[name] = idx
+  
+  atom.tag("bali_object_type", typ.proto.int)
 
   atom
 

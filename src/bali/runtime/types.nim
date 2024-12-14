@@ -10,6 +10,7 @@ import pretty
 
 type
   NativeFunction* = proc()
+  NativePrototypeFunction* = proc(value: MAtom)
 
   ValueKind* = enum
     vkGlobal
@@ -60,6 +61,7 @@ type
     name*: string
     constructor*: NativeFunction
     members*: Table[string, AtomOrFunction[NativeFunction]]
+    prototypeFunctions*: Table[string, NativePrototypeFunction] ## Functions inherited by each object that derives from this type
     singletonId*: uint
 
     proto*: Hash
@@ -99,6 +101,18 @@ proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
 
 proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =
   SemanticError(kind: UnknownIdentifier, unknown: identifier)
+
+proc getMethods*(runtime: Runtime, proto: Hash): Table[string, NativeFunction] {.inline.} =
+  for typ in runtime.types:
+    if typ.proto == proto:
+      print typ
+      var fns: Table[string, NativeFunction]
+      for name, member in typ.members:
+        if member.isFn: fns[name] = member.fn()
+
+      return fns
+  
+  raise newException(KeyError, "No such type with proto hash: " & $proto & " exists!")
 
 proc immutableReassignmentAttempt*(stmt: Statement): SemanticError {.inline.} =
   SemanticError(

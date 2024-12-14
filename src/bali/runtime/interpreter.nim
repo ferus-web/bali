@@ -282,10 +282,16 @@ proc generateIR*(
 
       runtime.ir.call(stmt.fn, args)
     else: ]#
-    let nam = if stmt.mangle: stmt.fn.normalizeIRName() else: stmt.fn
+    let nam = if stmt.mangle: stmt.fn.normalizeIRName() else: stmt.fn.function
     info "interpreter: generate IR for calling function: " & nam & (if stmt.mangle: " (mangled)" else: newString 0)
     runtime.expand(fn, stmt, internal)
 
+    if *stmt.fn.field:
+      var curr = &stmt.fn.field
+      while curr != nil:
+        runtime.ir.passArgument(runtime.index(curr.identifier, defaultParams(fn)))
+        curr = curr.next
+    
     for i, arg in stmt.arguments:
       case arg.kind
       of cakIdent:
@@ -864,6 +870,7 @@ proc run*(runtime: Runtime) =
   base64.generateStdIR(runtime)
   json.generateStdIR(runtime)
   encodeUri.generateStdIR(runtime)
+  std_string.generateStdIR(runtime)
   
   if runtime.opts.experiments.dateRoutines:
     date.generateStdIR(runtime)

@@ -1,8 +1,9 @@
-import std/[logging]
+import std/[logging, tables, hashes]
 import mirage/runtime/prelude
 import bali/internal/sugar
 import bali/runtime/[atom_helpers, types]
 import bali/stdlib/errors
+import pretty
 
 proc ToString*(runtime: Runtime, value: MAtom): string =
   ## 7.1.17 ToString ( argument )
@@ -20,6 +21,19 @@ proc ToString*(runtime: Runtime, value: MAtom): string =
       return "undefined"
     else:
       # 9. Assert: argument is an Object.
+      # FIXME: I don't think this is compliant...
+      print value
+      let typHash = cast[Hash](
+        &(
+          &value.tagged("bali_object_type")
+        ).getInt()
+      )
+      let meths = runtime.getMethods(typHash)
+      print meths
+
+      if meths.contains("toString"):
+        assert off
+      
       return "undefined" # FIXME: not implemented yet!
   of Null, Ident:
     debug "runtime: toString(): atom is null."
