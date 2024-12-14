@@ -102,16 +102,14 @@ proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
 proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =
   SemanticError(kind: UnknownIdentifier, unknown: identifier)
 
-proc getMethods*(runtime: Runtime, proto: Hash): Table[string, NativeFunction] {.inline.} =
+proc getMethods*(runtime: Runtime, proto: Hash): Table[string, NativePrototypeFunction] {.inline.} =
   for typ in runtime.types:
     if typ.proto == proto:
-      print typ
       var fns: Table[string, NativeFunction]
-      for name, member in typ.members:
-        if member.isFn: fns[name] = member.fn()
+      #for name, member in typ.members:
+      #  if member.isFn: fns[name] = member.fn()
+      return typ.prototypeFunctions
 
-      return fns
-  
   raise newException(KeyError, "No such type with proto hash: " & $proto & " exists!")
 
 proc immutableReassignmentAttempt*(stmt: Statement): SemanticError {.inline.} =

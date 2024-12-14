@@ -21,19 +21,17 @@ proc ToString*(runtime: Runtime, value: MAtom): string =
       return "undefined"
     else:
       # 9. Assert: argument is an Object.
-      # FIXME: I don't think this is compliant...
-      print value
+      #[# FIXME: I don't think this is compliant...
       let typHash = cast[Hash](
         &(
           &value.tagged("bali_object_type")
         ).getInt()
       )
       let meths = runtime.getMethods(typHash)
-      print meths
 
       if meths.contains("toString"):
-        assert off
-      
+        return &runtime.vm.registers.callArgs.pop().getStr()
+      else:]#
       return "undefined" # FIXME: not implemented yet!
   of Null, Ident:
     debug "runtime: toString(): atom is null."

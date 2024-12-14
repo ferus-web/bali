@@ -287,11 +287,8 @@ proc generateIR*(
     runtime.expand(fn, stmt, internal)
 
     if *stmt.fn.field:
-      var curr = &stmt.fn.field
-      while curr != nil:
-        runtime.ir.passArgument(runtime.index(curr.identifier, defaultParams(fn)))
-        curr = curr.next
-    
+      runtime.ir.passArgument(runtime.index((&stmt.fn.field).identifier, defaultParams(fn)))
+
     for i, arg in stmt.arguments:
       case arg.kind
       of cakIdent:
@@ -362,7 +359,6 @@ proc generateIR*(
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
     runtime.ir.resetArgs()
   of ReassignVal:
-    assert off
     let index = runtime.index(stmt.reIdentifier, defaultParams(fn))
     if runtime.verifyNotOccupied(stmt.reIdentifier, fn):
       runtime.semanticError(immutableReassignmentAttempt(stmt))

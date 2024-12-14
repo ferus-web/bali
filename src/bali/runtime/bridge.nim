@@ -60,7 +60,9 @@ proc definePrototypeFn*[T](runtime: Runtime, prototype: typedesc[T], name: strin
   runtime.vm.registerBuiltin(
     name,
     proc(_: Operation) =
-      fn(runtime.vm.registers.callArgs.pop())
+      let typ = runtime.vm.registers.callArgs[0]
+      runtime.vm.registers.callArgs.delete(0)
+      fn(typ)
   )
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
