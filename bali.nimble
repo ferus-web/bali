@@ -29,5 +29,5 @@ task fmt, "Format code":
 
 requires "noise >= 0.1.10"
 requires "fuzzy >= 0.1.0"
-
 requires "yaml >= 2.1.1"
+requires "https://github.com/xTrayambak/kaleidoscope >= 0.1.0"

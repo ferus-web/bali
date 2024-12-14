@@ -282,9 +282,12 @@ proc generateIR*(
 
       runtime.ir.call(stmt.fn, args)
     else: ]#
-    let nam = if stmt.mangle: stmt.fn.normalizeIRName() else: stmt.fn
+    let nam = if stmt.mangle: stmt.fn.normalizeIRName() else: stmt.fn.function
     info "interpreter: generate IR for calling function: " & nam & (if stmt.mangle: " (mangled)" else: newString 0)
     runtime.expand(fn, stmt, internal)
+
+    if *stmt.fn.field:
+      runtime.ir.passArgument(runtime.index((&stmt.fn.field).identifier, defaultParams(fn)))
 
     for i, arg in stmt.arguments:
       case arg.kind
@@ -356,7 +359,6 @@ proc generateIR*(
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
     runtime.ir.resetArgs()
   of ReassignVal:
-    assert off
     let index = runtime.index(stmt.reIdentifier, defaultParams(fn))
     if runtime.verifyNotOccupied(stmt.reIdentifier, fn):
       runtime.semanticError(immutableReassignmentAttempt(stmt))
@@ -864,6 +866,7 @@ proc run*(runtime: Runtime) =
   base64.generateStdIR(runtime)
   json.generateStdIR(runtime)
   encodeUri.generateStdIR(runtime)
+  std_string.generateStdIR(runtime)
   
   if runtime.opts.experiments.dateRoutines:
     date.generateStdIR(runtime)

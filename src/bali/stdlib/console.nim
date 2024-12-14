@@ -19,6 +19,7 @@ type
     Warn
 
   ConsoleDelegate* = proc(level: ConsoleLevel, msg: string)
+  JSConsole* = object
 
 const DefaultConsoleDelegate* = proc(level: ConsoleLevel, msg: string) =
   echo $level & ": " & msg
@@ -39,44 +40,51 @@ proc console(runtime: Runtime, level: ConsoleLevel) {.inline.} =
 
 proc consoleLogIR*(runtime: Runtime) =
   # generate binding interface
+  runtime.registerType(prototype = JSConsole, name = "console")
 
   # console.log
   # Perform Logger("log", data).
-  runtime.defineFn(
-    "console.log",
-    proc() =
+
+  runtime.definePrototypeFn(
+    JSConsole,
+    "log",
+    proc(_: MAtom) =
       console(runtime, ConsoleLevel.Log),
   )
 
   # console.warn
   # Perform Logger("warn", data).
-  runtime.defineFn(
-    "console.warn",
-    proc() =
+  runtime.definePrototypeFn(
+    JSConsole,
+    "warn",
+    proc(_: MAtom) =
       console(runtime, ConsoleLevel.Warn),
   )
 
   # console.info
   # Perform Logger("info", data).
-  runtime.defineFn(
-    "console.info",
-    proc() =
+  runtime.definePrototypeFn(
+    JSConsole,
+    "info",
+    proc(_: MAtom) =
       console(runtime, ConsoleLevel.Info),
   )
 
   # console.error
   # Perform Logger("error", data).
-  runtime.defineFn(
-    "console.error",
-    proc() =
+  runtime.definePrototypeFn(
+    JSConsole,
+    "error",
+    proc(_: MAtom) =
       console(runtime, ConsoleLevel.Error),
   )
 
   # console.debug
   # Perform Logger("debug", data).
-  runtime.defineFn(
-    "console.debug",
-    proc() =
+  runtime.definePrototypeFn(
+    JSConsole,
+    "debug",
+    proc(_: MAtom) =
       console(runtime, ConsoleLevel.Debug),
   )
 
