@@ -29,7 +29,7 @@ proc argument*(
 
       let msg = message.multiReplace({"{nargs}": $runtime.vm.registers.callArgs.len})
 
-      runtime.typeError(msg)
+      typeError(runtime, msg)
       return
     else:
       debug "runtime: argument(): `required` == false, ignoring and returning `undefined`"
