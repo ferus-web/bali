@@ -186,6 +186,16 @@ proc baldeRepl(ctx: Input) =
     of ".quit":
       discard noise.historySave(file)
       quit(0)
+    of ".help":
+      echo """
+.quit          - Quit the REPL
+.help          - Show this message
+.clear_history - Clear the REPL's history
+.dump_stack    - Dump the stack of the previous evaluation, if there was one.
+.dump_gc       - Dump Nim's GC statistics
+.express       - Express an atom from the stack address of a previous evaluation, if there was one.
+
+You can also just type in JavaScript expressions to evaluate them."""
     of ".clear_history":
       noise.historyClear()
     of ".dump_stack":
@@ -198,15 +208,38 @@ proc baldeRepl(ctx: Input) =
     of ".dump_gc":
       echo GC_getStatistics()
     else:
-      let parser = newParser(line)
-      let ast = parser.parse()
+      if line.startsWith(".express"):
+        if prevRuntime == nil:
+          echo "Nothing has been evaluated yet."
+          continue
 
-      if ast.errors.len > 0:
-        for error in ast.errors:
-          styledWriteLine(stdout, fgRed, "Parse Error", resetStyle, ": ", styleBright, error.message, resetStyle)
+        let args = line.split(' ')
+        if args.len < 2:
+          styledWriteLine(stdout, fgRed, ".express expects 1 argument!", resetStyle)
+          continue
+
+        let index = try:
+          parseUint(args[1])
+        except ValueError as exc:
+          styledWriteLine(stdout, fgRed, "could not parse index for .express", resetStyle, ": ", styleBright, exc.msg, resetStyle)
+          continue
+
+        if prevRuntime.vm.stack.contains(index):
+          print prevRuntime.vm.stack[index]
+        else:
+          echo "No value exists at index: " & $index & '\n' &
+              "Run .dump_stack to see all values."
+          continue
       else:
-        noise.historyAdd(line)
-        evaluateSource line
+        let parser = newParser(line)
+        let ast = parser.parse()
+
+        if ast.errors.len > 0:
+          for error in ast.errors:
+            styledWriteLine(stdout, fgRed, "Parse Error", resetStyle, ": ", styleBright, error.message, resetStyle)
+        else:
+          noise.historyAdd(line)
+          evaluateSource line
 
   when promptHistory:
     discard noise.historySave(file)

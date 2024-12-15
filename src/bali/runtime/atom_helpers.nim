@@ -3,6 +3,7 @@
 import std/[options, tables]
 import bali/grammar/statement
 import mirage/atom
+import pretty
 
 func isUndefined*(atom: MAtom): bool {.inline.} =
   atom.kind == Object and atom.objFields.len < 1
