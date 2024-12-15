@@ -5,8 +5,9 @@ mkShell {
     pkg-config
     simdutf
     gmp
-    nodejs_22
+    spidermonkey_128
     quickjs
+    boa
   ];
 
   LD_LIBRARY_PATH = lib.makeLibraryPath [
