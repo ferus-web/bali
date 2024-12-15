@@ -1,6 +1,6 @@
-var str = "     Hello World!       "
-console.log(str)
+var str = new String("     Hello World!       ")
+console.log(str.toString())
 
-str = str.trim()
+let x = str.trim()
 
-console.log(str)
+console.log(x)
