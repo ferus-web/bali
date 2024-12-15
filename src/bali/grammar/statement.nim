@@ -152,6 +152,16 @@ func hash*(access: FieldAccess): Hash {.inline.} =
 
 proc hash*(scope: Scope): Hash {.inline.}
 
+proc hash*(call: FunctionCall): Hash {.inline.} =
+  var hash: Hash
+  if *call.field:
+    hash = hash !& hash(&call.field)
+  
+  if *call.ident:
+    hash = hash !& hash(&call.ident)
+
+  hash
+
 proc hash*(stmt: Statement): Hash {.inline.} =
   var hash: Hash
 
