@@ -41,6 +41,7 @@ proc generateStdIr*(runtime: Runtime) =
     "toString",
     proc(value: MAtom) =
       let value = &value.tagged("internal")
+      debug "String.toString(): returning value: " & &getStr(value)
 
       ret value
   )
@@ -54,6 +55,8 @@ proc generateStdIr*(runtime: Runtime) =
 
       if !needle:
         ret 0
+
+      debug "String.indexOf(): value = \"" & runtime.ToString(value) & "\"; needle = \"" & runtime.ToString(&needle) & '"'
 
       ret find(runtime.ToString(value), runtime.ToString(&needle))
   )
