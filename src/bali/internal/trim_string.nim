@@ -43,7 +43,7 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
     
     substringLength -= seenWhitespaceLength
  
-  str[substringStart .. substringStart + substringLength]
+  str[substringStart ..< substringStart + substringLength - 1]
 
 proc trimString*(runtime: Runtime, input: MAtom, where: TrimMode): string =
   # 1. Let str be ? RequireObjectCoercible(string).
