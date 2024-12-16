@@ -7,7 +7,7 @@ import bali/runtime/[arguments, bridge, atom_helpers, types]
 import bali/runtime/abstract/to_string
 import bali/internal/[trim_string, sugar]
 import mirage/atom
-import pkg/kaleidoscope/[casings, search]
+import pkg/kaleidoscope/[search]
 import pretty
 
 type
@@ -116,7 +116,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc(value: MAtom) =
       let value = &value.tagged("internal")
 
-      ret casings.toLowerAscii(runtime.ToString(value))
+      ret strutils.toLowerAscii(runtime.ToString(value))
   )
 
   runtime.definePrototypeFn(
@@ -124,5 +124,5 @@ proc generateStdIr*(runtime: Runtime) =
     proc(value: MAtom) =
       let value = &value.tagged("internal")
 
-      ret casings.toUpperAscii(runtime.ToString(value))
+      ret strutils.toUpperAscii(runtime.ToString(value))
   )
