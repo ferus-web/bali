@@ -2,12 +2,12 @@
 ## Wraps around the Mirage atom
 ## Author(s):
 ## Trayambak Rai (xtrayambak at disroot dot org)
-import std/[logging, tables, hashes]
+import std/[logging, tables, strutils, hashes]
 import bali/runtime/[arguments, bridge, atom_helpers, types]
 import bali/runtime/abstract/to_string
 import bali/internal/[trim_string, sugar]
 import mirage/atom
-import std/strutils
+import pkg/kaleidoscope/[casings, search]
 import pretty
 
 type
@@ -55,7 +55,7 @@ proc generateStdIr*(runtime: Runtime) =
 
       debug "String.indexOf(): value = \"" & runtime.ToString(value) & "\"; needle = \"" & runtime.ToString(&needle) & '"'
 
-      ret find(runtime.ToString(value), runtime.ToString(&needle))
+      ret search.find(runtime.ToString(value), runtime.ToString(&needle))
   )
 
   runtime.definePrototypeFn(
@@ -116,7 +116,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc(value: MAtom) =
       let value = &value.tagged("internal")
 
-      ret toLowerAscii(runtime.ToString(value))
+      ret casings.toLowerAscii(runtime.ToString(value))
   )
 
   runtime.definePrototypeFn(
@@ -124,5 +124,5 @@ proc generateStdIr*(runtime: Runtime) =
     proc(value: MAtom) =
       let value = &value.tagged("internal")
 
-      ret toUpperAscii(runtime.ToString(value))
+      ret casings.toUpperAscii(runtime.ToString(value))
   )

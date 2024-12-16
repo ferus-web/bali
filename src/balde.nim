@@ -6,7 +6,7 @@
 when not isMainModule:
   {.error: "This file is not meant to be separately imported!".}
 
-import std/[strutils, terminal, times, tables, os, monotimes, logging]
+import std/[strutils, terminal, times, tables, os, options, monotimes, logging, json]
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/prelude
@@ -14,6 +14,12 @@ import bali/private/argparser
 import pkg/[colored_logger, jsony, pretty, noise, fuzzy]
 
 const Version {.strdefine: "NimblePkgVersion".} = "<version not defined>"
+
+type
+  DumpMode = enum
+    dmPretty
+    dmJson
+    dmJsonPretty
 
 var
   enableProfiler = false
@@ -74,6 +80,16 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
 
   runtime
 
+func `%`(t: tuple[str: Option[string], exc: Option[void], ident: Option[string]]): JsonNode =
+  if *t.str:
+    return newJString &t.str
+  
+  if *t.exc:
+    return "exception".newJString
+
+  if *t.ident:
+    return newJString &t.ident
+
 proc execFile(ctx: Input, file: string) {.inline.} =
   profileThis "execFile() sanity checks":
     if not fileExists(file):
@@ -125,7 +141,27 @@ proc execFile(ctx: Input, file: string) {.inline.} =
     runtime.run()
 
   if ctx.enabled("dump-ast"):
-    print ast
+    var rawMode = ctx.flag("dump-mode")
+    if !rawMode: rawMode = some("pretty")
+
+    let mode = case &rawMode
+    of "pretty": dmPretty
+    of "json": dmJson
+    of "json-pretty": dmJsonPretty
+    else:
+      die "invalid mode for dump-mode: " & &rawMode
+      dmPretty
+
+    case mode
+    of dmPretty: print ast # Pretty-print the AST
+    else: die "dump mode not implemented"
+    #[of dmJson:
+      # convert the AST to JSON using jsony
+      let serialized = toJson(ast)
+      echo serialized
+    of dmJsonPretty:
+      let serialized = pretty(parseJson(toJson(ast))) # FIXME: this is horribly inefficient but it works
+      echo serialized]#
 
   if ctx.enabled("dump-runtime-after-exec"):
     print runtime

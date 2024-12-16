@@ -146,7 +146,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   let typIdx = runtime.types.len - 1
 
   runtime.vm.registerBuiltin(
-    "BALI_CONSTRUCTOR_" & name.toUpperAscii(),
+    "BALI_CONSTRUCTOR_" & strutils.toUpperAscii(name),
     proc(_: Operation) =
       if runtime.types[typIdx].constructor == nil:
         runtime.typeError(runtime.types[typIdx].name & " is not a constructor")
