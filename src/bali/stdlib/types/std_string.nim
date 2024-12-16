@@ -10,7 +10,7 @@ import mirage/atom
 when defined(baliUseStdFind):
   import std/strutils
 else:
-  import pkg/kaleidoscope/search
+  import pkg/kaleidoscope/[casings, search]
 import pretty
 
 type
@@ -112,4 +112,20 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSString, "trimRight",
     trimEnd
+  )
+
+  runtime.definePrototypeFn(
+    JSString, "toLowerCase",
+    proc(value: MAtom) =
+      let value = &value.tagged("internal")
+
+      ret toLowerAscii(runtime.ToString(value))
+  )
+
+  runtime.definePrototypeFn(
+    JSString, "toUpperCase",
+    proc(value: MAtom) =
+      let value = &value.tagged("internal")
+
+      ret toUpperAscii(runtime.ToString(value))
   )
