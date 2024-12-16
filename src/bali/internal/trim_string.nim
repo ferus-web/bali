@@ -1,6 +1,4 @@
 ## TrimString( string, where )
-## Implemented according to the ECMAScript spec.
-## 
 
 import std/[strutils, logging]
 import mirage/runtime/prelude
@@ -44,8 +42,8 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
       return
     
     substringLength -= seenWhitespaceLength
-  
-  str[substringStart .. substringLength]
+ 
+  str[substringStart .. substringStart + substringLength]
 
 proc trimString*(runtime: Runtime, input: MAtom, where: TrimMode): string =
   # 1. Let str be ? RequireObjectCoercible(string).
