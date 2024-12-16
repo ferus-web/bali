@@ -28,9 +28,9 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
       if not things.contains(c):
         break
 
-      substringStart += 1
-      substringLength -= 1
-
+      inc substringStart
+      dec substringLength
+  
   if mode == TrimMode.Right or mode == TrimMode.Both:
     var seenWhitespaceLength = 0
 
@@ -42,10 +42,13 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
 
     if seenWhitespaceLength >= substringLength:
       return
-
+    
+    echo "wslen: " & $seenWhitespaceLength
     substringLength -= seenWhitespaceLength
-
-  str[substringStart ..< str.len]
+  
+  echo "start: " & $substringStart
+  echo "end: " & $substringLength
+  str[substringStart .. substringLength]
 
 proc trimString*(runtime: Runtime, input: MAtom, where: TrimMode): string =
   # 1. Let str be ? RequireObjectCoercible(string).

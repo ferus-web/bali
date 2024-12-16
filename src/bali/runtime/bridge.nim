@@ -1,4 +1,4 @@
-import std/[logging, strutils, tables, options, hashes]
+import std/[logging, tables, options, strutils, hashes]
 import mirage/runtime/prelude
 import mirage/ir/generator
 import bali/runtime/[atom_obj_variant, atom_helpers, types, normalize]
@@ -39,10 +39,16 @@ proc defineFn*[T](
 
 proc setProperty*[T](
     runtime: Runtime, prototype: typedesc[T], name: string, value: MAtom
-) =
+) {.inline.} =
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
       runtime.types[i].members[name] = initAtomOrFunction[NativeFunction](value)
+
+proc setProperty*[V: not MAtom, T](
+  runtime: Runtime,
+  prototype: typedesc[T], name: string, value: V
+) {.inline.} =
+  runtime.setProperty(prototype = prototype, name = name, value = value.wrap())
 
 proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
   ## Expose a native function to a JavaScript runtime.
@@ -60,7 +66,7 @@ proc definePrototypeFn*[T](runtime: Runtime, prototype: typedesc[T], name: strin
   runtime.vm.registerBuiltin(
     name,
     proc(_: Operation) =
-      let typ = runtime.vm.registers.callArgs[0]
+      let typ = deepCopy(runtime.vm.registers.callArgs[0])
       runtime.vm.registers.callArgs.delete(0)
       fn(typ)
   )
@@ -128,10 +134,10 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   var jsType: JSType
 
   for fname, fatom in prototype().fieldPairs:
-    if not fname.startsWith('@'):
-      jsType.members[fname] = initAtomOrFunction[NativeFunction](fatom.wrap())
-    else:
-      debug "runtime: registerType(): field name starts with at-the-rate (@); not exposing it to the JS runtime."
+    #if not fname.startsWith('@'):
+    jsType.members[fname] = initAtomOrFunction[NativeFunction](fatom.wrap())
+    #else:
+    #  debug "runtime: registerType(): field name starts with at-the-rate (@); not exposing it to the JS runtime."
   
   jsType.proto = hash($prototype)
   jsType.name = name

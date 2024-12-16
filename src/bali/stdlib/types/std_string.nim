@@ -7,10 +7,7 @@ import bali/runtime/[arguments, bridge, atom_helpers, types]
 import bali/runtime/abstract/to_string
 import bali/internal/[trim_string, sugar]
 import mirage/atom
-when defined(baliUseStdFind):
-  import std/strutils
-else:
-  import pkg/kaleidoscope/[casings, search]
+import std/strutils
 import pretty
 
 type
@@ -39,8 +36,8 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSString,
     "toString",
-    proc(value: MAtom) =
-      let value = &value.tagged("internal")
+    proc(str: MAtom) =
+      let value = &str.tagged("internal")
       debug "String.toString(): returning value: " & &getStr(value)
 
       ret value
