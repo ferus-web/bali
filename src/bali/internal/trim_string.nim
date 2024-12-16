@@ -43,11 +43,8 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
     if seenWhitespaceLength >= substringLength:
       return
     
-    echo "wslen: " & $seenWhitespaceLength
     substringLength -= seenWhitespaceLength
   
-  echo "start: " & $substringStart
-  echo "end: " & $substringLength
   str[substringStart .. substringLength]
 
 proc trimString*(runtime: Runtime, input: MAtom, where: TrimMode): string =

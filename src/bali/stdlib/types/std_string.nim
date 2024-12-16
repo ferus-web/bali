@@ -4,7 +4,7 @@
 ## Trayambak Rai (xtrayambak at disroot dot org)
 import std/[logging, tables, strutils, hashes]
 import bali/runtime/[arguments, bridge, atom_helpers, types]
-import bali/runtime/abstract/to_string
+import bali/runtime/abstract/[coercible, to_number, to_string]
 import bali/internal/[trim_string, sugar]
 import mirage/atom
 import pkg/kaleidoscope/[search]
@@ -47,15 +47,43 @@ proc generateStdIr*(runtime: Runtime) =
     JSString,
     "indexOf",
     proc(value: MAtom) =
-      let value = &value.tagged("internal")
-      let needle = runtime.argument(1)
+      ## 22.1.3.9 String.prototype.indexOf ( searchString [ , position ] )
+      ## If searchString appears as a substring of the result of converting this object to a String, at one or
+      ## more indices that are greater than or equal to position, then the smallest such index is returned;
+      ## otherwise, -1𝔽 is returned. If position is undefined, +0𝔽 is assumed, so as to search all of the
+      ## String.
 
-      if !needle:
-        ret 0
+      let
+        # 1. Let O be ? RequireObjectCoercible(this value)
+        # 2. Let S be ? ToString(O).
+        value = runtime.ToString(
+          runtime.RequireObjectCoercible(&value.tagged("internal"))
+        )
+        needle = runtime.argument(1)
+        position = runtime.argument(2)
+      
+      var searchStr: string
+      if *needle:
+        # 3. Let searchStr be ? ToString(searchString).
+        searchStr = runtime.ToString(&needle)
+      
+      # 4. Let pos be ? ToIntegerOrInfinity(position).
+      var pos: uint
+      if *position:
+        pos = runtime.ToNumber(&position).uint()
+      else:
+        # 5. Assert: If position is undefined, then pos is 0.
+        pos = 0'u
+  
+      let
+        # 6. Let len be the length of S
+        len = value.len.uint
 
-      debug "String.indexOf(): value = \"" & runtime.ToString(value) & "\"; needle = \"" & runtime.ToString(&needle) & '"'
+        # 7. Let start be the result of clamping pos between 0 and len.
+        start = clamp(pos, 0'u, len)
 
-      ret search.find(runtime.ToString(value), runtime.ToString(&needle))
+      # 8. Return 𝔽(StringIndexOf(S, searchStr, start)).
+      ret search.find(value[start ..< value.len], searchStr)
   )
 
   runtime.definePrototypeFn(
