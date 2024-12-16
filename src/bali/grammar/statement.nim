@@ -204,8 +204,8 @@ proc hash*(scope: Scope): Hash {.inline.} =
   if *scope.next:
     hash = hash(&scope.next)
 
-  if *scope.prev:
-    hash = hash(&scope.prev)
+  #if *scope.prev:
+  #  hash = hash(&scope.prev)
 
   hash
 
