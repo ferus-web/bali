@@ -13,6 +13,7 @@ This manual is largely inspired by Monoucha's manual. \
 * [Creating new types](#creating-new-types)
     - [Wrapping primitives](#wrapping-primitives)
     - [Wrapping our type](#wrapping-our-type)
+    - [Modifying our type's prototype](#modifying-our-prototype)
 * [Supported ECMAScript APIs](#supported-ecmascript-apis)
     - [The Math type](#the-math-type)
     - [The JSON type (Incomplete)](#the-json-type) 
@@ -128,12 +129,57 @@ runtime.setProperty(Person, "likes", sequence(@[
 ]))
 ```
 Here, we're exposing our `Person` type to the JavaScript environment by specifying what fields it has, and also setting those fields. \
-Unfortunately, for now, you have to manually wrap those fields as `setProperty` does not do it for you yet. \
 Now, you can easily just run this in your JS code:
 ```js
 console.log(Person.name) // Log: John Doe
 console.log(Person.age) // Log: 24
 console.log(Person.likes) // Log: [Skating, Tennis, Programming]
+```
+
+## Modifying our prototype
+Now, what if you wanted to add a function that can be called by every instance of your type? \
+In order to do that, you need to modify its **prototype**. Assume that we want multiple instances of the previously defined `Person` class to be possible. \
+We need to define a constructor for it.
+
+```nim
+runtime.defineConstructor(
+    "Person",
+    proc =
+      let
+        name = runtime.ToString(&runtime.argument(1), required = true, message = "Expected `name` argument at pos 1, got {nargs}")
+        age = runtime.ToNumber(&runtime.argument(2), required = true, message = "Expected `age` argument at pos 2, got {nargs}")
+      
+      let person = Person(name: name, age: age.uint)
+
+      ret person
+)
+```
+Now, we can call `new Person("John Doe", 24)` in JavaScript land and get an instance of the `Person` class! \
+Let us assume you want a `greet` function for all `Person`(s) that returns "<name> greets you back.". We can implement it like this.
+```nim
+runtime.definePrototypeFn(
+    Person,
+    "greet",
+    proc(value: MAtom) =
+      let 
+        name = runtime.ToString(value["name"])
+        age = runtime.ToNumber(value["age"])
+
+      echo name & " greets you back."
+)
+```
+Let us break that down, shall we?
+
+- `definePrototypeFn`, as the name suggests, sets up a function for a type's prototype. This prototype is copied to all of the instances of that type, and all of the child classes that derive from this one, and so on and so forth.
+- You might be wondering what `value` here is. It's actually the `Person` type we called `ret` on to pass it over to JS-land. It's now in the form of an atom, and unfortunately there's no way to easily turn it back into its original representation, atleast right now.
+
+Now, the following code should work fine:
+```js
+let john = new Person("John Doe", 23)
+let jane = new Person("Jane Doe", 28)
+
+john.greet()
+jane.greet()
 ```
 
 # Supported ECMAScript APIs
