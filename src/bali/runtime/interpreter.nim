@@ -327,8 +327,8 @@ proc generateIR*(
     else:
       runtime.ir.returnFn(runtime.index(&stmt.retIdent, defaultParams(fn)).int)
   of CallAndStoreResult:
-    runtime.markLocal(fn, stmt.storeIdent)
     runtime.generateIR(fn, stmt.storeFn)
+    runtime.markLocal(fn, stmt.storeIdent)
 
     let index = runtime.index(stmt.storeIdent, defaultParams(fn))
     debug "emitter: call-and-store result will be stored in ident \"" & stmt.storeIdent &
@@ -692,7 +692,11 @@ proc generateIR*(
       runtime.ir.call(normalizeIRName "console.log")
   of AccessArrayIndex:
     let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
-    let fieldIndex = runtime.loadIRAtom(stmt.arrAccIndex)
+    let fieldIndex = if *stmt.arrAccIndex:
+      runtime.loadIRAtom(&stmt.arrAccIndex)
+    elif *stmt.arrAccIdentIndex:
+      runtime.index(&stmt.arrAccIdentIndex, defaultParams(fn))
+    else: unreachable; 0
     
     runtime.ir.passArgument(atomIdx)
     runtime.ir.passArgument(fieldIndex)

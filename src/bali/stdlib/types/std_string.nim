@@ -87,6 +87,36 @@ proc generateStdIr*(runtime: Runtime) =
   )
 
   runtime.definePrototypeFn(
+    JSString, "concat",
+    proc(value: MAtom) =
+      ## 22.1.3.5 String.prototype.concat ( ...args )
+
+      # 1. Let O be ? RequireObjectCoercible(this value).
+      # 2. Let S be ? ToString(O).
+      let value = runtime.ToString(
+        runtime.RequireObjectCoercible(&value.tagged("internal"))
+      )
+      
+      # 3. Let R be S.
+      var res = value
+
+      # 4. For each element next of args, do
+      for i in 0 ..< runtime.argumentCount():
+        # a. Let nextString be ? ToString(next).
+        let nextString = runtime.ToString(
+          &runtime.argument(i + 1)
+        )
+
+        # b. Set R to the string-concatenation of R and nextString.
+        res &= nextString
+
+      # 5. Return R.
+      echo runtime.argumentcount
+      echo res
+      ret res
+  )
+
+  runtime.definePrototypeFn(
     JSString,
     "trim",
     proc(value: MAtom) =
