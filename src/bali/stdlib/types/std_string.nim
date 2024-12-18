@@ -111,8 +111,6 @@ proc generateStdIr*(runtime: Runtime) =
         res &= nextString
 
       # 5. Return R.
-      echo runtime.argumentcount
-      echo res
       ret res
   )
 

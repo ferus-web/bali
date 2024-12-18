@@ -10,6 +10,7 @@ var i = 0
 while (i < 4)
 {
 	let val = vals[i]
-	console.log(x.concat(val))
+	let cat = x.concat(val)
+	console.log(cat)
 	i++
 }

@@ -590,13 +590,12 @@ proc generateIR*(
     runtime.ir.copyAtom(runtime.index(stmt.cpImmutSourceIdent, defaultParams(fn)), dest)
   of WhileStmt:
     debug "emitter: generate IR for while loop"
-    when not defined(baliEmitterDontElideLoops):
-      if stmt.whStmtOnlyMutatesItsState(stmt.whBranch.getValueCaptures()):
-        debug "emitter: while loop only mutates its own state - eliding it away"
-        if runtime.optimizeAwayStateMutatorLoop(fn, stmt):
-          return  # we can fully skip creating all of the expensive comparison checks! :D
-        else:
-          warn "emitter: failed to elide state mutator loop :("
+    if runtime.opts.codegen.elideLoops and stmt.whStmtOnlyMutatesItsState(stmt.whBranch.getValueCaptures()):
+      debug "emitter: while loop only mutates its own state - eliding it away"
+      if runtime.optimizeAwayStateMutatorLoop(fn, stmt):
+        return  # we can fully skip creating all of the expensive comparison checks! :D
+      else:
+        debug "emitter: failed to elide state mutator loop :("
 
     runtime.expand(fn, stmt)
 

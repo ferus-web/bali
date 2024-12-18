@@ -52,7 +52,14 @@ proc die(msg: varargs[string]) {.inline, noReturn.} =
 proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runtime =
   let test262 = ctx.enabled("test262")
   var runtime = newRuntime(
-    file, ast, InterpreterOpts(test262: test262, dumpBytecode: ctx.enabled("dump-bytecode"), repl: repl)
+    file, ast, InterpreterOpts(
+      test262: test262,
+      dumpBytecode: ctx.enabled("dump-bytecode", "D"),
+      repl: repl,
+      codegen: CodegenOpts(
+        elideLoops: not ctx.enabled("disable-loop-elision")
+      )
+    )
   )
   let expStr = ctx.flag("enable-experiments")
 
@@ -107,7 +114,7 @@ proc execFile(ctx: Input, file: string) {.inline.} =
         die "failed to open file:", exc.msg
         ""
 
-  if ctx.enabled("dump-tokens"):
+  if ctx.enabled("dump-tokens", "T"):
     let excludeWs = ctx.enabled("no-whitespace")
     let tok = newTokenizer(source)
     while not tok.eof:
@@ -280,6 +287,31 @@ You can also just type in JavaScript expressions to evaluate them."""
   when promptHistory:
     discard noise.historySave(file)
 
+proc showHelp {.noReturn.} =
+  let name = getAppFilename().splitPath().tail
+  echo """
+Usage: $1 [options] [script]
+
+  The Bali Debugger provides a command line interface to the Bali JavaScript engine.
+  If no files are provided for execution, then Balde starts a read-eval-print-loop (REPL)
+  session.
+
+Version: $2
+
+Options:
+  --help, -h                              Show this message.
+  --verbose, -v                           Show additional debug logs, useful for debugging the engine.
+  --dump-bytecode, -D                     Dump bytecode for the next evaluation.
+  --dump-tokens, -T                       Dump tokens for the provided file.
+  --dump-ast                              Dump the abstract syntax tree for the JavaScript file.
+  --dump-no-eval                          Dump the abstract syntax tree for the JavaScript file, bypassing the IR generation phase entirely.
+  --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
+  --enable-experiments:<a>;<b>; ... <z>   Enable certain experimental features that aren't stable yet.
+""" % [
+  name, Version
+  ]
+  quit(0)
+
 proc main() {.inline.} =
   enableLogging()
   
@@ -290,6 +322,9 @@ proc main() {.inline.} =
 
   if input.enabled("verbose", "v"):
     setLogFilter(lvlAll)
+
+  if input.enabled("help", "h"):
+    showHelp()
 
   if input.command.len < 1:
     if not input.enabled("verbose", "v"):

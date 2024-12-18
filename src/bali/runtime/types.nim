@@ -50,11 +50,15 @@ type
   ExperimentOpts* = object
     dateRoutines*: bool
 
+  CodegenOpts* = object
+    elideLoops*: bool = true
+
   InterpreterOpts* = object
     test262*: bool = false
     repl*: bool = false
     dumpBytecode*: bool = false
-
+    
+    codegen*: CodegenOpts
     experiments*: ExperimentOpts
 
   JSType* = object
