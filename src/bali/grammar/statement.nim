@@ -145,7 +145,8 @@ type
     of Break: discard
     of AccessArrayIndex:
       arrAccIdent*: string
-      arrAccIndex*: MAtom
+      arrAccIndex*: Option[MAtom]
+      arrAccIdentIndex*: Option[string]
 
 func hash*(access: FieldAccess): Hash {.inline.} =
   hash((access.identifier))
@@ -267,7 +268,10 @@ proc increment*(ident: string): Statement =
   Statement(kind: Increment, incIdent: ident)
 
 proc arrayAccess*(ident: string, index: MAtom): Statement =
-  Statement(kind: AccessArrayIndex, arrAccIdent: ident, arrAccIndex: index)
+  Statement(kind: AccessArrayIndex, arrAccIdent: ident, arrAccIndex: index.some)
+
+proc arrayAccess*(ident: string, index: string): Statement =
+  Statement(kind: AccessArrayIndex, arrAccIdent: ident, arrAccIdentIndex: index.some)
 
 proc decrement*(ident: string): Statement =
   Statement(kind: Decrement, decIdent: ident)

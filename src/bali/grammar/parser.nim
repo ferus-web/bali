@@ -323,21 +323,32 @@ proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
-  if (let indexToken = parser.tokenizer.nextExceptWhitespace(); *indexToken):
-    let
-      token = &indexToken
-      atom = parser.parseAtom(token)
-
-    if !atom:
-      parser.error UnexpectedToken, "expected expression, got " & $token.kind
-    
+  template checkForRBracket =
     let closing = parser.tokenizer.nextExceptWhitespace()
     if !closing or (&closing).kind != TokenKind.RBracket:
       parser.error Other, "missing ] in index expression"
 
-    return some(
-      arrayAccess(ident, &atom)
-    )
+  if (let indexToken = parser.tokenizer.nextExceptWhitespace(); *indexToken):
+    let
+      token = &indexToken
+      cTok = deepCopy(parser.tokenizer)
+      atom = parser.parseAtom(token)
+
+    if !atom:
+      parser.tokenizer = cTok
+    else:
+      checkForRBracket
+      return some(arrayAccess(ident, &atom))
+      # parser.error UnexpectedToken, "expected expression, got " & $token.kind
+    
+    checkForRBracket
+
+    case token.kind
+    of TokenKind.Identifier:
+      return some(arrayAccess(ident, token.ident))
+    else:
+      # TODO: Get field accesses via strings inside array index expressions working
+      parser.error UnexpectedToken, "expected identifier or numeric, got " & $token.kind
   else:
     parser.error Other, "expected expression, got EOF"
 
@@ -626,7 +637,8 @@ proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
   of TokenKind.LBracket:
     return parser.parseArray()
   else:
-    parser.error UnexpectedToken, "expected value, got " & $token.kind & " instead."
+    return
+    # parser.error UnexpectedToken, "expected value, got " & $token.kind & " instead."
 
 proc parseArguments*(parser: Parser): Option[PositionedArguments] =
   info "parser: parse arguments for function call"
