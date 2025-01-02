@@ -10,7 +10,8 @@ var i = 0
 while (i < 4)
 {
 	let val = vals[i]
-	let cat = x.concat(val)
+	let valStr = new String(val)
+	let cat = x.concat(valStr)
 	console.log(cat)
 	i++
 }

@@ -87,6 +87,12 @@ proc createAtom*(typ: JSType): MAtom =
 
   atom
 
+proc getTypeFromName*(runtime: Runtime, name: string): Option[JSType] =
+  ## Returns a registered JS type based on its name, if it exists.
+  for typ in runtime.types:
+    if typ.name == name:
+      return some(typ)
+
 proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): MAtom =
   for etyp in runtime.types:
     if etyp.proto == hash($typ):

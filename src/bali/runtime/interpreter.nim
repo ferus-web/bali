@@ -269,25 +269,33 @@ proc generateIR*(
       assert *ownerStmt
       runtime.markInternal(&ownerStmt, stmt.mutIdentifier)
   of Call:
-    #[if runtime.vm.hasBuiltin(stmt.fn):
-      info "interpreter: generate IR for calling builtin: " & stmt.fn
-      let args = (
-        proc(): seq[MAtom] =
-          var x: seq[MAtom]
-          for arg in stmt.arguments:
-            x &= uinteger runtime.index(arg.ident, defaultParams(fn))
+    var nam = if stmt.mangle:
+      stmt.fn.normalizeIRName()
+    else: 
+      stmt.fn.function
 
-          x
-      )()
-
-      runtime.ir.call(stmt.fn, args)
-    else: ]#
-    let nam = if stmt.mangle: stmt.fn.normalizeIRName() else: stmt.fn.function
     info "interpreter: generate IR for calling function: " & nam & (if stmt.mangle: " (mangled)" else: newString 0)
     runtime.expand(fn, stmt, internal)
 
+
     if *stmt.fn.field:
-      runtime.ir.passArgument(runtime.index((&stmt.fn.field).identifier, defaultParams(fn)))
+      let typName = block:
+        var curr = &stmt.fn.field
+        while true:
+          if curr.prev == nil:
+            break
+
+          curr = curr.prev
+
+        curr.identifier
+
+      let typ = runtime.getTypeFromName(typName)
+      
+      if *typ:
+        nam =
+          "BALI_" & toUpperAscii(typName) & '_' & toUpperAscii(stmt.fn.function.normalizeIRName())
+      else:
+        runtime.ir.passArgument(runtime.index((&stmt.fn.field).identifier, defaultParams(fn)))
 
     for i, arg in stmt.arguments:
       case arg.kind
@@ -905,7 +913,7 @@ proc run*(runtime: Runtime) =
   else:
     echo source
     quit(0)
-
+  
   debug "interpreter: begin VM analyzer"
   runtime.vm.analyze()
 

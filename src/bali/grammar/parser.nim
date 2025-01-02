@@ -870,7 +870,7 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
 
   if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
     if (&tok).kind != TokenKind.RParen:
-      parser.error Other, "expected right parenthesis after expression"
+      parser.error Other, "expected right parenthesis after expression, got " & $(&tok).kind
 
   debug "parser: whilst parsing expression in parenthesis wrap: grammar was satisfied, returning expression"
 

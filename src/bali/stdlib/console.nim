@@ -45,46 +45,46 @@ proc consoleLogIR*(runtime: Runtime) =
   # console.log
   # Perform Logger("log", data).
 
-  runtime.definePrototypeFn(
+  runtime.defineFn(
     JSConsole,
     "log",
-    proc(_: MAtom) =
+    proc =
       console(runtime, ConsoleLevel.Log),
   )
 
   # console.warn
   # Perform Logger("warn", data).
-  runtime.definePrototypeFn(
+  runtime.defineFn(
     JSConsole,
     "warn",
-    proc(_: MAtom) =
+    proc =
       console(runtime, ConsoleLevel.Warn),
   )
 
   # console.info
   # Perform Logger("info", data).
-  runtime.definePrototypeFn(
+  runtime.defineFn(
     JSConsole,
     "info",
-    proc(_: MAtom) =
+    proc =
       console(runtime, ConsoleLevel.Info),
   )
 
   # console.error
   # Perform Logger("error", data).
-  runtime.definePrototypeFn(
+  runtime.defineFn(
     JSConsole,
     "error",
-    proc(_: MAtom) =
+    proc =
       console(runtime, ConsoleLevel.Error),
   )
 
   # console.debug
   # Perform Logger("debug", data).
-  runtime.definePrototypeFn(
+  runtime.defineFn(
     JSConsole,
     "debug",
-    proc(_: MAtom) =
+    proc =
       console(runtime, ConsoleLevel.Debug),
   )
 
