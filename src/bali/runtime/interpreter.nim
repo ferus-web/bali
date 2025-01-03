@@ -7,7 +7,7 @@ import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/[normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils, bridge]
-import bali/runtime/optimize/[mutator_loops]
+import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/stdlib/prelude
 import crunchy, pretty
 
@@ -615,6 +615,12 @@ proc generateIR*(
       unreachable
       0
     
+    let allocElimResult: Option[AllocationEliminatorResult] =
+      if runtime.opts.codegen.loopAllocationEliminator:
+        runtime.eliminateRedundantLoopAllocations(stmt.whBranch).some
+      else:
+        none(AllocationEliminatorResult)
+
     let
       lhsIdx =
         case stmt.whConditionExpr.binLeft.kind
@@ -639,6 +645,10 @@ proc generateIR*(
         else:
           unreachable
           0
+    
+    if *allocElimResult:
+      let placeBefore = (&allocElimResult).placeBefore
+      runtime.generateIRForScope(placeBefore)
 
     let jmpIntoComparison = getCurrOpNum()
     case stmt.whConditionExpr.op
@@ -663,8 +673,13 @@ proc generateIR*(
         # if it is modified, it'll likely point to wherever `escapeJump` points to
     
     let jmpIntoBody = getCurrOpNum()
+    
+    # generate the body of the loop
+    if !allocElimResult:
+      runtime.generateIRForScope(stmt.whBranch) 
+    else:
+      runtime.generateIRForScope((&allocElimResult).modifiedBody)
 
-    runtime.generateIRForScope(stmt.whBranch) # generate the body of the loop
     runtime.ir.jump(jmpIntoComparison.uint) # jump back to the comparison logic
 
     let jmpPastBody = getCurrOpNum()
