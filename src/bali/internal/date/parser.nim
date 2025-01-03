@@ -2,7 +2,6 @@
 ## Mostly based off of Ladybird/LibJS's implementation
 
 import std/[logging, options, strutils, times]
-import bali/internal/date/types
 import bali/internal/[generic_lexer, trim_string, sugar]
 
 const
