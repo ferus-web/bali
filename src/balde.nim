@@ -57,7 +57,8 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
       dumpBytecode: ctx.enabled("dump-bytecode", "D"),
       repl: repl,
       codegen: CodegenOpts(
-        elideLoops: not ctx.enabled("disable-loop-elision")
+        elideLoops: not ctx.enabled("disable-loop-elision"),
+        loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim")
       )
     )
   )
@@ -305,8 +306,11 @@ Options:
   --dump-tokens, -T                       Dump tokens for the provided file.
   --dump-ast                              Dump the abstract syntax tree for the JavaScript file.
   --dump-no-eval                          Dump the abstract syntax tree for the JavaScript file, bypassing the IR generation phase entirely.
-  --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
   --enable-experiments:<a>;<b>; ... <z>   Enable certain experimental features that aren't stable yet.
+
+Codegen Flags:
+  --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
+  --disable-loop-allocation-elim          Don't attempt to rewrite loops to avoid unnecessary atom allocations
 """ % [
   name, Version
   ]

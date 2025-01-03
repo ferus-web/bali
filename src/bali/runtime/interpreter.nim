@@ -7,7 +7,7 @@ import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/[normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils, bridge]
-import bali/runtime/optimize/[mutator_loops]
+import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/stdlib/prelude
 import crunchy, pretty
 
@@ -225,7 +225,7 @@ proc resolveFieldAccess*(
 
   accessResult
 
-proc generateIRForScope*(runtime: Runtime, scope: Scope)
+proc generateIRForScope*(runtime: Runtime, scope: Scope, allocateConstants: bool = true)
 
 proc generateIR*(
     runtime: Runtime,
@@ -562,12 +562,12 @@ proc generateIR*(
       unreachable
       0
 
-    runtime.generateIRForScope(stmt.branchTrue) # generate branch one
+    runtime.generateIRForScope(stmt.branchTrue, allocateConstants = false) # generate branch one
     let skipBranchTwoJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
       # jump beyond branch two, don't accidentally execute it
     let endOfBranchOne = getCurrOpNum().uint
 
-    runtime.generateIRForScope(stmt.branchFalse) # generate branch two
+    runtime.generateIRForScope(stmt.branchFalse, allocateConstants = false) # generate branch two
     let endOfBranchTwo = getCurrOpNum().uint
     runtime.ir.overrideArgs(skipBranchTwoJmp, @[uinteger(endOfBranchTwo)])
 
@@ -615,6 +615,12 @@ proc generateIR*(
       unreachable
       0
     
+    let allocElimResult: Option[AllocationEliminatorResult] =
+      if runtime.opts.codegen.loopAllocationEliminator:
+        runtime.eliminateRedundantLoopAllocations(stmt.whBranch).some
+      else:
+        none(AllocationEliminatorResult)
+
     let
       lhsIdx =
         case stmt.whConditionExpr.binLeft.kind
@@ -639,6 +645,10 @@ proc generateIR*(
         else:
           unreachable
           0
+    
+    if *allocElimResult:
+      let placeBefore = (&allocElimResult).placeBefore
+      runtime.generateIRForScope(placeBefore, allocateConstants = false)
 
     let jmpIntoComparison = getCurrOpNum()
     case stmt.whConditionExpr.op
@@ -663,8 +673,13 @@ proc generateIR*(
         # if it is modified, it'll likely point to wherever `escapeJump` points to
     
     let jmpIntoBody = getCurrOpNum()
+    
+    # generate the body of the loop
+    if !allocElimResult:
+      runtime.generateIRForScope(stmt.whBranch, allocateConstants = false) 
+    else:
+      runtime.generateIRForScope((&allocElimResult).modifiedBody, allocateConstants = false)
 
-    runtime.generateIRForScope(stmt.whBranch) # generate the body of the loop
     runtime.ir.jump(jmpIntoComparison.uint) # jump back to the comparison logic
 
     let jmpPastBody = getCurrOpNum()
@@ -722,7 +737,7 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
     )
     runtime.ir.resetArgs() # reset the call param register
 
-proc generateIRForScope*(runtime: Runtime, scope: Scope) =
+proc generateIRForScope*(runtime: Runtime, scope: Scope, allocateConstants: bool = true) =
   let
     fn =
       try:
@@ -745,15 +760,16 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope) =
   if name != "outer":
     runtime.loadArgumentsOntoStack(fn)
   else:
-    constants.generateStdIr(runtime)
-    inc runtime.addrIdx
+    if allocateConstants:
+      constants.generateStdIr(runtime)
+      inc runtime.addrIdx
 
-    for i, typ in runtime.types:
-      let idx = runtime.addrIdx
-      runtime.markGlobal(typ.name)
-      runtime.ir.loadObject(idx)
-      runtime.ir.markGlobal(idx)
-      runtime.types[i].singletonId = idx
+      for i, typ in runtime.types:
+        let idx = runtime.addrIdx
+        runtime.markGlobal(typ.name)
+        runtime.ir.loadObject(idx)
+        runtime.ir.markGlobal(idx)
+        runtime.types[i].singletonId = idx
 
   for i, stmt in scope.stmts:
     runtime.generateIR(fn, stmt, index = i.uint.some)

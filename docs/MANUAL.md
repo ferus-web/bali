@@ -23,6 +23,11 @@ This manual is largely inspired by Monoucha's manual. \
     - [Flags](#flags)
     - [Using the REPL](#using-the-repl)
     - [Experiments](#experiments)
+* [Controlling Codegen](#controlling-codegen)
+    - [Prelude](#prelude)
+    - [Loop Elision](#loop-elision)
+    - [Loop Allocation Elision](#loop-allocation-elision)
+    - [Disabling optimizations](#disabling-optimizations)
 
 # Introduction
 Bali is a JavaScript engine written from scratch in Nim for the [Ferus web engine](https://github.com/ferus-web/ferus). It is designed to be convenient to interface with whilst being fast and compliant. It provides you high-level abstractions as far as humanly possible.
@@ -262,3 +267,91 @@ Experiments are unstable Bali features that are locked behind an interpreter fla
 
 ### Current Experiments
 - Date Routines (internal name: `date-routines`): Provides access to some of the JavaScript `Date` API.
+
+## Controlling Codegen
+Bali exposes some levers to turn on/off some code generation features. This features help Bali emit faster bytecode by skipping certain expensive portions of the provided JS source into code that does roughly the same thing.
+
+If the optimized code does not perform the same behaviour as the unoptimized code, that is a bug. You should probably report it to me after you're 100% sure that it isn't a problem on your part.
+
+### Prelude
+Bali exposes two code generation optimizations as of right now:
+- Loop Elider
+- Loop Allocation Eliminator
+
+### Loop Elision
+Say, we have some code like this (this is very stupid, most people don't write code like this):
+```js
+var i = 0
+while (i < 999999)
+{
+    i++
+}
+```
+
+Bali can successfully prove that the while-loop only exists to modify the loop's state controller (`i`) in a particular way (increment it in this case) \
+Bali now knows that there is not a need to:
+* Waste storage space by generating code for a loop
+* Waste CPU cycles by iterating 999999 times
+As such, it can compute the result that will be stored at the end in the `i` variable and turns the code into the rough equivalent of this:
+```js
+var i = 999999
+```
+This also works for decrements, as intended.
+
+There are a few cases where the loop elision will correctly fallback and actually generate the loop's code if it detects that a loop does more than mutate its own state.
+```js
+var i = 0
+while (i < 999999)
+{
+    i++ // This is fine.
+    console.log(i) // Woops: we can't elide that loop now!
+}
+```
+Now, it realizes that it has to actually generate the loop. Loop elision makes Bali _really_ fast against other JavaScript engines for very specifically cherry picked benchmarks, but serves next to no real-world usage. Yet.
+
+### Loop Allocation Elimination
+Say, we have some code like this (this actually happens in a lot of places):
+```js
+while (true)
+{
+  let x = "Programming se me utsahit hota hun. Me vyavsaik programmer hun, aur tum ise idhar dekh sakte ho. Ye mera kaushal he."
+  console.log(x)
+}
+```
+AFAIK, other JavaScript engines like V8 and SpiderMonkey have an internal string interning "cache" to prevent allocating the same string again and again. \
+Bali takes a different approach, because why not?
+
+Before a loop is about to be generated, Bali runs an optimization pass over the body to check if any allocations can be moved outside the loop's body.
+The aforementioned code sample, hence, would be converted into this:
+```js
+let x = "Programming se me utsahit hota hun. Me vyavsaik programmer hun, aur tum ise idhar dekh sakte ho. Ye mera kaushal he."
+
+while (true)
+{
+  console.log(x)
+}
+```
+
+This prevents unnecessary allocations. Yay.
+
+### Disabling Optimizations
+If you don't want the bytecode generator to spend time optimizing code (you're 100% sure you've written very neat code that will always make your CPU happy or something) or the bytecode generator ends up performing optimization incorrectly (rare, but if it occurs, please file a bug report), then you can disable codegen optimizations.
+
+#### Disabling Optimizations in Balde
+Balde exposes the following two flags to control optimizations:
+* --disable-loop-elision
+* --disable-loop-allocation-elim
+
+#### Disabling Optimizations in Nim code
+When instantiating the `Runtime`, you can pass an `InterpreterOpts` struct containing a `CodegenOpts` struct.
+```nim
+var runtime = newRuntime(
+  fileName, ast, 
+  InterpreterOpts(
+    codegen: CodegenOpts(
+      elideLoops: false,
+      loopAllocationEliminator: false
+    )
+  )
+)
+```
