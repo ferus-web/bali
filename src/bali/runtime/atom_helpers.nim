@@ -14,6 +14,10 @@ func isObject*(atom: MAtom): bool {.inline.} =
 func isNull*(atom: MAtom): bool {.inline.} =
   atom.kind == Null
 
+func isNumber*(atom: MAtom): bool {.inline.} =
+  atom.kind == UnsignedInt or
+  atom.kind == Integer
+
 proc `[]`*(atom: MAtom, name: string): MAtom {.inline.} =
   if atom.kind != Object:
     raise newException(ValueError, $atom.kind & " does not have field access methods")

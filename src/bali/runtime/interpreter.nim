@@ -828,6 +828,9 @@ proc generateInternalIR*(runtime: Runtime) =
       if atom.isUndefined():
         runtime.typeError("value is undefined")
 
+      if atom.isNull():
+        runtime.typeError("value is null")
+
       if atom.kind != Object:
         debug "runtime: atom is not an object, returning undefined."
         runtime.vm.addAtom(obj(), storeAt)
