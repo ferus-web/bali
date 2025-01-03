@@ -15,6 +15,12 @@ func `*`*[T, E](opt: Result[T, E]): bool =
 
 func `!`*[T, E](opt: Result[T, E]): bool =
   opt.isErr
+
+func `&|`*[T](opt: Option[T], fallback: T): T {.inline.} =
+  if opt.isSome:
+    return opt.unsafeGet()
+
+  fallback
 {.pop.}
 
 func `&`*[T](opt: Option[T]): T {.inline.} =
