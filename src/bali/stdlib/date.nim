@@ -8,6 +8,7 @@ import bali/stdlib/errors
 import mirage/atom
 import bali/runtime/[normalize, atom_helpers, arguments, types, bridge]
 import bali/runtime/abstract/coercion
+import bali/internal/date/parser
 
 ## 21.4.1.1 Time Values and Time Range
 ## Time measurement in ECMAScript is analogous to time measurement in POSIX, in particular sharing definition in terms of the proleptic Gregorian calendar, an epoch of midnight at the beginning of 1 January 1970 UTC, and an accounting of every day as comprising exactly 86,400 seconds (each of which is 1000 milliseconds long).
@@ -18,8 +19,22 @@ import bali/runtime/abstract/coercion
 
 type
   JSDate* = object
-    `@epoch`*: int64
+    `@epoch`*: float
     `@invalid`*: bool = false
+
+proc parseDateString(runtime: Runtime, dateString: string): float =
+  if dateString.len < 1:
+    return NaN
+
+  if (let time = parseSimplifiedISO8601(dateString); *time):
+    return &time
+  
+  warn "date: TODO: implementation-specific date formats are not supported"
+  # TODO: Implement implementation-specific formats. For instance,
+  #       Firefox and Chrome support "DD/MM/YYYY HH:mm AM/PM +TZ"
+  #       The spec isn't very clear on this, so it's best to implement
+  #       only a few of these.
+  NaN
 
 proc generateStdIR*(runtime: Runtime) =
   info "date: generating IR interfaces"
@@ -28,19 +43,35 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.defineConstructor(
     "Date",
     proc =
-      var epoch = inNanoseconds(cast[Duration](getTime()))
-      var date: JSDate
-      let value = runtime.argument(1)
-
-      if *value:
-        let atom = &value
-        case atom.kind
-        of Integer:
-          date.`@epoch` = epoch
+      var dateValue: float
+      
+      # 2. Let numberOfArgs be the number of elements in values.
+      # 3. If numberOfArgs = 0, then
+      if runtime.argumentCount() == 0:
+        # a. Let dv be SystemUTCEpochMilliseconds().
+        # FIXME: I think this is... wrong.
+        dateValue = float(
+          cast[Duration](
+            getTime().inZone(
+              utc()
+            ).toTime()
+          ).inMilliseconds()
+        )
+      # 4. Else if numberOfArgs = 1, then
+      elif runtime.argumentCount() == 1:
+        # a. Let value be values[0].
+        let value = &runtime.argument(1, required = true)
+        
+        # FIXME: uncompliant.
+        case value.kind
         of String:
-          runtime.typeError("Date constructor does not parse dates yet.")
+          dateValue = runtime.parseDateString(&value.getStr())
         else:
-          date.`@invalid` = true
+          dateValue = runtime.ToNumber(value)
+      
+      ret JSDate(
+        `@epoch`: dateValue
+      )
   )
 
   runtime.defineFn(
@@ -55,4 +86,16 @@ proc generateStdIR*(runtime: Runtime) =
           nowNs / 1000000
         )
       )
+  )
+
+  runtime.defineFn(
+    JSDate,
+    "parse",
+    proc =
+      if runtime.argumentCount() < 1:
+        ret NaN
+
+      let dateString = runtime.ToString(&runtime.argument(1))
+
+      ret runtime.parseDateString(dateString)
   )

@@ -18,7 +18,6 @@ func consume*(lexer: var GenericLexer): char =
   
   inc lexer.bufpos
   result = lexer.buf[lexer.bufpos - 1]
-  result.debugecho
 
 func consumeSpecific*(lexer: var GenericLexer, c: char): bool {.inline.} =
   if lexer.consume() == c:
