@@ -48,7 +48,6 @@ type
       imNewValue*: MAtom
   
   ExperimentOpts* = object
-    dateRoutines*: bool
 
   CodegenOpts* = object
     elideLoops*: bool = true
@@ -96,7 +95,6 @@ type
 
 proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
   case name
-  of "date-routines": opts.dateRoutines = value
   else:
     warn "Unrecognized experiment \"" & name & "\"!"
     return false

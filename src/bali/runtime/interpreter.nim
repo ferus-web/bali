@@ -898,9 +898,7 @@ proc run*(runtime: Runtime) =
   json.generateStdIR(runtime)
   encodeUri.generateStdIR(runtime)
   std_string.generateStdIR(runtime)
-  
-  if runtime.opts.experiments.dateRoutines:
-    date.generateStdIR(runtime)
+  date.generateStdIR(runtime)
 
   parseIntGenerateStdIR(runtime)
 

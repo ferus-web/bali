@@ -266,7 +266,7 @@ Experiments are unstable Bali features that are locked behind an interpreter fla
 ```
 
 ### Current Experiments
-- Date Routines (internal name: `date-routines`): Provides access to some of the JavaScript `Date` API.
+There are currently no active experimental features.
 
 ## Controlling Codegen
 Bali exposes some levers to turn on/off some code generation features. This features help Bali emit faster bytecode by skipping certain expensive portions of the provided JS source into code that does roughly the same thing.
