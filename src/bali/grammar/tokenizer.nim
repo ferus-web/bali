@@ -1,5 +1,4 @@
 ## JavaScript tokenizer
-##
 
 import std/[math, options, logging, strutils, tables, unicode]
 import bali/grammar/token

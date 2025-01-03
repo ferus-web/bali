@@ -194,6 +194,9 @@ proc parseExpression*(
       else:
         debug "parser: boolean will fill right term"
         term.binRight = atomHolder(boolean(false))
+    of TokenKind.Comment:
+      debug "parser: whilst parsing arithmetic expr, found comment - ignoring"
+      discard
     else:
       debug "parser: met unexpected token " & $next.kind &
         " during tokenization, marking expression parse as failed"
@@ -303,6 +306,10 @@ proc parseArray*(parser: Parser): Option[MAtom] =
         prev = TokenKind.Comma
 
       continue
+
+    if token.kind == TokenKind.Comment:
+      debug "parser: found comment whilst parsing array elements"
+      continue
     
     let atom = parser.parseAtom(token)
     if !atom:
@@ -323,10 +330,20 @@ proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
-  template checkForRBracket =
+  template missingRBracket =
+    parser.error Other, "missing ] in index expression"
+    return false
+
+  proc checkForRBracket: bool =
+    # Returns a parsing error 
     let closing = parser.tokenizer.nextExceptWhitespace()
-    if !closing or (&closing).kind != TokenKind.RBracket:
-      parser.error Other, "missing ] in index expression"
+    if !closing: missingRBracket
+    
+    let kind = (&closing).kind
+    case kind
+    of TokenKind.RBracket: return true
+    of TokenKind.Comment: return checkForRBracket()
+    else: missingRBracket
 
   if (let indexToken = parser.tokenizer.nextExceptWhitespace(); *indexToken):
     let
@@ -337,11 +354,12 @@ proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
     if !atom:
       parser.tokenizer = cTok
     else:
-      checkForRBracket
-      return some(arrayAccess(ident, &atom))
+      if checkForRBracket():
+        return some(arrayAccess(ident, &atom))
       # parser.error UnexpectedToken, "expected expression, got " & $token.kind
     
-    checkForRBracket
+    if not checkForRBracket():
+      return
 
     case token.kind
     of TokenKind.Identifier:
