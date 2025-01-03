@@ -4,5 +4,7 @@ var i = 0
 
 while (i < 99999)
 {
+	let str = "Hello string-interner!"
+	console.log(str)
 	i++
 }
