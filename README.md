@@ -103,6 +103,8 @@ runtime.run()
 - `typeof`                             [X]
 - Arrays                               [X]
 - REPL                                 [X]
+- String prototype                     [X]
+- Dates                                [X]
 - For-loops                            [ ]
 - Modules                              [ ]
 - Async                                [ ]
