@@ -888,6 +888,17 @@ proc generateInternalIR*(runtime: Runtime) =
   )
   runtime.ir.call("BALI_INDEX_INTERNAL")
 
+  runtime.ir.newModule("BALI_RESOLVE_AND_CALL_FUNCTION")
+  runtime.vm.registerBuiltin(
+    "BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL",
+    proc(op: Operation) =
+      let atom = runtime.argument(1)
+      assert(*atom, "BUG: Atom was empty when calling BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL")
+
+      let name = &getStr(&atom)
+  )
+  runtime.ir.call("BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL")
+
 proc run*(runtime: Runtime) =
   runtime.test262 = runtime.ast.test262
   console.generateStdIR(runtime)

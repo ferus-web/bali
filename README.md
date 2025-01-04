@@ -105,6 +105,7 @@ runtime.run()
 - REPL                                 [X]
 - String prototype                     [X]
 - Dates                                [X]
+- Functions as values                  [ ]
 - For-loops                            [ ]
 - Modules                              [ ]
 - Async                                [ ]
