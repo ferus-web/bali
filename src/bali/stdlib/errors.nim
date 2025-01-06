@@ -18,6 +18,10 @@ proc typeError*(runtime: Runtime, message: string, exitCode: int = 1) {.inline.}
   runtime.vm.throw(jsException("TypeError: " & message))
   runtime.logTracebackAndDie(exitCode)
 
+proc rangeError*(runtime: Runtime, message: string, exitCode: int = 1) {.inline.} =
+  runtime.vm.throw(jsException("RangeError: " & message))
+  runtime.logTracebackAndDie(exitCode)
+
 proc referenceError*(runtime: Runtime, message: string, exitCode: int = 1) {.inline.} =
   runtime.vm.throw(jsException("ReferenceError: " & message))
   runtime.logTracebackAndDie(exitCode)
