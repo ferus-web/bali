@@ -94,6 +94,7 @@ type
       fn*: FunctionCall
       arguments*: PositionedArguments
       mangle*: bool
+      expectsReturnVal*: bool = false
     of NewFunction:
       fnName*: string
       body*: Scope
@@ -321,9 +322,13 @@ proc returnFunc*(ident: string): Statement =
   Statement(kind: ReturnFn, retIdent: some(ident))
 
 proc callAndStoreImmut*(ident: string, fn: Statement): Statement =
+  var fn = fn
+  fn.expectsReturnVal = true
   Statement(kind: CallAndStoreResult, mutable: false, storeIdent: ident, storeFn: fn)
 
 proc callAndStoreMut*(ident: string, fn: Statement): Statement =
+  var fn = fn
+  fn.expectsReturnVal = true
   Statement(kind: CallAndStoreResult, mutable: true, storeIdent: ident, storeFn: fn)
 
 proc createMutVal*(name: string, atom: MAtom): Statement =
@@ -338,8 +343,8 @@ proc atomArg*(atom: MAtom): CallArg =
 proc constructObject*(name: string, args: PositionedArguments): Statement =
   Statement(kind: ConstructObject, objName: name, args: args)
 
-proc call*(fn: FunctionCall, arguments: PositionedArguments, mangle: bool = true): Statement =
-  Statement(kind: Call, fn: fn, arguments: arguments, mangle: mangle)
+proc call*(fn: FunctionCall, arguments: PositionedArguments, mangle: bool = true, expectsReturnVal: bool = false): Statement =
+  Statement(kind: Call, fn: fn, arguments: arguments, mangle: mangle, expectsReturnVal: expectsReturnVal)
 
 proc callFunction*(name: string): FunctionCall =
   FunctionCall(

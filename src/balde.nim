@@ -59,7 +59,8 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
       insertDebugHooks: ctx.enabled("insert-debug-hooks", "H"),
       codegen: CodegenOpts(
         elideLoops: not ctx.enabled("disable-loop-elision"),
-        loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim")
+        loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim"),
+        aggressivelyFreeRetvals: not ctx.enabled("dont-aggressively-free-retvals")
       )
     )
   )
@@ -312,7 +313,8 @@ Options:
 
 Codegen Flags:
   --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
-  --disable-loop-allocation-elim          Don't attempt to rewrite loops to avoid unnecessary atom allocations
+  --disable-loop-allocation-elim          Don't attempt to rewrite loops to avoid unnecessary atom allocations.
+  --dont-aggressively-free-retvals        Don't aggressively zero-out the return-value register. This can speed up execution at the cost of allowing OOMs to crash the engine and/or the                                           host system. Only use this flag if you're completely sure that your code won't "clog" the return-value register!
 """ % [
   name, Version
   ]

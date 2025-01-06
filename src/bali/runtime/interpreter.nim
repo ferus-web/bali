@@ -322,7 +322,10 @@ proc generateIR*(
         runtime.ir.passArgument(index)
 
     runtime.ir.call(nam)
-    runtime.ir.resetArgs()
+    runtime.ir.resetArgs() # Reset the call arguments register to prevent this call's arguments from leaking into future calls
+
+    if not stmt.expectsReturnVal and runtime.opts.codegen.aggressivelyFreeRetvals:
+      runtime.ir.zeroRetval() # Destroy the return value, if any. This helps conserve memory.
   of ReturnFn:
     assert not (*stmt.retVal and *stmt.retIdent),
       "ReturnFn statement cannot have both return atom and return ident at once!"
