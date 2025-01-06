@@ -1,6 +1,6 @@
 # Bali Manual
 This manual is largely inspired by Monoucha's manual. \
-**WARNING**: Bali is only tested with the default memory management strategy (ORC). It _should_ work with others, but they aren't tested. You are on your own if you use them. \
+**WARNING**: Bali is only tested with the default memory management strategy (ORC). It uses ORC extensively and as such, it will probably not compile with other strategies. \
 **WARNING**: If you embed Bali in your program, you must compile it with the C++ backend as Bali relies on some C++ libraries.
 
 **This manual is largely under construction. Report problems if you can.**
@@ -27,6 +27,7 @@ This manual is largely inspired by Monoucha's manual. \
     - [Prelude](#prelude)
     - [Loop Elision](#loop-elision)
     - [Loop Allocation Elision](#loop-allocation-elision)
+    - [Return-value register scrubber](#return-value-register-scrubber)
     - [Disabling optimizations](#disabling-optimizations)
 
 # Introduction
@@ -48,7 +49,7 @@ An atom is a variant type discriminated by its `kind` field that can be:
 There's also an identifier type, but that's only internally used by Mirage.
 
 ## Baby's First Scripts
-Now, we'll learn how to write a Nim program that can load and evaluate JavaScript. You'll need to implement two of Bali's components:
+Now, we'll learn how to write a Nim program that can load and evaluate JavaScript. You'll need to import two of Bali's components:
 - The `grammar` module, which as the name suggests, is responsible for lexing and parsing the JavaScript source code into an abstract syntax tree
 - The `runtime` module, which takes in the AST and converts it into bytecode that targets the [Mirage/Pulsar](https://github.com/ferus-web/mirage) interpreter.
 
@@ -334,13 +335,17 @@ while (true)
 
 This prevents unnecessary allocations. Yay.
 
+### Return-Value Register Scrubber
+This optimization essentially allows the engine to emit the `ZRETV` instruction. This instruction clears the return-value register, which allows the garbage collector to quickly clear up the memory it might occupy. This makes some badly written code no longer result in an OOM. It, however, like most of Bali, is not battle tested and as such, might result in undefined behaviour. It is enabled by default.
+
 ### Disabling Optimizations
 If you don't want the bytecode generator to spend time optimizing code (you're 100% sure you've written very neat code that will always make your CPU happy or something) or the bytecode generator ends up performing optimization incorrectly (rare, but if it occurs, please file a bug report), then you can disable codegen optimizations.
 
 #### Disabling Optimizations in Balde
-Balde exposes the following two flags to control optimizations:
+Balde exposes the following three flags to control optimizations:
 * --disable-loop-elision
 * --disable-loop-allocation-elim
+* --dont-aggressively-free-retvals
 
 #### Disabling Optimizations in Nim code
 When instantiating the `Runtime`, you can pass an `InterpreterOpts` struct containing a `CodegenOpts` struct.
@@ -350,7 +355,8 @@ var runtime = newRuntime(
   InterpreterOpts(
     codegen: CodegenOpts(
       elideLoops: false,
-      loopAllocationEliminator: false
+      loopAllocationEliminator: false,
+      aggressivelyFreeRetvals: false
     )
   )
 )
