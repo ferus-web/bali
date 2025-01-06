@@ -57,6 +57,7 @@ type
     test262*: bool = false
     repl*: bool = false
     dumpBytecode*: bool = false
+    insertDebugHooks*: bool = false ## Allow some calls from JS-land that expose the engine's internals to it.
     
     codegen*: CodegenOpts
     experiments*: ExperimentOpts

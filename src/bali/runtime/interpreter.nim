@@ -277,7 +277,6 @@ proc generateIR*(
     info "interpreter: generate IR for calling function: " & nam & (if stmt.mangle: " (mangled)" else: newString 0)
     runtime.expand(fn, stmt, internal)
 
-
     if *stmt.fn.field:
       let typName = block:
         var curr = &stmt.fn.field
@@ -898,6 +897,26 @@ proc generateInternalIR*(runtime: Runtime) =
       let name = &getStr(&atom)
   )
   runtime.ir.call("BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL")
+
+  if runtime.opts.insertDebugHooks:
+    runtime.defineFn(
+      "baliGC_Dump",
+      proc =
+        echo GC_getStatistics()
+    )
+
+    runtime.defineFn(
+      "baliGC_FullCollect",
+      proc =
+        GC_fullCollect()
+    )
+
+    runtime.defineFn(
+      "baliGC_PartialCollect",
+      proc =
+        let limit = &(&runtime.argument(1)).getInt()
+        GC_partialCollect(limit)
+    )
 
 proc run*(runtime: Runtime) =
   runtime.test262 = runtime.ast.test262

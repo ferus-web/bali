@@ -56,6 +56,7 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
       test262: test262,
       dumpBytecode: ctx.enabled("dump-bytecode", "D"),
       repl: repl,
+      insertDebugHooks: ctx.enabled("insert-debug-hooks", "H"),
       codegen: CodegenOpts(
         elideLoops: not ctx.enabled("disable-loop-elision"),
         loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim")
@@ -307,6 +308,7 @@ Options:
   --dump-ast                              Dump the abstract syntax tree for the JavaScript file.
   --dump-no-eval                          Dump the abstract syntax tree for the JavaScript file, bypassing the IR generation phase entirely.
   --enable-experiments:<a>;<b>; ... <z>   Enable certain experimental features that aren't stable yet.
+  --insert-debug-hooks, -H                Insert some debug hooks that expose JavaScript code to the engine's internals.
 
 Codegen Flags:
   --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
