@@ -18,7 +18,7 @@ Sexual jokes must not be made, and any demeaning jokes making fun of a contribut
 We do not care if you are Chinese, Indian, American, Russian, Finnish, Canadian, Australian, Indonesian, British, or Japanese. We just care that you are a respectful person.
 
 # Think twice before using certain words
-Slurs are outlawed.
+Racial slurs are outlawed.
 
 # When a disagreement is created, do not go senile.
 This code of conduct applies to **all** projects under the Ferus organization.
