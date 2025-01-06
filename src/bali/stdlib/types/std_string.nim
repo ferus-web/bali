@@ -5,6 +5,7 @@
 import std/[logging, tables, strutils, hashes]
 import bali/runtime/[arguments, bridge, atom_helpers, types]
 import bali/runtime/abstract/[coercible, to_number, to_string]
+import bali/stdlib/errors
 import bali/internal/[trim_string, sugar]
 import mirage/atom
 import pkg/kaleidoscope/[search]
@@ -181,4 +182,19 @@ proc generateStdIr*(runtime: Runtime) =
       let value = &value.tagged("internal")
 
       ret strutils.toUpperAscii(runtime.ToString(value))
+  )
+
+  runtime.definePrototypeFn(
+    JSString, "repeat",
+    proc(value: MAtom) =
+      let value = runtime.ToString(&value.tagged("internal"))
+      var repeatCnt: int
+
+      if runtime.argumentCount() > 0:
+        repeatCnt = int(runtime.ToNumber(&runtime.argument(1)))
+
+      if repeatCnt < 0:
+        runtime.rangeError("repeat count must be non-negative")
+
+      ret value.repeat(repeatCnt)
   )
