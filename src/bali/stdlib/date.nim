@@ -69,9 +69,9 @@ proc generateStdIR*(runtime: Runtime) =
         else:
           dateValue = runtime.ToNumber(value)
       
-      ret JSDate(
-        `@epoch`: dateValue
-      )
+      var date = runtime.createObjFromType(JSDate)
+      date.tag("epoch", dateValue)
+      ret date
   )
 
   runtime.defineFn(
