@@ -3,7 +3,7 @@
 ## Author(s):
 ## Trayambak Rai (xtrayambak at disroot dot org)
 import std/[logging, tables, strutils, hashes]
-import bali/runtime/[arguments, bridge, atom_helpers, types]
+import bali/runtime/[arguments, bridge, atom_helpers, types, bridge]
 import bali/runtime/abstract/[coercible, to_number, to_string]
 import bali/stdlib/errors
 import bali/internal/[trim_string, sugar]
@@ -28,10 +28,14 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.defineConstructor(
     "String",
     proc =
-      let argument = runtime.argument(1)
+      let argument = 
+        if runtime.argumentCount > 0:
+          &runtime.argument(1)
+        else:
+          str("")
 
-      var atom = runtime.toJsString(&argument).wrap()
-      atom.tag("bali_object_type", int hash $JSString)
+      var atom = runtime.createObjFromType(JSString)
+      atom.tag("internal", runtime.ToString(argument))
       ret atom
   )
   runtime.definePrototypeFn(

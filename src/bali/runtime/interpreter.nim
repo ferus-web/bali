@@ -796,7 +796,12 @@ proc computeTypeof*(runtime: Runtime, atom: MAtom): string =
     return "string"
   of Integer, Float, UnsignedInt:
     return "number"
-  of Null, Object, Sequence:
+  of Null, Sequence:
+    return "object"
+  of Object:
+    if runtime.isA(atom, JSString):
+      return "string"
+    
     return "object"
   of Boolean:
     return "boolean"
