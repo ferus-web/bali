@@ -87,6 +87,36 @@ proc createAtom*(typ: JSType): MAtom =
 
   atom
 
+proc isA*[T: object](runtime: Runtime, atom: MAtom, typ: typedesc[T]): bool =
+  ## This function returns a boolean based off of whether `atom` is a replica of the supplied Nim-native type `typ`.
+  ## It checks the `bali_object_type` that's attached to all objects created by `createAtom` (and by extension, `createObjFromType`)
+  debug "runtime: isA(" & atom.crush() & "): checking if atom is a replica of " & $typ
+
+  if atom.kind != Object:
+    debug "runtime: isA(" & atom.crush() & "): atom is not an object, returning false."
+    return false
+
+  let objTypOpt = atom.tagged("bali_object_type")
+
+  if !objTypOpt:
+    debug "runtime: isA(" & atom.crush() & "): atom does not contain the tag `bali_object_type`, returning false. This is weird."
+    return false
+
+  if (&objTypOpt).kind != Integer:
+    warn "runtime: isA(" & atom.crush() & "): atom's `bali_object_type` tag is not an integer! It is a " & $(&objTypOpt).kind
+
+  let objTyp = &getInt(&objTypOpt)
+
+  for etyp in runtime.types:
+    if etyp.proto != hash($typ):
+      continue
+
+    if etyp.proto.int == objTyp:
+      debug "runtime: isA(" & atom.crush() & "): atom is a replica of " & $typ
+      return true
+
+  false
+
 proc getTypeFromName*(runtime: Runtime, name: string): Option[JSType] =
   ## Returns a registered JS type based on its name, if it exists.
   for typ in runtime.types:
