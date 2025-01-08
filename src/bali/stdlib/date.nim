@@ -143,3 +143,100 @@ proc generateStdIR*(runtime: Runtime) =
 
       ret runtime.parseDateString(dateString)
   )
+  
+  # B.2.3 Additional Properties of the Date.prototype Object
+  runtime.definePrototypeFn(
+    JSDate,
+    "getYear",
+    proc(value: MAtom) =
+      ## B.2.3.1 Date.prototype.getYear ( )
+
+      # 1. Let dateObject be the this value.
+      let dateObject = value
+
+      # 2. Perform ? RequireInternalSlot(dateObject, [[DateValue]]).
+      assert(runtime.isA(dateObject, JSDate))
+
+      # 3. Let t be dateObject.[[DateValue]].
+      let time = runtime.ToNumber(&dateObject.tagged("epoch"))
+      
+      # 4. If t is NaN, return NaN.
+      if time == NaN:
+        ret NaN
+
+      # 5. Return YearFromTime(LocalTime(t)) - 1900𝔽.
+      # FIXME: This is uncompliant as it doesn't return the value in the local time.
+      ret getYearFromTime(
+        time
+      ) - 1900
+  )
+  
+  # 21.4.4.1 Date.prototype.constructor
+  runtime.definePrototypeFn(
+    JSDate,
+    "getFullYear",
+    proc(value: MAtom) =
+      ## 21.4.4.4 Date.prototype.getFullYear ( )
+
+      # 1. Let dateObject be the this value.
+      let dateObject = value
+
+      # 2. Perform ? RequireInternalSlot(dateObject, [[DateValue]]).
+      assert(runtime.isA(dateObject, JSDate))
+
+      # 3. Let t be dateObject.[[DateValue]].
+      let time = runtime.ToNumber(&dateObject.tagged("epoch"))
+
+      # 4. If t is NaN, return NaN.
+      if time == NaN:
+        ret NaN
+
+      # 5. Return YearFromTime(LocalTime(t)).
+      ret getYearFromTime(time)
+  )
+
+  runtime.definePrototypeFn(
+    JSDate,
+    "getDay",
+    proc(value: MAtom) =
+      ## 21.4.4.3 Date.prototype.getDay ( )
+
+      # 1. Let dateObject be the this value.
+      let dateObject = value
+
+      # 2. Perform ? RequireInternalSlot(dateObject, [[DateValue]]).
+      assert(runtime.isA(dateObject, JSDate))
+
+      # 3. Let t be dateObject.[[DateValue]].
+      let time = runtime.ToNumber(&dateObject.tagged("epoch"))
+
+      # 4. If t is NaN, return NaN.
+      if time == NaN:
+        ret NaN
+      
+      # 5. Return WeekDay(LocalTime(t)).
+      ret toWeekDay(time)
+  )
+
+  runtime.definePrototypeFn(
+    JSDate,
+    "getDate",
+    proc(value: MAtom) =
+      ## 21.4.4.3 Date.prototype.getDate ( )
+
+      # 1. Let dateObject be the this value.
+      let dateObject = value
+
+      # 2. Perform ? RequireInternalSlot(dateObject, [[DateValue]]).
+      assert(runtime.isA(dateObject, JSDate))
+
+      # 3. Let t be dateObject.[[DateValue]].
+      let time = runtime.ToNumber(&dateObject.tagged("epoch"))
+
+      # 4. If t is NaN, return NaN.
+      if time == NaN:
+        ret NaN
+      
+      # 5. Return DateFromTime(LocalTime(t)).
+      ret getDateFromTime(time)
+  )
