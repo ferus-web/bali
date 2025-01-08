@@ -4,30 +4,6 @@
 import std/[logging, options, strutils, times]
 import bali/internal/[generic_lexer, trim_string, sugar]
 
-const
-  WeekdayName* = [
-    "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
-  ]
-
-  MonthName* = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-  ]
-
-  MonthFullName* = [
-    "January", "February", "March", "April", "May", "June", 
-    "July", "August", "September", "October", "November", "December"
-  ]
-
-  firstDayOfMonth* = (
-    common: [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334],
-    leap:   [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
-  )
-  
-  daysInMonths* = [
-    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
-  ]
-
 proc parseSimplifiedISO8601*(date: string): Option[float] =
   ## 21.4.3.2 Date.parse ( string ), https://tc39.es/ecma262/#sec-date.parse
   var lexer = newGenericLexer(date)

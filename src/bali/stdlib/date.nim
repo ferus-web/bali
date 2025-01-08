@@ -1,14 +1,14 @@
-## WIP implementation of the `Date` object
+## Implementation of the `Date` object
 ##
 ## Author(s): 
 ## Trayambak Rai (xtrayambak at disroot dot org)
-import std/[math, times, logging]
+import std/[math, strformat, times, logging]
 import bali/internal/sugar
 import bali/stdlib/errors
 import mirage/atom
 import bali/runtime/[normalize, atom_helpers, arguments, types, bridge]
 import bali/runtime/abstract/coercion
-import bali/internal/date/parser
+import bali/internal/date/[utils, constants, parser]
 
 ## 21.4.1.1 Time Values and Time Range
 ## Time measurement in ECMAScript is analogous to time measurement in POSIX, in particular sharing definition in terms of the proleptic Gregorian calendar, an epoch of midnight at the beginning of 1 January 1970 UTC, and an accounting of every day as comprising exactly 86,400 seconds (each of which is 1000 milliseconds long).
@@ -35,6 +35,50 @@ proc parseDateString(runtime: Runtime, dateString: string): float =
   #       The spec isn't very clear on this, so it's best to implement
   #       only a few of these.
   NaN
+
+proc dateToString*(tv: float): string =
+  ## The abstract operation DateString takes argument tv (a Number, but not NaN) and returns a String. It performs
+  ## the following steps when called:
+
+  # 1. Let weekday be the Name of the entry in Table 63 with the Number WeekDay(tv).
+  let weekDay = WeekdayName[toWeekDay(tv)]
+
+  # 2. Let month be the Name of the entry in Table 64 with the Number MonthFromTime(tv).
+  let month = MonthName[getMonthFromTime(tv)]
+
+  # 3. Let day be ToZeroPaddedDecimalString(ℝ(DateFromTime(tv)), 2).
+  let day = fmt"{getDateFromTime(tv):02d}"
+
+  # 4. Let yv be YearFromTime(tv).
+  let year = getYearFromTime(tv)
+
+  # 5. If yv is +0𝔽 or yv > +0𝔽, let yearSign be the empty String; otherwise, let yearSign be "-".
+  let yearSign =
+    if year >= 0: newString(0)
+    else: "-"
+
+  # 6. Let paddedYear be ToZeroPaddedDecimalString(abs(ℝ(yv)), 4).
+  # 7. Return the string-concatenation of weekday, the code unit 0x0020 (SPACE), month, the code unit 0x0020 (SPACE), day, the code unit 0x0020 (SPACE), yearSign, and paddedYear.
+  fmt"{weekday} {month} {day} {yearSign}{abs(year):04d}"
+
+proc timeToString*(tv: float): string =
+  # FIXME: non-compliant!
+  let timeString = fmt"{getHourFromTime(tv):02d}:{getMinuteFromTime(tv):02d}:{getSecondFromTime(tv):02d}"
+
+  timeString & " GMT"
+
+proc toDateString*(tv: float): string =
+  # 1. If tv is NaN, return "Invalid Date".
+  if tv == NaN:
+    return "Invalid Date"
+  
+  # FIXME: non-compliant!
+  #        This should ideally call LocalTime(tv)
+  let t = tv
+  
+  # FIXME: non-compliant!
+  #        This should ideally also include the timezone string
+  fmt"{dateToString(tv)} {timeToString(tv)}"
 
 proc generateStdIR*(runtime: Runtime) =
   info "date: generating IR interfaces"
