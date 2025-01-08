@@ -310,6 +310,7 @@ Options:
   --dump-no-eval                          Dump the abstract syntax tree for the JavaScript file, bypassing the IR generation phase entirely.
   --enable-experiments:<a>;<b>; ... <z>   Enable certain experimental features that aren't stable yet.
   --insert-debug-hooks, -H                Insert some debug hooks that expose JavaScript code to the engine's internals.
+  --test262                               Insert some functions similar to those found in Test262.
 
 Codegen Flags:
   --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.

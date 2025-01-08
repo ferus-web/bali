@@ -1,7 +1,7 @@
 ## Test262 required builtins/harnesses
 ##
 
-import std/[strutils, math, options, logging, tables]
+import std/[strutils, math, options, logging, tables, terminal]
 import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/runtime/[normalize, bridge]
@@ -36,12 +36,13 @@ proc generateStdIr*(runtime: Runtime) =
     "sameValue",
     proc =
       template no() =
+        stderr.styledWriteLine(bgRed, fgBlack, " FAIL ", resetStyle, " ", styleBright, b.crush(), resetStyle, " != ", styleBright, a.crush(), resetStyle)
         runtime.test262Error(
           "Assert.sameValue(): " & b.crush() & " != " & a.crush() & ' ' & msg
         )
 
       template yes() =
-        info "Assert.sameValue(): passed test! (" & b.crush() & " == " & a.crush() & ')'
+        stdout.styledWriteLine(bgGreen, fgBlack, " PASS ", resetStyle, " ", styleBright, b.crush(), resetStyle, " == ", styleBright, a.crush(), resetStyle)
         return
 
       let
