@@ -1,7 +1,7 @@
 ## Implementations of date-related functions necessary for the JavaScript Date API
 ## Author(s): 
 ## Trayambak Rai (xtrayambak at disroot dot org)
-import std/[math]
+import std/[math, times]
 import bali/internal/date/constants
 import bali/internal/sugar
 
@@ -24,7 +24,7 @@ func toWeekDay*(t: float): int {.inline.} =
   # 1. Return 𝔽(ℝ(Day(t) + 4𝔽) modulo 7).
   int(
     (toDay(t) + 4) mod 7
-  ) - 1
+  )
 
 func getHourFromTime*(t: float): int {.inline.} =
   ## The abstract operation HourFromTime takes argument t (a finite time value) and returns an integral Number in
@@ -110,7 +110,7 @@ func getDayWithinYear*(t: float): uint16 {.inline.} =
     return 0'u16
   
   # 1. Return Day(t) - DayFromYear(YearFromTime(t)).
-  cast[uint16](toDay(t).float - getDayFromYear(getYearFromTime(t)))
+  uint16(toDay(t).float - getDayFromYear(getYearFromTime(t)))
 
 func getMinuteFromTime*(t: float): uint8 {.inline.} =
   if t == Inf:
