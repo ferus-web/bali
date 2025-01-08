@@ -36,13 +36,13 @@ proc generateStdIr*(runtime: Runtime) =
     "sameValue",
     proc =
       template no() =
-        stderr.styledWriteLine(bgRed, fgBlack, " FAIL ", resetStyle, " ", styleBright, b.crush(), resetStyle, " != ", styleBright, a.crush(), resetStyle)
+        stderr.styledWriteLine(bgRed, fgBlack, " FAIL ", resetStyle, " ", styleBright, a.crush(), resetStyle, " != ", styleBright, b.crush(), resetStyle)
         runtime.test262Error(
           "Assert.sameValue(): " & b.crush() & " != " & a.crush() & ' ' & msg
         )
 
       template yes() =
-        stdout.styledWriteLine(bgGreen, fgBlack, " PASS ", resetStyle, " ", styleBright, b.crush(), resetStyle, " == ", styleBright, a.crush(), resetStyle)
+        stdout.styledWriteLine(bgGreen, fgBlack, " PASS ", resetStyle, " ", styleBright, a.crush(), resetStyle, " == ", styleBright, b.crush(), resetStyle)
         return
 
       let
