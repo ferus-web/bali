@@ -2,7 +2,7 @@
 ## Wraps around the Mirage atom
 ## Author(s):
 ## Trayambak Rai (xtrayambak at disroot dot org)
-import std/[logging, tables, strutils, hashes]
+import std/[logging, tables, strutils, hashes, unicode]
 import bali/runtime/[arguments, bridge, atom_helpers, types, bridge]
 import bali/runtime/abstract/[coercible, to_number, to_string]
 import bali/stdlib/errors
@@ -201,4 +201,24 @@ proc generateStdIr*(runtime: Runtime) =
         runtime.rangeError("repeat count must be non-negative")
 
       ret value.repeat(repeatCnt)
+  )
+
+  runtime.defineFn(
+    JSString,
+    "fromCharCode",
+    proc =
+      ## 22.1.2.1 String.fromCharCode ( ...codeUnits ), https://tc39.es/ecma262/#sec-string.fromcharcode
+      # 1. Let result be the empty String.
+      var res: string
+      
+      # 2. For each element next of codeUnits, do
+      for i in 1 .. runtime.argumentCount():
+        # a. Let nextCU be the code unit whose numeric value is ℝ(? ToUint16(next)).
+        let nextCodeUnit = uint16(runtime.ToNumber(&runtime.argument(i)))
+
+        # b. Set result to the string-concatenation of result and nextCU.
+        res &= Rune(nextCodeUnit)
+
+      # 3. Return result.
+      ret res
   )
