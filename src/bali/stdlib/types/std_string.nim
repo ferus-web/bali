@@ -11,6 +11,10 @@ import mirage/atom
 import pkg/kaleidoscope/[search]
 import pretty
 
+const
+  ## At what point should Bali start SIMD-accelerating string related operations?
+  BaliStringAccelerationThreshold* {.intdefine.} = 512
+
 type
   JSString* = object
     `@internal`*: string
@@ -66,7 +70,7 @@ proc generateStdIr*(runtime: Runtime) =
         )
         needle = runtime.argument(1)
         position = runtime.argument(2)
-      
+
       var searchStr: string
       if *needle:
         # 3. Let searchStr be ? ToString(searchString).
@@ -88,7 +92,10 @@ proc generateStdIr*(runtime: Runtime) =
         start = clamp(pos, 0'u, len)
 
       # 8. Return 𝔽(StringIndexOf(S, searchStr, start)).
-      ret search.find(value[start ..< value.len], searchStr)
+      if value.len < BaliStringAccelerationThreshold:
+        ret strutils.find(value[start ..< value.len], searchStr) # Don't use SIMD acceleration if a string is smaller than 512 characters
+      else:
+        ret search.find(value[start ..< value.len], searchStr)
   )
 
   runtime.definePrototypeFn(
