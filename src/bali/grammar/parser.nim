@@ -389,6 +389,59 @@ proc expectEqualsSign*(
   else:
     parser.error UnexpectedToken, "expected semicolon or equal sign after identifier, got " & $nextTok.kind
 
+proc parseTernaryOp*(
+  parser: Parser,
+  ident: Option[string] = none(string),
+  atom: Option[MAtom] = none(MAtom)
+): Option[Statement] =
+  assert(*ident or *atom, "BUG: Expected either initial `ident` or `atom` when parsing ternary operation, got neither?")
+  debug "parser: parsing ternary operation"
+  var tern = Statement(kind: TernaryOp)
+  tern.ternaryCond =
+    if *ident:
+      identHolder(&ident)
+    elif *atom:
+      atomHolder(&atom)
+    else: unreachable; atomHolder(null())
+  
+  debug "parser: parsing ternary's true expression"
+  # TODO: add support for expressions like x ? (a + b) : (c + d)
+  let trueExpr = parser.tokenizer.nextExceptWhitespace()
+
+  if !trueExpr:
+    parser.error UnexpectedToken, "expected expression, got EOF instead"
+  
+  let trueKind = (&trueExpr).kind
+  case trueKind
+  of TokenKind.Number, TokenKind.String:
+    tern.trueTernary = atomHolder(&parser.parseAtom(&trueExpr))
+  of TokenKind.Identifier:
+    tern.trueTernary = identHolder((&trueExpr).ident)
+  else:
+    parser.error UnexpectedToken, "expected value or identifier, got " & $trueKind & " instead"
+
+  # expect `:` to separate the two ternaries
+  let expectColon = parser.tokenizer.nextExceptWhitespace()
+  if !expectColon or (&expectColon).kind != TokenKind.Colon:
+    parser.error Other, "missing `:` in ternary expression"
+
+  debug "parser: parsing ternary's false expression"
+  let falseExpr = parser.tokenizer.nextExceptWhitespace()
+
+  if !falseExpr:
+    parser.error UnexpectedToken, "expected expression, got EOF instead"
+  
+  let falseKind = (&falseExpr).kind
+  case falseKind
+  of TokenKind.Number, TokenKind.String:
+    tern.falseTernary = atomHolder(&parser.parseAtom(&falseExpr))
+  of TokenKind.Identifier:
+    tern.falseTernary = identHolder((&falseExpr).ident)
+  else:
+    parser.error UnexpectedToken, "expected value or identifier, got " & $falseKind & " instead"
+
+  some(tern)
+
 proc parseDeclaration*(
     parser: Parser, initialIdent: string, reassignment: bool = false
 ): Option[Statement] =
@@ -451,6 +504,7 @@ proc parseDeclaration*(
   var
     atom: Option[MAtom]
     vIdent: Option[string]
+    ternary: Option[Statement]
     toCall: Option[Statement]
 
   while not parser.tokenizer.eof and !vIdent and !atom and !toCall:
@@ -476,12 +530,12 @@ proc parseDeclaration*(
           # array access, probably
           toCall = parser.parseArrayIndex(tok.ident)
           break
+        of TokenKind.Question:
+          ternary = parser.parseTernaryOp(ident = some(tok.ident))
+          break
         else:
-          parser.tokenizer = copiedTok
-
-      # just an ident copy
-      vIdent = some(tok.ident)
-      break
+          vIdent = some(tok.ident)
+          break
     of TokenKind.Number:
       if *tok.intVal:
         atom = some(uinteger uint32(&tok.intVal))
@@ -497,7 +551,7 @@ proc parseDeclaration*(
       toCall = parser.parseConstructor()
       break
     of TokenKind.Typeof:
-      toCall = some(call("BALI_TYPEOF".callFunction, &parser.parseTypeofCall(), mangle = false))
+      toCall = some(call("BALI_TYPEOF".callFunction(), &parser.parseTypeofCall(), mangle = false))
       break
     of TokenKind.LBracket:
       atom = parser.parseArray()
@@ -505,8 +559,13 @@ proc parseDeclaration*(
     else:
       parser.error UnexpectedToken, $tok.kind
 
-  assert not (*atom and *vIdent and *toCall),
+  assert not (*atom and *vIdent and *toCall and *ternary),
     "Attempt to assign a value to nothing (something went wrong)"
+
+  if *ternary:
+    var tern = &ternary
+    tern.ternaryStoreIn = some(ident)
+    return some(tern)
   
   if not reassignment:
     case initialIdent
