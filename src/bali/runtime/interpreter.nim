@@ -704,17 +704,22 @@ proc generateIR*(
     else:
       unreachable
   of Increment:
+    debug "emitter: generate IR for increment"
     runtime.ir.incrementInt(runtime.index(stmt.incIdent, defaultParams(fn)))
   of Decrement:
+    debug "emitter: generate IR for decrement"
     runtime.ir.decrementInt(runtime.index(stmt.decIdent, defaultParams(fn)))
   of Break:
+    debug "emitter: generate IR for break"
     runtime.irHints.breaksGeneratedAt &= runtime.ir.addOp(IROperation(opcode: Jump)) - 1
   of Waste:
+    debug "emitter: generate IR for wasting atom"
     let idx = runtime.loadIRAtom(stmt.wstAtom)
     if runtime.opts.repl:
       runtime.ir.passArgument(idx)
       runtime.ir.call(normalizeIRName "console.log")
   of AccessArrayIndex:
+    debug "emitter: generate IR for array indexing"
     let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
     let fieldIndex = if *stmt.arrAccIndex:
       runtime.loadIRAtom(&stmt.arrAccIndex)
@@ -726,6 +731,63 @@ proc generateIR*(
     runtime.ir.passArgument(fieldIndex)
     runtime.ir.call("BALI_INDEX")
     runtime.ir.resetArgs()
+  of TernaryOp:
+    debug "emitter: generate IR for ternary op"
+    if !stmt.ternaryStoreIn:
+      return
+
+    let
+      storeIn = &stmt.ternaryStoreIn
+      addrOfCond =
+        if stmt.ternaryCond.kind == AtomHolder:
+          runtime.loadIRAtom(stmt.ternaryCond.atom)
+        elif stmt.ternaryCond.kind == IdentHolder:
+          runtime.index(stmt.ternaryCond.ident, defaultParams(fn))
+        else: unreachable; 0'u
+
+    inc runtime.addrIdx
+
+    let
+      addrOfTrueExpr =
+        if stmt.trueTernary.kind == AtomHolder:
+          runtime.loadIRAtom(stmt.trueTernary.atom)
+        elif stmt.trueTernary.kind == IdentHolder:
+          runtime.index(stmt.falseTernary.ident, defaultParams(fn))
+        else: unreachable; 0'u
+
+    inc runtime.addrIdx
+
+    let
+      addrOfFalseExpr =
+        if stmt.falseTernary.kind == AtomHolder:
+          runtime.loadIRAtom(stmt.falseTernary.atom)
+        elif stmt.falseTernary.kind == IdentHolder:
+          runtime.index(stmt.falseTernary.ident, defaultParams(fn))
+        else: unreachable; 0'u
+
+    inc runtime.addrIdx
+
+    proc getCurrOpNum(): uint =
+      for module in runtime.ir.modules:
+        if module.name == runtime.ir.currModule:
+          return uint(module.operations.len + 1)
+
+      unreachable
+      0'u
+    
+    runtime.markLocal(fn, storeIn)
+    let finalAddr = runtime.addrIdx - 1
+    
+    runtime.ir.equate(addrOfCond, runtime.index("true", defaultParams(fn)))
+    # If addrOfCond == true:
+    runtime.ir.jump(getCurrOpNum() + 2'u)
+    # If addrOfCond == false (or != true, which means false anyways):
+    runtime.ir.jump(getCurrOpNum() + 3'u)
+
+    runtime.ir.copyAtom(addrOfTrueExpr, finalAddr)
+    runtime.ir.jump(getCurrOpNum() + 2'u)
+
+    runtime.ir.copyAtom(addrOfFalseExpr, finalAddr)
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 

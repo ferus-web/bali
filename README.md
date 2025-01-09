@@ -119,6 +119,7 @@ runtime.run()
 - REPL                                 [X]
 - String prototype                     [X]
 - Date prototype                       [X]
+- Ternary operations                   [X]
 - Functions as values                  [ ]
 - For-loops                            [ ]
 - Modules                              [ ]
