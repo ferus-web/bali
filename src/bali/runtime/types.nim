@@ -197,6 +197,10 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
     return runtime.addrIdx
   of String:
     runtime.ir.loadStr(runtime.addrIdx, atom)
+    runtime.ir.passArgument(runtime.addrIdx)
+    runtime.ir.call("BALI_CONSTRUCTOR_STRING")
+    runtime.ir.resetArgs()
+    runtime.ir.readRegister(runtime.addrIdx, Register.ReturnValue)
     return runtime.addrIdx
   of Null:
     runtime.ir.loadNull(runtime.addrIdx)

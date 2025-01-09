@@ -1,7 +1,8 @@
-import std/[logging, tables, hashes]
+import std/[logging, tables, options, hashes]
 import mirage/runtime/prelude
 import bali/internal/sugar
 import bali/runtime/[atom_helpers, types]
+import bali/runtime/abstract/to_primitive
 import bali/stdlib/errors
 import pretty
 
@@ -21,18 +22,11 @@ proc ToString*(runtime: Runtime, value: MAtom): string =
       return "undefined"
     else:
       # 9. Assert: argument is an Object.
-      #[# FIXME: I don't think this is compliant...
-      let typHash = cast[Hash](
-        &(
-          &value.tagged("bali_object_type")
-        ).getInt()
-      )
-      let meths = runtime.getMethods(typHash)
-
-      if meths.contains("toString"):
-        return &runtime.vm.registers.callArgs.pop().getStr()
-      else:]#
-      return "undefined" # FIXME: not implemented yet!
+      # 10. Let primValue be ? ToPrimitive(argument, string).
+      let primValue = runtime.ToPrimitive(value, some(String))
+      
+      # 12. Return ? ToString(primValue).
+      return runtime.ToString(primValue)
   of Null, Ident:
     debug "runtime: toString(): atom is null."
     return "null" # 4. If argument is null, return "null".

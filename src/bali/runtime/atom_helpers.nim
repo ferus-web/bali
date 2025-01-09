@@ -66,6 +66,16 @@ func wrap*[T: not MAtom](val: openArray[T]): MAtom =
 
   vec
 
+func wrap*(atom: MAtom): MAtom {.inline.} =
+  atom
+
+func wrap*[A, B](val: Table[A, B]): MAtom =
+  var atom = obj()
+  for k, v in val:
+    atom[$k] = wrap(v)
+
+  atom
+
 func wrap*[T: object](obj: T): MAtom =
   var mObj = atom.obj()
 

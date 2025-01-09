@@ -946,7 +946,7 @@ proc generateInternalIR*(runtime: Runtime) =
         index = runtime.argument(2)
 
       assert(*atom, "BUG: Atom was empty when calling BALI_INDEX_INTERNAL!")
-      assert((&atom).kind == Sequence, "BUG: BALI_INDEX_INTERNAL was passed a non-seq.")
+      assert((&atom).kind == Sequence, "BUG: BALI_INDEX_INTERNAL was passed a " & $(&atom).kind)
       
       let idx = &(&index).getInt()
       let vec = (&atom).sequence

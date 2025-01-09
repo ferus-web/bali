@@ -74,6 +74,11 @@ proc definePrototypeFn*[T](runtime: Runtime, prototype: typedesc[T], name: strin
     if typ.proto == hash($prototype):
       runtime.types[i].prototypeFunctions[name] = fn
 
+proc getReturnValue*(runtime: Runtime): Option[MAtom] =
+  ## Get the value in the return-value register, if there is any.
+  ## NOTE: You need to disable aggressive retval scrubbing if you want to get the return value of a function called in bytecode
+  runtime.vm.registers.retVal
+
 proc createAtom*(typ: JSType): MAtom =
   var atom = obj()
 
@@ -116,6 +121,15 @@ proc isA*[T: object](runtime: Runtime, atom: MAtom, typ: typedesc[T]): bool =
       return true
 
   false
+
+proc getMethod*(runtime: Runtime, v: MAtom, p: string): Option[NativePrototypeFunction] =
+  for typ in runtime.types:
+    if typ.proto.int != &getInt(&v.tagged("bali_object_type")):
+      continue
+
+    for name, meth in typ.prototypeFunctions:
+      if name == p:
+        return some(meth)
 
 proc getTypeFromName*(runtime: Runtime, name: string): Option[JSType] =
   ## Returns a registered JS type based on its name, if it exists.
