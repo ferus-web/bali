@@ -16,7 +16,7 @@ Thanks to [@CanadaHonk](https://github.com/CanadaHonk), Bali is now on [test262.
 You can check how much Bali progresses/regresses by each day's run.
 
 # How fast is it?
-With some recent codegen optimizations, Bali is already pretty fast on cherry-picked benchmarks.
+With some recent codegen optimizations, Bali is already pretty fast on cherry-picked benchmarks. Bali can perform some optimizations when it is generating code for the provided JavaScript source, granted that it can prove that there is an opportunity to optimize away things.
 
 ## Iterating 999999999 times and incrementing an integer each loop
 Bali has some loop elision optimizations in place which can fully eliminate an expensive loop when it sees the opportunity. \
@@ -24,7 +24,21 @@ Node is run without a JIT compiler just to be fair to Bali and QuickJS. QuickJS 
 outperforms both of them by a huge margin.
 
 **Try it for yourself**: [Source code](tests/data/iterate-for-no-reason-001.js) \
-![Image](assets/bali-vs-node-vs-qjs-001.png)
+| Engine    | Time Taken    |
+| --------- | ------------- |
+| V8 (Node) | 0.521s        |
+| Bali      | 0.012s        |
+| QuickJS   | 27.064s       |
+
+## Finding a substring in a moderately large string
+Bali's string-find function (`String.prototype.indexOf`) is SIMD-accelerated, and as such, is pretty fast. It still gets beaten out by QuickJS, though.
+
+**Try it for yourself**: [Source code](tests/data/string-find-001.js) \
+| Engine       | Time Taken    |
+| ------------ | ------------- |
+| SpiderMonkey | 0.057s        |
+| Bali         | 0.012s        |
+| QuickJS      | 0.003s        |
 
 # Contact Me
 You can join the [Ferus Discord Server](https://discord.gg/9MwfGn2Jkb) to discuss Bali and other components of the Ferus web engine.
@@ -104,7 +118,7 @@ runtime.run()
 - Arrays                               [X]
 - REPL                                 [X]
 - String prototype                     [X]
-- Dates                                [X]
+- Date prototype                       [X]
 - Functions as values                  [ ]
 - For-loops                            [ ]
 - Modules                              [ ]
