@@ -620,6 +620,12 @@ proc next*(tokenizer: Tokenizer): Token =
       token
     else:
       tokenizer.consumeInvalid()
+  of '?':
+    tokenizer.advance()
+    return Token(kind: TokenKind.Question)
+  of ':':
+    tokenizer.advance()
+    return Token(kind: TokenKind.Colon)
   else:
     tokenizer.consumeInvalid()
 

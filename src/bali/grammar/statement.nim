@@ -28,6 +28,7 @@ type
     Break
     Waste
     AccessArrayIndex
+    TernaryOp
 
   FieldAccess* = ref object
     prev*, next*: FieldAccess
@@ -148,6 +149,10 @@ type
       arrAccIdent*: string
       arrAccIndex*: Option[MAtom]
       arrAccIdentIndex*: Option[string]
+    of TernaryOp:
+      ternaryCond*: Statement
+      trueTernary*, falseTernary*: Statement
+      ternaryStoreIn*: Option[string]
 
 func hash*(access: FieldAccess): Hash {.inline.} =
   hash((access.identifier))
