@@ -23,7 +23,7 @@ Bali has some loop elision optimizations in place which can fully eliminate an e
 Node is run without a JIT compiler just to be fair to Bali and QuickJS. QuickJS turns out to be the slowest whilst Bali
 outperforms both of them by a huge margin.
 
-**Try it for yourself**: [Source code](tests/data/iterate-for-no-reason-001.js) \
+**Try it for yourself**: [Source code](tests/data/iterate-for-no-reason-001.js)
 | Engine    | Time Taken    |
 | --------- | ------------- |
 | V8 (Node) | 0.521s        |
@@ -33,7 +33,7 @@ outperforms both of them by a huge margin.
 ## Finding a substring in a moderately large string
 Bali's string-find function (`String.prototype.indexOf`) is SIMD-accelerated, and as such, is pretty fast. It still gets beaten out by QuickJS, though.
 
-**Try it for yourself**: [Source code](tests/data/string-find-001.js) \
+**Try it for yourself**: [Source code](tests/data/string-find-001.js)
 | Engine       | Time Taken    |
 | ------------ | ------------- |
 | SpiderMonkey | 0.057s        |
