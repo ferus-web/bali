@@ -197,6 +197,25 @@ proc generateStdIR*(runtime: Runtime) =
 
   runtime.definePrototypeFn(
     JSDate,
+    "toString",
+    proc(value: MAtom) =
+      ## 21.4.4.41 Date.prototype.toString ( )
+      
+      # 1. Let dateObject be the this value.
+      let dateObject = value
+
+      # 2. Perform ? RequireInternalSlot(dateObject, [[DateValue]])
+      assert(runtime.isA(dateObject, JSDate))
+
+      # 3. Let tv be dateObject.[[DateValue]].
+      let time = runtime.ToNumber(&dateObject.tagged("epoch"))
+
+      # 4. Return ToDateString(tv).
+      ret toDateString(time)
+  )
+  
+  runtime.definePrototypeFn(
+    JSDate,
     "getDay",
     proc(value: MAtom) =
       ## 21.4.4.3 Date.prototype.getDay ( )
