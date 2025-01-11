@@ -40,14 +40,14 @@ proc OrdinaryToPrimitive*(runtime: Runtime, input: MAtom, hint: PrimitiveHint): 
 
   # 4. Throw a TypeError exception.
   # Yes Rico, kaboom.
-  # runtime.typeError("Cannot convert object into primitive")
+  runtime.typeError("Cannot convert object into primitive")
 
 proc ToPrimitive*(runtime: Runtime, input: MAtom, preferredType: Option[MAtomKind] = none(MAtomKind)): MAtom =
   # 1. If input is an Object, then
   if input.kind == Object:
     # a. Let exoticToPrim be ? GetMethod(input, @@toPrimitive).
     let exoticToPrim = runtime.getMethod(input, "toPrimitive")
- 
+
     if *exoticToPrim:
       # b. If exoticToPrim is not undefined, then
       
@@ -65,7 +65,7 @@ proc ToPrimitive*(runtime: Runtime, input: MAtom, preferredType: Option[MAtomKin
           # 1. Assert: preferredType is number.
           if &preferredType in [Integer, UnsignedInt, Float]:
             # 2. Let hint be "number".
-            PrimitiveHint.String
+            PrimitiveHint.Number
           else:
             unreachable
             default PrimitiveHint
@@ -80,8 +80,10 @@ proc ToPrimitive*(runtime: Runtime, input: MAtom, preferredType: Option[MAtomKin
         return &res
       else:
         # vi. Throw a TypeError exception.
-        # runtime.typeError("Cannot convert object into primitive")
-        discard
+        runtime.typeError("Cannot convert object into primitive")
     else:
       # c. If preferredType is not present, let preferredType be number.
       return runtime.OrdinaryToPrimitive(input, PrimitiveHint.Number)
+
+  # 2. Return input.
+  return input
