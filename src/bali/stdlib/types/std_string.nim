@@ -3,7 +3,7 @@
 ## Author(s):
 ## Trayambak Rai (xtrayambak at disroot dot org)
 import std/[logging, tables, strutils, hashes, unicode]
-import bali/runtime/[arguments, bridge, atom_helpers, types, bridge]
+import bali/runtime/[arguments, bridge, atom_helpers, types]
 import bali/runtime/abstract/[coercible, to_number, to_string]
 import bali/stdlib/errors
 import bali/internal/[trim_string, sugar]
