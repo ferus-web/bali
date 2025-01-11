@@ -237,6 +237,8 @@ proc generateIR*(
     parentStmt: Option[Statement] = none(Statement),
     index: Option[uint] = none(uint)
 ) =
+  ## Given a statement `stmt` and its encompassing functional scope `fn` (which can be a plain scope as well),
+  ## generate the bytecode for that statement.
   case stmt.kind
   of CreateImmutVal:
     debug "emitter: generate IR for creating immutable value with identifier: " &
@@ -999,6 +1001,7 @@ proc run*(runtime: Runtime) =
   encodeUri.generateStdIR(runtime)
   std_string.generateStdIR(runtime)
   date.generateStdIR(runtime)
+  std_bigint.generateStdIR(runtime)
 
   parseIntGenerateStdIR(runtime)
 

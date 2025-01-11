@@ -18,6 +18,9 @@ func isNumber*(atom: MAtom): bool {.inline.} =
   atom.kind == UnsignedInt or
   atom.kind == Integer
 
+func isBigInt*(atom: MAtom): bool {.inline.} =
+  atom.kind == BigInteger
+
 proc `[]`*(atom: MAtom, name: string): MAtom {.inline.} =
   if atom.kind != Object:
     raise newException(ValueError, $atom.kind & " does not have field access methods")

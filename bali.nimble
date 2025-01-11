@@ -13,7 +13,7 @@ binDir          = "bin"
 # Dependencies
 
 requires "nim >= 2.0.2"
-requires "mirage >= 1.0.44"
+requires "mirage >= 1.1.0"
 requires "librng >= 0.1.3"
 requires "pretty >= 0.1.0"
 requires "colored_logger >= 0.1.0"
@@ -30,3 +30,5 @@ requires "https://github.com/xTrayambak/kaleidoscope >= 0.1.1"
 taskRequires "fmt", "nph#master"
 task fmt, "Format code":
   exec "nph src/ tests/"
+
+requires "https://github.com/ferus-web/nim-gmp >= 0.1.0"

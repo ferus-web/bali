@@ -3,4 +3,4 @@
 
 import ./[coercible, to_number, to_primitive, to_string]
 
-export coercible, to_number, to_string
+export coercible, to_number, to_string, to_primitive
