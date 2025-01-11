@@ -4,6 +4,7 @@ import bali/internal/sugar
 import bali/runtime/[atom_helpers, types]
 import bali/runtime/abstract/to_primitive
 import bali/stdlib/errors
+import pkg/gmp
 import pretty
 
 proc ToString*(runtime: Runtime, value: MAtom): string =
@@ -41,6 +42,10 @@ proc ToString*(runtime: Runtime, value: MAtom): string =
     return
       $(&value.getInt())
         # 7. If argument is a Number, return Number::toString(argument, 10).
+  of BigInteger:
+    debug "runtime: toString(): atom is a bigint"
+    return
+      $value.bigint
   of Float:
     debug "runtime: toString(): atom is a number (float)."
     return
@@ -64,4 +69,3 @@ proc ToString*(runtime: Runtime, value: MAtom): string =
     buffer &= ']'
 
     return buffer
-
