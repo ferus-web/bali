@@ -13,7 +13,7 @@ import pretty
 
 const
   ## At what point should Bali start SIMD-accelerating string related operations?
-  BaliStringAccelerationThreshold* {.intdefine.} = 512
+  BaliStringAccelerationThreshold* {.intdefine.} = 128
 
 type
   JSString* = object

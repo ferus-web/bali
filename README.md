@@ -1,5 +1,5 @@
 # Bali
-Bali is a WIP JavaScript engine written in Nim that aims to be as compliant as possible to the ECMAScript specifications. \
+Bali is a work-in-progress JavaScript lexer, parser and interpreter written in Nim that aims to be as compliant as possible to the ECMAScript specifications. \
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
 
 I repeat,
