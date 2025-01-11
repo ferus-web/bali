@@ -225,6 +225,7 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
       inc runtime.addrIdx
       let idx = runtime.loadIRAtom(item)
       runtime.ir.appendList(result, idx)
+  else: unreachable
 
 proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
   for value in runtime.values:
