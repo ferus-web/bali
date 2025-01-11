@@ -865,10 +865,15 @@ proc computeTypeof*(runtime: Runtime, atom: MAtom): string =
   of Object:
     if runtime.isA(atom, JSString):
       return "string"
+
+    if runtime.isA(atom, JSBigInt):
+      return "bigint"
     
     return "object"
   of Boolean:
     return "boolean"
+  of BigInteger:
+    return "bigint"
   else: unreachable
 
 proc generateInternalIR*(runtime: Runtime) =
