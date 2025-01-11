@@ -1,4 +1,4 @@
-import std/[logging]
+import std/[logging, math]
 import mirage/runtime/prelude
 import bali/internal/sugar
 import bali/runtime/[atom_helpers, types]
@@ -54,3 +54,25 @@ proc ToNumber*(runtime: Runtime, value: MAtom): float =
     return &value.getFloat()
   else:
     unreachable
+
+proc isFiniteNumber*(runtime: Runtime, number: MAtom): bool {.inline.} =
+  if not isNumber(number):
+    return false
+
+  let value = runtime.ToNumber(number)
+
+  if value.int32 < int32.high:
+    return true
+
+  return value != NaN and value != Inf
+
+proc isIntegralNumber*(runtime: Runtime, number: MAtom): bool {.inline.} =
+  if not number.isNumber:
+    return false
+
+  let value = runtime.ToNumber(number)
+
+  if value.int32 < int32.high:
+    return true
+
+  runtime.isFiniteNumber(number) and value.trunc() == value
