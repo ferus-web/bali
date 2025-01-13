@@ -1,7 +1,7 @@
 ## Test262 required builtins/harnesses
 ##
 
-import std/[strutils, math, options, logging, tables, terminal]
+import std/[strutils, math, options, logging, tables, terminal, hashes]
 import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/runtime/[normalize, bridge]
@@ -76,6 +76,8 @@ proc generateStdIr*(runtime: Runtime) =
         if a.getStr() == b.getStr(): yes else: no
       of Null:
         yes
+      of Sequence:
+        if a.getSequence().hash() == b.getSequence().hash(): yes else: no
       else:
         no,
   )

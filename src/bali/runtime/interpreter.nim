@@ -1,5 +1,4 @@
 ## Bali runtime (MIR emitter)
-##
 
 import std/[options, hashes, logging, sugar, strutils, tables, importutils]
 import mirage/ir/generator
