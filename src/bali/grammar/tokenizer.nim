@@ -147,8 +147,6 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
       factor *= 0.1'f64
       tokenizer.advance(1)
 
-    print fractionalPart
-
   var value = sign * (integralPart + fractionalPart)
   if tokenizer.charAt(1) in [some 'e', some 'E']:
     if &tokenizer.charAt(1) in {'0' .. '9'} or
