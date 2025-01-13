@@ -74,6 +74,8 @@ proc generateStdIr*(runtime: Runtime) =
         if a.getUint() == b.getUint(): yes else: no
       of String:
         if a.getStr() == b.getStr(): yes else: no
+      of Float:
+        if a.getFloat() == b.getFloat(): yes else: no
       of Null:
         yes
       of Sequence:

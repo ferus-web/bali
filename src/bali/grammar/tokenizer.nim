@@ -88,14 +88,18 @@ proc consumeInvalid*(tokenizer: Tokenizer): Token =
 proc charToDecimalDigit*(c: char): Option[uint32] {.inline.} =
   ## Convert characters to decimal digits
   if c >= '0' and c <= '9':
-    return some((c.ord - '0'.ord).uint32)
+    return some(
+      uint32(
+        cast[uint8](c) - (uint8)'0'
+      )
+    )
 
 proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
   if not tokenizer.hasAtleast(1):
     let value = parseInt($(&tokenizer.charAt()))
     tokenizer.advance()
     return Token(kind: Number, hasSign: false, floatVal: value.float, intVal: some(value.int32))
-
+  
   var
     hasSign: bool
     sign = 1f
@@ -127,7 +131,7 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
   while not tokenizer.eof and unpack(charToDecimalDigit(&tokenizer.charAt()), digit):
     integralPart = integralPart * 10'f64 + digit.float64
     tokenizer.advance(1)
-
+  
   var
     isInteger = true
     fractionalPart: float64 = 0'f64
@@ -138,10 +142,12 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
 
     var factor = 0.1'f64
 
-    while not tokenizer.eof() and unpack(charToDecimalDigit(tokenizer.consume()), digit):
+    while not tokenizer.eof() and unpack(charToDecimalDigit(&tokenizer.charAt()), digit):
       fractionalPart += digit.float64 * factor
       factor *= 0.1'f64
       tokenizer.advance(1)
+
+    print fractionalPart
 
   var value = sign * (integralPart + fractionalPart)
   if tokenizer.charAt(1) in [some 'e', some 'E']:
