@@ -833,6 +833,7 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope, allocateConstants: bool
         let idx = runtime.addrIdx
         runtime.markGlobal(typ.name)
         runtime.ir.loadObject(idx)
+        runtime.ir.createField(idx, 0, "bali_object_type")
         runtime.ir.markGlobal(idx)
         runtime.types[i].singletonId = idx
 
@@ -899,7 +900,7 @@ proc generateInternalIR*(runtime: Runtime) =
 
       let atom = runtime.vm.stack[index]
         # FIXME: weird bug with mirage, `get` returns a NULL atom.
-      
+
       if atom.isUndefined():
         runtime.typeError("value is undefined")
 
