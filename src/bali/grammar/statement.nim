@@ -143,7 +143,8 @@ type
     of Decrement:
       decIdent*: string
     of Waste:
-      wstAtom*: MAtom
+      wstAtom*: Option[MAtom]
+      wstIdent*: Option[string]
     of Break: discard
     of AccessArrayIndex:
       arrAccIdent*: string
@@ -268,7 +269,10 @@ proc returnFunc*(): Statement =
   Statement(kind: ReturnFn)
 
 proc waste*(atom: MAtom): Statement =
-  Statement(kind: Waste, wstAtom: atom)
+  Statement(kind: Waste, wstAtom: atom.some())
+
+proc waste*(ident: string): Statement =
+  Statement(kind: Waste, wstIdent: ident.some())
 
 proc increment*(ident: string): Statement =
   Statement(kind: Increment, incIdent: ident)

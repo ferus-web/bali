@@ -1017,10 +1017,19 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     if not parser.tokenizer.eof():
       let next = parser.tokenizer.nextExceptWhitespace()
+      print next
 
       if !next:
-        return
-          # FIXME: should we expand this into a `Call("console.log", `ident`)` instead?
+        #[ var args: PositionedArguments
+        args.pushIdent(token.ident)
+        return call(
+          fn = callFunction(
+            "log",
+            createFieldAccess(@["console"])
+          ),
+          arguments = move(args)
+        ).some() ]#
+        return waste(token.ident).some()
 
       case (&next).kind
       of TokenKind.LParen:
@@ -1034,9 +1043,11 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       else:
         parser.error UnexpectedToken,
           "expected left parenthesis, increment, decrement or equal sign, got " & $(&next).kind
+    else:
+      return waste(token.ident).some()
 
-    parser.tokenizer.pos = prevPos
-    parser.tokenizer.location = prevLoc
+    # parser.tokenizer.pos = prevPos
+    # parser.tokenizer.location = prevLoc
   of TokenKind.Return:
     if token.containsUnicodeEsc:
       parser.error Other, "keyword `return` cannot contain unicode escape(s)"

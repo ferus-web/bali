@@ -530,8 +530,8 @@ proc consumeLessThan*(tokenizer: Tokenizer): Token =
 
 proc consumeMinus*(tokenizer: Tokenizer): Token =
   debug "tokenizer: consume minus sign"
-  if not tokenizer.eof:
-    case &tokenizer.charAt(1)
+  if not tokenizer.eof and (let c = tokenizer.charAt(1); *c):
+    case &c
     of {'0' .. '9'}:
       debug "tokenizer: minus sign is followed by numeric, consuming Number"
       return tokenizer.consumeNumeric(true)

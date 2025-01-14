@@ -714,8 +714,16 @@ proc generateIR*(
     debug "emitter: generate IR for break"
     runtime.irHints.breaksGeneratedAt &= runtime.ir.addOp(IROperation(opcode: Jump)) - 1
   of Waste:
-    debug "emitter: generate IR for wasting atom"
-    let idx = runtime.loadIRAtom(stmt.wstAtom)
+    debug "emitter: generate IR for wasting value"
+    assert(not (*stmt.wstAtom and *stmt.wstIdent), "Cannot waste atom and identifier at once!")
+    
+    let idx =
+      if *stmt.wstAtom:
+        runtime.loadIRAtom(&stmt.wstAtom)
+      elif *stmt.wstIdent:
+        runtime.index(&stmt.wstIdent, defaultParams(fn))
+      else: unreachable; 0'u
+
     if runtime.opts.repl:
       runtime.ir.passArgument(idx)
       runtime.ir.call(normalizeIRName "console.log")
