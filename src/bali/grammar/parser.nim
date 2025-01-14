@@ -783,6 +783,14 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
     of TokenKind.RParen:
       metEnd = true
       break
+    of TokenKind.New:
+      # constructor!
+      let
+        call = parser.parseConstructor()
+        resIdent = "@0_" & $idx
+
+      parser.ast.appendToCurrentScope(callAndStoreMut(resIdent, &call))
+      args.pushIdent(resIdent)
     else:
       parser.error UnexpectedToken, $token.kind
 
