@@ -6,4 +6,4 @@ function fac(n) {
     return result
 }
 
-fac(2)
+console.log(fac(32))

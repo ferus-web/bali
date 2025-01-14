@@ -1017,7 +1017,6 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     if not parser.tokenizer.eof():
       let next = parser.tokenizer.nextExceptWhitespace()
-      print next
 
       if !next:
         #[ var args: PositionedArguments

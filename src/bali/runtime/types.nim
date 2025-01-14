@@ -78,6 +78,17 @@ type
   IRHints* = object
     breaksGeneratedAt*: seq[uint]
 
+  RuntimeStats* = object
+    atomsAllocated*: uint       ## How many atoms have been allocated so far?
+    bytecodeSize*: uint         ## How many kilobytes is the bytecode?
+    breaksGenerated*: uint      ## How many breaks did the codegen phase generate?
+    vmHasHalted*: bool          ## Has execution ended?
+    fieldAccesses*: uint        ## How many times has a field-access occurred?
+    typeofCalls*: uint          ## How many times has a typeof call occured?
+    clausesGenerated*: uint     ## How many clauses did the codegen phase generate?
+
+    numAllocations*, numDeallocations*: uint ## How many allocations/deallocations happened during execution?
+
   Runtime* = ref object
     ast*: AST
     ir*: IRGenerator
@@ -92,6 +103,9 @@ type
     semanticErrors*: seq[SemanticError]
     clauses*: seq[string]
     test262*: Test262Opts
+
+    statFieldAccesses, statTypeofCalls: uint
+    allocStatsStart*: AllocStats
 
     types*: seq[JSType]
 

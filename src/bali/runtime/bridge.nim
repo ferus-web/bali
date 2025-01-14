@@ -1,10 +1,14 @@
-import std/[logging, tables, options, strutils, hashes]
+import std/[logging, tables, options, strutils, hashes, importutils]
 import mirage/runtime/prelude
 import mirage/ir/generator
 import bali/runtime/[atom_obj_variant, atom_helpers, types, normalize]
 import bali/stdlib/errors
 import bali/internal/sugar
 import pretty
+
+privateAccess(Runtime)
+privateAccess(PulsarInterpreter)
+privateAccess(AllocStats)
 
 proc defineFn*[T](
     runtime: Runtime, prototype: typedesc[T], name: string, fn: NativeFunction
@@ -43,6 +47,28 @@ proc setProperty*[T](
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
       runtime.types[i].members[name] = initAtomOrFunction[NativeFunction](value)
+
+proc dumpStatistics*(
+  runtime: Runtime
+): RuntimeStats =
+  info "runtime: dumping statistics"
+  var stats: RuntimeStats
+
+  stats.atomsAllocated = uint(runtime.vm.stack.len)
+  stats.bytecodeSize = uint(runtime.vm.tokenizer.input.len / 1024)
+  stats.breaksGenerated = uint(runtime.irHints.breaksGeneratedAt.len)
+  stats.vmHasHalted = runtime.vm.halt
+  stats.fieldAccesses = runtime.statFieldAccesses
+  stats.typeofCalls = runtime.statTypeofCalls
+  stats.clausesGenerated = uint(runtime.ir.modules.len)
+
+  let allocStats = runtime.allocStatsStart - getAllocStats()
+  stats.numAllocations = uint(allocStats.allocCount)
+  stats.numDeallocations = uint(allocStats.deallocCount)
+
+  info "runtime: completed statistics dump"
+
+  stats
 
 proc setProperty*[V: not MAtom, T](
   runtime: Runtime,

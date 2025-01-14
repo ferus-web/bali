@@ -11,6 +11,7 @@ import bali/stdlib/prelude
 import crunchy, pretty
 
 privateAccess(PulsarInterpreter)
+privateAccess(AllocStats)
 
 proc generateIR*(
   runtime: Runtime,
@@ -1004,6 +1005,7 @@ proc generateInternalIR*(runtime: Runtime) =
     )
 
 proc run*(runtime: Runtime) =
+  runtime.allocStatsStart = getAllocStats()
   runtime.test262 = runtime.ast.test262
   console.generateStdIR(runtime)
   math.generateStdIR(runtime)

@@ -90,6 +90,39 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
 
   runtime
 
+proc dumpStatisticsPretty(runtime: Runtime) =
+  let stats = runtime.dumpStatistics()
+  
+  stdout.styledWriteLine(styleBright, "Runtime Statistics", resetStyle)
+  stdout.styledWriteLine(fgGreen, "Atoms Allocated", resetStyle, ": ", styleBright, $stats.atomsAllocated, resetStyle)
+
+  when defined(nimAllocStats):
+    stdout.styledWriteLine(fgGreen, "Traced Allocations", resetStyle, ": ", styleBright, $stats.numAllocations, resetStyle)
+    stdout.styledWriteLine(fgGreen, "Traced Deallocations", resetStyle, ": ", styleBright, $stats.numDeallocations, resetStyle)
+  else:
+    stdout.styledWriteLine(
+      "* ", styleItalic, styleBright, "Cannot show traced allocations/deallocations; compile Balde with ", 
+      resetStyle, fgGreen, "--define:nimAllocStats", resetStyle,
+      styleItalic, " to see allocation/deallocation statistics."
+    )
+
+  stdout.styledWriteLine(fgGreen, "Bytecode Size (KB)", resetStyle, ": ", styleBright, $stats.bytecodeSize, resetStyle)
+  stdout.styledWriteLine(fgGreen, "Code Breaks Generated", resetStyle, ": ", styleBright, $stats.breaksGenerated, resetStyle)
+  stdout.styledWriteLine(
+    fgGreen, "VM State", resetStyle, ": ",
+    (
+      if stats.vmHasHalted:
+        fgGreen
+      else:
+        fgRed
+    ),
+    (if stats.vmHasHalted: "Halted" else: "Running"),
+    resetStyle
+  )
+  stdout.styledWriteLine(fgGreen, "Field Accesses", resetStyle, ": ", styleBright, $stats.fieldAccesses, resetStyle)
+  stdout.styledWriteLine(fgGreen, "Typeof Calls", resetStyle, ": ", styleBright, $stats.typeofCalls, resetStyle)
+  stdout.styledWriteLine(fgGreen, "Clauses Generated", resetStyle, ": ", styleBright, $stats.clausesGenerated, resetStyle)
+
 func `%`(t: tuple[str: Option[string], exc: Option[void], ident: Option[string]]): JsonNode =
   if *t.str:
     return newJString &t.str
@@ -172,6 +205,9 @@ proc execFile(ctx: Input, file: string) {.inline.} =
     of dmJsonPretty:
       let serialized = pretty(parseJson(toJson(ast))) # FIXME: this is horribly inefficient but it works
       echo serialized]#
+  
+  if ctx.enabled("dump-statistics"):
+    runtime.dumpStatisticsPretty()
 
   if ctx.enabled("dump-runtime-after-exec"):
     print runtime
@@ -311,6 +347,8 @@ Options:
   --enable-experiments:<a>;<b>; ... <z>   Enable certain experimental features that aren't stable yet.
   --insert-debug-hooks, -H                Insert some debug hooks that expose JavaScript code to the engine's internals.
   --test262                               Insert some functions similar to those found in Test262.
+  --dump-statistics                       Dump some diagnostic statistics from the runtime.
+  --version, -V                           Output the version of Bali/Balde in the standard output
 
 Codegen Flags:
   --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
