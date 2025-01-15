@@ -29,19 +29,20 @@ proc toJsString*(runtime: Runtime, atom: MAtom): JSString =
 
 proc generateStdIr*(runtime: Runtime) =
   runtime.registerType(prototype = JSString, name = "String")
-  runtime.defineConstructor(
-    "String",
-    proc =
-      let argument = 
-        if runtime.argumentCount > 0:
-          &runtime.argument(1)
-        else:
-          str("")
+  proc stringConstructor =
+    let argument = 
+      if runtime.argumentCount > 0:
+        &runtime.argument(1)
+      else:
+        str("")
 
-      var atom = runtime.createObjFromType(JSString)
-      atom.tag("internal", runtime.ToString(argument))
-      ret atom
-  )
+    var atom = runtime.createObjFromType(JSString)
+    atom.tag("internal", runtime.ToString(argument))
+    ret atom
+
+  runtime.defineConstructor("String", stringConstructor)
+  runtime.defineFn("String", stringConstructor)
+
   runtime.definePrototypeFn(
     JSString,
     "toString",
