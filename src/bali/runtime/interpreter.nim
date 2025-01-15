@@ -11,6 +11,7 @@ import bali/stdlib/prelude
 import crunchy, pretty
 
 privateAccess(PulsarInterpreter)
+privateAccess(Runtime)
 privateAccess(AllocStats)
 
 proc generateIR*(
@@ -890,6 +891,7 @@ proc generateInternalIR*(runtime: Runtime) =
   runtime.vm.registerBuiltin(
     "BALI_RESOLVEFIELD_INTERNAL",
     proc(op: Operation) =
+      inc runtime.statFieldAccesses
       let
         index = uint(&(&runtime.argument(1)).getInt())
         storeAt = uint(&(&runtime.argument(2)).getInt())
@@ -947,6 +949,7 @@ proc generateInternalIR*(runtime: Runtime) =
   runtime.vm.registerBuiltin(
     "BALI_TYPEOF_INTERNAL",
     proc(op: Operation) =
+      inc runtime.statTypeofCalls
       let atom = runtime.argument(1)
       assert(*atom, "BUG: Atom was empty when calling BALI_TYPEOF_INTERNAL!")
       ret runtime.computeTypeof(&atom)

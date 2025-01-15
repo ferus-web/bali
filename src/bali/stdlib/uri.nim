@@ -4,6 +4,7 @@ import bali/internal/sugar
 import bali/runtime/[normalize, arguments, types, atom_helpers, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
+import bali/stdlib/types/std_string
 import mirage/ir/generator
 import mirage/atom
 import mirage/runtime/[prelude]
@@ -63,17 +64,19 @@ proc generateStdIR*(runtime: Runtime) =
 
       let source = &move(osource)
 
-      if source.kind != String:
+      if not runtime.isA(source, JSString):
         runtime.typeError(
           "URL constructor: " & runtime.ToString(source) & " is not a valid URL."
         )
         return
 
+      let str = runtime.ToString(source)
+
       let parsed =
         try:
-          parser.parse(runtime.ToString(source))
+          parser.parse(str)
         except URLParseError as pError:
-          debug "url: encountered parse error whilst parsing url: " & &source.getStr() &
+          debug "url: encountered parse error whilst parsing url: " & str &
             ": " & pError.msg
           debug "url: this is a constructor, so a TypeError will be thrown."
           runtime.typeError(pError.msg)
@@ -83,7 +86,7 @@ proc generateStdIR*(runtime: Runtime) =
       if parsed.scheme().len < 1:
         return
 
-      ret transposeUrlToObject(runtime, parsed, &source.getStr())
+      ret transposeUrlToObject(runtime, parsed, str)
     ,
   )
 
@@ -104,18 +107,20 @@ proc generateStdIR*(runtime: Runtime) =
 
       let source = &move(osource)
 
-      if source.kind != String:
+      if not runtime.isA(source, JSString):
         ret null()
+
+      let str = runtime.ToString(source)
 
       var parsed =
         try:
-          parser.parse(&source.getStr())
+          parser.parse(str)
         except URLParseError as exc:
-          debug "url: encountered parse error whilst parsing url: " & &source.getStr() &
+          debug "url: encountered parse error whilst parsing url: " & str &
             ": " & exc.msg
           debug "url: this is the function variant, so no error will be thrown."
           URL()
 
-      ret transposeUrlToObject(runtime, parsed, &source.getStr())
+      ret transposeUrlToObject(runtime, parsed, str)
     ,
   )
