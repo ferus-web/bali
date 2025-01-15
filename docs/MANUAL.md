@@ -275,9 +275,10 @@ Bali exposes some levers to turn on/off some code generation features. This feat
 If the optimized code does not perform the same behaviour as the unoptimized code, that is a bug. You should probably report it to me after you're 100% sure that it isn't a problem on your part.
 
 ### Prelude
-Bali exposes two code generation optimizations as of right now:
+Bali exposes three code generation optimizations as of right now:
 - Loop Elider
 - Loop Allocation Eliminator
+- Return-value register scrubbing
 
 ### Loop Elision
 Say, we have some code like this (this is very stupid, most people don't write code like this):
