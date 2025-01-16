@@ -19,14 +19,13 @@ import mirage/ir/generator
 import bali/grammar/prelude
 import bali/runtime/[statement_utils, types]
 
-type
-  AllocationEliminatorResult* = object
-    placeBefore*: Scope ## All statements here are to be placed outside the loop
-    modifiedBody*: Scope ## This is the modified body and it should be placed where the original body was intended
+type AllocationEliminatorResult* = object
+  placeBefore*: Scope ## All statements here are to be placed outside the loop
+  modifiedBody*: Scope
+    ## This is the modified body and it should be placed where the original body was intended
 
 proc eliminateRedundantLoopAllocations*(
-  runtime: Runtime,
-  body: Scope
+    runtime: Runtime, body: Scope
 ): AllocationEliminatorResult =
   debug "redundant_loop_allocations: checking if redundant allocations can be eliminated in loop body..."
 
@@ -37,10 +36,12 @@ proc eliminateRedundantLoopAllocations*(
   for stmt in body.stmts:
     case stmt.kind
     of CreateImmutVal, CreateMutVal:
-      debug "redundant_loop_allocations: moving " & $stmt.kind & " into place-before scope"
+      debug "redundant_loop_allocations: moving " & $stmt.kind &
+        " into place-before scope"
       elims.placeBefore.stmts &= stmt
     else:
-      debug "redundant_loop_allocations: moving " & $stmt.kind & " into modified-body scope"
+      debug "redundant_loop_allocations: moving " & $stmt.kind &
+        " into modified-body scope"
       elims.modifiedBody.stmts &= stmt
 
   elims

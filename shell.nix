@@ -8,6 +8,7 @@ mkShell {
     spidermonkey_128
     quickjs
     boa
+    nph
   ];
 
   LD_LIBRARY_PATH = lib.makeLibraryPath [

@@ -47,7 +47,7 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
         &args
       else:
         newSeq[CallArg](0)
-  
+
   if name == "$DONOTEVALUATE":
     parser.ast.doNotEvaluate = true
 
@@ -232,17 +232,17 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
-  let 
+  let
     tokenizer = parser.tokenizer.deepCopy()
     next = parser.tokenizer.nextExceptWhitespace()
     mustEndWithParen = *next and (&next).kind == TokenKind.LParen
 
   var metParen = false
-  
+
   if not mustEndWithParen:
     parser.tokenizer = tokenizer
 
-  var args: PositionedArguments 
+  var args: PositionedArguments
   while not parser.tokenizer.eof:
     if mustEndWithParen and metParen:
       break
@@ -265,12 +265,12 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
       let atom = parser.parseAtom(token)
       if !atom:
         parser.error UnexpectedToken, "expected value or identifier, got " & $token.kind
-      
+
       args.pushAtom(&atom)
 
   if mustEndWithParen and not metParen:
     parser.error Other, "missing ) in parenthetical"
-  
+
   some(args)
 
 proc parseArray*(parser: Parser): Option[MAtom] =
@@ -297,7 +297,7 @@ proc parseArray*(parser: Parser): Option[MAtom] =
 
     if token.kind == TokenKind.Comma:
       debug "parser: found comma whilst parsing array elements"
-      if prev in { TokenKind.LBracket, TokenKind.Comma }:
+      if prev in {TokenKind.LBracket, TokenKind.Comma}:
         debug "parser: previous token was left bracket or comma, appending `undefined` to array"
         prev = TokenKind.Comma
         arr &= undefined()
@@ -310,11 +310,12 @@ proc parseArray*(parser: Parser): Option[MAtom] =
     if token.kind == TokenKind.Comment:
       debug "parser: found comment whilst parsing array elements"
       continue
-    
+
     let atom = parser.parseAtom(token)
     if !atom:
-      parser.error UnexpectedToken, "expected expression, value or name, got " & $token.kind & " instead."
-    
+      parser.error UnexpectedToken,
+        "expected expression, value or name, got " & $token.kind & " instead."
+
     debug "parser: appending atom to array: " & (&atom).crush()
     arr &= &atom
 
@@ -330,20 +331,24 @@ proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
-  template missingRBracket =
+  template missingRBracket() =
     parser.error Other, "missing ] in index expression"
     return false
 
-  proc checkForRBracket: bool =
+  proc checkForRBracket(): bool =
     # Returns a parsing error 
     let closing = parser.tokenizer.nextExceptWhitespace()
-    if !closing: missingRBracket
-    
+    if !closing:
+      missingRBracket
+
     let kind = (&closing).kind
     case kind
-    of TokenKind.RBracket: return true
-    of TokenKind.Comment: return checkForRBracket()
-    else: missingRBracket
+    of TokenKind.RBracket:
+      return true
+    of TokenKind.Comment:
+      return checkForRBracket()
+    else:
+      missingRBracket
 
   if (let indexToken = parser.tokenizer.nextExceptWhitespace(); *indexToken):
     let
@@ -357,7 +362,7 @@ proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
       if checkForRBracket():
         return some(arrayAccess(ident, &atom))
       # parser.error UnexpectedToken, "expected expression, got " & $token.kind
-    
+
     if not checkForRBracket():
       return
 
@@ -371,8 +376,7 @@ proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
     parser.error Other, "expected expression, got EOF"
 
 proc expectEqualsSign*(
-  parser: Parser,
-  stubDef: proc(): Result[Option[Statement], void]
+    parser: Parser, stubDef: proc(): Result[Option[Statement], void]
 ): Result[Option[Statement], void] =
   # FIXME: this is utterly fucking deranged.
   let nextTok = parser.tokenizer.next()
@@ -387,14 +391,18 @@ proc expectEqualsSign*(
     else:
       expectEqualsSign parser, stubDef
   else:
-    parser.error UnexpectedToken, "expected semicolon or equal sign after identifier, got " & $nextTok.kind
+    parser.error UnexpectedToken,
+      "expected semicolon or equal sign after identifier, got " & $nextTok.kind
 
 proc parseTernaryOp*(
-  parser: Parser,
-  ident: Option[string] = none(string),
-  atom: Option[MAtom] = none(MAtom)
+    parser: Parser,
+    ident: Option[string] = none(string),
+    atom: Option[MAtom] = none(MAtom),
 ): Option[Statement] =
-  assert(*ident or *atom, "BUG: Expected either initial `ident` or `atom` when parsing ternary operation, got neither?")
+  assert(
+    *ident or *atom,
+    "BUG: Expected either initial `ident` or `atom` when parsing ternary operation, got neither?",
+  )
   debug "parser: parsing ternary operation"
   var tern = Statement(kind: TernaryOp)
   tern.ternaryCond =
@@ -402,15 +410,17 @@ proc parseTernaryOp*(
       identHolder(&ident)
     elif *atom:
       atomHolder(&atom)
-    else: unreachable; atomHolder(null())
-  
+    else:
+      unreachable
+      atomHolder(null())
+
   debug "parser: parsing ternary's true expression"
   # TODO: add support for expressions like x ? (a + b) : (c + d)
   let trueExpr = parser.tokenizer.nextExceptWhitespace()
 
   if !trueExpr:
     parser.error UnexpectedToken, "expected expression, got EOF instead"
-  
+
   let trueKind = (&trueExpr).kind
   case trueKind
   of TokenKind.Number, TokenKind.String:
@@ -418,7 +428,8 @@ proc parseTernaryOp*(
   of TokenKind.Identifier:
     tern.trueTernary = identHolder((&trueExpr).ident)
   else:
-    parser.error UnexpectedToken, "expected value or identifier, got " & $trueKind & " instead"
+    parser.error UnexpectedToken,
+      "expected value or identifier, got " & $trueKind & " instead"
 
   # expect `:` to separate the two ternaries
   let expectColon = parser.tokenizer.nextExceptWhitespace()
@@ -430,7 +441,7 @@ proc parseTernaryOp*(
 
   if !falseExpr:
     parser.error UnexpectedToken, "expected expression, got EOF instead"
-  
+
   let falseKind = (&falseExpr).kind
   case falseKind
   of TokenKind.Number, TokenKind.String:
@@ -438,7 +449,8 @@ proc parseTernaryOp*(
   of TokenKind.Identifier:
     tern.falseTernary = identHolder((&falseExpr).ident)
   else:
-    parser.error UnexpectedToken, "expected value or identifier, got " & $falseKind & " instead"
+    parser.error UnexpectedToken,
+      "expected value or identifier, got " & $falseKind & " instead"
 
   some(tern)
 
@@ -465,7 +477,7 @@ proc parseDeclaration*(
       else:
         parser.error UnexpectedToken, $tok.kind
 
-  proc stubDef: Result[Option[Statement], void] =
+  proc stubDef(): Result[Option[Statement], void] =
     case initialIdent
     of "let", "const":
       return ok(some(createImmutVal(ident, undefined())))
@@ -482,7 +494,7 @@ proc parseDeclaration*(
 
   let gotEquals = parser.expectEqualsSign(stubDef)
   if *gotEquals: # what the fuck?
-    if *(&gotEquals): 
+    if *(&gotEquals):
       return &gotEquals
     else:
       discard
@@ -495,7 +507,8 @@ proc parseDeclaration*(
 
   if !expr:
     debug "parser: no expression was parsed, reverting back to old tokenizer state"
-    debug "parser: old (now current) = " & $copiedTok.pos & "; new (now old) = " & $parser.tokenizer.pos
+    debug "parser: old (now current) = " & $copiedTok.pos & "; new (now old) = " &
+      $parser.tokenizer.pos
     parser.tokenizer = copiedTok
   else:
     debug "parser: an expression was successfully parsed, continuing in this state"
@@ -551,7 +564,9 @@ proc parseDeclaration*(
       toCall = parser.parseConstructor()
       break
     of TokenKind.Typeof:
-      toCall = some(call("BALI_TYPEOF".callFunction(), &parser.parseTypeofCall(), mangle = false))
+      toCall = some(
+        call("BALI_TYPEOF".callFunction(), &parser.parseTypeofCall(), mangle = false)
+      )
       break
     of TokenKind.LBracket:
       atom = parser.parseArray()
@@ -566,7 +581,7 @@ proc parseDeclaration*(
     var tern = &ternary
     tern.ternaryStoreIn = some(ident)
     return some(tern)
-  
+
   if not reassignment:
     case initialIdent
     of "let", "const":
@@ -936,7 +951,7 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
   if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
     if (&tok).kind != TokenKind.LParen:
       parser.error Other, "expected left parenthesis after " & $token & " token"
-  
+
   let copiedTok = parser.tokenizer.deepCopy()
   var expr = parser.parseExpression()
   if !expr:
@@ -949,13 +964,16 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
       parser.error Other, "expected expression, got nothing instead"
     else:
       let holder = atomHolder(&atom)
-      expr = some Statement(kind: BinaryOp, binLeft: holder, binRight: holder, op: BinaryOperation.Equal)
+      expr = some Statement(
+        kind: BinaryOp, binLeft: holder, binRight: holder, op: BinaryOperation.Equal
+      )
 
   debug "parser: whilst parsing expression in parenthesis wrap: found expression!"
 
   if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
     if (&tok).kind != TokenKind.RParen:
-      parser.error Other, "expected right parenthesis after expression, got " & $(&tok).kind
+      parser.error Other,
+        "expected right parenthesis after expression, got " & $(&tok).kind
 
   debug "parser: whilst parsing expression in parenthesis wrap: grammar was satisfied, returning expression"
 
@@ -1041,7 +1059,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
         return some decrement(token.ident)
       else:
         parser.error UnexpectedToken,
-          "expected left parenthesis, increment, decrement or equal sign, got " & $(&next).kind
+          "expected left parenthesis, increment, decrement or equal sign, got " &
+            $(&next).kind
     else:
       return waste(token.ident).some()
 
@@ -1150,16 +1169,15 @@ proc parseStatement*(parser: Parser): Option[Statement] =
   of TokenKind.Comment:
     if token.multiline:
       parser.precededByMultilineComment = true
-    
+
     if parser.opts.test262:
       try:
-        yaml.load(
-          token.comment, parser.ast.test262
-        )
+        yaml.load(token.comment, parser.ast.test262)
       except CatchableError as exc:
         discard
   of TokenKind.Typeof:
-    return some(call("BALI_TYPEOF".callFunction, &parser.parseTypeofCall(), mangle = false))
+    return
+      some(call("BALI_TYPEOF".callFunction, &parser.parseTypeofCall(), mangle = false))
   else:
     parser.error UnexpectedToken, "unexpected token: " & $token.kind
 
@@ -1178,5 +1196,7 @@ proc parse*(parser: Parser): AST {.inline.} =
   parser.ast.errors = deepCopy(parser.errors)
   parser.ast
 
-proc newParser*(input: string, opts: ParserOpts = default(ParserOpts)): Parser {.inline.} =
+proc newParser*(
+    input: string, opts: ParserOpts = default(ParserOpts)
+): Parser {.inline.} =
   Parser(tokenizer: newTokenizer(input), opts: opts)

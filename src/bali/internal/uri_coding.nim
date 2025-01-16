@@ -13,13 +13,13 @@ proc encode*(uri: string, extraUnescaped: set[char] = {}): string =
   ## interpreting string as a sequence of UTF-16 encoded code points as described in 6.1.4. If a character is identified
   ## as unreserved in RFC 2396 or appears in extraUnescaped, it is not escaped. It performs the following steps
   ## when called:
-  
+
   let length = uint32(uri.len) # 1. Let len be the length of uri.
   var res: string # 2. Let R be the empty string
-  const alwaysUnescaped: set[char] = { 
-    '-', '.', '!', '~', '*', '\'', '(', ')' 
-  } + Letters # 3. Let alwaysUnescaped be the string-concatenation of the ASCII word characters and "-.!~*'()"
-  let unescapedSet = alwaysUnescaped + extraUnescaped # 4. Let unescapedSet be the string-concatenation of alwaysUnescaped and extraUnescaped
+  const alwaysUnescaped: set[char] = {'-', '.', '!', '~', '*', '\'', '(', ')'} + Letters
+    # 3. Let alwaysUnescaped be the string-concatenation of the ASCII word characters and "-.!~*'()"
+  let unescapedSet = alwaysUnescaped + extraUnescaped
+    # 4. Let unescapedSet be the string-concatenation of alwaysUnescaped and extraUnescaped
   var k = 0'u32 # 5. Let k be 0
 
   # 6. Repeat, while k < len
@@ -31,24 +31,22 @@ proc encode*(uri: string, extraUnescaped: set[char] = {}): string =
     if unescapedSet.contains(c):
       # i. Set k to k + 1
       inc k
-      
+
       # ii. Set R to the string-concatenation of res and C.
       res &= c
     else: # c. Else,
       # FIXME: This is non-compliant!! Fix this!
       # i. Let cp be CodePointAt(uri, k)
-      let cp = uri
-        .runeAt(k)
-        .toUTF8()
+      let cp = uri.runeAt(k).toUTF8()
 
       inc k
-      
+
       let hex = cp.toHex()
-      
+
       res &= '%' & padString(hex, 2, "0", PaddingPlacement.Start)
 
   # 7. Return res.
   res
 
 proc encodeURI*(uri: string): string =
-  encode(uri, { ';', '/', '?', ':', '@', '&', '=', '+', '$', ',', '#' })
+  encode(uri, {';', '/', '?', ':', '@', '&', '=', '+', '$', ',', '#'})

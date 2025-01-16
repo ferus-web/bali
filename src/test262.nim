@@ -12,15 +12,17 @@ type RunResult = enum
   Error
   Segfault
 
-proc execJS(file: string, dontEval: bool, num, total: uint, timeout: uint = 10): RunResult =
-  info " [ " & $num & " / " & $total & " / " & $(round(num.int / total.int * 100, 1)) & "% ] " & file
+proc execJS(
+    file: string, dontEval: bool, num, total: uint, timeout: uint = 10
+): RunResult =
+  info " [ " & $num & " / " & $total & " / " & $(round(num.int / total.int * 100, 1)) &
+    "% ] " & file
   let cmd =
-    "timeout --signal=SIGKILL " & $timeout & " ./bin/balde " & file & " --test262" & $(if dontEval: " --dump-ast" else: "")
+    "timeout --signal=SIGKILL " & $timeout & " ./bin/balde " & file & " --test262" &
+    $(if dontEval: " --dump-ast" else: "")
 
   echo cmd
-  case execCmd(
-    cmd
-  )
+  case execCmd(cmd)
   of 0:
     return Success
   of 139:

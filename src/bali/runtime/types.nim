@@ -46,7 +46,7 @@ type
     of ImmutableReassignment:
       imIdent*: string
       imNewValue*: MAtom
-  
+
   ExperimentOpts* = object
 
   CodegenOpts* = object
@@ -58,8 +58,9 @@ type
     test262*: bool = false
     repl*: bool = false
     dumpBytecode*: bool = false
-    insertDebugHooks*: bool = false ## Allow some calls from JS-land that expose the engine's internals to it.
-    
+    insertDebugHooks*: bool = false
+      ## Allow some calls from JS-land that expose the engine's internals to it.
+
     codegen*: CodegenOpts
     experiments*: ExperimentOpts
 
@@ -67,11 +68,12 @@ type
     name*: string
     constructor*: NativeFunction
     members*: Table[string, AtomOrFunction[NativeFunction]]
-    prototypeFunctions*: Table[string, NativePrototypeFunction] ## Functions inherited by each object that derives from this type
+    prototypeFunctions*: Table[string, NativePrototypeFunction]
+      ## Functions inherited by each object that derives from this type
     singletonId*: uint
 
     proto*: Hash
-  
+
   IRLabel* = object
     start*, dummy*, ending*: uint
 
@@ -79,15 +81,16 @@ type
     breaksGeneratedAt*: seq[uint]
 
   RuntimeStats* = object
-    atomsAllocated*: uint       ## How many atoms have been allocated so far?
-    bytecodeSize*: uint         ## How many kilobytes is the bytecode?
-    breaksGenerated*: uint      ## How many breaks did the codegen phase generate?
-    vmHasHalted*: bool          ## Has execution ended?
-    fieldAccesses*: uint        ## How many times has a field-access occurred?
-    typeofCalls*: uint          ## How many times has a typeof call occured?
-    clausesGenerated*: uint     ## How many clauses did the codegen phase generate?
+    atomsAllocated*: uint ## How many atoms have been allocated so far?
+    bytecodeSize*: uint ## How many kilobytes is the bytecode?
+    breaksGenerated*: uint ## How many breaks did the codegen phase generate?
+    vmHasHalted*: bool ## Has execution ended?
+    fieldAccesses*: uint ## How many times has a field-access occurred?
+    typeofCalls*: uint ## How many times has a typeof call occured?
+    clausesGenerated*: uint ## How many clauses did the codegen phase generate?
 
-    numAllocations*, numDeallocations*: uint ## How many allocations/deallocations happened during execution?
+    numAllocations*, numDeallocations*: uint
+      ## How many allocations/deallocations happened during execution?
 
   Runtime* = ref object
     ast*: AST
@@ -114,14 +117,16 @@ proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
   else:
     warn "Unrecognized experiment \"" & name & "\"!"
     return false
-  
+
   info "Enabling experiment \"" & name & '"'
   true
 
 proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =
   SemanticError(kind: UnknownIdentifier, unknown: identifier)
 
-proc getMethods*(runtime: Runtime, proto: Hash): Table[string, NativePrototypeFunction] {.inline.} =
+proc getMethods*(
+    runtime: Runtime, proto: Hash
+): Table[string, NativePrototypeFunction] {.inline.} =
   for typ in runtime.types:
     if typ.proto == proto:
       var fns: Table[string, NativeFunction]
@@ -174,7 +179,11 @@ proc markGlobal*(runtime: Runtime, ident: string, index: Option[uint] = none(uin
   for rm in toRm:
     runtime.values.del(rm)
 
-  let idx = if *index: &index else: runtime.addrIdx
+  let idx =
+    if *index:
+      &index
+    else:
+      runtime.addrIdx
 
   runtime.values &= Value(kind: vkGlobal, index: idx, identifier: ident)
 
@@ -182,7 +191,9 @@ proc markGlobal*(runtime: Runtime, ident: string, index: Option[uint] = none(uin
 
   inc runtime.addrIdx
 
-proc markLocal*(runtime: Runtime, fn: Function, ident: string, index: Option[uint] = none(uint)) =
+proc markLocal*(
+    runtime: Runtime, fn: Function, ident: string, index: Option[uint] = none(uint)
+) =
   var toRm: seq[int]
   for i, value in runtime.values:
     if value.kind == vkLocal and value.ownerFunc == hash(fn) and
@@ -192,7 +203,11 @@ proc markLocal*(runtime: Runtime, fn: Function, ident: string, index: Option[uin
   for rm in toRm:
     runtime.values.del(rm)
 
-  let idx = if *index: &index else: runtime.addrIdx
+  let idx =
+    if *index:
+      &index
+    else:
+      runtime.addrIdx
 
   runtime.values &=
     Value(kind: vkLocal, index: idx, identifier: ident, ownerFunc: hash(fn))
@@ -219,7 +234,8 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   of Null:
     runtime.ir.loadNull(runtime.addrIdx)
     return runtime.addrIdx
-  of Ident: unreachable
+  of Ident:
+    unreachable
   of Boolean:
     runtime.ir.loadBool(runtime.addrIdx, atom)
     return runtime.addrIdx
@@ -227,7 +243,8 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
     if atom.isUndefined():
       runtime.ir.loadObject(runtime.addrIdx)
       return runtime.addrIdx
-    else: unreachable # FIXME
+    else:
+      unreachable # FIXME
   of Float:
     runtime.ir.loadFloat(runtime.addrIdx, atom)
     return runtime.addrIdx
@@ -239,7 +256,8 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
       inc runtime.addrIdx
       let idx = runtime.loadIRAtom(item)
       runtime.ir.appendList(result, idx)
-  else: unreachable
+  else:
+    unreachable
 
 proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
   for value in runtime.values:
@@ -260,7 +278,8 @@ proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
 
       if cond:
         return value.index
-  
-  debug "runtime: cannot find identifier \"" & ident & "\" in index search, returning pointer to undefined()"
+
+  debug "runtime: cannot find identifier \"" & ident &
+    "\" in index search, returning pointer to undefined()"
   runtime.index("undefined", params)
   # raise newException(ValueError, "No such ident: " & ident)

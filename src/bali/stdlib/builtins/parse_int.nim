@@ -15,7 +15,7 @@ proc parseIntGenerateStdIr*(runtime: Runtime) =
   # The parseInt() function parses a string argument and returns an integer of the specified radix (the base in mathematical numeral systems).
   runtime.defineFn(
     "parseInt",
-    proc =
+    proc() =
       if runtime.vm.registers.callArgs.len < 1:
         runtime.vm.registers.retVal = some floating NaN
         return

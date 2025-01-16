@@ -181,5 +181,5 @@ const Keywords* = {
   "return": TokenKind.Return,
   "while": TokenKind.While,
   "break": TokenKind.Break,
-  "typeof": TokenKind.Typeof
+  "typeof": TokenKind.Typeof,
 }.toTable

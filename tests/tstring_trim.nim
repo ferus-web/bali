@@ -8,4 +8,5 @@ suite "TrimString( string, where )":
 
   test "trim ending whitespace":
     check "32   ".internalTrim(strutils.Whitespace, TrimMode.Right) == "32"
-    check ":^)                  ".internalTrim(strutils.Whitespace, TrimMode.Right) == ":^)"
+    check ":^)                  ".internalTrim(strutils.Whitespace, TrimMode.Right) ==
+      ":^)"

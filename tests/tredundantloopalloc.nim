@@ -6,14 +6,11 @@ import pkg/pretty
 let x = eliminateRedundantLoopAllocations(
   runtime = nil,
   body = Scope(
-    stmts: @[
-      Statement(
-        kind: CreateImmutVal,
-        imIdentifier: "meow",
-        imAtom: str "hi :3"
-      ),
-      callFunction("deine_mutter").call(@[CallArg(kind: cakIdent, ident: "meow")])
-    ]
-  )
+    stmts:
+      @[
+        Statement(kind: CreateImmutVal, imIdentifier: "meow", imAtom: str "hi :3"),
+        callFunction("deine_mutter").call(@[CallArg(kind: cakIdent, ident: "meow")]),
+      ]
+  ),
 )
 print x

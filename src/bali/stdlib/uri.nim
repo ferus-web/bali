@@ -76,8 +76,8 @@ proc generateStdIR*(runtime: Runtime) =
         try:
           parser.parse(str)
         except URLParseError as pError:
-          debug "url: encountered parse error whilst parsing url: " & str &
-            ": " & pError.msg
+          debug "url: encountered parse error whilst parsing url: " & str & ": " &
+            pError.msg
           debug "url: this is a constructor, so a TypeError will be thrown."
           runtime.typeError(pError.msg)
           newURL("", "", "", "")
@@ -116,8 +116,8 @@ proc generateStdIR*(runtime: Runtime) =
         try:
           parser.parse(str)
         except URLParseError as exc:
-          debug "url: encountered parse error whilst parsing url: " & str &
-            ": " & exc.msg
+          debug "url: encountered parse error whilst parsing url: " & str & ": " &
+            exc.msg
           debug "url: this is the function variant, so no error will be thrown."
           URL()
 

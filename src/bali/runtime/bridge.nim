@@ -49,15 +49,13 @@ proc setProperty*[T](
       runtime.types[i].members[name] = initAtomOrFunction[NativeFunction](value)
 
 proc setProperty*[T, V](
-  runtime: Runtime, prototype: typedesc[T], name: string, value: V
+    runtime: Runtime, prototype: typedesc[T], name: string, value: V
 ) =
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
       runtime.types[i].members[name] = initAtomOrFunction[NativeFunction](wrap(value))
 
-proc dumpStatistics*(
-  runtime: Runtime
-): RuntimeStats =
+proc dumpStatistics*(runtime: Runtime): RuntimeStats =
   info "runtime: dumping statistics"
   var stats: RuntimeStats
 
@@ -69,7 +67,7 @@ proc dumpStatistics*(
   stats.typeofCalls = runtime.statTypeofCalls
   stats.clausesGenerated = uint(runtime.ir.modules.len)
 
-  let allocStats = runtime.allocStatsStart - getAllocStats()
+  let allocStats = getAllocStats() - runtime.allocStatsStart
   stats.numAllocations = uint(allocStats.allocCount)
   stats.numDeallocations = uint(allocStats.deallocCount)
 
@@ -78,8 +76,7 @@ proc dumpStatistics*(
   stats
 
 proc setProperty*[V: not MAtom, T](
-  runtime: Runtime,
-  prototype: typedesc[T], name: string, value: V
+    runtime: Runtime, prototype: typedesc[T], name: string, value: V
 ) {.inline.} =
   runtime.setProperty(prototype = prototype, name = name, value = value.wrap())
 
@@ -95,13 +92,15 @@ proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
   )
   runtime.ir.call(builtinName)
 
-proc definePrototypeFn*[T](runtime: Runtime, prototype: typedesc[T], name: string, fn: NativePrototypeFunction) =
+proc definePrototypeFn*[T](
+    runtime: Runtime, prototype: typedesc[T], name: string, fn: NativePrototypeFunction
+) =
   runtime.vm.registerBuiltin(
     name,
     proc(_: Operation) =
       let typ = deepCopy(runtime.vm.registers.callArgs[0])
       runtime.vm.registers.callArgs.delete(0)
-      fn(typ)
+      fn(typ),
   )
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
@@ -120,7 +119,7 @@ proc createAtom*(typ: JSType): MAtom =
       let idx = atom.objValues.len
       atom.objValues &= undefined()
       atom.objFields[name] = idx
-  
+
   atom.tag("bali_object_type", typ.proto.int)
 
   atom
@@ -137,11 +136,13 @@ proc isA*[T: object](runtime: Runtime, atom: MAtom, typ: typedesc[T]): bool =
   let objTypOpt = atom.tagged("bali_object_type")
 
   if !objTypOpt:
-    debug "runtime: isA(" & atom.crush() & "): atom does not contain the tag `bali_object_type`, returning false. This is weird."
+    debug "runtime: isA(" & atom.crush() &
+      "): atom does not contain the tag `bali_object_type`, returning false. This is weird."
     return false
 
   if (&objTypOpt).kind != Integer:
-    warn "runtime: isA(" & atom.crush() & "): atom's `bali_object_type` tag is not an integer! It is a " & $(&objTypOpt).kind
+    warn "runtime: isA(" & atom.crush() &
+      "): atom's `bali_object_type` tag is not an integer! It is a " & $(&objTypOpt).kind
 
   let objTyp = &getInt(&objTypOpt)
 
@@ -155,7 +156,9 @@ proc isA*[T: object](runtime: Runtime, atom: MAtom, typ: typedesc[T]): bool =
 
   false
 
-proc getMethod*(runtime: Runtime, v: MAtom, p: string): Option[NativePrototypeFunction] =
+proc getMethod*(
+    runtime: Runtime, v: MAtom, p: string
+): Option[NativePrototypeFunction] =
   for typ in runtime.types:
     if typ.proto.int != &getInt(&v.tagged("bali_object_type")):
       continue
@@ -221,7 +224,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
     jsType.members[fname] = initAtomOrFunction[NativeFunction](fatom.wrap())
     #else:
     #  debug "runtime: registerType(): field name starts with at-the-rate (@); not exposing it to the JS runtime."
-  
+
   jsType.proto = hash($prototype)
   jsType.name = name
 

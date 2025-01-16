@@ -25,14 +25,10 @@ proc referenceError*(runtime: Runtime, message: string, exitCode: int = 1) {.inl
   runtime.vm.throw(jsException("ReferenceError: " & message))
   runtime.logTracebackAndDie(exitCode)
 
-proc syntaxError*(
-  runtime: Runtime, message: string, exitCode: int = 1
-) {.inline.} =
+proc syntaxError*(runtime: Runtime, message: string, exitCode: int = 1) {.inline.} =
   ## Meant for other Bali stdlib methods to use.
   runtime.vm.throw(jsException("SyntaxError: " & message))
   runtime.logTracebackAndDie(exitCode)
 
-proc syntaxError*(
-  runtime: Runtime, error: ParseError, exitCode: int = 1
-) {.inline.} =
+proc syntaxError*(runtime: Runtime, error: ParseError, exitCode: int = 1) {.inline.} =
   runtime.syntaxError(error.message, exitCode)

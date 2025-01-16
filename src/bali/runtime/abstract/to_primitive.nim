@@ -4,11 +4,10 @@ import bali/internal/sugar
 import bali/stdlib/errors
 import mirage/runtime/prelude
 
-type
-  PrimitiveHint* {.pure.} = enum
-    Default
-    String
-    Number
+type PrimitiveHint* {.pure.} = enum
+  Default
+  String
+  Number
 
 proc OrdinaryToPrimitive*(runtime: Runtime, input: MAtom, hint: PrimitiveHint): MAtom =
   # 1. If hint is string, then
@@ -42,7 +41,9 @@ proc OrdinaryToPrimitive*(runtime: Runtime, input: MAtom, hint: PrimitiveHint): 
   # Yes Rico, kaboom.
   runtime.typeError("Cannot convert object into primitive")
 
-proc ToPrimitive*(runtime: Runtime, input: MAtom, preferredType: Option[MAtomKind] = none(MAtomKind)): MAtom =
+proc ToPrimitive*(
+    runtime: Runtime, input: MAtom, preferredType: Option[MAtomKind] = none(MAtomKind)
+): MAtom =
   # 1. If input is an Object, then
   if input.kind == Object:
     # a. Let exoticToPrim be ? GetMethod(input, @@toPrimitive).
@@ -50,7 +51,7 @@ proc ToPrimitive*(runtime: Runtime, input: MAtom, preferredType: Option[MAtomKin
 
     if *exoticToPrim:
       # b. If exoticToPrim is not undefined, then
-      
+
       let hint =
         if !preferredType:
           # i. If preferredType is not present, then
@@ -69,12 +70,12 @@ proc ToPrimitive*(runtime: Runtime, input: MAtom, preferredType: Option[MAtomKin
           else:
             unreachable
             default PrimitiveHint
-        
+
       # iv. Let result be ? Call(exoticToPrim, input, « hint »).
       (&exoticToPrim)(wrap(toTable {"hint": hint.int.integer(), "input": input}))
       let res = runtime.getReturnValue()
       assert(*res, "BUG: Expected toPrimitive() to return value, got nothing.")
-      
+
       if (&res).kind != Object:
         # v. If result is not an Object, return result.
         return &res

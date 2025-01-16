@@ -33,7 +33,7 @@ proc jsException*(msg: string): JSException {.inline.} =
 proc logTracebackAndDie*(runtime: Runtime, exitCode: int = 1) =
   let traceback = runtime.vm.generateTraceback()
   assert *traceback, "Mirage failed to generate traceback!"
-  
+
   if not runtime.vm.trace.exception.message.contains(runtime.test262.negative.`type`):
     stdout.write(&traceback & '\n')
     deathCallback(runtime.vm, exitCode)

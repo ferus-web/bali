@@ -17,10 +17,9 @@ import bali/internal/date/[utils, constants, parser]
 ## A Number can exactly represent all integers from -9,007,199,254,740,992 to 9,007,199,254,740,992 (21.1.2.8 and 21.1.2.6). A time value supports a slightly smaller range of -8,640,000,000,000,000 to 8,640,000,000,000,000 milliseconds. This yields a supported time value range of exactly -100,000,000 days to 100,000,000 days relative to midnight at the beginning of 1 January 1970 UTC.
 ## The exact moment of midnight at the beginning of 1 January 1970 UTC is represented by the time value +0𝔽.
 
-type
-  JSDate* = object
-    `@epoch`*: float
-    `@invalid`*: bool = false
+type JSDate* = object
+  `@ epoch`*: float
+  `@ invalid`*: bool = false
 
 proc parseDateString(runtime: Runtime, dateString: string): float =
   if dateString.len < 1:
@@ -28,7 +27,7 @@ proc parseDateString(runtime: Runtime, dateString: string): float =
 
   if (let time = parseSimplifiedISO8601(dateString); *time):
     return &time
-  
+
   warn "date: TODO: implementation-specific date formats are not supported"
   # TODO: Implement implementation-specific formats. For instance,
   #       Firefox and Chrome support "DD/MM/YYYY HH:mm AM/PM +TZ"
@@ -54,8 +53,10 @@ proc dateToString*(tv: float): string =
 
   # 5. If yv is +0𝔽 or yv > +0𝔽, let yearSign be the empty String; otherwise, let yearSign be "-".
   let yearSign =
-    if year >= 0: newString(0)
-    else: "-"
+    if year >= 0:
+      newString(0)
+    else:
+      "-"
 
   # 6. Let paddedYear be ToZeroPaddedDecimalString(abs(ℝ(yv)), 4).
   # 7. Return the string-concatenation of weekday, the code unit 0x0020 (SPACE), month, the code unit 0x0020 (SPACE), day, the code unit 0x0020 (SPACE), yearSign, and paddedYear.
@@ -63,7 +64,8 @@ proc dateToString*(tv: float): string =
 
 proc timeToString*(tv: float): string =
   # FIXME: non-compliant!
-  let timeString = fmt"{getHourFromTime(tv):02d}:{getMinuteFromTime(tv):02d}:{getSecondFromTime(tv):02d}"
+  let timeString =
+    fmt"{getHourFromTime(tv):02d}:{getMinuteFromTime(tv):02d}:{getSecondFromTime(tv):02d}"
 
   timeString & " GMT"
 
@@ -71,11 +73,11 @@ proc toDateString*(tv: float): string =
   # 1. If tv is NaN, return "Invalid Date".
   if tv == NaN:
     return "Invalid Date"
-  
+
   # FIXME: non-compliant!
   #        This should ideally call LocalTime(tv)
   let t = tv
-  
+
   # FIXME: non-compliant!
   #        This should ideally also include the timezone string
   fmt"{dateToString(tv)} {timeToString(tv)}"
@@ -86,64 +88,58 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.registerType("Date", JSDate)
   runtime.defineConstructor(
     "Date",
-    proc =
+    proc() =
       var dateValue: float
-      
+
       # 2. Let numberOfArgs be the number of elements in values.
       # 3. If numberOfArgs = 0, then
       if runtime.argumentCount() == 0:
         # a. Let dv be SystemUTCEpochMilliseconds().
         # FIXME: I think this is... wrong.
-        dateValue = float(
-          cast[Duration](
-            getTime().inZone(
-              utc()
-            ).toTime()
-          ).inMilliseconds()
-        )
+        dateValue =
+          float(cast[Duration](getTime().inZone(utc()).toTime()).inMilliseconds())
       # 4. Else if numberOfArgs = 1, then
       elif runtime.argumentCount() == 1:
         # a. Let value be values[0].
         let value = &runtime.argument(1, required = true)
-        
+
         # FIXME: uncompliant.
         case value.kind
         of String:
           dateValue = runtime.parseDateString(&value.getStr())
         else:
           dateValue = runtime.ToNumber(value)
-      
+
       var date = runtime.createObjFromType(JSDate)
       date.tag("epoch", dateValue)
       ret date
+    ,
   )
 
   runtime.defineFn(
     JSDate,
     "now",
-    proc =
+    proc() =
       let nowNs = inNanoseconds(cast[Duration](getTime()))
 
       # Return 𝔽(floor(nowNs / 10**6)).
-      ret int(
-        floor(
-          nowNs / 1000000
-        )
-      )
+      ret int(floor(nowNs / 1000000))
+    ,
   )
 
   runtime.defineFn(
     JSDate,
     "parse",
-    proc =
+    proc() =
       if runtime.argumentCount() < 1:
         ret NaN
 
       let dateString = runtime.ToString(&runtime.argument(1))
 
       ret runtime.parseDateString(dateString)
+    ,
   )
-  
+
   # B.2.3 Additional Properties of the Date.prototype Object
   runtime.definePrototypeFn(
     JSDate,
@@ -159,18 +155,17 @@ proc generateStdIR*(runtime: Runtime) =
 
       # 3. Let t be dateObject.[[DateValue]].
       let time = runtime.ToNumber(&dateObject.tagged("epoch"))
-      
+
       # 4. If t is NaN, return NaN.
       if time == NaN:
         ret NaN
 
       # 5. Return YearFromTime(LocalTime(t)) - 1900𝔽.
       # FIXME: This is uncompliant as it doesn't return the value in the local time.
-      ret getYearFromTime(
-        time
-      ) - 1900
+      ret getYearFromTime(time) - 1900
+    ,
   )
-  
+
   # 21.4.4.1 Date.prototype.constructor
   runtime.definePrototypeFn(
     JSDate,
@@ -193,6 +188,7 @@ proc generateStdIR*(runtime: Runtime) =
 
       # 5. Return YearFromTime(LocalTime(t)).
       ret getYearFromTime(time)
+    ,
   )
 
   runtime.definePrototypeFn(
@@ -200,7 +196,7 @@ proc generateStdIR*(runtime: Runtime) =
     "toString",
     proc(value: MAtom) =
       ## 21.4.4.41 Date.prototype.toString ( )
-      
+
       # 1. Let dateObject be the this value.
       let dateObject = value
 
@@ -212,8 +208,9 @@ proc generateStdIR*(runtime: Runtime) =
 
       # 4. Return ToDateString(tv).
       ret toDateString(time)
+    ,
   )
-  
+
   runtime.definePrototypeFn(
     JSDate,
     "getDay",
@@ -232,9 +229,10 @@ proc generateStdIR*(runtime: Runtime) =
       # 4. If t is NaN, return NaN.
       if time == NaN:
         ret NaN
-      
+
       # 5. Return WeekDay(LocalTime(t)).
       ret toWeekDay(time)
+    ,
   )
 
   runtime.definePrototypeFn(
@@ -255,7 +253,8 @@ proc generateStdIR*(runtime: Runtime) =
       # 4. If t is NaN, return NaN.
       if time == NaN:
         ret NaN
-      
+
       # 5. Return DateFromTime(LocalTime(t)).
       ret getDateFromTime(time)
+    ,
   )

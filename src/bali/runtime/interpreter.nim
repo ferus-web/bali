@@ -5,7 +5,12 @@ import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
-import bali/runtime/[normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils, bridge]
+import
+  bali/runtime/
+    [
+      normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils,
+      bridge,
+    ]
 import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/stdlib/prelude
 import crunchy, pretty
@@ -22,7 +27,7 @@ proc generateIR*(
   ownerStmt: Option[Statement] = none(Statement),
   exprStoreIn: Option[string] = none(string),
   parentStmt: Option[Statement] = none(Statement),
-  index: Option[uint] = none(uint)
+  index: Option[uint] = none(uint),
 )
 
 proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false) =
@@ -236,7 +241,7 @@ proc generateIR*(
     ownerStmt: Option[Statement] = none(Statement),
     exprStoreIn: Option[string] = none(string),
     parentStmt: Option[Statement] = none(Statement),
-    index: Option[uint] = none(uint)
+    index: Option[uint] = none(uint),
 ) =
   ## Given a statement `stmt` and its encompassing functional scope `fn` (which can be a plain scope as well),
   ## generate the bytecode for that statement.
@@ -244,12 +249,13 @@ proc generateIR*(
   of CreateImmutVal:
     debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
-    
+
     let idx = runtime.loadIRAtom(stmt.imAtom)
 
     if not internal:
       if fn.name == "outer":
-        debug "emitter: marking index as global because it's in outer-most scope: " & $idx
+        debug "emitter: marking index as global because it's in outer-most scope: " &
+          $idx
         runtime.ir.markGlobal(idx)
 
       runtime.markLocal(fn, stmt.imIdentifier, index = some(idx))
@@ -264,7 +270,8 @@ proc generateIR*(
 
     if not internal:
       if fn.name == "outer":
-        debug "emitter: marking index as global because it's in outer-most scope: " & $idx
+        debug "emitter: marking index as global because it's in outer-most scope: " &
+          $idx
         runtime.ir.markGlobal(idx)
 
       runtime.markLocal(fn, stmt.mutIdentifier, index = some(idx))
@@ -272,12 +279,14 @@ proc generateIR*(
       assert *ownerStmt
       runtime.markInternal(&ownerStmt, stmt.mutIdentifier)
   of Call:
-    var nam = if stmt.mangle:
-      stmt.fn.normalizeIRName()
-    else: 
-      stmt.fn.function
+    var nam =
+      if stmt.mangle:
+        stmt.fn.normalizeIRName()
+      else:
+        stmt.fn.function
 
-    info "interpreter: generate IR for calling function: " & nam & (if stmt.mangle: " (mangled)" else: newString 0)
+    info "interpreter: generate IR for calling function: " & nam &
+      (if stmt.mangle: " (mangled)" else: newString 0)
     runtime.expand(fn, stmt, internal)
 
     if *stmt.fn.field:
@@ -292,18 +301,20 @@ proc generateIR*(
         curr.identifier
 
       let typ = runtime.getTypeFromName(typName)
-      
+
       if *typ:
         nam =
-          "BALI_" & toUpperAscii(typName) & '_' & toUpperAscii(stmt.fn.function.normalizeIRName())
+          "BALI_" & toUpperAscii(typName) & '_' &
+          toUpperAscii(stmt.fn.function.normalizeIRName())
       else:
-        runtime.ir.passArgument(runtime.index((&stmt.fn.field).identifier, defaultParams(fn)))
+        runtime.ir.passArgument(
+          runtime.index((&stmt.fn.field).identifier, defaultParams(fn))
+        )
 
     for i, arg in stmt.arguments:
       case arg.kind
       of cakIdent:
-        info "interpreter: passing ident parameter to function with ident: " &
-          arg.ident
+        info "interpreter: passing ident parameter to function with ident: " & arg.ident
 
         runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
       of cakAtom: # already loaded via the statement expander
@@ -312,10 +323,7 @@ proc generateIR*(
         runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
       of cakFieldAccess:
         let index = runtime.resolveFieldAccess(
-          fn,
-          stmt,
-          runtime.index(arg.access.identifier, defaultParams(fn)),
-          arg.access,
+          fn, stmt, runtime.index(arg.access.identifier, defaultParams(fn)), arg.access
         )
         runtime.ir.markGlobal(index)
         runtime.ir.passArgument(index)
@@ -325,10 +333,12 @@ proc generateIR*(
         runtime.ir.passArgument(index)
 
     runtime.ir.call(nam)
-    runtime.ir.resetArgs() # Reset the call arguments register to prevent this call's arguments from leaking into future calls
+    runtime.ir.resetArgs()
+      # Reset the call arguments register to prevent this call's arguments from leaking into future calls
 
     if not stmt.expectsReturnVal and runtime.opts.codegen.aggressivelyFreeRetvals:
-      runtime.ir.zeroRetval() # Destroy the return value, if any. This helps conserve memory.
+      runtime.ir.zeroRetval()
+        # Destroy the return value, if any. This helps conserve memory.
   of ReturnFn:
     assert not (*stmt.retVal and *stmt.retIdent),
       "ReturnFn statement cannot have both return atom and return ident at once!"
@@ -542,7 +552,7 @@ proc generateIR*(
         else:
           unreachable
           0
-    
+
     case stmt.conditionExpr.op
     of Equal, NotEqual:
       runtime.ir.equate(lhsIdx, rhsIdx)
@@ -567,12 +577,14 @@ proc generateIR*(
       unreachable
       0
 
-    runtime.generateIRForScope(stmt.branchTrue, allocateConstants = false) # generate branch one
+    runtime.generateIRForScope(stmt.branchTrue, allocateConstants = false)
+      # generate branch one
     let skipBranchTwoJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
       # jump beyond branch two, don't accidentally execute it
     let endOfBranchOne = getCurrOpNum().uint
 
-    runtime.generateIRForScope(stmt.branchFalse, allocateConstants = false) # generate branch two
+    runtime.generateIRForScope(stmt.branchFalse, allocateConstants = false)
+      # generate branch two
     let endOfBranchTwo = getCurrOpNum().uint
     runtime.ir.overrideArgs(skipBranchTwoJmp, @[uinteger(endOfBranchTwo)])
 
@@ -603,10 +615,11 @@ proc generateIR*(
     runtime.ir.copyAtom(runtime.index(stmt.cpImmutSourceIdent, defaultParams(fn)), dest)
   of WhileStmt:
     debug "emitter: generate IR for while loop"
-    if runtime.opts.codegen.elideLoops and stmt.whStmtOnlyMutatesItsState(stmt.whBranch.getValueCaptures()):
+    if runtime.opts.codegen.elideLoops and
+        stmt.whStmtOnlyMutatesItsState(stmt.whBranch.getValueCaptures()):
       debug "emitter: while loop only mutates its own state - eliding it away"
       if runtime.optimizeAwayStateMutatorLoop(fn, stmt):
-        return  # we can fully skip creating all of the expensive comparison checks! :D
+        return # we can fully skip creating all of the expensive comparison checks! :D
       else:
         debug "emitter: failed to elide state mutator loop :("
 
@@ -619,7 +632,7 @@ proc generateIR*(
 
       unreachable
       0
-    
+
     let allocElimResult: Option[AllocationEliminatorResult] =
       if runtime.opts.codegen.loopAllocationEliminator:
         runtime.eliminateRedundantLoopAllocations(stmt.whBranch).some
@@ -650,7 +663,7 @@ proc generateIR*(
         else:
           unreachable
           0
-    
+
     if *allocElimResult:
       let placeBefore = (&allocElimResult).placeBefore
       runtime.generateIRForScope(placeBefore, allocateConstants = false)
@@ -676,14 +689,16 @@ proc generateIR*(
       dummyJump = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
         # this will just point to its own address in the event that it isn't modified
         # if it is modified, it'll likely point to wherever `escapeJump` points to
-    
+
     let jmpIntoBody = getCurrOpNum()
-    
+
     # generate the body of the loop
     if !allocElimResult:
-      runtime.generateIRForScope(stmt.whBranch, allocateConstants = false) 
+      runtime.generateIRForScope(stmt.whBranch, allocateConstants = false)
     else:
-      runtime.generateIRForScope((&allocElimResult).modifiedBody, allocateConstants = false)
+      runtime.generateIRForScope(
+        (&allocElimResult).modifiedBody, allocateConstants = false
+      )
 
     runtime.ir.jump(jmpIntoComparison.uint) # jump back to the comparison logic
 
@@ -717,14 +732,19 @@ proc generateIR*(
     runtime.irHints.breaksGeneratedAt &= runtime.ir.addOp(IROperation(opcode: Jump)) - 1
   of Waste:
     debug "emitter: generate IR for wasting value"
-    assert(not (*stmt.wstAtom and *stmt.wstIdent), "Cannot waste atom and identifier at once!")
-    
+    assert(
+      not (*stmt.wstAtom and *stmt.wstIdent),
+      "Cannot waste atom and identifier at once!",
+    )
+
     let idx =
       if *stmt.wstAtom:
         runtime.loadIRAtom(&stmt.wstAtom)
       elif *stmt.wstIdent:
         runtime.index(&stmt.wstIdent, defaultParams(fn))
-      else: unreachable; 0'u
+      else:
+        unreachable
+        0'u
 
     if runtime.opts.repl:
       runtime.ir.passArgument(idx)
@@ -732,12 +752,15 @@ proc generateIR*(
   of AccessArrayIndex:
     debug "emitter: generate IR for array indexing"
     let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
-    let fieldIndex = if *stmt.arrAccIndex:
-      runtime.loadIRAtom(&stmt.arrAccIndex)
-    elif *stmt.arrAccIdentIndex:
-      runtime.index(&stmt.arrAccIdentIndex, defaultParams(fn))
-    else: unreachable; 0
-    
+    let fieldIndex =
+      if *stmt.arrAccIndex:
+        runtime.loadIRAtom(&stmt.arrAccIndex)
+      elif *stmt.arrAccIdentIndex:
+        runtime.index(&stmt.arrAccIdentIndex, defaultParams(fn))
+      else:
+        unreachable
+        0
+
     runtime.ir.passArgument(atomIdx)
     runtime.ir.passArgument(fieldIndex)
     runtime.ir.call("BALI_INDEX")
@@ -754,27 +777,31 @@ proc generateIR*(
           runtime.loadIRAtom(stmt.ternaryCond.atom)
         elif stmt.ternaryCond.kind == IdentHolder:
           runtime.index(stmt.ternaryCond.ident, defaultParams(fn))
-        else: unreachable; 0'u
+        else:
+          unreachable
+          0'u
 
     inc runtime.addrIdx
 
-    let
-      addrOfTrueExpr =
-        if stmt.trueTernary.kind == AtomHolder:
-          runtime.loadIRAtom(stmt.trueTernary.atom)
-        elif stmt.trueTernary.kind == IdentHolder:
-          runtime.index(stmt.falseTernary.ident, defaultParams(fn))
-        else: unreachable; 0'u
+    let addrOfTrueExpr =
+      if stmt.trueTernary.kind == AtomHolder:
+        runtime.loadIRAtom(stmt.trueTernary.atom)
+      elif stmt.trueTernary.kind == IdentHolder:
+        runtime.index(stmt.falseTernary.ident, defaultParams(fn))
+      else:
+        unreachable
+        0'u
 
     inc runtime.addrIdx
 
-    let
-      addrOfFalseExpr =
-        if stmt.falseTernary.kind == AtomHolder:
-          runtime.loadIRAtom(stmt.falseTernary.atom)
-        elif stmt.falseTernary.kind == IdentHolder:
-          runtime.index(stmt.falseTernary.ident, defaultParams(fn))
-        else: unreachable; 0'u
+    let addrOfFalseExpr =
+      if stmt.falseTernary.kind == AtomHolder:
+        runtime.loadIRAtom(stmt.falseTernary.atom)
+      elif stmt.falseTernary.kind == IdentHolder:
+        runtime.index(stmt.falseTernary.ident, defaultParams(fn))
+      else:
+        unreachable
+        0'u
 
     inc runtime.addrIdx
 
@@ -785,10 +812,10 @@ proc generateIR*(
 
       unreachable
       0'u
-    
+
     runtime.markLocal(fn, storeIn)
     let finalAddr = runtime.addrIdx - 1
-    
+
     runtime.ir.equate(addrOfCond, runtime.index("true", defaultParams(fn)))
     # If addrOfCond == true:
     runtime.ir.jump(getCurrOpNum() + 2'u)
@@ -812,7 +839,9 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
     )
     runtime.ir.resetArgs() # reset the call param register
 
-proc generateIRForScope*(runtime: Runtime, scope: Scope, allocateConstants: bool = true) =
+proc generateIRForScope*(
+    runtime: Runtime, scope: Scope, allocateConstants: bool = true
+) =
   let
     fn =
       try:
@@ -878,13 +907,14 @@ proc computeTypeof*(runtime: Runtime, atom: MAtom): string =
 
     if runtime.isA(atom, JSBigInt):
       return "bigint"
-    
+
     return "object"
   of Boolean:
     return "boolean"
   of BigInteger:
     return "bigint"
-  else: unreachable
+  else:
+    unreachable
 
 proc generateInternalIR*(runtime: Runtime) =
   runtime.ir.newModule("BALI_RESOLVEFIELD")
@@ -927,7 +957,7 @@ proc generateInternalIR*(runtime: Runtime) =
         if typ.singletonId == index:
           debug "runtime: singleton ID for type `" & typ.name &
             "` matches field access index"
-          
+
           for name, member in typ.members:
             if member.isFn:
               continue
@@ -953,6 +983,7 @@ proc generateInternalIR*(runtime: Runtime) =
       let atom = runtime.argument(1)
       assert(*atom, "BUG: Atom was empty when calling BALI_TYPEOF_INTERNAL!")
       ret runtime.computeTypeof(&atom)
+    ,
   )
   runtime.ir.call("BALI_TYPEOF_INTERNAL")
 
@@ -965,14 +996,18 @@ proc generateInternalIR*(runtime: Runtime) =
         index = runtime.argument(2)
 
       assert(*atom, "BUG: Atom was empty when calling BALI_INDEX_INTERNAL!")
-      assert((&atom).kind == Sequence, "BUG: BALI_INDEX_INTERNAL was passed a " & $(&atom).kind)
-      
+      assert(
+        (&atom).kind == Sequence,
+        "BUG: BALI_INDEX_INTERNAL was passed a " & $(&atom).kind,
+      )
+
       let idx = &(&index).getInt()
       let vec = (&atom).sequence
       if idx < 0 or idx > vec.len - 1:
         ret undefined()
 
       ret vec[idx] # TODO: add indexing for tables/object fields
+    ,
   )
   runtime.ir.call("BALI_INDEX_INTERNAL")
 
@@ -981,30 +1016,34 @@ proc generateInternalIR*(runtime: Runtime) =
     "BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL",
     proc(op: Operation) =
       let atom = runtime.argument(1)
-      assert(*atom, "BUG: Atom was empty when calling BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL")
+      assert(
+        *atom,
+        "BUG: Atom was empty when calling BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL",
+      )
 
-      let name = &getStr(&atom)
+      let name = &getStr(&atom),
   )
   runtime.ir.call("BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL")
 
   if runtime.opts.insertDebugHooks:
     runtime.defineFn(
       "baliGC_Dump",
-      proc =
+      proc() =
         echo GC_getStatistics()
+      ,
     )
 
     runtime.defineFn(
       "baliGC_FullCollect",
-      proc =
-        GC_fullCollect()
+      proc() =
+        GC_fullCollect(),
     )
 
     runtime.defineFn(
       "baliGC_PartialCollect",
-      proc =
+      proc() =
         let limit = &(&runtime.argument(1)).getInt()
-        GC_partialCollect(limit)
+        GC_partialCollect(limit),
     )
 
 proc run*(runtime: Runtime) =
@@ -1045,13 +1084,13 @@ proc run*(runtime: Runtime) =
   runtime.vm.tokenizer = tokenizer.newTokenizer(source)
 
   debug "interpreter: the following bytecode will now be executed"
-  
+
   if not runtime.opts.dumpBytecode:
     debug source
   else:
     echo source
     quit(0)
-  
+
   debug "interpreter: begin VM analyzer"
   runtime.vm.analyze()
 

@@ -25,7 +25,7 @@ proc ToString*(runtime: Runtime, value: MAtom): string =
       # 9. Assert: argument is an Object.
       # 10. Let primValue be ? ToPrimitive(argument, string).
       let primValue = runtime.ToPrimitive(value, some(String))
-      
+
       # 12. Return ? ToString(primValue).
       return runtime.ToString(primValue)
   of Null, Ident:
@@ -44,8 +44,7 @@ proc ToString*(runtime: Runtime, value: MAtom): string =
         # 7. If argument is a Number, return Number::toString(argument, 10).
   of BigInteger:
     debug "runtime: toString(): atom is a bigint"
-    return
-      $value.bigint
+    return $value.bigint
   of Float:
     debug "runtime: toString(): atom is a number (float)."
     return

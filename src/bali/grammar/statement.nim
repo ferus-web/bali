@@ -76,7 +76,7 @@ type
     LesserOrEqual
     NotEqual
     NotTrueEqual
-  
+
   FunctionCall* = object
     field*: Option[FieldAccess]
     ident*: Option[string]
@@ -164,7 +164,7 @@ proc hash*(call: FunctionCall): Hash {.inline.} =
   var hash: Hash
   if *call.field:
     hash = hash !& hash(&call.field)
-  
+
   if *call.ident:
     hash = hash !& hash(&call.ident)
 
@@ -248,8 +248,7 @@ proc pushImmExpr*(args: var PositionedArguments, expr: Statement) {.inline.} =
 
 {.push checks: off, inline.}
 proc throwError*(
-    errorStr: Option[string], errorExc: Option[void],
-    errorIdent: Option[string]
+    errorStr: Option[string], errorExc: Option[void], errorIdent: Option[string]
 ): Statement =
   if *errorStr and *errorExc and *errorIdent:
     raise newException(
@@ -262,7 +261,7 @@ proc throwError*(
 proc createImmutVal*(name: string, atom: MAtom): Statement =
   Statement(kind: CreateImmutVal, imIdentifier: name, imAtom: atom)
 
-proc breakStmt*: Statement =
+proc breakStmt*(): Statement =
   Statement(kind: Break)
 
 proc returnFunc*(): Statement =
@@ -352,25 +351,28 @@ proc atomArg*(atom: MAtom): CallArg =
 proc constructObject*(name: string, args: PositionedArguments): Statement =
   Statement(kind: ConstructObject, objName: name, args: args)
 
-proc call*(fn: FunctionCall, arguments: PositionedArguments, mangle: bool = true, expectsReturnVal: bool = false): Statement =
-  Statement(kind: Call, fn: fn, arguments: arguments, mangle: mangle, expectsReturnVal: expectsReturnVal)
+proc call*(
+    fn: FunctionCall,
+    arguments: PositionedArguments,
+    mangle: bool = true,
+    expectsReturnVal: bool = false,
+): Statement =
+  Statement(
+    kind: Call,
+    fn: fn,
+    arguments: arguments,
+    mangle: mangle,
+    expectsReturnVal: expectsReturnVal,
+  )
 
 proc callFunction*(name: string): FunctionCall =
-  FunctionCall(
-    function: name
-  )
+  FunctionCall(function: name)
 
 proc callFunction*(name: string, ident: string): FunctionCall =
-  FunctionCall(
-    function: name,
-    ident: some(ident)
-  )
+  FunctionCall(function: name, ident: some(ident))
 
 proc callFunction*(name: string, field: FieldAccess): FunctionCall =
-  FunctionCall(
-    function: name,
-    field: some field
-  )
+  FunctionCall(function: name, field: some field)
 
 {.pop.}
 

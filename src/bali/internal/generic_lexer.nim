@@ -3,8 +3,7 @@
 
 import std/[lexbase, options, strutils]
 
-type
-  GenericLexer* {.final.} = object of BaseLexer
+type GenericLexer* {.final.} = object of BaseLexer
 
 func remaining*(lexer: GenericLexer): uint {.inline.} =
   uint(lexer.buf.len - lexer.bufpos)
@@ -15,7 +14,7 @@ func eof*(lexer: var GenericLexer): bool {.inline.} =
 func consume*(lexer: var GenericLexer): char =
   if lexer.eof:
     return '\0'
-  
+
   inc lexer.bufpos
   result = lexer.buf[lexer.bufpos - 1]
 
@@ -38,7 +37,7 @@ func lexNDigits*(lexer: var GenericLexer, n: uint): Option[int] =
     if not ch.isAlphaNumeric:
       return
 
-    r = 10 * r + int(((uint8)ch) - (uint8)'0')
+    r = 10 * r + int(((uint8) ch) - (uint8) '0')
 
   result = some(r)
 

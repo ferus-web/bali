@@ -9,8 +9,7 @@ type
     phase*: string
     `type`*: string
 
-  Test262Opts* = object
-    ## Information inferred from the Test262 YAML metadata
+  Test262Opts* = object ## Information inferred from the Test262 YAML metadata
     description*: string
     esid*: string
     features*: seq[string]

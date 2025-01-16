@@ -15,22 +15,19 @@ const
   ## At what point should Bali start SIMD-accelerating string related operations?
   BaliStringAccelerationThreshold* {.intdefine.} = 128
 
-type
-  JSString* = object
-    `@internal`*: string
+type JSString* = object
+  `@ internal`*: string
 
 func value*(str: JSString): string {.inline.} =
-  str.`@internal`
+  str.`@ internal`
 
 proc toJsString*(runtime: Runtime, atom: MAtom): JSString =
-  JSString(
-    `@internal`: runtime.ToString(atom)
-  )
+  JSString(`@ internal`: runtime.ToString(atom))
 
 proc generateStdIr*(runtime: Runtime) =
   runtime.registerType(prototype = JSString, name = "String")
-  proc stringConstructor =
-    let argument = 
+  proc stringConstructor() =
+    let argument =
       if runtime.argumentCount > 0:
         &runtime.argument(1)
       else:
@@ -51,6 +48,7 @@ proc generateStdIr*(runtime: Runtime) =
       debug "String.toString(): returning value: " & &getStr(value)
 
       ret value
+    ,
   )
 
   runtime.definePrototypeFn(
@@ -66,9 +64,8 @@ proc generateStdIr*(runtime: Runtime) =
       let
         # 1. Let O be ? RequireObjectCoercible(this value)
         # 2. Let S be ? ToString(O).
-        value = runtime.ToString(
-          runtime.RequireObjectCoercible(&value.tagged("internal"))
-        )
+        value =
+          runtime.ToString(runtime.RequireObjectCoercible(&value.tagged("internal")))
         needle = runtime.argument(1)
         position = runtime.argument(2)
 
@@ -76,7 +73,7 @@ proc generateStdIr*(runtime: Runtime) =
       if *needle:
         # 3. Let searchStr be ? ToString(searchString).
         searchStr = runtime.ToString(&needle)
-      
+
       # 4. Let pos be ? ToIntegerOrInfinity(position).
       var pos: uint
       if *position:
@@ -84,7 +81,7 @@ proc generateStdIr*(runtime: Runtime) =
       else:
         # 5. Assert: If position is undefined, then pos is 0.
         pos = 0'u
-  
+
       let
         # 6. Let len be the length of S
         len = value.len.uint
@@ -94,37 +91,38 @@ proc generateStdIr*(runtime: Runtime) =
 
       # 8. Return 𝔽(StringIndexOf(S, searchStr, start)).
       if value.len < BaliStringAccelerationThreshold:
-        ret strutils.find(value[start ..< value.len], searchStr) # Don't use SIMD acceleration if a string is smaller than 512 characters
+        ret strutils.find(value[start ..< value.len], searchStr)
+          # Don't use SIMD acceleration if a string is smaller than 512 characters
       else:
         ret search.find(value[start ..< value.len], searchStr)
+    ,
   )
 
   runtime.definePrototypeFn(
-    JSString, "concat",
+    JSString,
+    "concat",
     proc(value: MAtom) =
       ## 22.1.3.5 String.prototype.concat ( ...args )
 
       # 1. Let O be ? RequireObjectCoercible(this value).
       # 2. Let S be ? ToString(O).
-      let value = runtime.ToString(
-        runtime.RequireObjectCoercible(&value.tagged("internal"))
-      )
-      
+      let value =
+        runtime.ToString(runtime.RequireObjectCoercible(&value.tagged("internal")))
+
       # 3. Let R be S.
       var res = value
 
       # 4. For each element next of args, do
       for i in 0 ..< runtime.argumentCount():
         # a. Let nextString be ? ToString(next).
-        let nextString = runtime.ToString(
-          &runtime.argument(i + 1)
-        )
+        let nextString = runtime.ToString(&runtime.argument(i + 1))
 
         # b. Set R to the string-concatenation of R and nextString.
         res &= nextString
 
       # 5. Return R.
       ret res
+    ,
   )
 
   runtime.definePrototypeFn(
@@ -135,9 +133,10 @@ proc generateStdIr*(runtime: Runtime) =
 
       # 1. Let S be the this value.
       let value = &value.tagged("internal")
-      
+
       # 2. Return ? TrimString (S, start + end)
       ret runtime.trimString(value, TrimMode.Both)
+    ,
   )
 
   proc trimStart(value: MAtom) =
@@ -146,7 +145,7 @@ proc generateStdIr*(runtime: Runtime) =
 
     # 1. Let S be the this value.
     let value = &value.tagged("internal")
-      
+
     # 2. Return ? TrimString (S, start)
     ret runtime.trimString(value, TrimMode.Left)
 
@@ -156,48 +155,41 @@ proc generateStdIr*(runtime: Runtime) =
 
     # 1. Let S be the this value.
     let value = &value.tagged("internal")
-      
+
     # 2. Return ? TrimString (S, start)
     ret runtime.trimString(value, TrimMode.Right)
 
-  runtime.definePrototypeFn(
-    JSString, "trimStart",
-    trimStart
-  )
+  runtime.definePrototypeFn(JSString, "trimStart", trimStart)
+
+  runtime.definePrototypeFn(JSString, "trimLeft", trimStart)
+
+  runtime.definePrototypeFn(JSString, "trimEnd", trimEnd)
+
+  runtime.definePrototypeFn(JSString, "trimRight", trimEnd)
 
   runtime.definePrototypeFn(
-    JSString, "trimLeft",
-    trimStart
-  )
-
-  runtime.definePrototypeFn(
-    JSString, "trimEnd",
-    trimEnd
-  )
-  
-  runtime.definePrototypeFn(
-    JSString, "trimRight",
-    trimEnd
-  )
-
-  runtime.definePrototypeFn(
-    JSString, "toLowerCase",
+    JSString,
+    "toLowerCase",
     proc(value: MAtom) =
       let value = &value.tagged("internal")
 
       ret strutils.toLowerAscii(runtime.ToString(value))
+    ,
   )
 
   runtime.definePrototypeFn(
-    JSString, "toUpperCase",
+    JSString,
+    "toUpperCase",
     proc(value: MAtom) =
       let value = &value.tagged("internal")
 
       ret strutils.toUpperAscii(runtime.ToString(value))
+    ,
   )
 
   runtime.definePrototypeFn(
-    JSString, "repeat",
+    JSString,
+    "repeat",
     proc(value: MAtom) =
       let value = runtime.ToString(&value.tagged("internal"))
       var repeatCnt: int
@@ -209,16 +201,17 @@ proc generateStdIr*(runtime: Runtime) =
         runtime.rangeError("repeat count must be non-negative")
 
       ret value.repeat(repeatCnt)
+    ,
   )
 
   runtime.defineFn(
     JSString,
     "fromCharCode",
-    proc =
+    proc() =
       ## 22.1.2.1 String.fromCharCode ( ...codeUnits ), https://tc39.es/ecma262/#sec-string.fromcharcode
       # 1. Let result be the empty String.
       var res: string
-      
+
       # 2. For each element next of codeUnits, do
       for i in 1 .. runtime.argumentCount():
         # a. Let nextCU be the code unit whose numeric value is ℝ(? ToUint16(next)).
@@ -229,4 +222,5 @@ proc generateStdIr*(runtime: Runtime) =
 
       # 3. Return result.
       ret res
+    ,
   )

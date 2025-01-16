@@ -8,12 +8,8 @@ import bali/internal/sugar
 func toDay*(t: float): int =
   ## The abstract operation Day takes argument t (a finite time value) and returns an integral Number. It returns the
   ## day number of the day in which t falls. It performs the following steps when called:
-  
-  int(
-    floor(
-      t / msPerDay
-    )
-  )
+
+  int(floor(t / msPerDay))
 
 func toWeekDay*(t: float): int {.inline.} =
   ## The abstract operation WeekDay takes argument t (a finite time value) and returns an integral Number in the
@@ -22,9 +18,7 @@ func toWeekDay*(t: float): int {.inline.} =
   ## fies Thursday; 5𝔽 specifies Friday; and 6𝔽 specifies Saturday
 
   # 1. Return 𝔽(ℝ(Day(t) + 4𝔽) modulo 7).
-  int(
-    (toDay(t) + 4) mod 7
-  )
+  int((toDay(t) + 4) mod 7)
 
 func getHourFromTime*(t: float): int {.inline.} =
   ## The abstract operation HourFromTime takes argument t (a finite time value) and returns an integral Number in
@@ -32,11 +26,7 @@ func getHourFromTime*(t: float): int {.inline.} =
   ## when called
 
   # 1. Return 𝔽(floor(ℝ(t / msPerHour)) modulo HoursPerDay).
-  int(
-    floor(
-      t / msPerHour
-    ) mod HoursPerDay
-  )
+  int(floor(t / msPerHour) mod HoursPerDay)
 
 func getDayFromYear*(y: int32): float =
   # 1. Let ry be ℝ(y).
@@ -51,7 +41,7 @@ func getDayFromYear*(y: int32): float =
 
     # 4. Let numYears4 be floor((ry - 1969) / 4).
     numYears4 = floor((ry - 1969) / 4)
-    
+
     # 5. Let numYears100 be floor((ry - 1901) / 100).
     numYears100 = floor((ry - 1901) / 100)
 
@@ -92,7 +82,7 @@ func getYearFromTime*(t: float): int32 {.inline.} =
     return int32.high()
 
   var year = int32(floor(t / (365.2425 * msPerDay) + 1970))
-  
+
   let yearT = getTimeFromYear(year)
   if yearT > t:
     dec year
@@ -108,7 +98,7 @@ func inLeapYear*(t: float): bool {.inline.} =
 func getDayWithinYear*(t: float): uint16 {.inline.} =
   if t == Inf:
     return 0'u16
-  
+
   # 1. Return Day(t) - DayFromYear(YearFromTime(t)).
   uint16(toDay(t).float - getDayFromYear(getYearFromTime(t)))
 
@@ -129,7 +119,7 @@ func getMsecondsFromTime*(t: float): uint16 {.inline.} =
     return 0'u8
 
   uint16(t mod msPerSecond)
-  
+
 func getMonthFromTime*(t: float): int {.inline.} =
   ## The abstract operation MonthFromTime takes argument t (a finite time value) and returns an integral Number in
   ## the inclusive interval from +0𝔽 to 11𝔽. It returns a Number identifying the month in which t falls. A month value of
@@ -212,4 +202,5 @@ func getDateFromTime*(t: float): uint8 {.inline.} =
     return uint8(dayWithinYear - 303 - inLeapYear)
   of 11:
     return uint8(dayWithinYear - 333 - inLeapYear)
-  else: unreachable
+  else:
+    unreachable

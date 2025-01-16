@@ -15,11 +15,10 @@ import pkg/[colored_logger, jsony, pretty, noise, fuzzy]
 
 const Version {.strdefine: "NimblePkgVersion".} = "<version not defined>"
 
-type
-  DumpMode = enum
-    dmPretty
-    dmJson
-    dmJsonPretty
+type DumpMode = enum
+  dmPretty
+  dmJson
+  dmJsonPretty
 
 var
   enableProfiler = false
@@ -52,7 +51,9 @@ proc die(msg: varargs[string]) {.inline, noReturn.} =
 proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runtime =
   let test262 = ctx.enabled("test262")
   var runtime = newRuntime(
-    file, ast, InterpreterOpts(
+    file,
+    ast,
+    InterpreterOpts(
       test262: test262,
       dumpBytecode: ctx.enabled("dump-bytecode", "D"),
       repl: repl,
@@ -60,15 +61,15 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
       codegen: CodegenOpts(
         elideLoops: not ctx.enabled("disable-loop-elision"),
         loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim"),
-        aggressivelyFreeRetvals: not ctx.enabled("dont-aggressively-free-retvals")
-      )
-    )
+        aggressivelyFreeRetvals: not ctx.enabled("dont-aggressively-free-retvals"),
+      ),
+    ),
   )
   let expStr = ctx.flag("enable-experiments")
 
   var success = true
   let exps =
-    if *expStr: 
+    if *expStr:
       split(&expStr, ';')
     else:
       newSeq[string](0)
@@ -92,41 +93,106 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
 
 proc dumpStatisticsPretty(runtime: Runtime) =
   let stats = runtime.dumpStatistics()
-  
+
   stdout.styledWriteLine(styleBright, "Runtime Statistics", resetStyle)
-  stdout.styledWriteLine(fgGreen, "Atoms Allocated", resetStyle, ": ", styleBright, $stats.atomsAllocated, resetStyle)
+  stdout.styledWriteLine(
+    fgGreen,
+    "Atoms Allocated",
+    resetStyle,
+    ": ",
+    styleBright,
+    $stats.atomsAllocated,
+    resetStyle,
+  )
 
   when defined(nimAllocStats):
-    stdout.styledWriteLine(fgGreen, "Traced Allocations", resetStyle, ": ", styleBright, $stats.numAllocations, resetStyle)
-    stdout.styledWriteLine(fgGreen, "Traced Deallocations", resetStyle, ": ", styleBright, $stats.numDeallocations, resetStyle)
+    stdout.styledWriteLine(
+      fgGreen,
+      "Traced Allocations",
+      resetStyle,
+      ": ",
+      styleBright,
+      $stats.numAllocations,
+      resetStyle,
+    )
+    stdout.styledWriteLine(
+      fgGreen,
+      "Traced Deallocations",
+      resetStyle,
+      ": ",
+      styleBright,
+      $stats.numDeallocations,
+      resetStyle,
+    )
   else:
     stdout.styledWriteLine(
-      "* ", styleItalic, styleBright, "Cannot show traced allocations/deallocations; compile Balde with ", 
-      resetStyle, fgGreen, "--define:nimAllocStats", resetStyle,
-      styleItalic, " to see allocation/deallocation statistics."
+      "* ", styleItalic, styleBright,
+      "Cannot show traced allocations/deallocations; compile Balde with ", resetStyle,
+      fgGreen, "--define:nimAllocStats", resetStyle, styleItalic,
+      " to see allocation/deallocation statistics.",
     )
 
-  stdout.styledWriteLine(fgGreen, "Bytecode Size (KB)", resetStyle, ": ", styleBright, $stats.bytecodeSize, resetStyle)
-  stdout.styledWriteLine(fgGreen, "Code Breaks Generated", resetStyle, ": ", styleBright, $stats.breaksGenerated, resetStyle)
   stdout.styledWriteLine(
-    fgGreen, "VM State", resetStyle, ": ",
-    (
-      if stats.vmHasHalted:
-        fgGreen
-      else:
-        fgRed
-    ),
-    (if stats.vmHasHalted: "Halted" else: "Running"),
-    resetStyle
+    fgGreen,
+    "Bytecode Size (KB)",
+    resetStyle,
+    ": ",
+    styleBright,
+    $stats.bytecodeSize,
+    resetStyle,
   )
-  stdout.styledWriteLine(fgGreen, "Field Accesses", resetStyle, ": ", styleBright, $stats.fieldAccesses, resetStyle)
-  stdout.styledWriteLine(fgGreen, "Typeof Calls", resetStyle, ": ", styleBright, $stats.typeofCalls, resetStyle)
-  stdout.styledWriteLine(fgGreen, "Clauses Generated", resetStyle, ": ", styleBright, $stats.clausesGenerated, resetStyle)
+  stdout.styledWriteLine(
+    fgGreen,
+    "Code Breaks Generated",
+    resetStyle,
+    ": ",
+    styleBright,
+    $stats.breaksGenerated,
+    resetStyle,
+  )
+  stdout.styledWriteLine(
+    fgGreen,
+    "VM State",
+    resetStyle,
+    ": ",
+    (if stats.vmHasHalted: fgGreen else: fgRed),
+    (if stats.vmHasHalted: "Halted" else: "Running"),
+    resetStyle,
+  )
+  stdout.styledWriteLine(
+    fgGreen,
+    "Field Accesses",
+    resetStyle,
+    ": ",
+    styleBright,
+    $stats.fieldAccesses,
+    resetStyle,
+  )
+  stdout.styledWriteLine(
+    fgGreen,
+    "Typeof Calls",
+    resetStyle,
+    ": ",
+    styleBright,
+    $stats.typeofCalls,
+    resetStyle,
+  )
+  stdout.styledWriteLine(
+    fgGreen,
+    "Clauses Generated",
+    resetStyle,
+    ": ",
+    styleBright,
+    $stats.clausesGenerated,
+    resetStyle,
+  )
 
-func `%`(t: tuple[str: Option[string], exc: Option[void], ident: Option[string]]): JsonNode =
+func `%`(
+    t: tuple[str: Option[string], exc: Option[void], ident: Option[string]]
+): JsonNode =
   if *t.str:
     return newJString &t.str
-  
+
   if *t.exc:
     return "exception".newJString
 
@@ -185,19 +251,27 @@ proc execFile(ctx: Input, file: string) {.inline.} =
 
   if ctx.enabled("dump-ast"):
     var rawMode = ctx.flag("dump-mode")
-    if !rawMode: rawMode = some("pretty")
+    if !rawMode:
+      rawMode = some("pretty")
 
-    let mode = case &rawMode
-    of "pretty": dmPretty
-    of "json": dmJson
-    of "json-pretty": dmJsonPretty
-    else:
-      die "invalid mode for dump-mode: " & &rawMode
-      dmPretty
+    let mode =
+      case &rawMode
+      of "pretty":
+        dmPretty
+      of "json":
+        dmJson
+      of "json-pretty":
+        dmJsonPretty
+      else:
+        die "invalid mode for dump-mode: " & &rawMode
+        dmPretty
 
     case mode
-    of dmPretty: print ast # Pretty-print the AST
-    else: die "dump mode not implemented"
+    of dmPretty:
+      print ast
+    # Pretty-print the AST
+    else:
+      die "dump mode not implemented"
     #[of dmJson:
       # convert the AST to JSON using jsony
       let serialized = toJson(ast)
@@ -205,7 +279,7 @@ proc execFile(ctx: Input, file: string) {.inline.} =
     of dmJsonPretty:
       let serialized = pretty(parseJson(toJson(ast))) # FIXME: this is horribly inefficient but it works
       echo serialized]#
-  
+
   if ctx.enabled("dump-statistics"):
     runtime.dumpStatisticsPretty()
 
@@ -216,9 +290,8 @@ proc baldeRun(ctx: Input) =
   if not ctx.enabled("verbose", "v"):
     setLogFilter(lvlWarn)
 
-  enableProfiler =
-    ctx.enabled("enable-profiler", "P")
-  
+  enableProfiler = ctx.enabled("enable-profiler", "P")
+
   let arg = ctx.command
   execFile(ctx, arg)
 
@@ -231,7 +304,8 @@ proc baldeRepl(ctx: Input) =
     var runtime = allocRuntime(ctx, "<repl>", ast, repl = true)
     if prevRuntime != nil:
       runtime.values = prevRuntime.values
-      runtime.vm.stack = prevRuntime.vm.stack # Copy all atoms of the previous runtime to the new one
+      runtime.vm.stack = prevRuntime.vm.stack
+        # Copy all atoms of the previous runtime to the new one
     runtime.run()
     prevRuntime = runtime
 
@@ -260,7 +334,8 @@ proc baldeRepl(ctx: Input) =
 
   while true:
     let ok = noise.readLine()
-    if not ok: break
+    if not ok:
+      break
 
     let line = noise.getLine()
 
@@ -300,17 +375,21 @@ You can also just type in JavaScript expressions to evaluate them."""
           styledWriteLine(stdout, fgRed, ".express expects 1 argument!", resetStyle)
           continue
 
-        let index = try:
-          parseUint(args[1])
-        except ValueError as exc:
-          styledWriteLine(stdout, fgRed, "could not parse index for .express", resetStyle, ": ", styleBright, exc.msg, resetStyle)
-          continue
+        let index =
+          try:
+            parseUint(args[1])
+          except ValueError as exc:
+            styledWriteLine(
+              stdout, fgRed, "could not parse index for .express", resetStyle, ": ",
+              styleBright, exc.msg, resetStyle,
+            )
+            continue
 
         if prevRuntime.vm.stack.contains(index):
           print prevRuntime.vm.stack[index]
         else:
           echo "No value exists at index: " & $index & '\n' &
-              "Run .dump_stack to see all values."
+            "Run .dump_stack to see all values."
           continue
       else:
         let parser = newParser(line)
@@ -318,7 +397,10 @@ You can also just type in JavaScript expressions to evaluate them."""
 
         if ast.errors.len > 0:
           for error in ast.errors:
-            styledWriteLine(stdout, fgRed, "Parse Error", resetStyle, ": ", styleBright, error.message, resetStyle)
+            styledWriteLine(
+              stdout, fgRed, "Parse Error", resetStyle, ": ", styleBright,
+              error.message, resetStyle,
+            )
         else:
           noise.historyAdd(line)
           evaluateSource line
@@ -326,7 +408,7 @@ You can also just type in JavaScript expressions to evaluate them."""
   when promptHistory:
     discard noise.historySave(file)
 
-proc showHelp {.noReturn.} =
+proc showHelp() {.noReturn.} =
   let name = getAppFilename().splitPath().tail
   echo """
 Usage: $1 [options] [script]
@@ -354,14 +436,13 @@ Codegen Flags:
   --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
   --disable-loop-allocation-elim          Don't attempt to rewrite loops to avoid unnecessary atom allocations.
   --dont-aggressively-free-retvals        Don't aggressively zero-out the return-value register. This can speed up execution at the cost of allowing OOMs to crash the engine and/or the                                           host system. Only use this flag if you're completely sure that your code won't "clog" the return-value register!
-""" % [
-  name, Version
-  ]
+""" %
+    [name, Version]
   quit(0)
 
 proc main() {.inline.} =
   enableLogging()
-  
+
   let input = parseInput()
   if input.enabled("version", "V"):
     echo Version
@@ -379,7 +460,7 @@ proc main() {.inline.} =
 
     baldeRepl(input)
     quit(0)
-  
+
   if input.command.len > 0:
     baldeRun(input)
   else:

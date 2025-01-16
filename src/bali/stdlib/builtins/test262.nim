@@ -15,8 +15,7 @@ proc test262Error*(runtime: Runtime, msg: string) =
   runtime.vm.throw(jsException(msg))
   logTracebackAndDie(runtime)
 
-type
-  JSAssert* = object
+type JSAssert* = object
 
 proc generateStdIr*(runtime: Runtime) =
   info "builtins.test262: generating IR interfaces"
@@ -24,8 +23,8 @@ proc generateStdIr*(runtime: Runtime) =
   # $DONOTEVALUATE (stub)
   runtime.defineFn(
     "$DONOTEVALUATE",
-    proc =
-      return
+    proc() =
+      return ,
   )
 
   runtime.registerType(prototype = JSAssert, name = "assert")
@@ -34,15 +33,41 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.defineFn(
     JSAssert,
     "sameValue",
-    proc =
+    proc() =
       template no() =
-        stderr.styledWriteLine(bgRed, fgBlack, " FAIL ", resetStyle, " ", styleBright, a.crush(), resetStyle, " != ", styleBright, b.crush(), resetStyle)
+        stderr.styledWriteLine(
+          bgRed,
+          fgBlack,
+          " FAIL ",
+          resetStyle,
+          " ",
+          styleBright,
+          a.crush(),
+          resetStyle,
+          " != ",
+          styleBright,
+          b.crush(),
+          resetStyle,
+        )
         runtime.test262Error(
           "Assert.sameValue(): " & b.crush() & " != " & a.crush() & ' ' & msg
         )
 
       template yes() =
-        stdout.styledWriteLine(bgGreen, fgBlack, " PASS ", resetStyle, " ", styleBright, a.crush(), resetStyle, " == ", styleBright, b.crush(), resetStyle)
+        stdout.styledWriteLine(
+          bgGreen,
+          fgBlack,
+          " PASS ",
+          resetStyle,
+          " ",
+          styleBright,
+          a.crush(),
+          resetStyle,
+          " == ",
+          styleBright,
+          b.crush(),
+          resetStyle,
+        )
         return
 
       let

@@ -7,9 +7,8 @@ import bali/internal/[sugar, trim_string]
 import mirage/atom
 import pkg/[pretty, gmp]
 
-type
-  JSBigInt* = object
-    `@value`*: MAtom
+type JSBigInt* = object
+  `@ value`*: MAtom
 
 proc stringToBigInt*(runtime: Runtime, str: MAtom): MAtom =
   # 7.1.14 StringToBigInt ( str )
@@ -43,14 +42,14 @@ proc toBigInt*(runtime: Runtime, atom: MAtom): MAtom =
   if prim.isNumber():
     # Throw a TypeError exception.
     runtime.typeError("Cannot convert number into BigInt")
-  
+
   # BigInt
   if prim.kind == BigInteger:
     # Return prim.
     var bigint = runtime.createObjFromType(JSBigInt)
     bigint.tag("value", prim)
     return bigint
-  
+
   # String
   if prim.kind == String:
     # 1. Let n be StringToBigInt(prim).
@@ -59,15 +58,15 @@ proc toBigInt*(runtime: Runtime, atom: MAtom): MAtom =
     if n.isUndefined():
       # 2. If n is undefined, throw a SyntaxError exception.
       runtime.syntaxError("invalid BigInt syntax")
-    
+
     # 3. Return n
     return n
-  
+
   # Null
   if prim.isNull():
     # Throw a TypeError exception.
     runtime.typeError("can't convert null to BigInt")
-  
+
   # Undefined
   if prim.isUndefined():
     # Throw a TypeError exception.
@@ -83,20 +82,16 @@ proc toBigInt*(runtime: Runtime, atom: MAtom): MAtom =
 
 proc numberToBigInt*(runtime: Runtime, primitive: MAtom): MAtom {.inline.} =
   ## 21.2.1.1.1 NumberToBigInt ( number )
-  
+
   # 1. If IsIntegralNumber(number) is false, throw a RangeError exception.
   if not runtime.isIntegralNumber(primitive):
     runtime.rangeError("Value is out of the valid range")
-  
+
   # 2. Return ℤ(ℝ(number)).
 
   var bigint = runtime.createObjFromType(JSBigInt)
 
-  bigint.tag("value", bigint(
-    runtime.ToNumber(
-      primitive
-    ).int()
-  ))
+  bigint.tag("value", bigint(runtime.ToNumber(primitive).int()))
 
   bigint
 
@@ -104,23 +99,24 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.registerType(prototype = JSBigInt, name = "BigInt")
   runtime.defineFn(
     "BigInt",
-    proc =
+    proc() =
       ## 21.2.1.1 BigInt ( value )
 
       # 1. If NewTarget is not undefined, throw a TypeError exception.
       # TODO: I have no clue what NewTarget is.
-      
+
       let value = &runtime.argument(1)
 
       # 2. Let prim be ? ToPrimitive(value, NUMBER).
       let primitive = runtime.ToPrimitive(value, some(Integer))
-      
+
       # 3. If Type(prim) is Number, return ? NumberToBigInt(prim).
       if primitive.isNumber():
         ret runtime.numberToBigInt(primitive)
-      
+
       # 4. Otherwise, return ? ToBigInt(prim).
       ret runtime.toBigInt(primitive)
+    ,
   )
 
   runtime.definePrototypeFn(
@@ -129,4 +125,5 @@ proc generateStdIR*(runtime: Runtime) =
     proc(value: MAtom) =
       let bigint = &value.tagged("value")
       ret $bigint.bigint
+    ,
   )

@@ -15,8 +15,7 @@ func isNull*(atom: MAtom): bool {.inline.} =
   atom.kind == Null
 
 func isNumber*(atom: MAtom): bool {.inline.} =
-  atom.kind == UnsignedInt or
-  atom.kind == Integer
+  atom.kind == UnsignedInt or atom.kind == Integer
 
 func isBigInt*(atom: MAtom): bool {.inline.} =
   atom.kind == BigInteger
@@ -95,8 +94,8 @@ proc `[]=`*[T: not MAtom](atom: var MAtom, name: string, value: T) {.inline.} =
 
 proc tag*[T](atom: var MAtom, tag: string, value: T) {.inline.} =
   atom['@' & tag] = value.wrap()
+
 {.pop.}
 
 func undefined*(): MAtom {.inline.} =
   obj()
-

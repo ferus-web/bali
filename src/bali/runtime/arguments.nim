@@ -5,10 +5,7 @@ import bali/runtime/[atom_helpers, types]
 import bali/stdlib/errors
 
 proc argument*(
-  runtime: Runtime,
-  position: Natural,
-  required: bool = false,
-  message: string = "",
+    runtime: Runtime, position: Natural, required: bool = false, message: string = ""
 ): Option[MAtom] =
   ## Get an argument from the call arguments register.
   ## If `required` is `true`, then a TypeError with an error message of your choice will be thrown.
@@ -20,7 +17,8 @@ proc argument*(
   debug "runtime: fetching argument #" & $position
 
   if runtime.vm.registers.callArgs.len < position:
-    debug "runtime: argument(): " & $position & " > " & $runtime.vm.registers.callArgs.len
+    debug "runtime: argument(): " & $position & " > " &
+      $runtime.vm.registers.callArgs.len
     if required:
       debug "runtime: argument(): `required` == true, throwing TypeError"
       when not defined(danger):

@@ -28,7 +28,7 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
 
       inc substringStart
       dec substringLength
-  
+
   if mode == TrimMode.Right or mode == TrimMode.Both:
     var seenWhitespaceLength = 0
 
@@ -40,9 +40,9 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
 
     if seenWhitespaceLength >= substringLength:
       return
-    
+
     substringLength -= seenWhitespaceLength
- 
+
   str[substringStart ..< substringStart + substringLength]
 
 proc trimString*(runtime: Runtime, input: MAtom, where: TrimMode): string =

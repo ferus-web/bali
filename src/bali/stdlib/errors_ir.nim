@@ -15,9 +15,11 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.vm.registerBuiltin(
     "BALI_THROWERROR",
     proc(op: Operation) =
-      let atom = runtime.argument(1, required = true, message = "BUG: BALI_THROWERROR got {nargs} atoms, expected one!")
-      runtime.vm.throw(jsException(
-        runtime.ToString(&atom)
-      ))
+      let atom = runtime.argument(
+        1,
+        required = true,
+        message = "BUG: BALI_THROWERROR got {nargs} atoms, expected one!",
+      )
+      runtime.vm.throw(jsException(runtime.ToString(&atom)))
       runtime.logTracebackAndDie(),
   )

@@ -48,7 +48,7 @@ proc consoleLogIR*(runtime: Runtime) =
   runtime.defineFn(
     JSConsole,
     "log",
-    proc =
+    proc() =
       console(runtime, ConsoleLevel.Log),
   )
 
@@ -57,7 +57,7 @@ proc consoleLogIR*(runtime: Runtime) =
   runtime.defineFn(
     JSConsole,
     "warn",
-    proc =
+    proc() =
       console(runtime, ConsoleLevel.Warn),
   )
 
@@ -66,7 +66,7 @@ proc consoleLogIR*(runtime: Runtime) =
   runtime.defineFn(
     JSConsole,
     "info",
-    proc =
+    proc() =
       console(runtime, ConsoleLevel.Info),
   )
 
@@ -75,7 +75,7 @@ proc consoleLogIR*(runtime: Runtime) =
   runtime.defineFn(
     JSConsole,
     "error",
-    proc =
+    proc() =
       console(runtime, ConsoleLevel.Error),
   )
 
@@ -84,7 +84,7 @@ proc consoleLogIR*(runtime: Runtime) =
   runtime.defineFn(
     JSConsole,
     "debug",
-    proc =
+    proc() =
       console(runtime, ConsoleLevel.Debug),
   )
 
