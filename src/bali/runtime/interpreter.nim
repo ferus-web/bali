@@ -1111,9 +1111,13 @@ proc run*(runtime: Runtime) =
   
   var backScopes = runtime.ast.scopes[0]
   var scopes: seq[Scope]
-  while *backScopes.next:
+
+  if *backScopes.next:
+    while *backScopes.next:
+      scopes &= backScopes
+      backScopes = &backScopes.next
+  else:
     scopes &= backScopes
-    backScopes = &backScopes.next
   
   scopes.reverse()
   for ident in [
