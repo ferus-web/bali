@@ -1,5 +1,6 @@
 function callSomething(x) {
-	console.log("Upon calling the given function, I got:", x())
+	// console.log(x)
+	console.log(x)
 }
 
 function cheezburgr() {

@@ -1,6 +1,6 @@
 ## Bali runtime (MIR emitter)
 
-import std/[options, hashes, logging, sugar, strutils, tables, importutils]
+import std/[algorithm, options, hashes, logging, sugar, strutils, tables, importutils]
 import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
@@ -233,6 +233,13 @@ proc resolveFieldAccess*(
 
 proc generateIRForScope*(runtime: Runtime, scope: Scope, allocateConstants: bool = true)
 
+func willIRGenerateClause*(runtime: Runtime, clause: string): bool {.inline.} =
+  for cls in runtime.ir.modules:
+    if cls.name == clause:
+      return true
+
+  false
+
 proc generateIR*(
     runtime: Runtime,
     fn: Function,
@@ -285,10 +292,6 @@ proc generateIR*(
       else:
         stmt.fn.function
 
-    info "interpreter: generate IR for calling function: " & nam &
-      (if stmt.mangle: " (mangled)" else: newString 0)
-    runtime.expand(fn, stmt, internal)
-
     if *stmt.fn.field:
       let typName = block:
         var curr = &stmt.fn.field
@@ -311,19 +314,16 @@ proc generateIR*(
           runtime.index((&stmt.fn.field).identifier, defaultParams(fn))
         )
 
+
     for i, arg in stmt.arguments:
       case arg.kind
       of cakIdent:
-        info "interpreter: passing ident parameter to function with ident: " & arg.ident
+        debug "interpreter: passing ident parameter to function with ident: " & arg.ident
         
-        for module in runtime.ir.modules:
-          if module.name == arg.ident:
-            continue
-
         runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
       of cakAtom: # already loaded via the statement expander
         let ident = $i
-        info "interpreter: passing atom parameter to function with ident: " & ident
+        debug "interpreter: passing atom parameter to function with ident: " & ident
         runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
       of cakFieldAccess:
         let index = runtime.resolveFieldAccess(
@@ -336,13 +336,29 @@ proc generateIR*(
         runtime.ir.markGlobal(index)
         runtime.ir.passArgument(index)
     
-    runtime.ir.call(nam)
-    runtime.ir.resetArgs()
+    # Traditional function calls (pre-defined functions)
+    if *runtime.vm.getClause(nam) or runtime.willIRGenerateClause(nam) or runtime.vm.builtins.contains(nam):
+      debug "interpreter: generate IR for calling traditional function: " & nam &
+        (if stmt.mangle: " (mangled)" else: newString 0)
+      runtime.expand(fn, stmt, internal)
+    
+      runtime.ir.call(nam)
+      runtime.ir.resetArgs()
       # Reset the call arguments register to prevent this call's arguments from leaking into future calls
 
-    if not stmt.expectsReturnVal and runtime.opts.codegen.aggressivelyFreeRetvals:
-      runtime.ir.zeroRetval()
-        # Destroy the return value, if any. This helps conserve memory.
+      if not stmt.expectsReturnVal and runtime.opts.codegen.aggressivelyFreeRetvals:
+        runtime.ir.zeroRetval()
+          # Destroy the return value, if any. This helps conserve memory.
+    else:
+      # Dynamic bytecode segment references
+      discard runtime.ir.addOp(
+        IROperation(
+          opcode: ExecuteBytecodeCallable,
+          arguments: @[uinteger(runtime.index(nam, defaultParams(fn)))]
+        )
+      )
+      runtime.ir.resetArgs()
+      
   of ReturnFn:
     assert not (*stmt.retVal and *stmt.retIdent),
       "ReturnFn statement cannot have both return atom and return ident at once!"
@@ -872,10 +888,20 @@ proc generateIRForScope*(
 
   if name != "outer":
     runtime.loadArgumentsOntoStack(fn)
+    runtime.markGlobal(name)
   else:
     if allocateConstants:
       constants.generateStdIr(runtime)
       inc runtime.addrIdx
+      
+      for clause in runtime.clauses:
+        let fnIndex = runtime.index(clause, defaultParams(fn))
+        discard runtime.ir.addOp(
+          IROperation(opcode: LoadBytecodeCallable, arguments: @[
+            uinteger(fnIndex), str(clause)
+          ])
+        )
+        runtime.ir.markGlobal(fnIndex)
 
       for i, typ in runtime.types:
         let idx = runtime.addrIdx
@@ -1082,8 +1108,21 @@ proc run*(runtime: Runtime) =
         else:
           quit(0)
     )
+  
+  var backScopes = runtime.ast.scopes[0]
+  var scopes: seq[Scope]
+  while *backScopes.next:
+    scopes &= backScopes
+    backScopes = &backScopes.next
+  
+  scopes.reverse()
+  for ident in [
+    "undefined", "NaN", "true", "false", "null"
+  ]:
+    runtime.markGlobal(ident)
 
-  runtime.generateIRForScope(runtime.ast.scopes[0])
+  for scope in scopes:
+    runtime.generateIRForScope(scope)
 
   constants.generateStdIR(runtime)
 

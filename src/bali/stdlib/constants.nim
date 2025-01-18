@@ -19,23 +19,25 @@ proc generateStdIr*(runtime: Runtime) =
 
   runtime.constantsGenerated = true
 
+  let params = IndexParams(priorities: @[vkGlobal])
+
   debug "constants: generating constant values"
-  runtime.ir.loadObject(runtime.addrIdx)
-  runtime.ir.markGlobal(runtime.addrIdx)
-  runtime.markGlobal("undefined")
-
-  runtime.ir.loadFloat(runtime.addrIdx, floating(NaN))
-  runtime.ir.markGlobal(runtime.addrIdx)
-  runtime.markGlobal("NaN")
-
-  runtime.ir.loadBool(runtime.addrIdx, true)
-  runtime.ir.markGlobal(runtime.addrIdx)
-  runtime.markGlobal("true")
-
-  runtime.ir.loadBool(runtime.addrIdx, false)
-  runtime.ir.markGlobal(runtime.addrIdx)
-  runtime.markGlobal("false")
-
-  runtime.ir.loadNull(runtime.addrIdx)
-  runtime.ir.markGlobal(runtime.addrIdx)
-  runtime.markGlobal("null")
+  let undefined = runtime.index("undefined", params)
+  runtime.ir.loadObject(undefined)
+  runtime.ir.markGlobal(undefined)
+  
+  let nan = runtime.index("NaN", params)
+  runtime.ir.loadFloat(nan, floating(NaN))
+  runtime.ir.markGlobal(nan)
+  
+  let vTrue = runtime.index("true", params)
+  runtime.ir.loadBool(vTrue, true)
+  runtime.ir.markGlobal(vTrue)
+  
+  let vFalse = runtime.index("false", params)
+  runtime.ir.loadBool(vFalse, false)
+  runtime.ir.markGlobal(vFalse)
+  
+  let null = runtime.index("null", params)
+  runtime.ir.loadNull(null)
+  runtime.ir.markGlobal(null)
