@@ -263,6 +263,9 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
 proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
   for value in runtime.values:
     for prio in params.priorities:
+      if value.kind == vkGlobal and value.identifier == ident:
+        return value.index
+
       if value.kind != prio:
         continue
 
@@ -279,7 +282,7 @@ proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
 
       if cond:
         return value.index
-
+  
   debug "runtime: cannot find identifier \"" & ident &
     "\" in index search, returning pointer to undefined()"
   runtime.index("undefined", params)
