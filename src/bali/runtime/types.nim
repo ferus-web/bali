@@ -79,6 +79,7 @@ type
 
   IRHints* = object
     breaksGeneratedAt*: seq[uint]
+    generatedClauses*: seq[string] ## FIXME: This is a horrible fix for the double-clause codegen bug!
 
   RuntimeStats* = object
     atomsAllocated*: uint ## How many atoms have been allocated so far?

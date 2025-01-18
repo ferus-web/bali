@@ -68,3 +68,6 @@ proc ToString*(runtime: Runtime, value: MAtom): string =
     buffer &= ']'
 
     return buffer
+  of BytecodeCallable, NativeCallable:
+    # FIXME: not spec compliant!
+    return "function"

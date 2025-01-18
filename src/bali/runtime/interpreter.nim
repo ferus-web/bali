@@ -315,6 +315,10 @@ proc generateIR*(
       case arg.kind
       of cakIdent:
         info "interpreter: passing ident parameter to function with ident: " & arg.ident
+        
+        for module in runtime.ir.modules:
+          if module.name == arg.ident:
+            continue
 
         runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
       of cakAtom: # already loaded via the statement expander
@@ -331,7 +335,7 @@ proc generateIR*(
         let index = runtime.index($i, internalIndex(stmt))
         runtime.ir.markGlobal(index)
         runtime.ir.passArgument(index)
-
+    
     runtime.ir.call(nam)
     runtime.ir.resetArgs()
       # Reset the call arguments register to prevent this call's arguments from leaking into future calls
@@ -860,6 +864,11 @@ proc generateIRForScope*(
   if not runtime.clauses.contains(name):
     runtime.clauses.add(name)
     runtime.ir.newModule(name.normalizeIRName())
+  
+  if runtime.irHints.generatedClauses.contains(name):
+    return
+
+  runtime.irHints.generatedClauses &= name
 
   if name != "outer":
     runtime.loadArgumentsOntoStack(fn)
