@@ -1,32 +1,32 @@
 ## Atom functions
 
 import std/[options, tables]
-import bali/grammar/statement
 import mirage/atom
-import pretty
 
-func isUndefined*(atom: MAtom): bool {.inline.} =
+{.push warning[UnreachableCode]: off, inline.}
+
+func isUndefined*(atom: MAtom): bool =
   atom.kind == Object and atom.objFields.len < 1
 
-func isObject*(atom: MAtom): bool {.inline.} =
+func isObject*(atom: MAtom): bool =
   atom.kind == Object
 
-func isNull*(atom: MAtom): bool {.inline.} =
+func isNull*(atom: MAtom): bool =
   atom.kind == Null
 
-func isNumber*(atom: MAtom): bool {.inline.} =
+func isNumber*(atom: MAtom): bool =
   atom.kind == UnsignedInt or atom.kind == Integer
 
-func isBigInt*(atom: MAtom): bool {.inline.} =
+func isBigInt*(atom: MAtom): bool =
   atom.kind == BigInteger
 
-proc `[]`*(atom: MAtom, name: string): MAtom {.inline.} =
+proc `[]`*(atom: MAtom, name: string): MAtom =
   if atom.kind != Object:
     raise newException(ValueError, $atom.kind & " does not have field access methods")
 
   atom.objValues[atom.objFields[name]]
 
-proc `[]=`*(atom: var MAtom, name: string, value: sink MAtom) {.inline.} =
+proc `[]=`*(atom: var MAtom, name: string, value: sink MAtom) =
   if atom.kind != Object:
     raise newException(ValueError, $atom.kind & " does not have field access methods")
 
@@ -36,14 +36,13 @@ proc `[]=`*(atom: var MAtom, name: string, value: sink MAtom) {.inline.} =
   else:
     atom.objValues[atom.objFields[name]] = move(value)
 
-proc contains*(atom: MAtom, name: string): bool {.inline.} =
+proc contains*(atom: MAtom, name: string): bool =
   atom.objFields.contains(name)
 
-proc tagged*(atom: MAtom, tag: string): Option[MAtom] {.inline.} =
+proc tagged*(atom: MAtom, tag: string): Option[MAtom] =
   if atom.contains('@' & tag):
     return some atom['@' & tag]
 
-{.push inline.}
 func wrap*(val: SomeSignedInt | SomeUnsignedInt | string | float | bool): MAtom =
   when val is SomeSignedInt:
     return integer(val.int)
@@ -89,13 +88,13 @@ func wrap*[T: object](obj: T): MAtom =
 func wrap*(val: seq[MAtom]): MAtom =
   sequence(val)
 
-proc `[]=`*[T: not MAtom](atom: var MAtom, name: string, value: T) {.inline.} =
+proc `[]=`*[T: not MAtom](atom: var MAtom, name: string, value: T) =
   atom[name] = wrap(value)
 
-proc tag*[T](atom: var MAtom, tag: string, value: T) {.inline.} =
+proc tag*[T](atom: var MAtom, tag: string, value: T) =
   atom['@' & tag] = value.wrap()
 
-{.pop.}
-
-func undefined*(): MAtom {.inline.} =
+func undefined*(): MAtom =
   obj()
+
+{.pop.}

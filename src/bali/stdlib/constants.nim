@@ -1,17 +1,10 @@
 ## Constant values (like NaN, undefined, null, etc.)
 
-import std/[options, logging, tables]
-import bali/internal/sugar
-import bali/runtime/[normalize, atom_helpers]
-import bali/runtime/abstract/coercion
-import bali/stdlib/errors
-import jsony
+import std/[logging]
 import mirage/ir/generator
 import mirage/atom
 import mirage/runtime/[prelude]
 import bali/runtime/types
-import sanchar/parse/url
-import pretty
 
 proc generateStdIr*(runtime: Runtime) =
   if runtime.constantsGenerated:
@@ -25,19 +18,19 @@ proc generateStdIr*(runtime: Runtime) =
   let undefined = runtime.index("undefined", params)
   runtime.ir.loadObject(undefined)
   runtime.ir.markGlobal(undefined)
-  
+
   let nan = runtime.index("NaN", params)
   runtime.ir.loadFloat(nan, floating(NaN))
   runtime.ir.markGlobal(nan)
-  
+
   let vTrue = runtime.index("true", params)
   runtime.ir.loadBool(vTrue, true)
   runtime.ir.markGlobal(vTrue)
-  
+
   let vFalse = runtime.index("false", params)
   runtime.ir.loadBool(vFalse, false)
   runtime.ir.markGlobal(vFalse)
-  
+
   let null = runtime.index("null", params)
   runtime.ir.loadNull(null)
   runtime.ir.markGlobal(null)

@@ -1,8 +1,7 @@
-import std/[hashes, logging, options, tables]
+import std/[hashes, options]
 import mirage/atom
 import bali/runtime/normalize
 import bali/internal/sugar
-import pretty
 
 type
   StatementKind* = enum

@@ -14,10 +14,8 @@
 ## end
 
 import std/[logging]
-import mirage/atom
-import mirage/ir/generator
 import bali/grammar/prelude
-import bali/runtime/[statement_utils, types]
+import bali/runtime/[types]
 
 type AllocationEliminatorResult* = object
   placeBefore*: Scope ## All statements here are to be placed outside the loop

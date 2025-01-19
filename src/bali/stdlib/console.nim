@@ -1,13 +1,12 @@
 ## JavaScript console API standard interface
 ## This uses a delegate system similar to that of V8's.
 
-import std/[options, tables, logging]
+import std/[options, logging]
 import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/runtime/[normalize, arguments, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/internal/sugar
-import pretty
 
 type
   ConsoleLevel* {.pure.} = enum

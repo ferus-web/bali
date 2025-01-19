@@ -1,6 +1,6 @@
 ## Bali runtime (MIR emitter)
 
-import std/[algorithm, options, hashes, logging, sugar, strutils, tables, importutils]
+import std/[algorithm, options, hashes, logging, strutils, tables, importutils]
 import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
@@ -256,7 +256,7 @@ proc generateIR*(
   of CreateImmutVal:
     debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
-    
+
     let idx = runtime.loadIRAtom(stmt.imAtom)
 
     if not internal:
@@ -314,12 +314,11 @@ proc generateIR*(
           runtime.index((&stmt.fn.field).identifier, defaultParams(fn))
         )
 
-
     for i, arg in stmt.arguments:
       case arg.kind
       of cakIdent:
         debug "interpreter: passing ident parameter to function with ident: " & arg.ident
-        
+
         runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
       of cakAtom: # already loaded via the statement expander
         let ident = $i
@@ -335,13 +334,14 @@ proc generateIR*(
         let index = runtime.index($i, internalIndex(stmt))
         runtime.ir.markGlobal(index)
         runtime.ir.passArgument(index)
-    
+
     # Traditional function calls (pre-defined functions)
-    if *runtime.vm.getClause(nam) or runtime.willIRGenerateClause(nam) or runtime.vm.builtins.contains(nam):
+    if *runtime.vm.getClause(nam) or runtime.willIRGenerateClause(nam) or
+        runtime.vm.builtins.contains(nam):
       debug "interpreter: generate IR for calling traditional function: " & nam &
         (if stmt.mangle: " (mangled)" else: newString 0)
       runtime.expand(fn, stmt, internal)
-    
+
       runtime.ir.call(nam)
       runtime.ir.resetArgs()
       # Reset the call arguments register to prevent this call's arguments from leaking into future calls
@@ -354,11 +354,10 @@ proc generateIR*(
       discard runtime.ir.addOp(
         IROperation(
           opcode: ExecuteBytecodeCallable,
-          arguments: @[uinteger(runtime.index(nam, defaultParams(fn)))]
+          arguments: @[uinteger(runtime.index(nam, defaultParams(fn)))],
         )
       )
       runtime.ir.resetArgs()
-      
   of ReturnFn:
     assert not (*stmt.retVal and *stmt.retIdent),
       "ReturnFn statement cannot have both return atom and return ident at once!"
@@ -880,7 +879,7 @@ proc generateIRForScope*(
   if not runtime.clauses.contains(name):
     runtime.clauses.add(name)
     runtime.ir.newModule(name.normalizeIRName())
-  
+
   if runtime.irHints.generatedClauses.contains(name):
     return
 
@@ -893,13 +892,13 @@ proc generateIRForScope*(
     if allocateConstants:
       constants.generateStdIr(runtime)
       inc runtime.addrIdx
-      
+
       for clause in runtime.clauses:
         let fnIndex = runtime.index(clause, defaultParams(fn))
         discard runtime.ir.addOp(
-          IROperation(opcode: LoadBytecodeCallable, arguments: @[
-            uinteger(fnIndex), str(clause)
-          ])
+          IROperation(
+            opcode: LoadBytecodeCallable, arguments: @[uinteger(fnIndex), str(clause)]
+          )
         )
         runtime.ir.markGlobal(fnIndex)
 
@@ -1108,7 +1107,7 @@ proc run*(runtime: Runtime) =
         else:
           quit(0)
     )
-  
+
   var backScopes = runtime.ast.scopes[0]
   var scopes: seq[Scope]
 
@@ -1118,11 +1117,9 @@ proc run*(runtime: Runtime) =
       backScopes = &backScopes.next
   else:
     scopes &= backScopes
-  
+
   scopes.reverse()
-  for ident in [
-    "undefined", "NaN", "true", "false", "null"
-  ]:
+  for ident in ["undefined", "NaN", "true", "false", "null"]:
     runtime.markGlobal(ident)
 
   for scope in scopes:

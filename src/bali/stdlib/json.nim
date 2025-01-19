@@ -2,10 +2,9 @@
 
 import std/[json, options, logging, tables]
 import bali/internal/sugar
-import bali/runtime/[normalize, atom_helpers, arguments, types, bridge]
+import bali/runtime/[arguments, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
-import mirage/ir/generator
 import mirage/atom
 import mirage/runtime/[prelude]
 import jsony

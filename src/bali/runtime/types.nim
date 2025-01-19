@@ -1,12 +1,11 @@
 ## Runtime types
 
-import std/[options, hashes, logging, strutils, tables]
+import std/[options, hashes, logging, tables]
 import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/grammar/prelude
 import bali/internal/sugar
-import bali/runtime/[normalize, atom_obj_variant, atom_helpers]
-import pretty
+import bali/runtime/[atom_obj_variant, atom_helpers]
 
 type
   NativeFunction* = proc()
@@ -79,7 +78,8 @@ type
 
   IRHints* = object
     breaksGeneratedAt*: seq[uint]
-    generatedClauses*: seq[string] ## FIXME: This is a horrible fix for the double-clause codegen bug!
+    generatedClauses*: seq[string]
+      ## FIXME: This is a horrible fix for the double-clause codegen bug!
 
   RuntimeStats* = object
     atomsAllocated*: uint ## How many atoms have been allocated so far?
@@ -113,6 +113,7 @@ type
 
     types*: seq[JSType]
 
+{.push warning[UnreachableCode]: off.}
 proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
   case name
   else:
@@ -121,6 +122,8 @@ proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
 
   info "Enabling experiment \"" & name & '"'
   true
+
+{.pop.}
 
 proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =
   SemanticError(kind: UnknownIdentifier, unknown: identifier)
@@ -282,7 +285,7 @@ proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
 
       if cond:
         return value.index
-  
+
   debug "runtime: cannot find identifier \"" & ident &
     "\" in index search, returning pointer to undefined()"
   runtime.index("undefined", params)

@@ -2,14 +2,12 @@
 ## These aren't part of the ECMAScript standard, but rather the HTML living spec.
 ##
 
-import std/[options, logging, tables]
-import mirage/ir/generator
+import std/[options, logging]
 import mirage/runtime/prelude
-import bali/runtime/[arguments, normalize, types, bridge]
+import bali/runtime/[arguments, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/internal/sugar
-import pretty
 
 when not defined(baliUseStdBase64):
   import simdutf/base64

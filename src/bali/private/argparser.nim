@@ -1,5 +1,4 @@
-import std/[os, parseopt, options, logging, tables, strutils]
-import bali/internal/sugar
+import std/[os, parseopt, options, logging, tables]
 
 type Input* = object
   command*: string

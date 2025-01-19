@@ -1,12 +1,9 @@
 ## TrimString( string, where )
 
-import std/[strutils, logging]
+import std/[strutils]
 import mirage/runtime/prelude
-import bali/internal/sugar
 import bali/runtime/types
 import bali/runtime/abstract/[coercible, to_string]
-
-import pretty
 
 type TrimMode* {.pure.} = enum
   Left

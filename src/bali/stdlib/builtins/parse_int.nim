@@ -2,11 +2,9 @@
 ##
 
 import std/[strutils, math, options, logging]
-import mirage/ir/generator
 import mirage/runtime/prelude
-import bali/runtime/[arguments, normalize, types, bridge]
+import bali/runtime/[arguments, types, bridge]
 import bali/internal/[sugar, trim_string]
-import pretty
 
 proc parseIntGenerateStdIr*(runtime: Runtime) =
   info "builtins.parse_int: generating IR interfaces"

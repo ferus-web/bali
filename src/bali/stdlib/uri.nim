@@ -9,7 +9,6 @@ import mirage/ir/generator
 import mirage/atom
 import mirage/runtime/[prelude]
 import sanchar/parse/url
-import pretty
 
 var parser = newURLParser()
 

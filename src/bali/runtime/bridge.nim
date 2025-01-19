@@ -1,10 +1,11 @@
+## A neat JavaScript <-> Nim bridge.
+
 import std/[logging, tables, options, strutils, hashes, importutils]
 import mirage/runtime/prelude
 import mirage/ir/generator
 import bali/runtime/[atom_obj_variant, atom_helpers, types, normalize]
 import bali/stdlib/errors
 import bali/internal/sugar
-import pretty
 
 privateAccess(Runtime)
 privateAccess(PulsarInterpreter)

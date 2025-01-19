@@ -7,7 +7,7 @@ import bali/runtime/[normalize, arguments, types, bridge]
 import bali/runtime/abstract/[to_number]
 import bali/stdlib/errors
 import bali/internal/sugar
-import pretty, librng, librng/generator
+import pkg/[librng, librng/generator]
 
 privateAccess(RNG)
 

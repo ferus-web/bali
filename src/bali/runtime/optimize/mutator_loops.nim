@@ -13,7 +13,6 @@
 
 import std/[logging]
 import mirage/atom
-import mirage/ir/generator
 import bali/grammar/prelude
 import bali/runtime/[statement_utils, types]
 

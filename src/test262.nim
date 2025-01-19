@@ -1,9 +1,7 @@
 ## Test262 runner for Bali
 
-import std/[os, osproc, json, posix, strutils, logging, tables, math, times]
-import bali/grammar/prelude
-import bali/runtime/prelude
-import colored_logger, pretty
+import std/[os, osproc, json, posix, strutils, logging, math, times]
+import colored_logger
 
 const BASE_DIR = "test262/test"
 

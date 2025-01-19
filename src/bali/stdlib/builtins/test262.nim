@@ -1,15 +1,13 @@
 ## Test262 required builtins/harnesses
 ##
 
-import std/[strutils, math, options, logging, tables, terminal, hashes]
-import mirage/ir/generator
+import std/[math, options, logging, terminal, hashes]
 import mirage/runtime/prelude
-import bali/runtime/[normalize, bridge]
+import bali/runtime/[bridge]
 import bali/runtime/abstract/to_string
 import bali/runtime/[arguments, types, atom_helpers]
 import bali/stdlib/errors_common
 import bali/internal/sugar
-import pretty
 
 proc test262Error*(runtime: Runtime, msg: string) =
   runtime.vm.throw(jsException(msg))

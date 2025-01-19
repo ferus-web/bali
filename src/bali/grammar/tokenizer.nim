@@ -1,10 +1,9 @@
 ## JavaScript tokenizer
 
-import std/[math, options, logging, strutils, tables, unicode]
+import std/[math, options, logging, strutils, tables]
 import bali/grammar/token
 import bali/internal/sugar
 import results
-import pretty
 
 type
   TokenizerOpts* = object

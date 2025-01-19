@@ -8,11 +8,7 @@ import bali/runtime/abstract/[coercible, to_number, to_string]
 import bali/stdlib/errors
 import bali/internal/[trim_string, sugar]
 import mirage/atom
-import pkg/[
-  kaleidoscope/search,
-  ferrite/utf16view
-]
-import pretty
+import pkg/[kaleidoscope/search, ferrite/utf16view]
 
 const
   ## At what point should Bali start SIMD-accelerating string related operations?
@@ -22,7 +18,7 @@ type JSString* = object
   `@ internal`*: string
 
 func value*(str: JSString): string {.inline.} =
-  str.`@internal`
+  str.`@ internal`
 
 proc generateStdIr*(runtime: Runtime) =
   runtime.registerType(prototype = JSString, name = "String")

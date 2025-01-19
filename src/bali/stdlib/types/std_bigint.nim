@@ -1,11 +1,11 @@
 ## Arbitrary-precision integers
-import std/[logging, options, tables]
+import std/[options]
 import bali/runtime/[arguments, atom_helpers, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/internal/[sugar, trim_string]
 import mirage/atom
-import pkg/[pretty, gmp]
+import pkg/gmp
 
 type JSBigInt* = object
   `@ value`*: MAtom

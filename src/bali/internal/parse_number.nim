@@ -1,5 +1,4 @@
 import std/[strutils, logging, options]
-import bali/internal/sugar
 
 proc parseNumberText*(text: string): Option[float] {.inline.} =
   debug "parseNumberText: " & text

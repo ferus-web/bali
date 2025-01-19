@@ -1,11 +1,9 @@
-import std/[logging, tables, options, hashes]
+import std/[logging, options]
 import mirage/runtime/prelude
 import bali/internal/sugar
 import bali/runtime/[atom_helpers, types]
 import bali/runtime/abstract/to_primitive
-import bali/stdlib/errors
 import pkg/gmp
-import pretty
 
 proc ToString*(runtime: Runtime, value: MAtom): string =
   ## 7.1.17 ToString ( argument )

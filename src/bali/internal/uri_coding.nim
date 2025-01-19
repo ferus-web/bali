@@ -3,7 +3,6 @@
 ## Trayambak Rai (xtrayambak at disroot dot org)
 ## https://ecma-international.org/wp-content/uploads/ECMA-262_15th_edition_june_2024.pdf
 import std/[unicode, strutils]
-import mirage/atom
 import bali/internal/[str_padding]
 
 proc encode*(uri: string, extraUnescaped: set[char] = {}): string =

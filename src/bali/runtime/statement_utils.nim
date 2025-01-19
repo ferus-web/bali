@@ -1,6 +1,5 @@
-import std/[logging, tables]
+import std/[tables]
 import bali/grammar/statement
-import pretty
 
 proc getValueDefinitions*(body: Scope): seq[string] =
   ## Get all the identifiers that `body` defines

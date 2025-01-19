@@ -1,11 +1,7 @@
 ## Implementation of `throw` in MIR bytecode
 
-import std/[logging]
-import mirage/ir/generator
 import mirage/runtime/prelude
 import bali/grammar/errors
-import bali/runtime/[atom_helpers, normalize]
-import bali/internal/sugar
 import bali/runtime/types
 import bali/stdlib/errors_common
 

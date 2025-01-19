@@ -1,7 +1,7 @@
 ## Implementations of date-related functions necessary for the JavaScript Date API
 ## Author(s): 
 ## Trayambak Rai (xtrayambak at disroot dot org)
-import std/[math, times]
+import std/[math]
 import bali/internal/date/constants
 import bali/internal/sugar
 

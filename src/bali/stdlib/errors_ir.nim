@@ -5,7 +5,7 @@
 import std/[logging]
 import mirage/runtime/prelude
 import bali/stdlib/errors_common
-import bali/runtime/[arguments, atom_helpers, types]
+import bali/runtime/[arguments, types]
 import bali/runtime/abstract/to_string
 import bali/internal/sugar
 

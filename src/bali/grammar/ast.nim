@@ -1,8 +1,5 @@
 import std/[options]
-import bali/grammar/errors
-import bali/internal/sugar
-import pretty
-import ./[statement]
+import bali/grammar/[statement, errors]
 
 type
   Test262Negativity* = object
