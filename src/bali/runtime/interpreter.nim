@@ -256,7 +256,7 @@ proc generateIR*(
   of CreateImmutVal:
     debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
-
+    
     let idx = runtime.loadIRAtom(stmt.imAtom)
 
     if not internal:

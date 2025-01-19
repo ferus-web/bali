@@ -8,7 +8,10 @@ import bali/runtime/abstract/[coercible, to_number, to_string]
 import bali/stdlib/errors
 import bali/internal/[trim_string, sugar]
 import mirage/atom
-import pkg/kaleidoscope/[search]
+import pkg/[
+  kaleidoscope/search,
+  ferrite/utf16view
+]
 import pretty
 
 const
@@ -19,10 +22,7 @@ type JSString* = object
   `@ internal`*: string
 
 func value*(str: JSString): string {.inline.} =
-  str.`@ internal`
-
-proc toJsString*(runtime: Runtime, atom: MAtom): JSString =
-  JSString(`@ internal`: runtime.ToString(atom))
+  str.`@internal`
 
 proc generateStdIr*(runtime: Runtime) =
   runtime.registerType(prototype = JSString, name = "String")
@@ -34,7 +34,9 @@ proc generateStdIr*(runtime: Runtime) =
         str("")
 
     var atom = runtime.createObjFromType(JSString)
-    atom.tag("internal", runtime.ToString(argument))
+    let value = runtime.ToString(argument)
+    atom.tag("internal", value)
+    atom["length"] = newUtf16View(value).codeunitLen()
     ret atom
 
   runtime.defineConstructor("String", stringConstructor)
