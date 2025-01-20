@@ -25,7 +25,7 @@ jobs:
         uses: docker://fedora:latest
         with:
           args: |
-            sudo dnf install simdutf simdutf-devel
+            sudo dnf install simdutf
             nimble build --define:release --define:speed --out:./
             ls bin/
 
