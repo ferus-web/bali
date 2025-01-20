@@ -23,11 +23,14 @@ jobs:
         uses: docker://fedora:latest
         with:
           args: |
-            sh -c "
-            sudo dnf install simdutf gcc gcc-c++ gmp gmp-devel git -y &&
+            bash -c "
+            sudo dnf install cmake make gcc gcc-c++ gmp gmp-devel git -y &&
             curl https://nim-lang.org/choosenim/init.sh -sSf > init.sh &&
             chmod +x ./init.sh &&
             git config --global --add safe.directory /github/workspace &&
+
+            git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install -j$(nproc) && cd .. &&
+
             ./init.sh --yes &&
             export PATH="$HOME/.nimble/bin:$PATH" &&
             nimble test
