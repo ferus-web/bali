@@ -3,7 +3,7 @@ on: push
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: fedora-latest
     steps:
       - uses: actions/checkout@v4
       - name: Cache nimble
@@ -18,6 +18,7 @@ jobs:
         with:
           nim-version: '2.2.0'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: nimble build --define:release --define:baliUseStdBase64 # TODO: get simdutf working here
+      - run: sudo dnf install simdutf simdutf-devel
+      - run: nimble build --define:release
       - run: git clone https://github.com/tc39/test262.git
       - run: ./bin/test262 run-all-tests-rec .
