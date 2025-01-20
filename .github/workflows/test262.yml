@@ -24,7 +24,7 @@ jobs:
         with:
           args: |
             sh -c "
-            sudo dnf install simdutf gcc git -y &&
+            sudo dnf install simdutf gcc gcc-c++ git -y &&
             curl https://nim-lang.org/choosenim/init.sh -sSf > init.sh &&
             chmod +x ./init.sh &&
             git config --global --add safe.directory /github/workspace &&
