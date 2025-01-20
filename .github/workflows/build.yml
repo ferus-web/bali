@@ -21,7 +21,7 @@ jobs:
           nim-version: '2.2.0'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: sudo dnf install simdutf simdutf-devel
-      - run: nimble build --define:release --out:./ --define:baliUseStdBase64 # TODO: get simdutf working here
+      - run: nimble build --define:release --out:./
       - run: ls bin/
 
       - name: Upload Build Artifact (balde)

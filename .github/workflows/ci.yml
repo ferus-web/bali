@@ -18,5 +18,5 @@ jobs:
         with:
           nim-version: '2.2.0'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: nimble build --define:baliUseStdBase64 # TODO: get simdutf working here
-      - run: nimble test --define:baliUseStdBase64
+      - run: sudo dnf install simdutf simdutf-devel
+      - run: nimble test
