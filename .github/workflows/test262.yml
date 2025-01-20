@@ -23,9 +23,16 @@ jobs:
         uses: docker://fedora:latest
         with:
           args: |
-            sudo dnf install simdutf &&
+            sh -c "
+            sudo dnf install simdutf gcc git -y &&
+            curl https://nim-lang.org/choosenim/init.sh -sSf > init.sh &&
+            chmod +x ./init.sh &&
+            git config --global --add safe.directory /github/workspace &&
+            ./init.sh --yes &&
+            export PATH="$HOME/.nimble/bin:$PATH" &&
             nimble build --define:release --define:speed --out:./ &&
             ls bin/
+            "
 
       - name: Get a copy of the Test262 suite
         with:
