@@ -23,8 +23,8 @@ jobs:
         uses: docker://fedora:latest
         with:
           args: |
-            sudo dnf install simdutf
-            nimble build --define:release --define:speed --out:./
+            sudo dnf install simdutf &&
+            nimble build --define:release --define:speed --out:./ &&
             ls bin/
 
       - name: Get a copy of the Test262 suite

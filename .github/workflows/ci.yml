@@ -23,5 +23,5 @@ jobs:
         uses: docker://fedora:latest
         with:
           args: |
-            sudo dnf install simdutf
+            sudo dnf install simdutf &&
             nimble test

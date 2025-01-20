@@ -25,8 +25,8 @@ jobs:
         uses: docker://fedora:latest
         with:
           args: |
-            sudo dnf install simdutf
-            nimble build --define:release --define:speed --out:./
+            sudo dnf install simdutf &&
+            nimble build --define:release --define:speed --out:./ &&
             ls bin/
 
       - name: Upload Build Artifact (balde)
