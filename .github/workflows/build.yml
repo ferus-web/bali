@@ -5,7 +5,7 @@ on: push
 
 jobs:
   build:
-    runs-on: fedora-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Cache nimble
@@ -20,9 +20,14 @@ jobs:
         with:
           nim-version: '2.2.0'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: sudo dnf install simdutf simdutf-devel
-      - run: nimble build --define:release --out:./
-      - run: ls bin/
+
+      - name: Build Balde
+        uses: docker://fedora:latest
+        with:
+          args: |
+            sudo dnf install simdutf simdutf-devel
+            nimble build --define:release --define:speed --out:./
+            ls bin/
 
       - name: Upload Build Artifact (balde)
         uses: actions/upload-artifact@v4

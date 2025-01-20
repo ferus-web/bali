@@ -3,7 +3,7 @@ on: push
 
 jobs:
   build:
-    runs-on: fedora-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Cache nimble
@@ -18,7 +18,19 @@ jobs:
         with:
           nim-version: '2.2.0'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: sudo dnf install simdutf simdutf-devel
-      - run: nimble build --define:release
-      - run: git clone https://github.com/tc39/test262.git
-      - run: ./bin/test262 run-all-tests-rec .
+
+      - name: Build Balde
+        uses: docker://fedora:latest
+        with:
+          args: |
+            sudo dnf install simdutf simdutf-devel
+            nimble build --define:release --define:speed --out:./
+            ls bin/
+
+      - name: Get a copy of the Test262 suite
+        with:
+          args: git clone https://github.com/tc39/test262.git
+
+      - name: Run Balde against the Test262 suite
+        with:
+          args: ./bin/test262 run-all-tests-rec .

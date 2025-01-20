@@ -3,7 +3,7 @@ on: push
 
 jobs:
   build:
-    runs-on: fedora-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Cache nimble
@@ -18,5 +18,10 @@ jobs:
         with:
           nim-version: '2.2.0'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: sudo dnf install simdutf simdutf-devel
-      - run: nimble test
+
+      - name: Run Bali's internal test suite
+        uses: docker://fedora:latest
+        with:
+          args: |
+            sudo dnf install simdutf simdutf-devel
+            nimble test
