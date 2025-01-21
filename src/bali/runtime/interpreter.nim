@@ -38,9 +38,10 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
       if arg.kind == cakAtom:
         debug "ir: load immutable value to expand Call's immediate arguments: " &
           arg.atom.crush()
-        runtime.generateIR(
-          fn, createImmutVal($i, arg.atom), ownerStmt = some(stmt), internal = true
-        ) # XXX: should this be mutable?
+        discard runtime.loadIRAtom(arg.atom)
+        runtime.markInternal(
+          stmt, $i
+        )
       elif arg.kind == cakImmediateExpr:
         debug "ir: add code to solve expression to expand Call's immediate arguments"
         runtime.markInternal(stmt, $i)
@@ -53,12 +54,9 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
       if arg.kind == cakAtom:
         debug "ir: load immutable value to ConstructObject's immediate arguments: " &
           arg.atom.crush()
-        runtime.generateIR(
-          fn,
-          createImmutVal($hash(stmt) & '_' & $i, arg.atom),
-          ownerStmt = some(stmt),
-          internal = true,
-        ) # XXX: should this be mutable?
+        
+        discard runtime.loadIRAtom(arg.atom)
+        runtime.markInternal(stmt, $i)
   of CallAndStoreResult:
     debug "ir: expand CallAndStoreResult statement by expanding child Call statement"
     runtime.expand(fn, stmt.storeFn, internal)
@@ -286,6 +284,7 @@ proc generateIR*(
       assert *ownerStmt
       runtime.markInternal(&ownerStmt, stmt.mutIdentifier)
   of Call:
+    runtime.expand(fn, stmt)
     var nam =
       if stmt.mangle:
         stmt.fn.normalizeIRName()
@@ -336,11 +335,10 @@ proc generateIR*(
         runtime.ir.passArgument(index)
 
     # Traditional function calls (pre-defined functions)
-    if *runtime.vm.getClause(nam) or runtime.willIRGenerateClause(nam) or
+    if runtime.willIRGenerateClause(nam) or
         runtime.vm.builtins.contains(nam):
       debug "interpreter: generate IR for calling traditional function: " & nam &
         (if stmt.mangle: " (mangled)" else: newString 0)
-      runtime.expand(fn, stmt, internal)
 
       runtime.ir.call(nam)
       runtime.ir.resetArgs()
@@ -894,6 +892,7 @@ proc generateIRForScope*(
       inc runtime.addrIdx
 
       for clause in runtime.clauses:
+        if clause == "outer": continue # Nothing should be able to call into the outer scope.
         let fnIndex = runtime.index(clause, defaultParams(fn))
         discard runtime.ir.addOp(
           IROperation(

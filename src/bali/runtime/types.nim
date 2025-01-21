@@ -220,6 +220,7 @@ proc markLocal*(
 
   inc runtime.addrIdx
 
+var counter: int
 proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   case atom.kind
   of Integer:
@@ -229,6 +230,11 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
     runtime.ir.loadUint(runtime.addrIdx, &atom.getUint())
     return runtime.addrIdx
   of String:
+    if &atom.getStr() == "hello :^)":
+      inc counter
+
+    if counter == 2:
+      unreachable
     runtime.ir.loadStr(runtime.addrIdx, atom)
     runtime.ir.passArgument(runtime.addrIdx)
     runtime.ir.call("BALI_CONSTRUCTOR_STRING")

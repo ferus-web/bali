@@ -29,6 +29,9 @@ proc generateStdIr*(runtime: Runtime) =
       else:
         str("")
 
+    if runtime.isA(argument, JSString):
+      ret argument
+    
     var atom = runtime.createObjFromType(JSString)
     let value = runtime.ToString(argument)
     atom.tag("internal", value)
