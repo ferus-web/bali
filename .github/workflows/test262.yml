@@ -32,6 +32,7 @@ jobs:
             git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install -j$(nproc) && cd .. &&
 
             ./init.sh --yes &&
+
             export PATH="$HOME/.nimble/bin:$PATH" &&
             nimble build --define:release --define:speed --out:./ &&
             ls bin/
