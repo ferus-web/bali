@@ -56,7 +56,8 @@ You can run it with no arguments and it'll start up in a REPL. \
 It is primarily used for debugging the engine as of right now, but it runs code fine too.
 
 # Integrating Bali into your applications
-**Balde requires the C++ backend to be used as it depends on simdutf!**
+**Bali requires the C++ backend to be used as it depends on simdutf!**
+**Bali requires the system memory allocator (`--define:useMalloc`) to be used as the Nim allocator makes things unstable for now!**
 
 Firstly, add Bali to your project's dependencies.
 ```
