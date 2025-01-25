@@ -57,7 +57,6 @@ It is primarily used for debugging the engine as of right now, but it runs code 
 
 # Integrating Bali into your applications
 **Bali requires the C++ backend to be used as it depends on simdutf and LibICU!**
-**Bali requires the system memory allocator (`--define:useMalloc`) to be used as the Nim allocator makes things unstable for now!**
 
 You need to provide Bali with three dependencies: **simdutf**, **icu** (version 76) and **gmp**. Most of these can be installed via your system's package manager.
 

@@ -4,14 +4,6 @@
 */
 
 let a = new String("a")
-a = new String(a.repeat(1024))
+a = new String(a.repeat(65536))
 
-var i = 0;
-while (i < 999999999)
-{
-	a.concat(a)
-	i++
-
-	baliGC_Dump()
-	baliGC_FullCollect()
-}
+console.log(a)
