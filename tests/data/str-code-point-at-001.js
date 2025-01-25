@@ -1,0 +1,15 @@
+let x = "Hello world!"
+
+assert.sameValue(x.codePointAt(0), 72)
+assert.sameValue(x.codePointAt(1), 101)
+assert.sameValue(x.codePointAt(2), 108)
+assert.sameValue(x.codePointAt(3), 108)
+assert.sameValue(x.codePointAt(4), 111)
+assert.sameValue(x.codePointAt(5), 32)
+assert.sameValue(x.codePointAt(6), 119)
+assert.sameValue(x.codePointAt(7), 111)
+assert.sameValue(x.codePointAt(8), 114)
+assert.sameValue(x.codePointAt(9), 108)
+assert.sameValue(x.codePointAt(10), 100)
+assert.sameValue(x.codePointAt(11), 33)
+assert.sameValue(x.codePointAt(12), undefined)

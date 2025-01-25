@@ -24,7 +24,7 @@ jobs:
         with:
           args: |
             bash -c "
-            sudo dnf install cmake make gcc gcc-c++ gmp gmp-devel git -y &&
+            sudo dnf install cmake make gcc gcc-c++ gmp gmp-devel libicu-devel git -y &&
             curl https://nim-lang.org/choosenim/init.sh -sSf > init.sh &&
             chmod +x ./init.sh &&
             git config --global --add safe.directory /github/workspace &&
