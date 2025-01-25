@@ -225,3 +225,32 @@ proc generateStdIr*(runtime: Runtime) =
       ret res
     ,
   )
+
+  runtime.definePrototypeFn(
+    JSString,
+    "codePointAt",
+    proc(value: MAtom) =
+      # 22.1.3.4 String.prototype.codePointAt ( pos )
+      let
+        # 1. Let O be ? RequireObjectCoercible(this value).
+        obj = runtime.RequireObjectCoercible(value)
+
+        # 2. Let S be ? ToString(O).
+        str = runtime.ToString(obj)
+
+        # 3. Let position be ? ToIntegerOrInfinity(pos)
+        position = int(runtime.ToNumber(&runtime.argument(1)))
+
+        # 4. Let size be the length of S
+        size = str.len
+      
+      # 5. If position < 0 or position ≥ size, return undefined.
+      if position < 0 or position >= size:
+        ret undefined()
+      
+      # 6. Let cp be CodePointAt(S, position).
+      let codepoint = newUtf16View(str).codePointAt(position.uint())
+
+      # Return 𝔽(cp.[[CodePoint]]).
+      ret codepoint
+  )

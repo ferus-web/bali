@@ -2,13 +2,14 @@
 ##
 ## Author(s): 
 ## Trayambak Rai (xtrayambak at disroot dot org)
-import std/[math, strformat, times, logging]
+import std/[math, strformat, times, logging, options]
 import bali/internal/sugar
 import bali/stdlib/errors
 import mirage/atom
 import bali/runtime/[normalize, atom_helpers, arguments, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/internal/date/[utils, constants, parser]
+import bali/internal/timezone
 
 ## 21.4.1.1 Time Values and Time Range
 ## Time measurement in ECMAScript is analogous to time measurement in POSIX, in particular sharing definition in terms of the proleptic Gregorian calendar, an epoch of midnight at the beginning of 1 January 1970 UTC, and an accounting of every day as comprising exactly 86,400 seconds (each of which is 1000 milliseconds long).
@@ -69,6 +70,29 @@ proc timeToString*(tv: float): string =
 
   timeString & " GMT"
 
+var cachedSystemTimeZoneIdentifier: Option[string]
+
+proc getSystemTimezoneIdentifier*: string =
+  ## 21.4.1.24 SystemTimeZoneIdentifier ( ), https://tc39.es/ecma262/#sec-systemtimezoneidentifier
+  if *cachedSystemTimeZoneIdentifier:
+    return &cachedSystemTimeZoneIdentifier
+
+  # 1. If the implementation only supports the UTC time zone, return "UTC".
+
+  # 2. Let systemTimeZoneString be the String representing the host environment's current time zone, either a primary
+  # time zone identifier or an offset time zone identifier.
+  let systemTimeZoneString = getCurrentTimeZone()
+  
+  # FIXME: Non-compliant.
+
+  # 3. Return systemTimeZoneString.
+  cachedSystemTimeZoneIdentifier = some(systemTimeZoneString)
+  systemTimeZoneString
+
+proc getTimeZoneString*(time: float): string =
+  # FIXME: non-compliant.
+  return " (" & getCurrentTimeZone() & ')'
+
 proc toDateString*(tv: float): string =
   # 1. If tv is NaN, return "Invalid Date".
   if tv == NaN:
@@ -79,8 +103,7 @@ proc toDateString*(tv: float): string =
   let t = tv
 
   # FIXME: non-compliant!
-  #        This should ideally also include the timezone string
-  fmt"{dateToString(tv)} {timeToString(tv)}"
+  fmt"{dateToString(tv)} {timeToString(tv)}{getTimeZoneString(tv)}"
 
 proc generateStdIR*(runtime: Runtime) =
   info "date: generating IR interfaces"
