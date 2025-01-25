@@ -32,3 +32,5 @@ requires "https://github.com/ferus-web/ferrite >= 0.1.0"
 taskRequires "fmt", "nph#master"
 task fmt, "Format code":
   exec "nph src/ tests/"
+
+requires "icu4nim >= 0.1.0"
