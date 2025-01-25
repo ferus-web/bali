@@ -27,7 +27,7 @@ requires "fuzzy >= 0.1.0"
 requires "yaml >= 2.1.1"
 requires "https://github.com/xTrayambak/kaleidoscope >= 0.1.1"
 requires "https://github.com/ferus-web/nim-gmp >= 0.1.0"
-requires "https://github.com/ferus-web/ferrite >= 0.1.0"
+requires "https://github.com/ferus-web/ferrite >= 0.1.1"
 
 taskRequires "fmt", "nph#master"
 task fmt, "Format code":
