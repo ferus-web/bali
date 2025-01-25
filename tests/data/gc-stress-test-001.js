@@ -3,7 +3,7 @@
  * Make sure to run this with the --insert-debug-hooks flag!
 */
 
-let a = new String("a")
+let a = "a"
 a = new String(a.repeat(65536))
 
 console.log(a)
