@@ -1,14 +1,14 @@
 # Package
 
-version       = "0.4.4"
-author        = "xTrayambak"
-description   = "The Bali JavaScript Engine"
-license       = "GPL3"
-srcDir        = "src"
-backend       = "cpp"
-bin           = @["balde", "test262"]
-installExt    = @["nim"]
-binDir        = "bin"
+version = "0.4.4"
+author = "xTrayambak"
+description = "The Bali JavaScript Engine"
+license = "GPL3"
+srcDir = "src"
+backend = "cpp"
+bin = @["balde", "test262"]
+installExt = @["nim"]
+binDir = "bin"
 
 # Dependencies
 

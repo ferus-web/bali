@@ -31,7 +31,7 @@ proc generateStdIr*(runtime: Runtime) =
 
     if runtime.isA(argument, JSString):
       ret argument
-    
+
     var atom = runtime.createObjFromType(JSString)
     let value = runtime.ToString(argument)
     atom.tag("internal", value)
@@ -243,14 +243,15 @@ proc generateStdIr*(runtime: Runtime) =
 
         # 4. Let size be the length of S
         size = str.len
-      
+
       # 5. If position < 0 or position ≥ size, return undefined.
       if position < 0 or position >= size:
         ret undefined()
-      
+
       # 6. Let cp be CodePointAt(S, position).
       let codepoint = newUtf16View(str).codePointAt(position.uint())
 
       # Return 𝔽(cp.[[CodePoint]]).
       ret codepoint
+    ,
   )

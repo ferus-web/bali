@@ -72,7 +72,7 @@ proc timeToString*(tv: float): string =
 
 var cachedSystemTimeZoneIdentifier: Option[string]
 
-proc getSystemTimezoneIdentifier*: string =
+proc getSystemTimezoneIdentifier*(): string =
   ## 21.4.1.24 SystemTimeZoneIdentifier ( ), https://tc39.es/ecma262/#sec-systemtimezoneidentifier
   if *cachedSystemTimeZoneIdentifier:
     return &cachedSystemTimeZoneIdentifier
@@ -82,7 +82,7 @@ proc getSystemTimezoneIdentifier*: string =
   # 2. Let systemTimeZoneString be the String representing the host environment's current time zone, either a primary
   # time zone identifier or an offset time zone identifier.
   let systemTimeZoneString = getCurrentTimeZone()
-  
+
   # FIXME: Non-compliant.
 
   # 3. Return systemTimeZoneString.

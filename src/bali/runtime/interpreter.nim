@@ -39,9 +39,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         debug "ir: load immutable value to expand Call's immediate arguments: " &
           arg.atom.crush()
         discard runtime.loadIRAtom(arg.atom)
-        runtime.markInternal(
-          stmt, $i
-        )
+        runtime.markInternal(stmt, $i)
       elif arg.kind == cakImmediateExpr:
         debug "ir: add code to solve expression to expand Call's immediate arguments"
         runtime.markInternal(stmt, $i)
@@ -54,7 +52,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
       if arg.kind == cakAtom:
         debug "ir: load immutable value to ConstructObject's immediate arguments: " &
           arg.atom.crush()
-        
+
         discard runtime.loadIRAtom(arg.atom)
         runtime.markInternal(stmt, $i)
   of CallAndStoreResult:
@@ -893,7 +891,8 @@ proc generateIRForScope*(
       inc runtime.addrIdx
 
       for clause in runtime.clauses:
-        if clause == "outer": continue # Nothing should be able to call into the outer scope.
+        if clause == "outer":
+          continue # Nothing should be able to call into the outer scope.
         let fnIndex = runtime.index(clause, defaultParams(fn))
         discard runtime.ir.addOp(
           IROperation(

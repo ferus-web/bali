@@ -6,12 +6,12 @@ import bali/internal/sugar
 
 var cachedSystemTimeZone: Option[string]
 
-proc getCurrentTimeZone*: string =
+proc getCurrentTimeZone*(): string =
   debug "getCurrentTimeZone: returning system timezone"
   if *cachedSystemTimeZone:
     debug "getCurrentTimeZone: hit cache, returning cached timezone"
     return &cachedSystemTimeZone
-  
+
   var status = ZeroError
 
   var tz = detectHostTimeZone()
@@ -36,6 +36,6 @@ proc getCurrentTimeZone*: string =
   cachedSystemTimeZone = some($timeZoneName)
   $timeZoneName
 
-proc clearSystemTimeZoneCache* {.sideEffect.} =
+proc clearSystemTimeZoneCache*() {.sideEffect.} =
   debug "timezone: cleared system timezone cache"
   cachedSystemTimeZone.reset()
