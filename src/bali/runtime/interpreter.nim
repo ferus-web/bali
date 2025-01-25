@@ -233,6 +233,7 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope, allocateConstants: bool
 
 func willIRGenerateClause*(runtime: Runtime, clause: string): bool {.inline.} =
   for cls in runtime.ir.modules:
+    debugecho "> " & cls.name
     if cls.name == clause:
       return true
 
@@ -335,19 +336,19 @@ proc generateIR*(
         runtime.ir.passArgument(index)
 
     # Traditional function calls (pre-defined functions)
-    if runtime.willIRGenerateClause(nam) or
-        runtime.vm.builtins.contains(nam):
-      debug "interpreter: generate IR for calling traditional function: " & nam &
-        (if stmt.mangle: " (mangled)" else: newString 0)
+    #[ if runtime.willIRGenerateClause(nam) or
+        runtime.vm.builtins.contains(nam):]#
+    debug "interpreter: generate IR for calling traditional function: " & nam &
+      (if stmt.mangle: " (mangled)" else: newString 0)
 
-      runtime.ir.call(nam)
-      runtime.ir.resetArgs()
-      # Reset the call arguments register to prevent this call's arguments from leaking into future calls
+    runtime.ir.call(nam)
+    runtime.ir.resetArgs()
+    # Reset the call arguments register to prevent this call's arguments from leaking into future calls
 
-      if not stmt.expectsReturnVal and runtime.opts.codegen.aggressivelyFreeRetvals:
-        runtime.ir.zeroRetval()
-          # Destroy the return value, if any. This helps conserve memory.
-    else:
+    if not stmt.expectsReturnVal and runtime.opts.codegen.aggressivelyFreeRetvals:
+      runtime.ir.zeroRetval()
+        # Destroy the return value, if any. This helps conserve memory.
+    #[ else:
       # Dynamic bytecode segment references
       discard runtime.ir.addOp(
         IROperation(
@@ -355,7 +356,7 @@ proc generateIR*(
           arguments: @[uinteger(runtime.index(nam, defaultParams(fn)))],
         )
       )
-      runtime.ir.resetArgs()
+      runtime.ir.resetArgs() ]#
   of ReturnFn:
     assert not (*stmt.retVal and *stmt.retIdent),
       "ReturnFn statement cannot have both return atom and return ident at once!"
