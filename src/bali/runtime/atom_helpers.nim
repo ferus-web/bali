@@ -15,7 +15,7 @@ func isNull*(atom: MAtom): bool =
   atom.kind == Null
 
 func isNumber*(atom: MAtom): bool =
-  atom.kind == UnsignedInt or atom.kind == Integer
+  atom.kind == UnsignedInt or atom.kind == Integer or atom.kind == Float
 
 func isBigInt*(atom: MAtom): bool =
   atom.kind == BigInteger

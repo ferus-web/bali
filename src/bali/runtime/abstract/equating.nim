@@ -3,10 +3,10 @@
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import pkg/[mirage/atom, gmp/gmp]
 import pkg/ferrite/utf16view
-import bali/runtime/[atom_helpers, types]
-import bali/runtime/abstract/coercion
+import bali/runtime/[atom_helpers, types, bridge]
+import bali/runtime/abstract/[coercion]
 import bali/internal/sugar
-import bali/stdlib/types/std_bigint
+import bali/stdlib/types/[std_bigint, std_string]
 
 proc equateNumbers*(runtime: Runtime, x, y: MAtom): bool =
   runtime.ToNumber(x) == runtime.ToNumber(y)
@@ -26,11 +26,11 @@ proc equateSameValueNonNumber*(runtime: Runtime, x, y: MAtom): bool =
     return (&x.tagged("value")).bigint.bg == (&y.tagged("value")).bigint.bg
 
   # 4. If x is a String, then
-  if x.kind == String:
+  if runtime.isA(x, JSString):
     # a. If x and y have the same length and the same code units in the same positions, return true; otherwise, return false.
     let
-      xVal = newUtf16View(&x.getStr())
-      yVal = newUtf16View(&y.getStr())
+      xVal = newUtf16View(runtime.ToString(x))
+      yVal = newUtf16View(runtime.ToString(y))
 
     if xVal.codeUnitLen != yVal.codeUnitLen:
       return false
@@ -54,8 +54,9 @@ proc isStrictlyEqual*(runtime: Runtime, x, y: MAtom): bool =
   ## 7.2.15 IsStrictlyEqual ( x, y )
 
   # 1. If Type(x) is not Type(y), return false.
-  if x.kind != y.kind:
-    return false
+  if (x.kind != y.kind):
+    if not x.isNumber and y.isNumber:
+      return false
 
   # 2. If x is a Number, then
   if x.isNumber:
@@ -66,9 +67,9 @@ proc isStrictlyEqual*(runtime: Runtime, x, y: MAtom): bool =
 
 proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
   ## 7.2.14 IsLooselyEqual ( x, y )
-
+  
   # 1. If Type(x) is Type(y), then
-  if x.kind == y.kind:
+  if (x.isNumber and y.isNumber) or (x.kind == y.kind):
     # a. Return IsStrictlyEqual(x, y)
     return runtime.isStrictlyEqual(x, y)
 
@@ -84,15 +85,15 @@ proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
   # FIXME: Step 4: Not implemented properly
 
   # 5. If x is a Number and y is a String, return ! IsLooselyEqual(x, ! ToNumber(y))
-  if x.isNumber and y.kind == String:
+  if x.isNumber and runtime.isA(y, JSString):
     return runtime.isLooselyEqual(x, floating(runtime.ToNumber(y)))
 
   # 6. If x is a String and y is a Number, return ! IsLooselyEqual(! ToNumber(x), y).
-  if x.kind == String and y.isNumber:
+  if runtime.isA(x, JSString) and y.isNumber:
     return runtime.isLooselyEqual(floating(runtime.ToNumber(x)), y)
 
   # 7. If x is a BigInt and y is a String, then
-  if x.isBigInt and y.kind == String:
+  if x.isBigInt and runtime.isA(y, JSString):
     # a. Let n be StringToBigInt(y).
     let n = runtime.stringToBigInt(y)
 
@@ -104,7 +105,7 @@ proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
     return runtime.isLooselyEqual(x, n)
   
   # 8. If x is a String and y is a BigInt, return ! IsLooselyEqual(y, x).
-  if x.kind == String and y.isBigInt:
+  if runtime.isA(x, JSString) and y.isBigInt:
     # OPTIMIZATION: We can avoid an extra recursion by just writing a bit more code.
     # This follows the same steps as above, except x and y are swapped, so it's still compliant.
 
@@ -127,9 +128,24 @@ proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
     return runtime.isLooselyEqual(x, floating(runtime.ToNumber(y)))
 
   # 11. If x is either a String, a Number, a BigInt, or a Symbol and y is an Object, return ! IsLooselyEqual(x, ? ToPrimitive(y)).
-  if (x.kind in { 
-    String, 
-    BigInteger 
-  } or x.isNumber) and y.isObject:
+  if (runtime.isA(x, JSString) or x.isBigInt or x.isNumber) and y.isObject:
     # FIXME: does not account for symbols yet, as they aren't a type.
     return runtime.isLooselyEqual(x, runtime.ToPrimitive(y))
+  
+  # 12. If x is an Object and y is either a String, a Number, a BigInt or a Symbol, return ! IsLooselyEqual(? ToPrimitive(x), y).
+  if (runtime.isA(y, JSString) or y.isBigInt or y.isNumber) and x.isObject:
+    # FIXME: does not account for symbols yet
+    return runtime.isLooselyEqual(runtime.ToPrimitive(x), y)
+
+  # 13. If x is a BigInt and y is a Number, or if x is a Number and y is a BigInt, then
+  if (x.isBigInt and y.isNumber) or (x.isNumber and y.isBigInt):
+    # a. If x is not finite or y is not finite, return false.
+    if not runtime.isFiniteNumber(x) or not runtime.isFiniteNumber(y):
+      return false
+
+    # b. If ℝ(x) = ℝ(y), return true; otherwise return false.
+    if runtime.ToNumber(x) == runtime.ToNumber(y):
+      return true
+  
+  # 14. Return false.
+  return false

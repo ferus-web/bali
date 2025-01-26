@@ -479,7 +479,6 @@ proc generateIR*(
       runtime.ir.passArgument(leftIdx)
       runtime.ir.passArgument(rightIdx)
       runtime.ir.call("BALI_EQUATE_ATOMS")
-      runtime.ir.resetArgs()
       # FIXME: really weird bug in mirage's IR generator. wtf?
       let
         equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left == right branch
@@ -506,7 +505,6 @@ proc generateIR*(
       runtime.ir.passArgument(leftIdx)
       runtime.ir.passArgument(rightIdx)
       runtime.ir.call("BALI_EQUATE_ATOMS")
-      runtime.ir.resetArgs()
       # FIXME: really weird bug in mirage's IR generator. wtf?
       let equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
         # left == right branch
@@ -582,7 +580,6 @@ proc generateIR*(
       runtime.ir.passArgument(lhsIdx)
       runtime.ir.passArgument(rhsIdx)
       runtime.ir.call("BALI_EQUATE_ATOMS")
-      runtime.ir.resetArgs()
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
         IROperation(
@@ -701,7 +698,6 @@ proc generateIR*(
       runtime.ir.passArgument(lhsIdx)
       runtime.ir.passArgument(rhsIdx)
       runtime.ir.call("BALI_EQUATE_ATOMS")
-      runtime.ir.resetArgs()
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
         IROperation(
@@ -1063,13 +1059,12 @@ proc generateInternalIR*(runtime: Runtime) =
         a = &runtime.argument(1)
         b = &runtime.argument(2)
 
+      runtime.vm.registers.callArgs.reset()
+
       let res = runtime.isLooselyEqual(a, b)
-      if res:
-        # Carry on as usual
-        discard
-      else:
+      if not res:
         # Jump 2 instructions ahead
-        runtime.vm.currIndex += 2
+        runtime.vm.currIndex += 1
   )
 
   if runtime.opts.insertDebugHooks:
