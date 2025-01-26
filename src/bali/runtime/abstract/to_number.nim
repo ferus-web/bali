@@ -1,8 +1,8 @@
-import std/[logging, math]
+import std/[logging, math, options]
 import mirage/runtime/prelude
 import bali/internal/sugar
 import bali/runtime/[atom_helpers, types]
-import bali/stdlib/errors
+import bali/runtime/abstract/to_primitive
 import bali/internal/[trim_string, parse_number]
 
 proc StringToNumber*(runtime: Runtime, value: MAtom): float =
@@ -40,7 +40,12 @@ proc ToNumber*(runtime: Runtime, value: MAtom): float =
     if value.isUndefined():
       return NaN # 3. If argument is undefined, return NaN.
     else:
-      runtime.typeError("ToPrimitive() is not implemented yet!")
+      # 8. Let primValue be ? ToPrimitive(argument, NUMBER).
+      let primValue = runtime.ToPrimitive(value, some(Float))
+      assert(primValue.kind != Object)
+
+      # 10. Return ? ToNumber(primValue)
+      return runtime.ToNumber(primValue)
   of Null:
     return 0f # 4. If argument is either null or false, return +0𝔽.
   of Boolean:
