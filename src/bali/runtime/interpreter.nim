@@ -1092,9 +1092,6 @@ proc generateInternalIR*(runtime: Runtime) =
 
       runtime.vm.registers.callArgs.reset()
 
-      print a
-      print b
-
       let res = runtime.isStrictlyEqual(a, b)
       print res
       if not res:
