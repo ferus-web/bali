@@ -32,14 +32,14 @@ proc equateSameValueNonNumber*(runtime: Runtime, x, y: MAtom): bool =
       xVal = newUtf16View(runtime.ToString(x))
       yVal = newUtf16View(runtime.ToString(y))
 
-    if xVal.codeUnitLen != yVal.codeUnitLen:
+    if xVal.codePointLen != yVal.codePointLen:
       return false
 
     let
       xData = xVal.data()
       yData = yVal.data()
 
-    for i in 0 .. xData.len:
+    for i in 0 ..< xData.len:
       if xData[i] != yData[i]:
         return false
     
