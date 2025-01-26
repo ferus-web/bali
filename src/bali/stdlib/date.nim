@@ -124,7 +124,7 @@ proc generateStdIR*(runtime: Runtime) =
       # 4. Else if numberOfArgs = 1, then
       elif runtime.argumentCount() == 1:
         # a. Let value be values[0].
-        let value = &runtime.argument(1, required = true)
+        let value = &runtime.argument(1)
 
         # FIXME: uncompliant.
         case value.kind
