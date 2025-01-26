@@ -115,7 +115,7 @@ proc parseExpression*(
         parser.error Other, &err
 
       debug "parser: whilst parsing arithmetic expr, found String"
-      if term.binLeft != nil:
+      if term.binLeft == nil:
         debug "parser: atom will fill left term"
         term.binLeft = atomHolder(&parser.parseAtom(next))
       else:
@@ -958,7 +958,7 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
   if !expr:
     let copiedTokPhase2 = parser.tokenizer.deepCopy()
     parser.tokenizer = copiedTok
-
+    
     let atom = parser.parseAtom(parser.tokenizer.next())
     if !atom:
       parser.tokenizer = copiedTokPhase2
