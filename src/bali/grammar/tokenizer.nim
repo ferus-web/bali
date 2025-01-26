@@ -318,7 +318,7 @@ proc consumeEquality*(tokenizer: Tokenizer): Token =
       return Token(kind: TokenKind.Equal)
     else:
       debug "tokenizer: consume true equality sign"
-      tokenizer.advance()
+      tokenizer.advance(2)
       return Token(kind: TokenKind.TrueEqual)
   else:
     debug "tokenizer: consume equal-to sign because next char isn't another equal sign"

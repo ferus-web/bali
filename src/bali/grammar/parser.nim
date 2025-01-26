@@ -144,6 +144,9 @@ proc parseExpression*(
     of TokenKind.Equal:
       debug "parser: whilst parsing arithmetic expr, found equality operand"
       term.op = BinaryOperation.Equal
+    of TokenKind.TrueEqual:
+      debug "parser: whilst parsing arithmetic expr, found true equality operand"
+      term.op = BinaryOperation.TrueEqual
     of TokenKind.GreaterThan:
       debug "parser: whilst parsing arithmetic expr, found greater-than operand"
       term.op = BinaryOperation.GreaterThan

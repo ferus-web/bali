@@ -55,7 +55,7 @@ proc isStrictlyEqual*(runtime: Runtime, x, y: MAtom): bool =
 
   # 1. If Type(x) is not Type(y), return false.
   if (x.kind != y.kind):
-    if not x.isNumber and y.isNumber:
+    if not (x.isNumber and y.isNumber):
       return false
 
   # 2. If x is a Number, then

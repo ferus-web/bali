@@ -474,11 +474,16 @@ proc generateIR*(
       runtime.ir.multInt(leftIdx, rightIdx)
     of BinaryOperation.Div:
       runtime.ir.divInt(leftIdx, rightIdx)
-    of BinaryOperation.Equal:
+    of BinaryOperation.Equal, BinaryOperation.TrueEqual:
       # runtime.ir.equate(leftIdx, rightIdx)
       runtime.ir.passArgument(leftIdx)
       runtime.ir.passArgument(rightIdx)
-      runtime.ir.call("BALI_EQUATE_ATOMS")
+      runtime.ir.call(
+        if stmt.op == BinaryOperation.Equal: 
+          "BALI_EQUATE_ATOMS"
+        else:
+          "BALI_EQUATE_ATOMS_STRICT"
+      )
       # FIXME: really weird bug in mirage's IR generator. wtf?
       let
         equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left == right branch
@@ -576,10 +581,15 @@ proc generateIR*(
           0
 
     case stmt.conditionExpr.op
-    of Equal, NotEqual:
+    of Equal, NotEqual, TrueEqual:
       runtime.ir.passArgument(lhsIdx)
       runtime.ir.passArgument(rhsIdx)
-      runtime.ir.call("BALI_EQUATE_ATOMS")
+      runtime.ir.call(
+        if stmt.conditionExpr.op != BinaryOperation.TrueEqual: 
+          "BALI_EQUATE_ATOMS"
+        else:
+          "BALI_EQUATE_ATOMS_STRICT"
+      )
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
         IROperation(
@@ -613,7 +623,7 @@ proc generateIR*(
     runtime.ir.overrideArgs(skipBranchTwoJmp, @[uinteger(endOfBranchTwo)])
 
     case stmt.conditionExpr.op
-    of Equal, GreaterThan:
+    of Equal, GreaterThan, TrueEqual:
       runtime.ir.overrideArgs(falseJump, @[uinteger(endOfBranchOne)])
       runtime.ir.overrideArgs(trueJump, @[uinteger(falseJump + 2)])
     of NotEqual, LesserThan:
@@ -694,10 +704,15 @@ proc generateIR*(
 
     let jmpIntoComparison = getCurrOpNum()
     case stmt.whConditionExpr.op
-    of Equal, NotEqual:
+    of Equal, NotEqual, TrueEqual:
       runtime.ir.passArgument(lhsIdx)
       runtime.ir.passArgument(rhsIdx)
-      runtime.ir.call("BALI_EQUATE_ATOMS")
+      runtime.ir.call(
+        if stmt.whConditionExpr.op != BinaryOperation.TrueEqual: 
+          "BALI_EQUATE_ATOMS"
+        else:
+          "BALI_EQUATE_ATOMS_STRICT"
+      )
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
         IROperation(
@@ -739,7 +754,7 @@ proc generateIR*(
     runtime.irHints.breaksGeneratedAt.reset()
 
     case stmt.whConditionExpr.op
-    of BinaryOperation.Equal, BinaryOperation.GreaterThan:
+    of BinaryOperation.Equal, BinaryOperation.TrueEqual, BinaryOperation.GreaterThan:
       runtime.ir.overrideArgs(trueJump, @[uinteger(jmpIntoBody.uint)])
       runtime.ir.overrideArgs(escapeJump, @[uinteger(jmpPastBody.uint)])
     of BinaryOperation.NotEqual, BinaryOperation.LesserThan:
@@ -1062,6 +1077,26 @@ proc generateInternalIR*(runtime: Runtime) =
       runtime.vm.registers.callArgs.reset()
 
       let res = runtime.isLooselyEqual(a, b)
+      if not res:
+        # Jump 2 instructions ahead
+        runtime.vm.currIndex += 1
+  )
+
+  runtime.vm.registerBuiltin(
+    "BALI_EQUATE_ATOMS_STRICT",
+    proc(op: Operation) =
+      # This is supposed to work exactly how the EQU instruction works
+      let 
+        a = &runtime.argument(1)
+        b = &runtime.argument(2)
+
+      runtime.vm.registers.callArgs.reset()
+
+      print a
+      print b
+
+      let res = runtime.isStrictlyEqual(a, b)
+      print res
       if not res:
         # Jump 2 instructions ahead
         runtime.vm.currIndex += 1
