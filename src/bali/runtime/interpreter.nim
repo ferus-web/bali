@@ -12,6 +12,7 @@ import
       bridge,
     ]
 import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
+import bali/runtime/abstract/equating
 import bali/stdlib/prelude
 import crunchy, pretty
 
@@ -474,7 +475,11 @@ proc generateIR*(
     of BinaryOperation.Div:
       runtime.ir.divInt(leftIdx, rightIdx)
     of BinaryOperation.Equal:
-      runtime.ir.equate(leftIdx, rightIdx)
+      # runtime.ir.equate(leftIdx, rightIdx)
+      runtime.ir.passArgument(leftIdx)
+      runtime.ir.passArgument(rightIdx)
+      runtime.ir.call("BALI_EQUATE_ATOMS")
+      runtime.ir.resetArgs()
       # FIXME: really weird bug in mirage's IR generator. wtf?
       let
         equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1 # left == right branch
@@ -498,7 +503,10 @@ proc generateIR*(
           runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
       runtime.ir.overrideArgs(unequalJmp, @[uinteger(unequalBranch)])
     of BinaryOperation.NotEqual:
-      runtime.ir.equate(leftIdx, rightIdx)
+      runtime.ir.passArgument(leftIdx)
+      runtime.ir.passArgument(rightIdx)
+      runtime.ir.call("BALI_EQUATE_ATOMS")
+      runtime.ir.resetArgs()
       # FIXME: really weird bug in mirage's IR generator. wtf?
       let equalJmp = runtime.ir.addOp(IROperation(opcode: Jump)) - 1
         # left == right branch
@@ -571,7 +579,10 @@ proc generateIR*(
 
     case stmt.conditionExpr.op
     of Equal, NotEqual:
-      runtime.ir.equate(lhsIdx, rhsIdx)
+      runtime.ir.passArgument(lhsIdx)
+      runtime.ir.passArgument(rhsIdx)
+      runtime.ir.call("BALI_EQUATE_ATOMS")
+      runtime.ir.resetArgs()
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
         IROperation(
@@ -687,7 +698,10 @@ proc generateIR*(
     let jmpIntoComparison = getCurrOpNum()
     case stmt.whConditionExpr.op
     of Equal, NotEqual:
-      runtime.ir.equate(lhsIdx, rhsIdx)
+      runtime.ir.passArgument(lhsIdx)
+      runtime.ir.passArgument(rhsIdx)
+      runtime.ir.call("BALI_EQUATE_ATOMS")
+      runtime.ir.resetArgs()
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
         IROperation(
@@ -1041,19 +1055,22 @@ proc generateInternalIR*(runtime: Runtime) =
   )
   runtime.ir.call("BALI_INDEX_INTERNAL")
 
-  runtime.ir.newModule("BALI_RESOLVE_AND_CALL_FUNCTION")
   runtime.vm.registerBuiltin(
-    "BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL",
+    "BALI_EQUATE_ATOMS",
     proc(op: Operation) =
-      let atom = runtime.argument(1)
-      assert(
-        *atom,
-        "BUG: Atom was empty when calling BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL",
-      )
+      # This is supposed to work exactly how the EQU instruction works
+      let 
+        a = &runtime.argument(1)
+        b = &runtime.argument(2)
 
-      let name = &getStr(&atom),
+      let res = runtime.isLooselyEqual(a, b)
+      if res:
+        # Carry on as usual
+        discard
+      else:
+        # Jump 2 instructions ahead
+        runtime.vm.currIndex += 2
   )
-  runtime.ir.call("BALI_RESOLVE_AND_CALL_FUNCTION_INTERNAL")
 
   if runtime.opts.insertDebugHooks:
     runtime.defineFn(
