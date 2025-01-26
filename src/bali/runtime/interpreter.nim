@@ -1,6 +1,6 @@
 ## Bali runtime (MIR emitter)
 
-import std/[algorithm, options, hashes, logging, strutils, tables, importutils]
+import std/[options, hashes, logging, strutils, tables, importutils]
 import mirage/ir/generator
 import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
@@ -877,9 +877,6 @@ proc generateIRForScope*(
     runtime.clauses.add(name)
     runtime.ir.newModule(name.normalizeIRName())
 
-  if runtime.irHints.generatedClauses.contains(name):
-    return
-
   runtime.irHints.generatedClauses &= name
 
   if name != "outer":
@@ -1117,7 +1114,7 @@ proc run*(runtime: Runtime) =
   else:
     scopes &= backScopes
 
-  scopes.reverse()
+  # scopes.reverse()
   for ident in ["undefined", "NaN", "true", "false", "null"]:
     runtime.markGlobal(ident)
 

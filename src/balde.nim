@@ -310,7 +310,6 @@ proc baldeRepl(ctx: Input) =
     prevRuntime = runtime
 
   echo "Welcome to Balde, with Bali v" & Version
-  echo "Keep in mind that this is still a heavily work-in-progress feature. Bugs are bound to occur."
   echo "Start typing JavaScript expressions to evaluate them."
   echo "Type .quit to exit the REPL."
 
