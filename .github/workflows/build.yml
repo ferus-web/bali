@@ -20,25 +20,9 @@ jobs:
         with:
           nim-version: '2.2.0'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Balde
-        uses: docker://fedora:latest
-        with:
-          args: |
-            bash -c "
-            sudo dnf install cmake make gcc gcc-c++ gmp gmp-devel libicu-devel git -y &&
-            curl https://nim-lang.org/choosenim/init.sh -sSf > init.sh &&
-            chmod +x ./init.sh &&
-            git config --global --add safe.directory /github/workspace &&
-            
-            git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install -j$(nproc) && cd .. &&
-
-            ./init.sh --yes &&
-
-            export PATH="$HOME/.nimble/bin:$PATH" &&
-            nimble build --define:release --define:speed --out:./ &&
-            ls bin/
-            "
+      
+      - run: sudo apt-get install gcc libicu-dev libgmp-dev
+      - run: git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install . -j$(nproc) && cd .. && nimble refresh && nimble build --define:release --define:speed --out:./
 
       - name: Upload Build Artifact (balde)
         uses: actions/upload-artifact@v4

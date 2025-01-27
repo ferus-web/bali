@@ -1,4 +1,5 @@
 ## Arbitrary-precision integers
+## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import std/[options]
 import bali/runtime/[arguments, atom_helpers, types, bridge]
 import bali/runtime/abstract/coercion

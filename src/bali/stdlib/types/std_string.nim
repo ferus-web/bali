@@ -255,3 +255,31 @@ proc generateStdIr*(runtime: Runtime) =
       ret codepoint
     ,
   )
+
+  #[ runtime.definePrototypeFn(
+    JSString,
+    "substring",
+    proc(value: MAtom) =
+      # 22.1.3.25 String.prototype.substring ( start, end )
+
+      # If either argument is NaN or negative, it is replaced with zero; if either argument is strictly greater than the length
+      # of the String, it is replaced with the length of the String.
+      
+      let
+        # 1. Let O be ? RequireObjectCoercible(this value).
+        obj = runtime.RequireObjectCoercible(&value.tagged("internal"))
+        
+        # 2. Let S be ? ToString(O).
+        str = newUtf16View(runtime.ToString(obj))
+        
+        # 3. Let len be the length of S.
+        stringLength = str.codeunitLen
+
+      if start == NaN:
+        start = 0f
+
+      if last == NaN:
+        last = 0f
+
+      if start > 
+  ) ]#
