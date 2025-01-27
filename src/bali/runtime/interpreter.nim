@@ -1091,7 +1091,6 @@ proc generateInternalIR*(runtime: Runtime) =
       runtime.vm.registers.callArgs.reset()
 
       let res = runtime.isStrictlyEqual(a, b)
-      print res
       if not res:
         # Jump 2 instructions ahead
         runtime.vm.currIndex += 1

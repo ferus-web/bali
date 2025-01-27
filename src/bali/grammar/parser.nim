@@ -913,7 +913,10 @@ proc parseScope*(parser: Parser): seq[Statement] =
   if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
     if (&tok).kind != TokenKind.LCurly:
       parser.error Other, "expected left curly bracket"
-
+  
+  inc parser.ast.currentScope
+  parser.ast.scopes.setLen(parser.ast.currentScope + 1)
+  parser.ast.scopes[parser.ast.currentScope] = Scope()
   var stmts: seq[Statement]
 
   while not parser.tokenizer.eof:
@@ -940,6 +943,8 @@ proc parseScope*(parser: Parser): seq[Statement] =
     statement.col = parser.tokenizer.location.col
 
     stmts &= statement
+  
+  dec parser.ast.currentScope
 
   stmts
 
@@ -1121,7 +1126,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       elseBody = parser.parseScope()
 
     var lastScope = parser.ast.scopes[parser.ast.currentScope]
-    var exprScope = Scope(stmts: body)
+    var exprScope = Scope(stmts: parser.ast.scopes[parser.ast.currentScope + 1].stmts & body)
     var elseScope = Scope(stmts: elseBody)
     exprScope.prev = some(lastScope)
     elseScope.prev = some(lastScope)
@@ -1137,7 +1142,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     let body = parser.parseScope()
     let lastScope = parser.ast.scopes[parser.ast.currentScope]
-    var bodyScope = Scope(stmts: body)
+    var bodyScope = Scope(stmts: parser.ast.scopes[parser.ast.currentScope + 1].stmts & body)
 
     bodyScope.prev = some(lastScope)
     return some whileStmt(&expr, bodyScope)
@@ -1194,6 +1199,12 @@ proc parse*(parser: Parser): AST {.inline.} =
       var statement = &stmt
       statement.line = parser.tokenizer.location.line
       statement.col = parser.tokenizer.location.col
+
+      case statement.kind
+      of WhileStmt, IfStmt:
+        parser.ast.scopes.delete(parser.ast.currentScope + 1)
+      else: discard
+
       parser.ast.appendToCurrentScope(statement)
 
   parser.ast.errors = deepCopy(parser.errors)
