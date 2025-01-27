@@ -892,7 +892,7 @@ proc generateIRForScope*(
           name: "outer",
           arguments: newSeq[string](0),
           prev: scope.prev,
-          next: scope.next,
+          children: scope.children,
           stmts: scope.stmts,
         ) # FIXME: discriminate between scopes
     name = fn.name
@@ -934,10 +934,8 @@ proc generateIRForScope*(
   for i, stmt in scope.stmts:
     runtime.generateIR(fn, stmt, index = i.uint.some)
 
-  var curr = scope
-  while *curr.next:
-    curr = &curr.next
-    runtime.generateIRForScope(curr)
+  for child in scope.children:
+    runtime.generateIRForScope(child)
 
 proc findField*(atom: MAtom, accesses: FieldAccess): MAtom =
   if accesses.identifier in atom.objFields:
@@ -1147,23 +1145,13 @@ proc run*(runtime: Runtime) =
         else:
           quit(0)
     )
-
-  var backScopes = runtime.ast.scopes[0]
-  var scopes: seq[Scope]
-
-  if *backScopes.next:
-    while *backScopes.next:
-      scopes &= backScopes
-      backScopes = &backScopes.next
-  else:
-    scopes &= backScopes
-
-  # scopes.reverse()
+  
   for ident in ["undefined", "NaN", "true", "false", "null"]:
     runtime.markGlobal(ident)
 
-  for scope in scopes:
-    runtime.generateIRForScope(scope)
+  runtime.generateIRForScope(
+    runtime.ast.scopes[0]
+  )
 
   constants.generateStdIR(runtime)
 

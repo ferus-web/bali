@@ -29,7 +29,7 @@ proc appendToCurrentScope*(ast: AST, stmt: Statement) =
   ast.scopes[ast.currentScope].stmts &= stmt
 
 proc appendFunctionToCurrentScope*(ast: AST, fn: Function) =
-  ast.scopes[ast.currentScope].next = some(cast[Scope](fn))
+  ast.scopes[ast.currentScope].children &= Scope(fn)
 
 proc `[]`*(ast: AST, name: string): Option[Function] =
   for scope in ast.scopes:

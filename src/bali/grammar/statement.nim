@@ -53,7 +53,8 @@ type
   PositionedArguments* = seq[CallArg]
 
   Scope* = ref object of RootObj
-    prev*, next*: Option[Scope]
+    prev*: Option[Scope]
+    children*: seq[Scope]
     stmts*: seq[Statement]
 
   Function* = ref object of Scope
@@ -208,11 +209,8 @@ proc hash*(fn: Function): Hash {.inline.} =
 proc hash*(scope: Scope): Hash {.inline.} =
   var hash: Hash
 
-  if *scope.next:
-    hash = hash(&scope.next)
-
-  #if *scope.prev:
-  #  hash = hash(&scope.prev)
+  if *scope.prev:
+    hash = hash(&scope.prev)
 
   hash
 

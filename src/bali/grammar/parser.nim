@@ -1025,13 +1025,12 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     var fn = &fnOpt
 
-    var scope = parser.ast.scopes[0]
-
-    while *scope.next:
-      scope = &scope.next
+    var scope = parser.ast.scopes[parser.ast.currentScope]
 
     fn.prev = some(scope)
-    scope.next = some(Scope(fn))
+    scope.children &= Scope(fn)
+
+    parser.ast.scopes[parser.ast.currentScope] = move(scope)
   of TokenKind.Identifier:
     let
       prevPos = parser.tokenizer.pos
