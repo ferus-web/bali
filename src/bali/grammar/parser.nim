@@ -226,9 +226,12 @@ proc parseConstructor*(parser: Parser): Option[Statement] =
 
   if (&next).kind != TokenKind.Identifier:
     parser.error UnexpectedToken, "expected Identifier, got " & $(&next).kind
-
-  if not parser.tokenizer.eof() and parser.tokenizer.next().kind != TokenKind.LParen:
-    parser.error Other, "expected left parenthesis when creating object constructor"
+  
+  if parser.tokenizer.eof or parser.tokenizer.next().kind != TokenKind.LParen:
+    debug "parser: creating constructor that takes no arguments"
+    return some(
+      constructObject((&next).ident, @[])
+    )
 
   return some(constructObject((&next).ident, &parser.parseArguments()))
 
