@@ -28,7 +28,7 @@ proc generateIR*(
   ownerStmt: Option[Statement] = none(Statement),
   exprStoreIn: Option[string] = none(string),
   parentStmt: Option[Statement] = none(Statement),
-  index: Option[uint] = none(uint),
+  index: Option[uint] = none(uint)
 )
 
 proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false) =
@@ -55,7 +55,8 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
           arg.atom.crush()
 
         discard runtime.loadIRAtom(arg.atom)
-        runtime.markInternal(stmt, $i)
+        let name = $hash(stmt) & '_' & $i
+        runtime.markInternal(stmt, name)
   of CallAndStoreResult:
     debug "ir: expand CallAndStoreResult statement by expanding child Call statement"
     runtime.expand(fn, stmt.storeFn, internal)
@@ -479,7 +480,7 @@ proc generateIR*(
       runtime.ir.passArgument(leftIdx)
       runtime.ir.passArgument(rightIdx)
       runtime.ir.call(
-        if stmt.op == BinaryOperation.Equal: 
+        if stmt.op == BinaryOperation.Equal:
           "BALI_EQUATE_ATOMS"
         else:
           "BALI_EQUATE_ATOMS_STRICT"
@@ -585,7 +586,7 @@ proc generateIR*(
       runtime.ir.passArgument(lhsIdx)
       runtime.ir.passArgument(rhsIdx)
       runtime.ir.call(
-        if stmt.conditionExpr.op != BinaryOperation.TrueEqual: 
+        if stmt.conditionExpr.op != BinaryOperation.TrueEqual:
           "BALI_EQUATE_ATOMS"
         else:
           "BALI_EQUATE_ATOMS_STRICT"
@@ -708,7 +709,7 @@ proc generateIR*(
       runtime.ir.passArgument(lhsIdx)
       runtime.ir.passArgument(rhsIdx)
       runtime.ir.call(
-        if stmt.whConditionExpr.op != BinaryOperation.TrueEqual: 
+        if stmt.whConditionExpr.op != BinaryOperation.TrueEqual:
           "BALI_EQUATE_ATOMS"
         else:
           "BALI_EQUATE_ATOMS_STRICT"
@@ -1068,7 +1069,7 @@ proc generateInternalIR*(runtime: Runtime) =
     "BALI_EQUATE_ATOMS",
     proc(op: Operation) =
       # This is supposed to work exactly how the EQU instruction works
-      let 
+      let
         a = &runtime.argument(1)
         b = &runtime.argument(2)
 
@@ -1078,13 +1079,14 @@ proc generateInternalIR*(runtime: Runtime) =
       if not res:
         # Jump 2 instructions ahead
         runtime.vm.currIndex += 1
+    ,
   )
 
   runtime.vm.registerBuiltin(
     "BALI_EQUATE_ATOMS_STRICT",
     proc(op: Operation) =
       # This is supposed to work exactly how the EQU instruction works
-      let 
+      let
         a = &runtime.argument(1)
         b = &runtime.argument(2)
 
@@ -1094,6 +1096,7 @@ proc generateInternalIR*(runtime: Runtime) =
       if not res:
         # Jump 2 instructions ahead
         runtime.vm.currIndex += 1
+    ,
   )
 
   if runtime.opts.insertDebugHooks:
@@ -1130,6 +1133,7 @@ proc run*(runtime: Runtime) =
   std_string.generateStdIR(runtime)
   date.generateStdIR(runtime)
   std_bigint.generateStdIR(runtime)
+  std_number.generateStdIR(runtime)
 
   parseIntGenerateStdIR(runtime)
 
@@ -1144,13 +1148,11 @@ proc run*(runtime: Runtime) =
         else:
           quit(0)
     )
-  
+
   for ident in ["undefined", "NaN", "true", "false", "null"]:
     runtime.markGlobal(ident)
 
-  runtime.generateIRForScope(
-    runtime.ast.scopes[0]
-  )
+  runtime.generateIRForScope(runtime.ast.scopes[0])
 
   constants.generateStdIR(runtime)
 
