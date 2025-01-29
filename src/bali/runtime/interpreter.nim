@@ -28,7 +28,7 @@ proc generateIR*(
   ownerStmt: Option[Statement] = none(Statement),
   exprStoreIn: Option[string] = none(string),
   parentStmt: Option[Statement] = none(Statement),
-  index: Option[uint] = none(uint)
+  index: Option[uint] = none(uint),
 )
 
 proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false) =

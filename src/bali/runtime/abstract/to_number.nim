@@ -60,6 +60,20 @@ proc ToNumber*(runtime: Runtime, value: MAtom): float =
   else:
     unreachable
 
+proc ToNumeric*(runtime: Runtime, value: MAtom): MAtom =
+  ## 7.1.3 ToNumeric ( value )
+  ## This either returns a `BigInteger` atom or a `Floating` atom. Nothing else.
+
+  # 1. Let primValue be ? ToPrimitive(value, NUMBER).
+  let primValue = runtime.ToPrimitive(value, some(Integer))
+
+  # 2. If primValue is a BigInt, return primValue.
+  if primValue.kind == BigInteger:
+    return primValue
+
+  # 3. Return ? ToNumber(primValue)
+  floating(runtime.ToNumber(primValue))
+
 proc isFiniteNumber*(runtime: Runtime, number: MAtom): bool {.inline.} =
   if not isNumber(number):
     return false

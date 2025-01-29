@@ -4,8 +4,8 @@
 import std/[math, options, logging, terminal, hashes]
 import mirage/runtime/prelude
 import bali/runtime/[bridge]
-import bali/runtime/abstract/to_string
-import bali/runtime/[arguments, types, atom_helpers]
+import bali/runtime/abstract/[equating, to_string]
+import bali/runtime/[arguments, types]
 import bali/stdlib/errors_common
 import bali/internal/sugar
 
@@ -40,15 +40,16 @@ proc generateStdIr*(runtime: Runtime) =
           resetStyle,
           " ",
           styleBright,
-          a.crush(),
+          runtime.ToString(a),
           resetStyle,
           " != ",
           styleBright,
-          b.crush(),
+          runtime.ToString(b),
           resetStyle,
         )
         runtime.test262Error(
-          "Assert.sameValue(): " & b.crush() & " != " & a.crush() & ' ' & msg
+          "Assert.sameValue(): " & runtime.ToString(a) & " != " & runtime.ToString(b) &
+            ' ' & msg
         )
 
       template yes() =
@@ -59,11 +60,11 @@ proc generateStdIr*(runtime: Runtime) =
           resetStyle,
           " ",
           styleBright,
-          a.crush(),
+          runtime.ToString(a),
           resetStyle,
           " == ",
           styleBright,
-          b.crush(),
+          runtime.ToString(b),
           resetStyle,
         )
         return
@@ -77,32 +78,5 @@ proc generateStdIr*(runtime: Runtime) =
           else:
             ""
 
-      if a.isUndefined() and b.isUndefined():
-        yes
-
-      if a.kind == UnsignedInt:
-        if b.kind == Integer:
-          if int(&a.getUint()) == &b.getInt(): yes else: no
-      elif b.kind == UnsignedInt:
-        if a.kind == Integer:
-          if &a.getInt() == int(&b.getUint()): yes else: no
-
-      if a.kind != b.kind:
-        no
-
-      case a.kind
-      of Integer:
-        if a.getInt() == b.getInt(): yes else: no
-      of UnsignedInt:
-        if a.getUint() == b.getUint(): yes else: no
-      of String:
-        if a.getStr() == b.getStr(): yes else: no
-      of Float:
-        if a.getFloat() == b.getFloat(): yes else: no
-      of Null:
-        yes
-      of Sequence:
-        if a.getSequence().hash() == b.getSequence().hash(): yes else: no
-      else:
-        no,
+      if runtime.isLooselyEqual(a, b): yes else: no,
   )
