@@ -5,21 +5,21 @@ import bali/runtime/[arguments, atom_helpers, types, bridge]
 import bali/runtime/abstract/[coercion, equating]
 import mirage/atom
 
-type
-  JSSet* = object
-    `@ internal`*: MAtom ## Sequence MAtom
+type JSSet* = object
+  `@ internal`*: MAtom ## Sequence MAtom
 
 proc generateInternalIR*(runtime: Runtime) =
   runtime.registerType("Set", JSSet)
   runtime.defineConstructor(
     "Set",
-    proc =
+    proc() =
       # 24.2.1.1 Set ( [ iterable ] )
       # FIXME: Non-compliant.
-      
+
       var set = runtime.createObjFromType(JSSet)
       set.tag("internal", sequence(@[]))
       ret set
+    ,
   )
 
   runtime.definePrototypeFn(
@@ -48,8 +48,10 @@ proc generateInternalIR*(runtime: Runtime) =
       setVal.sequence.add(move(value))
 
       var setAtom = setAtom
-      setAtom.tag("internal", move(setVal)) # FIXME: We aren't changing the original set right now due to a limitation in Mirage. Fix this!
+      setAtom.tag("internal", move(setVal))
+        # FIXME: We aren't changing the original set right now due to a limitation in Mirage. Fix this!
 
       # 6. Return S.
       ret move(setAtom)
+    ,
   )

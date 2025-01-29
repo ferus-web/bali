@@ -57,6 +57,8 @@ proc setProperty*[T, V](
       runtime.types[i].members[name] = initAtomOrFunction[NativeFunction](wrap(value))
 
 proc dumpStatistics*(runtime: Runtime): RuntimeStats =
+  ## Get a `RuntimeStats` struct containing all the statistics about the
+  ## runtime's state, including the VM's state and code generator's statistics.
   info "runtime: dumping statistics"
   var stats: RuntimeStats
 
@@ -96,6 +98,8 @@ proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
 proc definePrototypeFn*[T](
     runtime: Runtime, prototype: typedesc[T], name: string, fn: NativePrototypeFunction
 ) =
+  ## Add a function to a type's prototype.
+  ## Each instance of this type will be able to invoke the provided function.
   runtime.vm.registerBuiltin(
     name,
     proc(_: Operation) =
@@ -109,10 +113,14 @@ proc definePrototypeFn*[T](
 
 proc getReturnValue*(runtime: Runtime): Option[MAtom] =
   ## Get the value in the return-value register, if there is any.
-  ## NOTE: You need to disable aggressive retval scrubbing if you want to get the return value of a function called in bytecode
+  ## NOTE: You need to disable the aggressive retval scrubbing optimization if you want to get the return value of a function called in bytecode
   runtime.vm.registers.retVal
 
 proc createAtom*(typ: JSType): MAtom =
+  ## Create an atom (object) based off of a provided type.
+  ## All fields of the provided `typ` are initialized in the object with `undefined`.
+  ## The object will also gain an internal Bali-specific data slot/tag called `bali_object_type` which helps the engine
+  ## in determining what type this object belongs to.
   var atom = obj()
 
   for name, member in typ.members:
@@ -160,6 +168,11 @@ proc isA*[T: object](runtime: Runtime, atom: MAtom, typ: typedesc[T]): bool =
 proc getMethod*(
     runtime: Runtime, v: MAtom, p: string
 ): Option[NativePrototypeFunction] =
+  ## Get a method from the provided object's prototype.
+  ## Returns an `Option[NativePrototypeFunction]` if a function with the name `p` is found,
+  ## else it returns an empty `Option`.
+  assert(v.kind == Object, "Cannot search object for methods if it isn't an object.")
+
   for typ in runtime.types:
     if typ.proto.int != &getInt(&v.tagged("bali_object_type")):
       continue
@@ -182,8 +195,8 @@ proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): MAtom =
   raise newException(ValueError, "No such registered type: `" & $typ & '`')
 
 proc defineConstructor*(runtime: Runtime, name: string, fn: NativeFunction) {.inline.} =
-  debug "runtime: exposing constructor for type: " & name
   ## Expose a constructor for a type to a JavaScript runtime.
+  debug "runtime: exposing constructor for type: " & name
 
   var found = false
   for i, jtype in runtime.types:
@@ -218,13 +231,11 @@ func argumentCount*(runtime: Runtime): int {.inline.} =
   runtime.vm.registers.callArgs.len
 
 proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
+  ## Register a type in the JavaScript engine instance with the name of the type (`name`) alongside its prototype (`prototype`).
   var jsType: JSType
 
   for fname, fatom in prototype().fieldPairs:
-    #if not fname.startsWith('@'):
     jsType.members[fname] = initAtomOrFunction[NativeFunction](fatom.wrap())
-    #else:
-    #  debug "runtime: registerType(): field name starts with at-the-rate (@); not exposing it to the JS runtime."
 
   jsType.proto = hash($prototype)
   jsType.name = name

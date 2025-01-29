@@ -20,6 +20,9 @@ type JSString* = object
 func value*(str: JSString): string {.inline.} =
   str.`@ internal`
 
+proc isString*(runtime: Runtime, a: MAtom): bool =
+  (a.kind == String or runtime.isA(a, JSString))
+
 proc generateStdIr*(runtime: Runtime) =
   runtime.registerType(prototype = JSString, name = "String")
   proc stringConstructor() =

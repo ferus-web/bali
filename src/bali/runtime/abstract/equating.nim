@@ -42,7 +42,7 @@ proc equateSameValueNonNumber*(runtime: Runtime, x, y: MAtom): bool =
     for i in 0 ..< xData.len:
       if xData[i] != yData[i]:
         return false
-    
+
     return true
 
   # 5. If x is a Boolean, then
@@ -67,7 +67,7 @@ proc isStrictlyEqual*(runtime: Runtime, x, y: MAtom): bool =
 
 proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
   ## 7.2.14 IsLooselyEqual ( x, y )
-  
+
   # 1. If Type(x) is Type(y), then
   if (x.isNumber and y.isNumber) or (x.kind == y.kind):
     # a. Return IsStrictlyEqual(x, y)
@@ -75,6 +75,26 @@ proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
 
   # 2. If x is null and y is undefined, return true.
   if x.isNull and y.isUndefined:
+    return true
+
+  # FIXME: NON-COMPLIANT: BALI-SPECIFIC HACK TO GET AROUND JSSTRING BOXING!
+  if runtime.isString(x) and runtime.isString(y):
+    # a. If x and y have the same length and the same code units in the same positions, return true; otherwise, return false.
+    let
+      xVal = newUtf16View(runtime.ToString(x))
+      yVal = newUtf16View(runtime.ToString(y))
+
+    if xVal.codePointLen != yVal.codePointLen:
+      return false
+
+    let
+      xData = xVal.data()
+      yData = yVal.data()
+
+    for i in 0 ..< xData.len:
+      if xData[i] != yData[i]:
+        return false
+
     return true
 
   # If x is undefined and y is null, return true.
@@ -103,7 +123,7 @@ proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
 
     # c. Return ! IsLooselyEqual(x, n).
     return runtime.isLooselyEqual(x, n)
-  
+
   # 8. If x is a String and y is a BigInt, return ! IsLooselyEqual(y, x).
   if runtime.isA(x, JSString) and y.isBigInt:
     # OPTIMIZATION: We can avoid an extra recursion by just writing a bit more code.
@@ -122,7 +142,7 @@ proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
   # 9. If x is a Boolean, return ! IsLooselyEqual(! ToNumber(x), y).
   if x.kind == Boolean:
     return runtime.isLooselyEqual(floating(runtime.ToNumber(x)), y)
-  
+
   # 10. If y is a Boolean, return ! IsLooselyEqual(x, ! ToNumber(y)).
   if y.kind == Boolean:
     return runtime.isLooselyEqual(x, floating(runtime.ToNumber(y)))
@@ -131,7 +151,7 @@ proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
   if (runtime.isA(x, JSString) or x.isBigInt or x.isNumber) and y.isObject:
     # FIXME: does not account for symbols yet, as they aren't a type.
     return runtime.isLooselyEqual(x, runtime.ToPrimitive(y))
-  
+
   # 12. If x is an Object and y is either a String, a Number, a BigInt or a Symbol, return ! IsLooselyEqual(? ToPrimitive(x), y).
   if (runtime.isA(y, JSString) or y.isBigInt or y.isNumber) and x.isObject:
     # FIXME: does not account for symbols yet
@@ -146,6 +166,6 @@ proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
     # b. If ℝ(x) = ℝ(y), return true; otherwise return false.
     if runtime.ToNumber(x) == runtime.ToNumber(y):
       return true
-  
+
   # 14. Return false.
   return false

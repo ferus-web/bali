@@ -913,7 +913,7 @@ proc parseScope*(parser: Parser): seq[Statement] =
   if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
     if (&tok).kind != TokenKind.LCurly:
       parser.error Other, "expected left curly bracket"
-  
+
   inc parser.ast.currentScope
   parser.ast.scopes.setLen(parser.ast.currentScope + 1)
   parser.ast.scopes[parser.ast.currentScope] = Scope()
@@ -943,7 +943,7 @@ proc parseScope*(parser: Parser): seq[Statement] =
     statement.col = parser.tokenizer.location.col
 
     stmts &= statement
-  
+
   dec parser.ast.currentScope
 
   stmts
@@ -966,7 +966,7 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
   if !expr:
     let copiedTokPhase2 = parser.tokenizer.deepCopy()
     parser.tokenizer = copiedTok
-    
+
     let atom = parser.parseAtom(parser.tokenizer.next())
     if !atom:
       parser.tokenizer = copiedTokPhase2
@@ -1126,7 +1126,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       elseBody = parser.parseScope()
 
     var lastScope = parser.ast.scopes[parser.ast.currentScope]
-    var exprScope = Scope(stmts: parser.ast.scopes[parser.ast.currentScope + 1].stmts & body)
+    var exprScope =
+      Scope(stmts: parser.ast.scopes[parser.ast.currentScope + 1].stmts & body)
     var elseScope = Scope(stmts: elseBody)
     exprScope.prev = some(lastScope)
     elseScope.prev = some(lastScope)
@@ -1142,7 +1143,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     let body = parser.parseScope()
     let lastScope = parser.ast.scopes[parser.ast.currentScope]
-    var bodyScope = Scope(stmts: parser.ast.scopes[parser.ast.currentScope + 1].stmts & body)
+    var bodyScope =
+      Scope(stmts: parser.ast.scopes[parser.ast.currentScope + 1].stmts & body)
 
     bodyScope.prev = some(lastScope)
     return some whileStmt(&expr, bodyScope)
@@ -1203,7 +1205,8 @@ proc parse*(parser: Parser): AST {.inline.} =
       case statement.kind
       of WhileStmt, IfStmt:
         parser.ast.scopes.delete(parser.ast.currentScope + 1)
-      else: discard
+      else:
+        discard
 
       parser.ast.appendToCurrentScope(statement)
 
