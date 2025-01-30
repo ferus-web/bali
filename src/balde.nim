@@ -360,7 +360,7 @@ You can also just type in JavaScript expressions to evaluate them."""
         continue
 
       for i, value in prevRuntime.vm.stack:
-        echo $i & ": " & prevRuntime.ToString(value) & " <" & $value.kind & '>'
+        echo $i & ": " & value.crush() & " <" & $value.kind & '>'
     of ".dump_gc":
       echo GC_getStatistics()
     else:

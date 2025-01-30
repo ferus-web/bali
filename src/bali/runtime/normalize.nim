@@ -35,6 +35,12 @@ proc normalizeIRName*(name: string): string =
       buffer &= "underscore"
     of '@':
       buffer &= "at"
+    of '%':
+      buffer &= "percent"
+    of '^':
+      buffer &= "pow"
+    of '!':
+      buffer &= "excl"
     else:
       raise newException(
         ValueError,

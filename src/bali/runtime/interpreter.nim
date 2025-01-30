@@ -9,7 +9,7 @@ import
   bali/runtime/
     [
       normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils,
-      bridge,
+      bridge, describe
     ]
 import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/runtime/abstract/equating
@@ -1178,6 +1178,8 @@ proc generateInternalIR*(runtime: Runtime) =
         echo GC_getStatistics()
       ,
     )
+
+    runtime.generateDescribeFnCode()
 
     runtime.defineFn(
       "baliGC_FullCollect",

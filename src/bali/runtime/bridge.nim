@@ -173,6 +173,9 @@ proc getMethod*(
   ## else it returns an empty `Option`.
   assert(v.kind == Object, "Cannot search object for methods if it isn't an object.")
 
+  if not v.contains("@bali_object_type"):
+    return
+
   for typ in runtime.types:
     if typ.proto.int != &getInt(&v.tagged("bali_object_type")):
       continue
