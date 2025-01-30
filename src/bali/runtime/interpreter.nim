@@ -400,29 +400,48 @@ proc generateIR*(
     runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
     runtime.ir.resetArgs()
   of ReassignVal:
-    let index = runtime.index(stmt.reIdentifier, defaultParams(fn))
-    if runtime.verifyNotOccupied(stmt.reIdentifier, fn):
-      runtime.semanticError(immutableReassignmentAttempt(stmt))
-      return
+    if not stmt.reIdentifier.contains('.'):
+      let index = runtime.index(stmt.reIdentifier, defaultParams(fn))
 
-    info "emitter: reassign value at index " & $index & " with ident \"" &
-      stmt.reIdentifier & "\" to " & stmt.reAtom.crush()
+      info "emitter: reassign value at index " & $index & " with ident \"" &
+        stmt.reIdentifier & "\" to " & stmt.reAtom.crush()
+      
+      # TODO: make this use loadIRAtom
+      case stmt.reAtom.kind
+      of Integer:
+        runtime.ir.loadInt(index, stmt.reAtom)
+      of UnsignedInt:
+        runtime.ir.loadUint(index, &stmt.reAtom.getUint())
+      of String:
+        discard runtime.ir.loadStr(index, stmt.reAtom)
+      of Float:
+        discard runtime.ir.addOp(
+          IROperation(opcode: LoadFloat, arguments: @[uinteger index, stmt.reAtom])
+        ) # FIXME: mirage: loadFloat isn't implemented
+      else:
+        unreachable
 
-    case stmt.reAtom.kind
-    of Integer:
-      runtime.ir.loadInt(index, stmt.reAtom)
-    of UnsignedInt:
-      runtime.ir.loadUint(index, &stmt.reAtom.getUint())
-    of String:
-      discard runtime.ir.loadStr(index, stmt.reAtom)
-    of Float:
-      discard runtime.ir.addOp(
-        IROperation(opcode: LoadFloat, arguments: @[uinteger index, stmt.reAtom])
-      ) # FIXME: mirage: loadFloat isn't implemented
+      runtime.ir.markGlobal(index)
     else:
-      unreachable
+      # field overwrite!
+      let accesses = createFieldAccess(stmt.reIdentifier.split('.'))
+      let atomIndex = runtime.loadIRAtom(stmt.reAtom)
 
-    runtime.ir.markGlobal(index)
+      inc runtime.addrIdx
+      
+      # prepare for internal call
+      runtime.ir.passArgument(
+        runtime.loadIRAtom(uinteger(runtime.index(accesses.identifier, defaultParams(fn))))
+      ) # 1: Atom index that needs its field to be overwritten
+
+      inc runtime.addrIdx
+
+      runtime.ir.passArgument(atomIndex) # 2: The atom to be put in the field
+
+      runtime.loadFieldAccessStrings(accesses) # 3: The field access strings
+
+      runtime.ir.call("BALI_WRITE_FIELD")
+      runtime.ir.resetArgs()
   of ThrowError:
     info "emitter: add error-throw logic"
 
@@ -1099,6 +1118,57 @@ proc generateInternalIR*(runtime: Runtime) =
         # Jump 2 instructions ahead
         runtime.vm.currIndex += 1
     ,
+  )
+
+  runtime.vm.registerBuiltin(
+    "BALI_WRITE_FIELD",
+    proc(_: Operation) =
+      let
+        destinationAtomIndex = uint(&getInt(&runtime.argument(1)))
+        writeAtom = &runtime.argument(2)
+
+      var accesses = createFieldAccess(
+          (
+            proc(): seq[string] =
+              if runtime.argumentCount() < 3:
+                return
+
+              var accesses: seq[string]
+              for i in 3 .. runtime.argumentCount():
+                accesses.add(&(&runtime.argument(i)).getStr())
+
+              accesses
+          )()
+        )
+
+      var destAtom = runtime.vm.stack[destinationAtomIndex]
+      
+      if destAtom.kind != Object:
+        ret writeAtom
+
+      template checkDestAtom =
+        if destAtom.isUndefined:
+          runtime.typeError("Value is undefined")
+
+        if destAtom.isNull:
+          runtime.typeError("Value is null")
+
+      checkDestAtom
+
+      while true:
+        let next = accesses.next
+        if next == nil:
+          break
+        else:
+          accesses = accesses.next
+        
+        destAtom = destAtom[accesses.identifier]
+        checkDestAtom
+      
+      destAtom[accesses.identifier] = writeAtom
+
+      runtime.vm.stack[destinationAtomIndex] = move(destAtom)
+      ret writeAtom
   )
 
   if runtime.opts.insertDebugHooks:
