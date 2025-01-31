@@ -39,7 +39,12 @@ proc `[]`*(ast: AST, name: string): Option[Function] =
 
 proc append*(ast: AST, name: string, stmt: Statement) =
   for scope in ast.scopes:
-    var fn = cast[Function](scope)
+    let fn = 
+      try:
+        Function(scope)
+      except ObjectConversionDefect:
+        continue
+
     if fn.name == name:
       fn.stmts &= stmt
       return

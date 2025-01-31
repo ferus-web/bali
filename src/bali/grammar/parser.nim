@@ -13,6 +13,11 @@ type
   ParserOpts* = object
     test262*: bool = false ## Whether to scan for Test262 directives
 
+  TableParsingState* {.pure.} = enum
+    Key
+    Colon
+    Value
+
   Parser* = ref object
     tokenizer*: Tokenizer
     ast: AST
@@ -279,6 +284,64 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
     parser.error Other, "missing ) in parenthetical"
 
   some(args)
+
+#[ proc parseTable*(parser: Parser): Option[MAtom] =
+  # We are assuming that the starting curly bracket (`{`) has been consumed.
+  debug "parser: parsing table"
+  if parser.tokenizer.eof:
+    parser.error Other, "expected expression, got EOF"
+
+  var
+    table: Table[MAtom, MAtom]
+    currentKey: MAtom
+
+    metLCurly = false
+    state = TableParsingState.Key
+
+  while not parser.tokenizer.eof and not metLCurly:
+    let token = parser.tokenizer.next()
+
+    if token.kind == TokenKind.LCurly:
+      metLCurly = true
+      break
+    
+    case state
+    of TableParsingState.Key:
+      let key =
+        case token.kind
+        of TokenKind.Identifier:
+          str(token.ident)
+        of TokenKind.String:
+          str(token.str)
+        of TokenKind.Number:
+          &parser.parseAtom(token)
+        else:
+          parser.error UnexpectedToken, $token.kind & " (expected identifier or string)"
+
+      table[key] = null()
+      currentKey = key
+      state = TableParsingState.Colon
+    of TableParsingState.Colon:
+      case token.kind
+      of TokenKind.Colon:
+        state = TableParsingState.Value
+      of TokenKind.Whitespace: discard
+      else:
+        parser.error Other, "expected Colon after property id, got " & $token.kind & " instead"
+    of TableParsingState.Value:
+      case token.kind
+      of TokenKind.Identifier:
+        parser.error Other, "identifiers are not supported in maps yet"
+      else:
+        let atom = parser.parseAtom(token)
+        if !atom:
+          parser.error UnexpectedToken, "expected value, got " & $token.kind
+        
+        table[currentKey] = &atom
+        state = TableParsingState.Key
+
+  if not metLCurly:
+    parser.error Other, "property list must be ended by }" ]#
 
 proc parseArray*(parser: Parser): Option[MAtom] =
   # We are assuming that the starting bracket (`[`) has been consumed.

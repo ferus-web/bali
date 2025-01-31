@@ -27,10 +27,7 @@ proc generateDescribeFnCode*(runtime: Runtime) =
         styleBright, "Kind", resetStyle,
         ": ", fgGreen, $val[].kind, resetStyle
       )
-        
-      if runtime.isA(val[], JSString):
-        echo "Boxed string (JSString)"
-      
+
       stdout.styledWrite(styleBright, "Description", resetStyle, ": ", fgGreen)
       case val[].kind
       of String:
@@ -41,6 +38,10 @@ proc generateDescribeFnCode*(runtime: Runtime) =
         stdout.write "Unboxed number (atom UInt32)\n"
       of Float:
         stdout.write "Unboxed number (atom Float64)\n"
-      else: stdout.write "N/A\n"
+      else:
+        if runtime.isA(val[], JSString):
+          echo "Boxed string (JSString)"
+        else:
+          stdout.write "N/A\n"
       stdout.styledWrite(resetStyle)
   )
