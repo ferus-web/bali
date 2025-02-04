@@ -28,11 +28,8 @@ type
     foundShebang: bool = false
 
 template error(parser: Parser, errorKind: ParseErrorKind, msg: string) =
-  parser.errors &= ParseError(
-    kind: errorKind,
-    location: parser.tokenizer.location,
-    message: msg
-  )
+  parser.errors &=
+    ParseError(kind: errorKind, location: parser.tokenizer.location, message: msg)
 
   return
 
@@ -235,12 +232,10 @@ proc parseConstructor*(parser: Parser): Option[Statement] =
 
   if (&next).kind != TokenKind.Identifier:
     parser.error UnexpectedToken, "expected Identifier, got " & $(&next).kind
-  
+
   if parser.tokenizer.eof or parser.tokenizer.next().kind != TokenKind.LParen:
     debug "parser: creating constructor that takes no arguments"
-    return some(
-      constructObject((&next).ident, @[])
-    )
+    return some(constructObject((&next).ident, @[]))
 
   return some(constructObject((&next).ident, &parser.parseArguments()))
 
@@ -399,8 +394,10 @@ proc parseArray*(parser: Parser): Option[MAtom] =
     # respectively.
     var copiedTok = deepCopy(parser.tokenizer)
     if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
-      if (&tok).kind notin { TokenKind.Comma, TokenKind.RBracket }:
-        parser.error UnexpectedToken, "expected comma (,) or right bracket (]) after array element, got " & $(&tok).kind
+      if (&tok).kind notin {TokenKind.Comma, TokenKind.RBracket}:
+        parser.error UnexpectedToken,
+          "expected comma (,) or right bracket (]) after array element, got " &
+            $(&tok).kind
       else:
         parser.tokenizer = move(copiedTok)
     else:
@@ -1071,6 +1068,78 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
 
   expr
 
+proc parseForLoop*(parser: Parser): Option[Statement] =
+  ## Parse a for-loop expression.
+  ## **Basic Rules**
+  ##
+  ## for (< initializer >; < condition >; < incrementer >) { < body > }
+  ##
+  ## - We're assuming that the `for` token has already been hit.
+  template expectSemicolon(section: string) =
+    let sectionEndingSemicolon = parser.tokenizer.nextExceptWhitespace()
+    if !sectionEndingSemicolon:
+      parser.error Other, "expected semicolon after " & section & ", got EOF."
+
+    if (&sectionEndingSemicolon).kind != TokenKind.Semicolon:
+      parser.error UnexpectedToken,
+        "expected semicolon after " & section & ", got " &
+          $(&sectionEndingSemicolon).kind
+
+  # Verify that we're heading towards a parenthesis
+  let parenTok = parser.tokenizer.nextExceptWhitespace()
+  if !parenTok:
+    parser.error Other, "expected left facing parenthesis, got EOF instead."
+
+  if (&parenTok).kind != TokenKind.LParen:
+    parser.error UnexpectedToken,
+      "expected left facing parenthesis, got " & $(&parenTok).kind
+
+  # Now, parse the next statement you can see.
+  # This is the initializer.
+  # Revert back if there's nothing.
+  var copiedTok = parser.tokenizer.deepCopy()
+  let initializer = parser.parseStatement()
+  if !initializer:
+    parser.tokenizer = move(copiedTok)
+
+  # Now, expect a semicolon.
+  expectSemicolon "initializer"
+
+  # Now, parse the next statement you can see.
+  # This is the condition.
+  # Revert back if there's nothing.
+  copiedTok = parser.tokenizer.deepCopy()
+  let condition = parser.parseExpression()
+  if !condition:
+    parser.tokenizer = move(copiedTok)
+
+  # Now, expect a semicolon
+  expectSemicolon "conditional"
+
+  # Now, parse the next statement you can see.
+  # This is the incrementor.
+  # Revert back if there's nothing.
+  copiedTok = parser.tokenizer.deepCopy()
+  let incrementor = parser.parseStatement()
+  if !incrementor:
+    parser.tokenizer = move(copiedTok)
+
+  # Now, parse the n- just kidding
+  # Expect left parenthesis
+  let endingParen = parser.tokenizer.nextExceptWhitespace()
+  if !endingParen:
+    parser.error Other,
+      "expected right facing parenthesis to close for-expression, got EOF."
+
+  if (&endingParen).kind != TokenKind.RParen:
+    parser.error UnexpectedToken,
+      "expected right facing parenthesis to close for-expression, got " &
+        $(&endingParen).kind
+
+  let body = Scope(stmts: parser.parseScope())
+
+  return some(forLoop(initializer, condition, incrementor, body))
+
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
@@ -1271,6 +1340,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
   of TokenKind.Typeof:
     return
       some(call("BALI_TYPEOF".callFunction, &parser.parseTypeofCall(), mangle = false))
+  of TokenKind.For:
+    return parser.parseForLoop()
   else:
     parser.error UnexpectedToken, $token.kind
 
@@ -1286,7 +1357,7 @@ proc parse*(parser: Parser): AST {.inline.} =
       statement.col = parser.tokenizer.location.col
 
       case statement.kind
-      of WhileStmt, IfStmt:
+      of WhileStmt, IfStmt, ForLoop:
         parser.ast.scopes.delete(parser.ast.currentScope + 1)
       else:
         discard

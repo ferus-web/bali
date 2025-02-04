@@ -182,5 +182,5 @@ const Keywords* = {
   "while": TokenKind.While,
   "break": TokenKind.Break,
   "typeof": TokenKind.Typeof,
-  "for": TokenKind.For
+  "for": TokenKind.For,
 }.toTable
