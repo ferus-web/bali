@@ -393,6 +393,19 @@ proc parseArray*(parser: Parser): Option[MAtom] =
     debug "parser: appending atom to array: " & (&atom).crush()
     arr &= &atom
 
+    # Just a check to see if the next token is valid.
+    # From valid, according to the grammar rules, it can only be two tokens:
+    # `,` and `]` to add another element and to close off the parsing algorithm
+    # respectively.
+    var copiedTok = deepCopy(parser.tokenizer)
+    if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
+      if (&tok).kind notin { TokenKind.Comma, TokenKind.RBracket }:
+        parser.error UnexpectedToken, "expected comma (,) or right bracket (]) after array element, got " & $(&tok).kind
+      else:
+        parser.tokenizer = move(copiedTok)
+    else:
+      parser.error Other, "missing ] after element list"
+
     prev = token.kind
 
   if not metRBracket:
@@ -1259,7 +1272,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     return
       some(call("BALI_TYPEOF".callFunction, &parser.parseTypeofCall(), mangle = false))
   else:
-    parser.error UnexpectedToken, "unexpected token: " & $token.kind
+    parser.error UnexpectedToken, $token.kind
 
 proc parse*(parser: Parser): AST {.inline.} =
   parser.ast = newAST()
