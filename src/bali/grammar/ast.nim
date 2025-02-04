@@ -63,7 +63,7 @@ func function*(
 func scope*(stmts: seq[Statement]): Scope {.inline.} =
   Scope(stmts: stmts)
 
-proc newAST*(): AST {.inline.} =
+func newAST*(): AST {.inline.} =
   AST(
     scopes:
       @[

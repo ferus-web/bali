@@ -947,7 +947,7 @@ proc generateIRForScope*(
         let idx = runtime.addrIdx
         runtime.markGlobal(typ.name)
         runtime.ir.loadObject(idx)
-        runtime.ir.createField(idx, 0, "bali_object_type")
+        runtime.ir.createField(idx, 0, "@bali_object_type")
         runtime.ir.markGlobal(idx)
         runtime.types[i].singletonId = idx
 
