@@ -398,7 +398,7 @@ You can also just type in JavaScript expressions to evaluate them."""
           for error in ast.errors:
             styledWriteLine(
               stdout, fgRed, "Parse Error", resetStyle, ": ", styleBright,
-              error.message, resetStyle,
+              $error, resetStyle,
             )
         else:
           noise.historyAdd(line)

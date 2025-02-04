@@ -27,12 +27,16 @@ type
     precededByMultilineComment: bool = false
     foundShebang: bool = false
 
-template error(parser: Parser, kind: ParseErrorKind, msg: string) =
-  parser.errors &= ParseError(location: parser.tokenizer.location, message: msg)
+template error(parser: Parser, errorKind: ParseErrorKind, msg: string) =
+  parser.errors &= ParseError(
+    kind: errorKind,
+    location: parser.tokenizer.location,
+    message: msg
+  )
 
   return
 
-proc `$`*(error: ParseError): string =
+func `$`*(error: ParseError): string =
   var buff: string
 
   case error.kind
@@ -1240,7 +1244,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     parser.error Other, "shebang cannot be preceded by whitespace"
   of TokenKind.Break:
     return some breakStmt()
-  of TokenKind.String, TokenKind.Number, TokenKind.Null:
+  of TokenKind.String, TokenKind.Number, TokenKind.Null, TokenKind.LBracket:
     return some waste(&parser.parseAtom(token))
   of TokenKind.Comment:
     if token.multiline:
