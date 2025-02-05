@@ -28,7 +28,7 @@ requires "yaml >= 2.1.1"
 requires "kaleidoscope >= 0.1.1"
 requires "https://github.com/ferus-web/nim-gmp >= 0.1.0"
 requires "ferrite >= 0.1.1"
-requires "icu4nim >= 0.1.0"
+requires "icu4nim >= 76.1.0"
 requires "mimalloc >= 0.3.1"
 
 taskRequires "fmt", "nph#master"
