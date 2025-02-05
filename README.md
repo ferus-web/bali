@@ -1,10 +1,10 @@
 # Bali
-Bali is a work-in-progress JavaScript lexer, parser and interpreter written in Nim that aims to be as compliant as possible to the ECMAScript specifications. \
+Bali (ˈbɑːli) is a work-in-progress JavaScript lexer, parser and interpreter written in Nim that aims to be as compliant as possible to the ECMAScript specifications. \
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
 
 I repeat,
 
-Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
+**Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.**
 
 # Usage
 * Bali is integrated into the [Ferus web engine](https://github.com/ferus-web/ferus) and used as the JavaScript runtime's backend
