@@ -39,7 +39,7 @@ proc `[]`*(ast: AST, name: string): Option[Function] =
 
 proc append*(ast: AST, name: string, stmt: Statement) =
   for scope in ast.scopes:
-    let fn = 
+    let fn =
       try:
         Function(scope)
       except ObjectConversionDefect:

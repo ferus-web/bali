@@ -4,6 +4,9 @@ import std/[options, logging]
 import pkg/icu4nim
 import bali/internal/sugar
 
+when defined(baliStaticallyLinkLibICU):
+  {.passC: "-static".}
+
 var cachedSystemTimeZone: Option[string]
 
 proc getCurrentTimeZone*(): string =

@@ -28,6 +28,7 @@ type
     Waste
     AccessArrayIndex
     TernaryOp
+    ForLoop
 
   FieldAccess* = ref object
     prev*, next*: FieldAccess
@@ -154,6 +155,11 @@ type
       ternaryCond*: Statement
       trueTernary*, falseTernary*: Statement
       ternaryStoreIn*: Option[string]
+    of ForLoop:
+      forLoopInitializer*: Option[Statement]
+      forLoopCond*: Option[Statement]
+      forLoopIter*: Option[Statement]
+      forLoopBody*: Scope
 
 func hash*(access: FieldAccess): Hash {.inline.} =
   hash((access.identifier))
@@ -269,6 +275,17 @@ proc waste*(atom: MAtom): Statement =
 
 proc waste*(ident: string): Statement =
   Statement(kind: Waste, wstIdent: ident.some())
+
+proc forLoop*(
+    initializer, condition, incrementor: Option[Statement], body: Scope
+): Statement =
+  Statement(
+    kind: ForLoop,
+    forLoopInitializer: initializer,
+    forLoopCond: condition,
+    forLoopIter: incrementor,
+    forLoopBody: body,
+  )
 
 proc increment*(ident: string): Statement =
   Statement(kind: Increment, incIdent: ident)

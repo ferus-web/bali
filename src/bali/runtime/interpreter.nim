@@ -6,11 +6,10 @@ import mirage/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
 import
-  bali/runtime/
-    [
-      normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils,
-      bridge, describe
-    ]
+  bali/runtime/[
+    normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils,
+    bridge, describe,
+  ]
 import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/runtime/abstract/equating
 import bali/stdlib/prelude
@@ -405,7 +404,7 @@ proc generateIR*(
 
       info "emitter: reassign value at index " & $index & " with ident \"" &
         stmt.reIdentifier & "\" to " & stmt.reAtom.crush()
-      
+
       # TODO: make this use loadIRAtom
       case stmt.reAtom.kind
       of Integer:
@@ -428,10 +427,12 @@ proc generateIR*(
       let atomIndex = runtime.loadIRAtom(stmt.reAtom)
 
       inc runtime.addrIdx
-      
+
       # prepare for internal call
       runtime.ir.passArgument(
-        runtime.loadIRAtom(uinteger(runtime.index(accesses.identifier, defaultParams(fn))))
+        runtime.loadIRAtom(
+          uinteger(runtime.index(accesses.identifier, defaultParams(fn)))
+        )
       ) # 1: Atom index that needs its field to be overwritten
 
       inc runtime.addrIdx
@@ -552,6 +553,24 @@ proc generateIR*(
         else:
           runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
       runtime.ir.overrideArgs(equalJmp, @[uinteger(equalBranch)])
+    of BinaryOperation.GreaterThan, BinaryOperation.LesserThan:
+      discard runtime.ir.addOp(
+        IROperation(
+          opcode: GreaterThanInt, arguments: @[uinteger leftIdx, uinteger rightIdx]
+        ) # FIXME: mirage doesn't have a nicer IR function for this.
+      )
+
+      #[ let
+        trueJump = runtime.ir.placeholder(Jump) - 1
+        falseJump = runtime.ir.placeholder(Jump) - 1
+      
+      runtime.ir.overrideArgs(trueJump, @[uinteger runtime.ir.loadBool(leftIdx, true)])
+      let jmpAfterTrueBranch = runtime.ir.placeholder(Jump) - 1
+
+      let falseBranch = runtime.ir.loadBool(leftIdx, false) - 1
+      
+      runtime.ir.overrideArgs(jmpAfterTrueBranch, @[uinteger(falseBranch + 1)])
+      runtime.ir.overrideArgs(falseJump, @[uinteger(falseBranch + 1)]) ]#
     else:
       warn "emitter: unimplemented binary operation: " & $stmt.op
 
@@ -887,6 +906,56 @@ proc generateIR*(
     runtime.ir.jump(getCurrOpNum() + 2'u)
 
     runtime.ir.copyAtom(addrOfFalseExpr, finalAddr)
+  of ForLoop:
+    # Generate IR for initializer, if it exists.
+    if *stmt.forLoopInitializer:
+      runtime.generateIR(fn, &stmt.forLoopInitializer)
+
+    proc getCurrOpNum(): uint =
+      for module in runtime.ir.modules:
+        if module.name == runtime.ir.currModule:
+          return uint(module.operations.len + 1)
+
+      unreachable
+      0'u
+
+    let conditionalJump = getCurrOpNum() + 1'u
+
+    # Generate IR for conditional, if it exists.
+    # TODO: Else, just equate `0` to `0`
+
+    var inverted = false
+    if *stmt.forLoopCond:
+      let cond = &stmt.forLoopCond
+      inverted = cond.op in {BinaryOperation.LesserThan}
+      runtime.generateIR(fn, cond)
+    else:
+      unreachable
+
+    # Now, generate the jumps for either going into the loop body or outside it.
+    # If conditional is true, jump into the body
+    # else, jump outside
+    let jmpIntoBody = uinteger(getCurrOpNum() + 2'u)
+
+    let jump1 = runtime.ir.placeholder(Jump) - 1
+    let jump2 = runtime.ir.placeholder(Jump) - 1
+
+    runtime.generateIRForScope(stmt.forLoopBody, allocateConstants = false)
+
+    # Generate code for the incrementor/stepper
+    if *stmt.forLoopIter:
+      runtime.generateIR(fn, &stmt.forLoopIter)
+
+    let jmpOutsideBody = uinteger(getCurrOpNum() + 1'u)
+
+    if not inverted:
+      runtime.ir.overrideArgs(jump1, @[jmpIntoBody])
+      runtime.ir.overrideArgs(jump2, @[jmpOutsideBody])
+    else:
+      runtime.ir.overrideArgs(jump1, @[jmpOutsideBody])
+      runtime.ir.overrideArgs(jump2, @[jmpIntoBody])
+
+    runtime.ir.jump(conditionalJump)
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
@@ -1128,25 +1197,25 @@ proc generateInternalIR*(runtime: Runtime) =
         writeAtom = &runtime.argument(2)
 
       var accesses = createFieldAccess(
-          (
-            proc(): seq[string] =
-              if runtime.argumentCount() < 3:
-                return
+        (
+          proc(): seq[string] =
+            if runtime.argumentCount() < 3:
+              return
 
-              var accesses: seq[string]
-              for i in 3 .. runtime.argumentCount():
-                accesses.add(&(&runtime.argument(i)).getStr())
+            var accesses: seq[string]
+            for i in 3 .. runtime.argumentCount():
+              accesses.add(&(&runtime.argument(i)).getStr())
 
-              accesses
-          )()
-        )
+            accesses
+        )()
+      )
 
       var destAtom = runtime.vm.stack[destinationAtomIndex]
-      
+
       if destAtom.kind != Object:
         ret writeAtom
 
-      template checkDestAtom =
+      template checkDestAtom() =
         if destAtom.isUndefined:
           runtime.typeError("Value is undefined")
 
@@ -1161,14 +1230,15 @@ proc generateInternalIR*(runtime: Runtime) =
           break
         else:
           accesses = accesses.next
-        
+
         destAtom = destAtom[accesses.identifier]
         checkDestAtom
-      
+
       destAtom[accesses.identifier] = writeAtom
 
       runtime.vm.stack[destinationAtomIndex] = move(destAtom)
       ret writeAtom
+    ,
   )
 
   if runtime.opts.insertDebugHooks:
