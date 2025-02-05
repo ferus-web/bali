@@ -7,25 +7,35 @@ import bali/stdlib/prelude
 proc generateDescribeFnCode*(runtime: Runtime) =
   runtime.defineFn(
     "describe",
-    proc =
-      let argument = uint(&getInt(&runtime.argument(1, required = true, message = "describe() expects 1 argument (stack index), got {nargs}")))
+    proc() =
+      let argument = uint(
+        &getInt(
+          &runtime.argument(
+            1,
+            required = true,
+            message = "describe() expects 1 argument (stack index), got {nargs}",
+          )
+        )
+      )
       if not runtime.vm.stack.contains(argument):
-        stderr.styledWriteLine(fgRed, "No such value exists at index " & $argument, resetStyle)
+        stderr.styledWriteLine(
+          fgRed, "No such value exists at index " & $argument, resetStyle
+        )
         return
 
       var val = runtime.vm.stack[argument].addr
 
       stdout.styledWriteLine(
-        styleBright, "Location", resetStyle, 
-        ": ", fgGreen, "0x" & $toHex(
-          cast[uint](
-            val
-          )
-        ), resetStyle
+        styleBright,
+        "Location",
+        resetStyle,
+        ": ",
+        fgGreen,
+        "0x" & $toHex(cast[uint](val)),
+        resetStyle,
       )
       stdout.styledWriteLine(
-        styleBright, "Kind", resetStyle,
-        ": ", fgGreen, $val[].kind, resetStyle
+        styleBright, "Kind", resetStyle, ": ", fgGreen, $val[].kind, resetStyle
       )
 
       stdout.styledWrite(styleBright, "Description", resetStyle, ": ", fgGreen)
@@ -43,5 +53,5 @@ proc generateDescribeFnCode*(runtime: Runtime) =
           echo "Boxed string (JSString)"
         else:
           stdout.write "N/A\n"
-      stdout.styledWrite(resetStyle)
+      stdout.styledWrite(resetStyle),
   )

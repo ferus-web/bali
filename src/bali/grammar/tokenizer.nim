@@ -631,6 +631,9 @@ proc next*(tokenizer: Tokenizer): Token =
     tokenizer.consumeInvalid()
 
 proc nextExceptWhitespace*(tokenizer: Tokenizer): Option[Token] =
+  if tokenizer.eof:
+    return
+
   var tok = tokenizer.next()
 
   while not tokenizer.eof() and tok.kind == TokenKind.Whitespace:
