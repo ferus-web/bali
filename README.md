@@ -123,6 +123,6 @@ runtime.run()
 - Date prototype                       [X]
 - Ternary operations                   [X]
 - Functions as values                  [ ]
-- For-loops                            [ ]
+- For-loops                            [X]
 - Modules                              [ ]
 - Async                                [ ]

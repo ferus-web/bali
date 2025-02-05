@@ -553,6 +553,24 @@ proc generateIR*(
         else:
           runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
       runtime.ir.overrideArgs(equalJmp, @[uinteger(equalBranch)])
+    of BinaryOperation.GreaterThan, BinaryOperation.LesserThan:
+      discard runtime.ir.addOp(
+        IROperation(
+          opcode: GreaterThanInt, arguments: @[uinteger leftIdx, uinteger rightIdx]
+        ) # FIXME: mirage doesn't have a nicer IR function for this.
+      )
+
+      #[ let
+        trueJump = runtime.ir.placeholder(Jump) - 1
+        falseJump = runtime.ir.placeholder(Jump) - 1
+      
+      runtime.ir.overrideArgs(trueJump, @[uinteger runtime.ir.loadBool(leftIdx, true)])
+      let jmpAfterTrueBranch = runtime.ir.placeholder(Jump) - 1
+
+      let falseBranch = runtime.ir.loadBool(leftIdx, false) - 1
+      
+      runtime.ir.overrideArgs(jmpAfterTrueBranch, @[uinteger(falseBranch + 1)])
+      runtime.ir.overrideArgs(falseJump, @[uinteger(falseBranch + 1)]) ]#
     else:
       warn "emitter: unimplemented binary operation: " & $stmt.op
 
@@ -888,6 +906,56 @@ proc generateIR*(
     runtime.ir.jump(getCurrOpNum() + 2'u)
 
     runtime.ir.copyAtom(addrOfFalseExpr, finalAddr)
+  of ForLoop:
+    # Generate IR for initializer, if it exists.
+    if *stmt.forLoopInitializer:
+      runtime.generateIR(fn, &stmt.forLoopInitializer)
+
+    proc getCurrOpNum(): uint =
+      for module in runtime.ir.modules:
+        if module.name == runtime.ir.currModule:
+          return uint(module.operations.len + 1)
+
+      unreachable
+      0'u
+
+    let conditionalJump = getCurrOpNum() + 1'u
+
+    # Generate IR for conditional, if it exists.
+    # TODO: Else, just equate `0` to `0`
+
+    var inverted = false
+    if *stmt.forLoopCond:
+      let cond = &stmt.forLoopCond
+      inverted = cond.op in {BinaryOperation.LesserThan}
+      runtime.generateIR(fn, cond)
+    else:
+      unreachable
+
+    # Now, generate the jumps for either going into the loop body or outside it.
+    # If conditional is true, jump into the body
+    # else, jump outside
+    let jmpIntoBody = uinteger(getCurrOpNum() + 2'u)
+
+    let jump1 = runtime.ir.placeholder(Jump) - 1
+    let jump2 = runtime.ir.placeholder(Jump) - 1
+
+    runtime.generateIRForScope(stmt.forLoopBody, allocateConstants = false)
+
+    # Generate code for the incrementor/stepper
+    if *stmt.forLoopIter:
+      runtime.generateIR(fn, &stmt.forLoopIter)
+
+    let jmpOutsideBody = uinteger(getCurrOpNum() + 1'u)
+
+    if not inverted:
+      runtime.ir.overrideArgs(jump1, @[jmpIntoBody])
+      runtime.ir.overrideArgs(jump2, @[jmpOutsideBody])
+    else:
+      runtime.ir.overrideArgs(jump1, @[jmpOutsideBody])
+      runtime.ir.overrideArgs(jump2, @[jmpIntoBody])
+
+    runtime.ir.jump(conditionalJump)
   else:
     warn "emitter: unimplemented IR generation directive: " & $stmt.kind
 
