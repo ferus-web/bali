@@ -999,6 +999,7 @@ proc generateIRForScope*(
       for clause in runtime.clauses:
         if clause == "outer":
           continue # Nothing should be able to call into the outer scope.
+
         let fnIndex = runtime.index(clause, defaultParams(fn))
         discard runtime.ir.addOp(
           IROperation(
