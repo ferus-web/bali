@@ -193,7 +193,7 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
 
 proc consumeBackslash*(tokenizer: Tokenizer): Result[char, MalformedStringReason] =
   debug "tokenizer: consume backslash"
-  discard tokenizer.consume()
+  tokenizer.advance()
 
   if tokenizer.eof:
     debug "tokenizer: `\\` is abruptly ended by the end of the stream, returning Invalid"
