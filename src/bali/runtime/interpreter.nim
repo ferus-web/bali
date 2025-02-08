@@ -182,11 +182,6 @@ proc verifyNotOccupied*(runtime: Runtime, ident: string, fn: Function): bool =
 
   false
 
-proc semanticError*(runtime: Runtime, error: SemanticError) =
-  info "emitter: caught semantic error (" & $error.kind & ')'
-
-  runtime.semanticErrors &= error
-
 proc loadFieldAccessStrings*(runtime: Runtime, access: FieldAccess) =
   var curr = access.next
   assert(

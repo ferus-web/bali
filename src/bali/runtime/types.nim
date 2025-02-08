@@ -33,19 +33,6 @@ type
     else:
       discard
 
-  SemanticErrorKind* = enum
-    UnknownIdentifier
-    ImmutableReassignment
-
-  SemanticError* = object
-    line*, col*: uint = 1
-    case kind*: SemanticErrorKind
-    of UnknownIdentifier:
-      unknown*: string
-    of ImmutableReassignment:
-      imIdent*: string
-      imNewValue*: MAtom
-
   ExperimentOpts* = object
 
   CodegenOpts* = object
@@ -104,7 +91,6 @@ type
 
     addrIdx*: uint
     values*: seq[Value]
-    semanticErrors*: seq[SemanticError]
     clauses*: seq[string]
     test262*: Test262Opts
 
@@ -125,9 +111,6 @@ proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
 
 {.pop.}
 
-proc unknownIdentifier*(identifier: string): SemanticError {.inline.} =
-  SemanticError(kind: UnknownIdentifier, unknown: identifier)
-
 proc getMethods*(
     runtime: Runtime, proto: Hash
 ): Table[string, NativePrototypeFunction] {.inline.} =
@@ -139,15 +122,6 @@ proc getMethods*(
       return typ.prototypeFunctions
 
   raise newException(KeyError, "No such type with proto hash: " & $proto & " exists!")
-
-proc immutableReassignmentAttempt*(stmt: Statement): SemanticError {.inline.} =
-  SemanticError(
-    kind: ImmutableReassignment,
-    imIdent: stmt.reIdentifier,
-    imNewValue: stmt.reAtom,
-    line: stmt.line,
-    col: stmt.col,
-  )
 
 proc defaultParams*(fn: Function): IndexParams {.inline.} =
   IndexParams(fn: some fn)
