@@ -1,7 +1,6 @@
 ## A basic operation object used by the Pulsar interpreter.
 ##
 
-
 import std/[options, tables]
 import ../shared
 import ../../[atom, utils]

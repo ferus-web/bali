@@ -2,10 +2,8 @@
 ## This works very similarly to Stylus' tokenizer.
 ##
 
-
 import std/[options, strutils, tables, math]
 import ./shared
-import pretty
 
 type
   TokenizerDefect* = object of Defect
@@ -101,7 +99,7 @@ proc consumeQuotedString*(tokenizer: Tokenizer, singleQuote: bool): Token =
       tokenizer.forwards(1)
 
     qstr.str &= c
-  
+
   qstr
 
 proc charToDecimalDigit*(c: char): Option[uint32] {.inline.} =

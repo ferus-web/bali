@@ -1,6 +1,6 @@
 import std/[logging, options, strutils]
-import mirage/atom
-import mirage/runtime/pulsar/interpreter
+import bali/runtime/vm/atom
+import bali/runtime/vm/runtime/pulsar/interpreter
 import bali/runtime/[atom_helpers, types]
 import bali/stdlib/errors
 

@@ -3,7 +3,6 @@
 ## It uses its own MIR format that is encoded via Flatty and compressed via Zippy to save on space.
 ##
 
-
 import std/[os, options, hashes]
 import zippy, flatty/binny
 import ./shared
@@ -11,7 +10,7 @@ import ./shared
 const IrMagic* = 0xF33DC0DE'u64
 
 proc getMirageCacheDir*(): string {.inline.} =
-  getCacheDir() / "mirage"
+  getCacheDir() / "bali"
 
 proc cache*(name: string, ir: string, gen: IRGenerator) {.inline.} =
   when defined(mirageDontCacheBytecode):

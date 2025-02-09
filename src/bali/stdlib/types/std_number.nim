@@ -7,7 +7,7 @@ import bali/stdlib/builtins/parse_int
 import bali/stdlib/errors
 import bali/internal/[sugar]
 import pkg/gmp
-import mirage/atom
+import bali/runtime/vm/atom
 
 type JSNumber* = object
   `@ value`*: MAtom

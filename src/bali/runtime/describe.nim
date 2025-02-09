@@ -1,5 +1,5 @@
 import std/[strutils, tables, terminal]
-import mirage/atom
+import bali/runtime/vm/atom
 import bali/runtime/[bridge, arguments, types]
 import bali/internal/sugar
 import bali/stdlib/prelude

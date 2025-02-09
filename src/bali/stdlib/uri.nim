@@ -5,9 +5,8 @@ import bali/runtime/[normalize, arguments, types, atom_helpers, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/stdlib/types/std_string
-import mirage/ir/generator
-import mirage/atom
-import mirage/runtime/[prelude]
+import bali/runtime/vm/ir/generator
+import bali/runtime/vm/atom
 import sanchar/parse/url
 
 var parser = newURLParser()

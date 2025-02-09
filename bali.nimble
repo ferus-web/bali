@@ -12,8 +12,7 @@ binDir = "bin"
 
 # Dependencies
 
-requires "nim >= 2.0.2"
-requires "mirage#master"
+requires "nim >= 2.2.0"
 requires "librng >= 0.1.3"
 requires "pretty >= 0.1.0"
 requires "colored_logger >= 0.1.0"
@@ -30,6 +29,9 @@ requires "https://github.com/ferus-web/nim-gmp >= 0.1.0"
 requires "ferrite >= 0.1.2"
 requires "icu4nim >= 76.1.0"
 requires "mimalloc >= 0.3.1"
+requires "zippy >= 0.10.16"
+requires "nimsimd >= 1.3.2"
+requires "flatty >= 0.3.4"
 
 taskRequires "fmt", "nph#master"
 task fmt, "Format code":

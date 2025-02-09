@@ -1,5 +1,5 @@
 import std/[importutils, strutils]
-import mirage/runtime/prelude
+import bali/runtime/vm/runtime/prelude
 import bali/runtime/types
 import bali/internal/sugar
 

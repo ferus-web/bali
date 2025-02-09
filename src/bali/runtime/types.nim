@@ -1,8 +1,8 @@
 ## Runtime types
 
 import std/[options, hashes, logging, tables]
-import mirage/ir/generator
-import mirage/runtime/prelude
+import bali/runtime/vm/ir/generator
+import bali/runtime/vm/runtime/prelude
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/[atom_obj_variant, atom_helpers]

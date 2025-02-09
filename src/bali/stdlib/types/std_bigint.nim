@@ -5,7 +5,7 @@ import bali/runtime/[arguments, atom_helpers, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/internal/[sugar, trim_string]
-import mirage/atom
+import bali/runtime/vm/atom
 import pkg/gmp
 
 type JSBigInt* = object

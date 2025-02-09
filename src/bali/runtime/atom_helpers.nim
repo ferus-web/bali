@@ -1,7 +1,7 @@
 ## Atom functions
 
 import std/[options, tables]
-import mirage/atom
+import bali/runtime/vm/atom
 
 {.push warning[UnreachableCode]: off, inline.}
 

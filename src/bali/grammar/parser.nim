@@ -4,7 +4,7 @@ import std/[options, logging, strutils, tables]
 import bali/grammar/[token, tokenizer, ast, errors, statement]
 import bali/internal/sugar
 import bali/runtime/atom_helpers
-import pkg/mirage/atom
+import pkg/bali/runtime/vm/atom
 import pkg/[results, pretty, yaml]
 
 {.push warning[UnreachableCode]: off.}

@@ -5,7 +5,7 @@
 import std/[math, strformat, times, logging, options]
 import bali/internal/sugar
 import bali/stdlib/errors
-import mirage/atom
+import bali/runtime/vm/atom
 import bali/runtime/[normalize, atom_helpers, arguments, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/internal/date/[utils, constants, parser]

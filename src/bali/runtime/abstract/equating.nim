@@ -1,7 +1,7 @@
 ## Equation functions
 ## Loose (==) and Strict (===)
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
-import pkg/[mirage/atom, gmp/gmp]
+import pkg/[bali/runtime/vm/atom, gmp/gmp]
 import pkg/ferrite/utf16view
 import bali/runtime/[atom_helpers, types, bridge]
 import bali/runtime/abstract/[coercion]

@@ -2,10 +2,8 @@
 ## to the calling Nim code itself.
 ##
 
-
 import std/[strutils, tables, hashes, options]
 import pkg/gmp
-import ./runtime/[shared]
 import ./utils
 
 type

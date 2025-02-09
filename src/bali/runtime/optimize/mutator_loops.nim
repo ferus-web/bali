@@ -12,7 +12,7 @@
 ##   var i = 9999
 
 import std/[logging]
-import mirage/atom
+import bali/runtime/vm/atom
 import bali/grammar/prelude
 import bali/runtime/[statement_utils, types]
 

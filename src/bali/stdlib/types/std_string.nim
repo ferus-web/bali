@@ -7,7 +7,7 @@ import bali/runtime/[arguments, bridge, atom_helpers, types]
 import bali/runtime/abstract/[coercible, to_number, to_string]
 import bali/stdlib/errors
 import bali/internal/[trim_string, sugar]
-import mirage/atom
+import bali/runtime/vm/atom
 import pkg/[kaleidoscope/search, ferrite/utf16view]
 
 const

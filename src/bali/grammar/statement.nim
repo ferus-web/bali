@@ -1,5 +1,5 @@
 import std/[hashes, options]
-import mirage/atom
+import bali/runtime/vm/atom
 import bali/runtime/normalize
 import bali/internal/sugar
 

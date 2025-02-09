@@ -1,4 +1,4 @@
-import mirage/atom
+import bali/runtime/vm/atom
 import ./[interpreter, atom_helpers, arguments, bridge]
 import ./abstract/coercion
 

@@ -2,12 +2,10 @@
 ## into a more modular and efficient form. You shouldn't import this directly, import `mirage/interpreter/prelude` instead.
 ##
 
-
 import std/[math, tables, options]
 import ../../[atom, utils]
 import ../[shared, tokenizer, exceptions]
 import ./[operation, bytecodeopsetconv]
-import pretty
 
 when not defined(mirageNoSimd):
   import nimsimd/sse2
@@ -218,7 +216,8 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
   of Jump:
     op.arguments &=
       op.consume(Integer, "JUMP expects exactly one integer as an argument")
-  of AddInt, AddStr, SubInt, MultInt, DivInt, PowerInt, MultFloat, DivFloat, PowerFloat, AddFloat, SubFloat:
+  of AddInt, AddStr, SubInt, MultInt, DivInt, PowerInt, MultFloat, DivFloat, PowerFloat,
+      AddFloat, SubFloat:
     for x in 1 .. 2:
       op.arguments &=
         op.consume(
@@ -367,14 +366,16 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
         currTrace.exception.operation
       else:
         currTrace.exception.operation - 1
-    
+
     if not *op:
       msg &= "\n\tClause \"" & currTrace.exception.clause & "\", " & $(line)
 
       if *currTrace.next:
         currTrace = &currTrace.next
       else:
-        msg &= "\n\t\t<uncomputable operation>\n\n " & $typeof(currTrace.exception) & ": " & currTrace.exception.message & '\n'
+        msg &=
+          "\n\t\t<uncomputable operation>\n\n " & $typeof(currTrace.exception) & ": " &
+          currTrace.exception.message & '\n'
         break
     else:
       var operation = &op
@@ -458,17 +459,15 @@ proc swap*(interpreter: PulsarInterpreter, a, b: int) {.inline.} =
 
 proc call*(interpreter: PulsarInterpreter, name: string, op: Operation) =
   if interpreter.hasBuiltin(name):
-    assert off
     interpreter.callBuiltin(name, op)
     inc interpreter.currIndex
   else:
-    let
-      (index, clause) = (
-        proc(): tuple[index: int, clause: Option[Clause]] {.gcsafe.} =
-          for i, cls in interpreter.clauses:
-            if cls.name == name:
-              return (index: i, clause: some cls)
-      )()
+    let (index, clause) = (
+      proc(): tuple[index: int, clause: Option[Clause]] {.gcsafe.} =
+        for i, cls in interpreter.clauses:
+          if cls.name == name:
+            return (index: i, clause: some cls)
+    )()
 
     if *clause:
       var newClause = &clause # get the new clause
@@ -593,7 +592,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
         AtomOverflowError,
         "Attempt to insert element beyond atom's limit of " & $(&list.lCap) & " items",
       )
-    
+
     if list.lHomogenous:
       let inferredType =
         if list.sequence.len > 0:
@@ -604,7 +603,8 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       if *inferredType and (&source).kind != &inferredType:
         raise newException(
           SequenceError,
-          "Attempt to add different type to sequence's homogenous type: " & $(&source).kind,
+          "Attempt to add different type to sequence's homogenous type: " &
+            $(&source).kind,
         )
 
     list.sequence.add(&source)
@@ -1014,11 +1014,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getInt()
       pos = uint(&op.arguments[0].getInt())
 
-    interpreter.addAtom(
-      integer(
-        a * b
-      ), pos
-    )
+    interpreter.addAtom(integer(a * b), pos)
     inc interpreter.currIndex
   of DivInt:
     let
@@ -1031,9 +1027,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       inc interpreter.currIndex
       return
 
-    interpreter.addAtom(
-      floating(a / b), pos
-    )
+    interpreter.addAtom(floating(a / b), pos)
     inc interpreter.currIndex
   of PowerInt:
     let
@@ -1041,11 +1035,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getInt()
       pos = uint(&op.arguments[0].getInt())
 
-    interpreter.addAtom(
-      integer(
-        a ^ b
-      ), pos
-    )
+    interpreter.addAtom(integer(a ^ b), pos)
     inc interpreter.currIndex
   of SubFloat:
     let
@@ -1053,11 +1043,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat()
       pos = uint(&op.arguments[0].getInt())
 
-    interpreter.addAtom(
-      floating(
-        a - b
-      ), pos
-    )
+    interpreter.addAtom(floating(a - b), pos)
     inc interpreter.currIndex
   of AddFloat:
     let
@@ -1065,11 +1051,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat()
       pos = uint(&op.arguments[0].getInt())
 
-    interpreter.addAtom(
-      floating(
-        a + b
-      ), pos
-    )
+    interpreter.addAtom(floating(a + b), pos)
     inc interpreter.currIndex
   of DivFloat:
     let
@@ -1082,9 +1064,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       inc interpreter.currIndex
       return
 
-    interpreter.addAtom(
-      floating(a / b), pos
-    )
+    interpreter.addAtom(floating(a / b), pos)
     inc interpreter.currIndex
   of MultFloat:
     let
@@ -1097,9 +1077,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       inc interpreter.currIndex
       return
 
-    interpreter.addAtom(
-      floating(a * b), pos
-    )
+    interpreter.addAtom(floating(a * b), pos)
     inc interpreter.currIndex
   of PowerFloat:
     let
@@ -1107,9 +1085,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       b = int(&(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat())
       pos = uint(&op.arguments[0].getInt())
 
-    interpreter.addAtom(
-      floating(a ^ b), pos
-    )
+    interpreter.addAtom(floating(a ^ b), pos)
     inc interpreter.currIndex
   of ZeroRetval:
     interpreter.registers.retVal = some(null())
@@ -1122,8 +1098,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
     interpreter.addAtom(bytecodeCallable(clause), index)
     inc interpreter.currIndex
   of ExecuteBytecodeCallable:
-    let callable =
-      &getBytecodeClause(&interpreter.get(uint(&op.arguments[0].getInt())))
+    let callable = &getBytecodeClause(&interpreter.get(uint(&op.arguments[0].getInt())))
 
     interpreter.call(callable, op)
   else:

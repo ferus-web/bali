@@ -1,8 +1,8 @@
 ## Bali runtime (MIR emitter)
 
 import std/[options, hashes, logging, strutils, tables, importutils]
-import mirage/ir/generator
-import mirage/runtime/[tokenizer, prelude]
+import bali/runtime/vm/ir/generator
+import bali/runtime/vm/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
 import

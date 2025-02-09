@@ -1,5 +1,4 @@
 import std/tables
-import ../atom
 
 type
   TokenKind* = enum
@@ -293,7 +292,7 @@ const
     "SUBF": SubFloat,
     "ZRETV": ZeroRetval,
     "LOADBC": LoadBytecodeCallable,
-    "EXEBC": ExecuteBytecodeCallable
+    "EXEBC": ExecuteBytecodeCallable,
   }.toTable
 
   OpCodeToString* = static:

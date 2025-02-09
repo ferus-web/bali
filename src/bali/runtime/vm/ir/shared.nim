@@ -1,7 +1,6 @@
 ## Shared code for the entire IR generation suite.
 ##
 
-
 import std/hashes
 import ../runtime/shared, ../atom
 

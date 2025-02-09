@@ -2,7 +2,6 @@
 ## which can then be used by the MIR emitter to generate MIR.
 ##
 
-
 import ../runtime/shared, ../[atom, utils]
 import ./[emitter, shared, caching]
 
@@ -58,8 +57,7 @@ proc loadInt*(
   ## * `loadFloat proc<#loadFloat, IRGenerator, uint, MAtom>`
 
   if value.kind != Integer:
-    raise
-      newException(ValueError, "Attempt to load " & $value.kind & " as an integer.")
+    raise newException(ValueError, "Attempt to load " & $value.kind & " as an integer.")
 
   gen.addOp(IROperation(opCode: LoadInt, arguments: @[uinteger position, value]))
 

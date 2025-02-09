@@ -1,7 +1,6 @@
 ## Converts a stream of MIR tokens into an operation, if possible.
 ##
 
-
 import std/[options]
 import ../[shared, tokenizer], operation
 

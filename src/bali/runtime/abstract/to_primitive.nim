@@ -2,7 +2,7 @@ import std/[options, tables]
 import bali/runtime/[types, atom_helpers, bridge]
 import bali/internal/sugar
 import bali/stdlib/errors
-import mirage/runtime/prelude
+import bali/runtime/vm/runtime/prelude
 
 type PrimitiveHint* {.pure.} = enum
   Default

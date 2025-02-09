@@ -1,7 +1,7 @@
 ## TrimString( string, where )
 
 import std/[strutils]
-import mirage/runtime/prelude
+import bali/runtime/vm/runtime/prelude
 import bali/runtime/types
 import bali/runtime/abstract/[coercible, to_string]
 

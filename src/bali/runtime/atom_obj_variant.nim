@@ -2,7 +2,7 @@
 
 import std/options
 import bali/internal/sugar
-import mirage/atom
+import bali/runtime/vm/atom
 
 type AtomOrFunction*[F] = object
   fn: Option[F]

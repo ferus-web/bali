@@ -2,7 +2,7 @@
 ##
 
 import std/[math, options, logging, terminal, hashes]
-import mirage/runtime/prelude
+import bali/runtime/vm/runtime/prelude
 import bali/runtime/[bridge]
 import bali/runtime/abstract/[equating, to_string]
 import bali/runtime/[arguments, types]

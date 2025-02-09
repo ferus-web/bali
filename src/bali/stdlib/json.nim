@@ -5,8 +5,7 @@ import bali/internal/sugar
 import bali/runtime/[arguments, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
-import mirage/atom
-import mirage/runtime/[prelude]
+import bali/runtime/vm/atom
 import jsony
 
 proc convertJsonNodeToAtom*(node: JsonNode): MAtom =

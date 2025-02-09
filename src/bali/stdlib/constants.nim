@@ -1,9 +1,9 @@
 ## Constant values (like NaN, undefined, null, etc.)
 
 import std/[logging]
-import mirage/ir/generator
-import mirage/atom
-import mirage/runtime/[prelude]
+import bali/runtime/vm/ir/generator
+import bali/runtime/vm/atom
+import bali/runtime/vm/runtime/[prelude]
 import bali/runtime/types
 
 proc generateStdIr*(runtime: Runtime) =

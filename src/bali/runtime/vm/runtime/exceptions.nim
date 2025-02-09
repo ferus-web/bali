@@ -1,5 +1,5 @@
 import std/[options, strutils]
-import mirage/atom
+import bali/runtime/vm/atom
 
 type
   ExceptionTrace* = ref object

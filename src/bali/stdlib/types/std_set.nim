@@ -3,7 +3,7 @@
 import std/[options]
 import bali/runtime/[arguments, atom_helpers, types, bridge]
 import bali/runtime/abstract/[coercion, equating]
-import mirage/atom
+import bali/runtime/vm/atom
 
 type JSSet* = object
   `@ internal`*: MAtom ## Sequence MAtom

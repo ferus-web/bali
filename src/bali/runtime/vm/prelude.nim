@@ -2,6 +2,6 @@
 
 import ./mirage/runtime/pulsar/[interpreter, operation]
 import ./mirage/version
-import ./mirage/atom
+import ./bali/runtime/vm/atom
 
 export atom, interpreter, operation, version
