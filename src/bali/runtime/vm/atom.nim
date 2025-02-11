@@ -4,10 +4,11 @@
 
 import std/[strutils, tables, hashes, options]
 import pkg/gmp
+import ./heap/mark_and_sweep
 import ./utils
 
 type
-  MAtomKind* = enum
+  MAtomKind* {.size: sizeof(uint8).} = enum
     Null = 0
     String = 1
     Integer = 2
@@ -28,7 +29,6 @@ type
     case kind*: MAtomKind
     of String:
       str*: string
-      sCap*: Option[int]
     of Ident:
       ident*: string
     of Integer:
@@ -56,7 +56,7 @@ type
 
   MAtomSeq* = distinct seq[MAtom]
 
-proc `=destroy`*(dest: MAtom) =
+#[ proc `=destroy`*(dest: MAtom) =
   case dest.kind
   of String:
     `=destroy`(dest.str)
@@ -70,6 +70,7 @@ proc `=destroy`*(dest: MAtom) =
       `=destroy`(atom)
   else:
     discard
+]#
 
 #[
 proc `=copy`*(dest: var MAtom, src: MAtom) =
@@ -176,8 +177,6 @@ proc setCap*(atom: var MAtom, cap: int) {.inline.} =
   case atom.kind
   of Sequence:
     atom.lCap = some(cap)
-  of String:
-    atom.sCap = some(cap)
   else:
     raise newException(
       ValueError, "Attempt to set cap on a non-container atom: " & $atom.kind
@@ -188,9 +187,6 @@ proc getCap*(atom: var MAtom): int {.inline.} =
   of Sequence:
     if *atom.lCap:
       return &atom.lCap
-  of String:
-    if *atom.sCap:
-      return &atom.sCap
   else:
     raise newException(
       ValueError, "Attempt to get the cap of a non-container atom: " & $atom.kind
@@ -243,8 +239,22 @@ proc getSequence*(atom: MAtom): Option[seq[MAtom]] {.inline.} =
   if atom.kind == Sequence:
     return some(atom.sequence)
 
-proc str*(s: string): MAtom {.inline, gcsafe, noSideEffect.} =
-  MAtom(kind: String, str: s)
+proc str*(s: string, inRuntime: bool = false): MAtom {.inline.} =
+  if inRuntime:
+    var mem = cast[ptr MAtom](
+      baliMSAlloc(
+        uint(sizeof(MAtom))
+      )
+    )
+    zeroMem(mem, sizeof(MAtom))
+
+    {.cast(uncheckedAssign).}: 
+      mem[].kind = String # segfaults for some reason...
+      mem[].str = s
+
+    mem[]
+  else:
+    return MAtom(kind: String, str: s)
 
 proc integer*(i: int): MAtom {.inline, gcsafe, noSideEffect.} =
   MAtom(kind: Integer, integer: i)

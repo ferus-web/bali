@@ -24,19 +24,20 @@ type JSURL = object
   hash*: string
 
 proc transposeUrlToObject(runtime: Runtime, parsed: URL, source: string): MAtom =
+  # TODO: port to JSString
   var url = runtime.createObjFromType(JSURL)
   url["hostname"] = str(parsed.hostname())
-  url["pathname"] = parsed.path().str()
+  url["pathname"] = parsed.path().str(inRuntime = true)
   url["port"] = parsed.port().int.integer()
   url["protocol"] = str(parsed.scheme() & ':')
-  url["search"] = parsed.query().str()
-  url["hostname"] = parsed.hostname().str()
-  url["source"] = source.str()
+  url["search"] = parsed.query().str(inRuntime = true)
+  url["hostname"] = parsed.hostname().str(inRuntime = true)
+  url["source"] = source.str(inRuntime = true)
   url["origin"] =
-    str(parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port())
+    str(parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port(), inRuntime = true)
   url["hash"] =
-    (if parsed.fragment().len > 0: str '#' & parsed.fragment()
-    else: str newString(0))
+    (if parsed.fragment().len > 0: str('#' & parsed.fragment(), inRuntime = true)
+    else: str(newString(0), inRuntime = true))
 
   url
 

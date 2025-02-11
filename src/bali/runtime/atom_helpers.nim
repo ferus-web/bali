@@ -43,7 +43,7 @@ proc tagged*(atom: MAtom, tag: string): Option[MAtom] =
   if atom.contains('@' & tag):
     return some atom['@' & tag]
 
-func wrap*(val: SomeSignedInt | SomeUnsignedInt | string | float | bool): MAtom =
+proc wrap*(val: SomeSignedInt | SomeUnsignedInt | string | float | bool): MAtom =
   when val is SomeSignedInt:
     return integer(val.int)
 
@@ -54,12 +54,12 @@ func wrap*(val: SomeSignedInt | SomeUnsignedInt | string | float | bool): MAtom 
     return uinteger(val.uint)
 
   when val is string:
-    return str(val)
+    return str(val, inRuntime = true)
 
   when val is float:
     return floating(val)
 
-func wrap*[T: not MAtom](val: openArray[T]): MAtom =
+proc wrap*[T: not MAtom](val: openArray[T]): MAtom =
   var vec = sequence(newSeq[MAtom](0))
 
   for v in val:

@@ -36,3 +36,5 @@ requires "flatty >= 0.3.4"
 taskRequires "fmt", "nph#master"
 task fmt, "Format code":
   exec "nph src/ tests/"
+
+requires "ptr_math >= 0.3.0"
