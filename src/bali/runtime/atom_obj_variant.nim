@@ -6,7 +6,7 @@ import bali/runtime/vm/atom
 
 type AtomOrFunction*[F] = object
   fn: Option[F]
-  atom: Option[MAtom]
+  atom: Option[JSValue]
 
 {.push inline.}
 func `fn=`*[F](af: var AtomOrFunction[F], fn: F) =
@@ -15,8 +15,8 @@ func `fn=`*[F](af: var AtomOrFunction[F], fn: F) =
   if *af.atom:
     af.atom = none(MAtom)
 
-func `atom=`*[F](af: var AtomOrFunction[F], atom: sink MAtom) =
-  af.atom = some(move(atom))
+func `atom=`*[F](af: var AtomOrFunction[F], atom: JSValue) =
+  af.atom = some(atom)
 
   if *af.fn:
     af.fn = none(typeof(F))
@@ -41,13 +41,13 @@ func isAtom*[F](af: AtomOrFunction[F]): bool =
 
   *af.atom
 
-func atom*[F](af: AtomOrFunction[F]): MAtom =
+func atom*[F](af: AtomOrFunction[F]): JSValue =
   assert(*af.atom, "atom() called but variant contains no atom.")
   &af.atom
 
 func initAtomOrFunction*[F](fn: F): AtomOrFunction[F] =
   AtomOrFunction[F](fn: some(fn))
 
-func initAtomOrFunction*[F](atom: sink MAtom): AtomOrFunction[F] =
-  AtomOrFunction[F](atom: some(move(atom)))
+func initAtomOrFunction*[F](atom: JSValue): AtomOrFunction[F] =
+  AtomOrFunction[F](atom: some(atom))
 {.pop.}

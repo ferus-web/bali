@@ -43,7 +43,7 @@ proc defineFn*[T](
   runtime.ir.call(name)
 
 proc setProperty*[T](
-    runtime: Runtime, prototype: typedesc[T], name: string, value: MAtom
+    runtime: Runtime, prototype: typedesc[T], name: string, value: JSValue
 ) =
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
@@ -78,7 +78,7 @@ proc dumpStatistics*(runtime: Runtime): RuntimeStats =
 
   stats
 
-proc setProperty*[V: not MAtom, T](
+proc setProperty*[V: not JSValue, T](
     runtime: Runtime, prototype: typedesc[T], name: string, value: V
 ) {.inline.} =
   runtime.setProperty(prototype = prototype, name = name, value = value.wrap())
@@ -111,16 +111,18 @@ proc definePrototypeFn*[T](
     if typ.proto == hash($prototype):
       runtime.types[i].prototypeFunctions[name] = fn
 
-proc getReturnValue*(runtime: Runtime): Option[MAtom] =
+proc getReturnValue*(runtime: Runtime): Option[JSValue] =
   ## Get the value in the return-value register, if there is any.
   ## NOTE: You need to disable the aggressive retval scrubbing optimization if you want to get the return value of a function called in bytecode
   runtime.vm.registers.retVal
 
-proc createAtom*(typ: JSType): MAtom =
+proc createAtom*(typ: JSType): JSValue =
   ## Create an atom (object) based off of a provided type.
   ## All fields of the provided `typ` are initialized in the object with `undefined`.
   ## The object will also gain an internal Bali-specific data slot/tag called `bali_object_type` which helps the engine
   ## in determining what type this object belongs to.
+  ##
+  ## **This value will be allocated via Bali's internal garbage collector. Don't unnecessarily call this or else you might trigger a GC collection sweep.**
   var atom = obj()
 
   for name, member in typ.members:
@@ -133,7 +135,7 @@ proc createAtom*(typ: JSType): MAtom =
 
   atom
 
-proc isA*[T: object](runtime: Runtime, atom: MAtom, typ: typedesc[T]): bool =
+proc isA*[T: object](runtime: Runtime, atom: JSValue, typ: typedesc[T]): bool =
   ## This function returns a boolean based off of whether `atom` is a replica of the supplied Nim-native type `typ`.
   ## It checks the `bali_object_type` that's attached to all objects created by `createAtom` (and by extension, `createObjFromType`)
   debug "runtime: isA(" & atom.crush() & "): checking if atom is a replica of " & $typ
@@ -166,7 +168,7 @@ proc isA*[T: object](runtime: Runtime, atom: MAtom, typ: typedesc[T]): bool =
   false
 
 proc getMethod*(
-    runtime: Runtime, v: MAtom, p: string
+    runtime: Runtime, v: JSValue, p: string
 ): Option[NativePrototypeFunction] =
   ## Get a method from the provided object's prototype.
   ## Returns an `Option[NativePrototypeFunction]` if a function with the name `p` is found,
@@ -190,7 +192,7 @@ proc getTypeFromName*(runtime: Runtime, name: string): Option[JSType] =
     if typ.name == name:
       return some(typ)
 
-proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): MAtom =
+proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): JSValue =
   for etyp in runtime.types:
     if etyp.proto == hash($typ):
       return etyp.createAtom()

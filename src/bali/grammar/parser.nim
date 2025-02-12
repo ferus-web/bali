@@ -72,7 +72,7 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
   else:
     return some call(name.callFunction, arguments)
 
-proc parseAtom*(parser: Parser, token: Token): Option[MAtom]
+proc parseAtom*(parser: Parser, token: Token): Option[JSValue]
 
 proc parseExpression*(
     parser: Parser, storeIn: Option[string] = none(string)
@@ -284,15 +284,15 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
 
   some(args)
 
-#[ proc parseTable*(parser: Parser): Option[MAtom] =
+#[ proc parseTable*(parser: Parser): Option[JSValue] =
   # We are assuming that the starting curly bracket (`{`) has been consumed.
   debug "parser: parsing table"
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
   var
-    table: Table[MAtom, MAtom]
-    currentKey: MAtom
+    table: Table[JSValue, JSValue]
+    currentKey: JSValue
 
     metLCurly = false
     state = TableParsingState.Key
@@ -342,14 +342,14 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
   if not metLCurly:
     parser.error Other, "property list must be ended by }" ]#
 
-proc parseArray*(parser: Parser): Option[MAtom] =
+proc parseArray*(parser: Parser): Option[JSValue] =
   # We are assuming that the starting bracket (`[`) has been consumed.
   debug "parser: parsing array"
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
   var
-    arr: seq[MAtom]
+    arr: seq[JSValue]
     prev = TokenKind.LBracket
     metRBracket = false
 
@@ -481,7 +481,7 @@ proc expectEqualsSign*(
 proc parseTernaryOp*(
     parser: Parser,
     ident: Option[string] = none(string),
-    atom: Option[MAtom] = none(MAtom),
+    atom: Option[JSValue] = none(JSValue),
 ): Option[Statement] =
   assert(
     *ident or *atom,
@@ -599,7 +599,7 @@ proc parseDeclaration*(
     return expr
 
   var
-    atom: Option[MAtom]
+    atom: Option[JSValue]
     vIdent: Option[string]
     ternary: Option[Statement]
     toCall: Option[Statement]
@@ -788,7 +788,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
   info "parser: parsed function: " & &name
   some function(&name, body, arguments)
 
-proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
+proc parseAtom*(parser: Parser, token: Token): Option[JSValue] =
   info "parser: trying to parse an atom out of " & $token.kind
 
   case token.kind
@@ -930,7 +930,7 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
   info "parser: parsing re-assignment to identifier: " & ident
 
   var
-    atom: Option[MAtom]
+    atom: Option[JSValue]
     vIdent: Option[string]
     toCall: Option[Statement]
 

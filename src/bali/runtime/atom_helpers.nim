@@ -5,28 +5,28 @@ import bali/runtime/vm/atom
 
 {.push warning[UnreachableCode]: off, inline.}
 
-func isUndefined*(atom: MAtom): bool =
+func isUndefined*(atom: JSValue): bool =
   atom.kind == Object and atom.objFields.len < 1
 
-func isObject*(atom: MAtom): bool =
+func isObject*(atom: JSValue): bool =
   atom.kind == Object
 
-func isNull*(atom: MAtom): bool =
+func isNull*(atom: JSValue): bool =
   atom.kind == Null
 
-func isNumber*(atom: MAtom): bool =
+func isNumber*(atom: JSValue): bool =
   atom.kind == UnsignedInt or atom.kind == Integer or atom.kind == Float
 
-func isBigInt*(atom: MAtom): bool =
+func isBigInt*(atom: JSValue): bool =
   atom.kind == BigInteger
 
-proc `[]`*(atom: MAtom, name: string): MAtom =
+proc `[]`*(atom: JSValue, name: string): JSValue =
   if atom.kind != Object:
     raise newException(ValueError, $atom.kind & " does not have field access methods")
 
   atom.objValues[atom.objFields[name]]
 
-proc `[]=`*(atom: var MAtom, name: string, value: sink MAtom) =
+proc `[]=`*(atom: var JSValue, name: string, value: sink JSValue) =
   if atom.kind != Object:
     raise newException(ValueError, $atom.kind & " does not have field access methods")
 
@@ -36,14 +36,14 @@ proc `[]=`*(atom: var MAtom, name: string, value: sink MAtom) =
   else:
     atom.objValues[atom.objFields[name]] = move(value)
 
-proc contains*(atom: MAtom, name: string): bool =
+proc contains*(atom: JSValue, name: string): bool =
   atom.objFields.contains(name)
 
-proc tagged*(atom: MAtom, tag: string): Option[MAtom] =
+proc tagged*(atom: JSValue, tag: string): Option[JSValue] =
   if atom.contains('@' & tag):
     return some atom['@' & tag]
 
-proc wrap*(val: SomeSignedInt | SomeUnsignedInt | string | float | bool): MAtom =
+proc wrap*(val: SomeSignedInt | SomeUnsignedInt | string | float | bool): JSValue =
   when val is SomeSignedInt:
     return integer(val.int)
 
@@ -59,25 +59,25 @@ proc wrap*(val: SomeSignedInt | SomeUnsignedInt | string | float | bool): MAtom 
   when val is float:
     return floating(val)
 
-proc wrap*[T: not MAtom](val: openArray[T]): MAtom =
-  var vec = sequence(newSeq[MAtom](0))
+proc wrap*[T: not JSValue](val: openArray[T]): JSValue =
+  var vec = sequence(newSeq[JSValue](0))
 
   for v in val:
     vec.sequence &= v.wrap()
 
   vec
 
-func wrap*(atom: MAtom): MAtom {.inline.} =
+proc wrap*(atom: JSValue): JSValue {.inline.} =
   atom
 
-func wrap*[A, B](val: Table[A, B]): MAtom =
+proc wrap*[A, B](val: Table[A, B]): JSValue =
   var atom = obj()
   for k, v in val:
     atom[$k] = wrap(v)
 
   atom
 
-func wrap*[T: object](obj: T): MAtom =
+proc wrap*[T: object](obj: T): JSValue =
   var mObj = atom.obj()
 
   for name, field in obj.fieldPairs:
@@ -85,16 +85,16 @@ func wrap*[T: object](obj: T): MAtom =
 
   mObj
 
-func wrap*(val: seq[MAtom]): MAtom =
+proc wrap*(val: seq[JSValue]): JSValue =
   sequence(val)
 
-proc `[]=`*[T: not MAtom](atom: var MAtom, name: string, value: T) =
+proc `[]=`*[T: not JSValue](atom: var JSValue, name: string, value: T) =
   atom[name] = wrap(value)
 
-proc tag*[T](atom: var MAtom, tag: string, value: T) =
+proc tag*[T](atom: var JSValue, tag: string, value: T) =
   atom['@' & tag] = value.wrap()
 
-func undefined*(): MAtom =
+proc undefined*(): JSValue =
   obj()
 
 {.pop.}

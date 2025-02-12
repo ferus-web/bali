@@ -1,6 +1,6 @@
 import bali/runtime/vm/heap/mark_and_sweep
 
-proc getsp: pointer =
+proc getsp(): pointer =
   when defined(amd64):
     asm """
       mov %%rsp, %0
@@ -17,7 +17,9 @@ proc getsp: pointer =
       :"=r"(`result`)
     """
   else:
-    {.error: "Unsupported platform - the Bali GC does not work on your CPU architecture".}
+    {.
+      error: "Unsupported platform - the Bali GC does not work on your CPU architecture"
+    .}
 
 initializeGC(getsp(), 32)
 var str = cast[ptr UncheckedArray[char]](baliMSAlloc(8 * sizeof(char)))

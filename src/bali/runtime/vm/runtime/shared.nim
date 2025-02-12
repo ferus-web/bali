@@ -122,12 +122,6 @@ type
     ## If the list is empty, a `Null` atom will be provided
     PopListPrefix = 0x11
 
-    ## Cast a value on the stack to an integer and store it in another location.
-    CastInt = 0x12
-
-    ## Cast a value on the stack to a string and store it in another location.
-    CastStr = 0x13
-
     ## Load an unsigned integer onto the stack
     LoadUint = 0x14
 
@@ -253,9 +247,7 @@ const
     "ADDS": AddStr,
     "POPL": PopList,
     "POPLPFX": PopListPrefix,
-    "CASTI": CastInt,
     "ADDL": AddList,
-    "CASTS": CastStr,
     "LOADUI": LoadUint,
     "LOADB": LoadBool,
     "SUBI": SubInt,

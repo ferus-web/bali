@@ -9,7 +9,7 @@ import bali/runtime/[atom_obj_variant, atom_helpers]
 
 type
   NativeFunction* = proc()
-  NativePrototypeFunction* = proc(value: MAtom)
+  NativePrototypeFunction* = proc(value: JSValue)
 
   ValueKind* = enum
     vkGlobal
@@ -194,22 +194,16 @@ proc markLocal*(
 
   inc runtime.addrIdx
 
-var counter: int
-proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
+proc loadIRAtom*(runtime: Runtime, atom: sink MAtom): uint =
   case atom.kind
   of Integer:
-    runtime.ir.loadInt(runtime.addrIdx, atom)
+    runtime.ir.loadInt(runtime.addrIdx, atom.addr)
     return runtime.addrIdx
   of UnsignedInt:
-    runtime.ir.loadUint(runtime.addrIdx, &atom.getUint())
+    runtime.ir.loadUint(runtime.addrIdx, atom.addr)
     return runtime.addrIdx
   of String:
-    if &atom.getStr() == "hello :^)":
-      inc counter
-
-    if counter == 2:
-      unreachable
-    runtime.ir.loadStr(runtime.addrIdx, atom)
+    runtime.ir.loadStr(runtime.addrIdx, atom.addr)
     runtime.ir.passArgument(runtime.addrIdx)
     runtime.ir.call("BALI_CONSTRUCTOR_STRING")
     runtime.ir.resetArgs()
@@ -221,16 +215,16 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   of Ident:
     unreachable
   of Boolean:
-    runtime.ir.loadBool(runtime.addrIdx, atom)
+    runtime.ir.loadBool(runtime.addrIdx, atom.addr)
     return runtime.addrIdx
   of Object:
-    if atom.isUndefined():
+    if atom.addr.isUndefined():
       runtime.ir.loadObject(runtime.addrIdx)
       return runtime.addrIdx
     else:
       unreachable # FIXME
   of Float:
-    runtime.ir.loadFloat(runtime.addrIdx, atom)
+    runtime.ir.loadFloat(runtime.addrIdx, atom.addr)
     return runtime.addrIdx
   of Sequence:
     runtime.ir.loadList(runtime.addrIdx)
@@ -238,7 +232,7 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
 
     for item in atom.sequence:
       inc runtime.addrIdx
-      let idx = runtime.loadIRAtom(item)
+      let idx = runtime.loadIRAtom(item[])
       runtime.ir.appendList(result, idx)
   else:
     unreachable

@@ -167,7 +167,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSDate,
     "getYear",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       ## B.2.3.1 Date.prototype.getYear ( )
 
       # 1. Let dateObject be the this value.
@@ -193,7 +193,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSDate,
     "getFullYear",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       ## 21.4.4.4 Date.prototype.getFullYear ( )
 
       # 1. Let dateObject be the this value.
@@ -217,7 +217,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSDate,
     "toString",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       ## 21.4.4.41 Date.prototype.toString ( )
 
       # 1. Let dateObject be the this value.
@@ -237,7 +237,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSDate,
     "getDay",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       ## 21.4.4.3 Date.prototype.getDay ( )
 
       # 1. Let dateObject be the this value.
@@ -261,7 +261,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSDate,
     "getDate",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       ## 21.4.4.3 Date.prototype.getDate ( )
 
       # 1. Let dateObject be the this value.

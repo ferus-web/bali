@@ -8,10 +8,10 @@ import bali/runtime/abstract/[coercion]
 import bali/internal/sugar
 import bali/stdlib/types/[std_bigint, std_string]
 
-proc equateNumbers*(runtime: Runtime, x, y: MAtom): bool =
+proc equateNumbers*(runtime: Runtime, x, y: JSValue): bool =
   runtime.ToNumber(x) == runtime.ToNumber(y)
 
-proc equateSameValueNonNumber*(runtime: Runtime, x, y: MAtom): bool =
+proc equateSameValueNonNumber*(runtime: Runtime, x, y: JSValue): bool =
   ## 7.2.12 SameValueNonNumber ( x, y )
 
   # 1. Assert: Type(x) is Type(y).
@@ -50,7 +50,7 @@ proc equateSameValueNonNumber*(runtime: Runtime, x, y: MAtom): bool =
     # a. If x and y are both true or both false, return true; otherwise, return false.
     return &x.getBool() == &y.getBool()
 
-proc isStrictlyEqual*(runtime: Runtime, x, y: MAtom): bool =
+proc isStrictlyEqual*(runtime: Runtime, x, y: JSValue): bool =
   ## 7.2.15 IsStrictlyEqual ( x, y )
 
   # 1. If Type(x) is not Type(y), return false.
@@ -65,7 +65,7 @@ proc isStrictlyEqual*(runtime: Runtime, x, y: MAtom): bool =
   # 3. Return SameValueNonNumber(x, y).
   return runtime.equateSameValueNonNumber(x, y)
 
-proc isLooselyEqual*(runtime: Runtime, x, y: MAtom): bool =
+proc isLooselyEqual*(runtime: Runtime, x, y: JSValue): bool =
   ## 7.2.14 IsLooselyEqual ( x, y )
 
   # 1. If Type(x) is Type(y), then

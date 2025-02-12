@@ -5,7 +5,7 @@ import bali/runtime/[atom_helpers, types]
 import bali/runtime/abstract/to_primitive
 import bali/internal/[trim_string, parse_number]
 
-proc StringToNumber*(runtime: Runtime, value: MAtom): float =
+proc StringToNumber*(runtime: Runtime, value: JSValue): float =
   assert value.kind == String, "StringToNumber() was passed a " & $value.kind
   debug "runtime: StringToNumber(" & value.crush() & ')'
   let text = runtime.trimString(value, TrimMode.Both)
@@ -25,7 +25,7 @@ proc StringToNumber*(runtime: Runtime, value: MAtom): float =
 
   return &parsed
 
-proc ToNumber*(runtime: Runtime, value: MAtom): float =
+proc ToNumber*(runtime: Runtime, value: JSValue): float =
   ## 7.1.4 ToNumber ( argument )
   ## The abstract operation ToNumber takes argument argument (an ECMAScript language value) and returns either
   ## a normal completion containing a Number or a throw completion. It converts argument to a value of type Number.
@@ -60,7 +60,7 @@ proc ToNumber*(runtime: Runtime, value: MAtom): float =
   else:
     unreachable
 
-proc ToNumeric*(runtime: Runtime, value: MAtom): MAtom =
+proc ToNumeric*(runtime: Runtime, value: JSValue): JSValue =
   ## 7.1.3 ToNumeric ( value )
   ## This either returns a `BigInteger` atom or a `Floating` atom. Nothing else.
 
@@ -74,7 +74,7 @@ proc ToNumeric*(runtime: Runtime, value: MAtom): MAtom =
   # 3. Return ? ToNumber(primValue)
   floating(runtime.ToNumber(primValue))
 
-proc isFiniteNumber*(runtime: Runtime, number: MAtom): bool {.inline.} =
+proc isFiniteNumber*(runtime: Runtime, number: JSValue): bool {.inline.} =
   if not isNumber(number):
     return false
 
@@ -85,7 +85,7 @@ proc isFiniteNumber*(runtime: Runtime, number: MAtom): bool {.inline.} =
 
   return value != NaN and value != Inf
 
-proc isIntegralNumber*(runtime: Runtime, number: MAtom): bool {.inline.} =
+proc isIntegralNumber*(runtime: Runtime, number: JSValue): bool {.inline.} =
   if not number.isNumber:
     return false
 

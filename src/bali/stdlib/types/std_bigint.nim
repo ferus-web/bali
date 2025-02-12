@@ -9,9 +9,9 @@ import bali/runtime/vm/atom
 import pkg/gmp
 
 type JSBigInt* = object
-  `@ value`*: MAtom
+  `@ value`*: JSValue
 
-proc stringToBigInt*(runtime: Runtime, str: MAtom): MAtom =
+proc stringToBigInt*(runtime: Runtime, str: JSValue): JSValue =
   # 7.1.14 StringToBigInt ( str )
 
   # 1. Let text be StringToCodePoints(str).
@@ -31,7 +31,7 @@ proc stringToBigInt*(runtime: Runtime, str: MAtom): MAtom =
 
   move(bigintAtom)
 
-proc toBigInt*(runtime: Runtime, atom: MAtom): MAtom =
+proc toBigInt*(runtime: Runtime, atom: JSValue): JSValue =
   ## 7.1.13 ToBigInt ( argument ), https://tc39.es/ecma262/#sec-tobigint
 
   # 1. Let prim be ? ToPrimitive(argument, number).
@@ -81,7 +81,7 @@ proc toBigInt*(runtime: Runtime, atom: MAtom): MAtom =
     bigint.tag("value", bigint(int(&prim.getBool())))
     return bigint
 
-proc numberToBigInt*(runtime: Runtime, primitive: MAtom): MAtom {.inline.} =
+proc numberToBigInt*(runtime: Runtime, primitive: JSValue): JSValue {.inline.} =
   ## 21.2.1.1.1 NumberToBigInt ( number )
 
   # 1. If IsIntegralNumber(number) is false, throw a RangeError exception.
@@ -123,7 +123,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSBigInt,
     "toString",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       let bigint = &value.tagged("value")
       ret $bigint.bigint
     ,

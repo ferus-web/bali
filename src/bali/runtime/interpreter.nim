@@ -39,7 +39,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
       if arg.kind == cakAtom:
         debug "ir: load immutable value to expand Call's immediate arguments: " &
           arg.atom.crush()
-        discard runtime.loadIRAtom(arg.atom)
+        discard runtime.loadIRAtom(arg.atom[])
         runtime.markInternal(stmt, $i)
       elif arg.kind == cakImmediateExpr:
         debug "ir: add code to solve expression to expand Call's immediate arguments"
@@ -54,7 +54,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         debug "ir: load immutable value to ConstructObject's immediate arguments: " &
           arg.atom.crush()
 
-        discard runtime.loadIRAtom(arg.atom)
+        discard runtime.loadIRAtom(arg.atom[])
         let name = $hash(stmt) & '_' & $i
         runtime.markInternal(stmt, name)
   of CallAndStoreResult:
@@ -251,7 +251,7 @@ proc generateIR*(
     debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
 
-    let idx = runtime.loadIRAtom(stmt.imAtom)
+    let idx = runtime.loadIRAtom(stmt.imAtom[])
 
     if not internal:
       if fn.name == "outer":
@@ -264,7 +264,7 @@ proc generateIR*(
       assert *ownerStmt
       runtime.markInternal(&ownerStmt, stmt.imIdentifier)
   of CreateMutVal:
-    let idx = runtime.loadIRAtom(stmt.mutAtom)
+    let idx = runtime.loadIRAtom(stmt.mutAtom[])
 
     if fn.name.len < 1:
       runtime.ir.markGlobal(idx)
@@ -420,14 +420,14 @@ proc generateIR*(
     else:
       # field overwrite!
       let accesses = createFieldAccess(stmt.reIdentifier.split('.'))
-      let atomIndex = runtime.loadIRAtom(stmt.reAtom)
+      let atomIndex = runtime.loadIRAtom(stmt.reAtom[])
 
       inc runtime.addrIdx
 
       # prepare for internal call
       runtime.ir.passArgument(
         runtime.loadIRAtom(
-          uinteger(runtime.index(accesses.identifier, defaultParams(fn)))
+          uinteger(runtime.index(accesses.identifier, defaultParams(fn)))[]
         )
       ) # 1: Atom index that needs its field to be overwritten
 
@@ -815,7 +815,7 @@ proc generateIR*(
 
     let idx =
       if *stmt.wstAtom:
-        runtime.loadIRAtom(&stmt.wstAtom)
+        runtime.loadIRAtom((&stmt.wstAtom)[])
       elif *stmt.wstIdent:
         runtime.index(&stmt.wstIdent, defaultParams(fn))
       else:
@@ -830,7 +830,7 @@ proc generateIR*(
     let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
     let fieldIndex =
       if *stmt.arrAccIndex:
-        runtime.loadIRAtom(&stmt.arrAccIndex)
+        runtime.loadIRAtom((&stmt.arrAccIndex)[])
       elif *stmt.arrAccIdentIndex:
         runtime.index(&stmt.arrAccIdentIndex, defaultParams(fn))
       else:
@@ -850,7 +850,7 @@ proc generateIR*(
       storeIn = &stmt.ternaryStoreIn
       addrOfCond =
         if stmt.ternaryCond.kind == AtomHolder:
-          runtime.loadIRAtom(stmt.ternaryCond.atom)
+          runtime.loadIRAtom(stmt.ternaryCond.atom[])
         elif stmt.ternaryCond.kind == IdentHolder:
           runtime.index(stmt.ternaryCond.ident, defaultParams(fn))
         else:
@@ -861,7 +861,7 @@ proc generateIR*(
 
     let addrOfTrueExpr =
       if stmt.trueTernary.kind == AtomHolder:
-        runtime.loadIRAtom(stmt.trueTernary.atom)
+        runtime.loadIRAtom(stmt.trueTernary.atom[])
       elif stmt.trueTernary.kind == IdentHolder:
         runtime.index(stmt.falseTernary.ident, defaultParams(fn))
       else:
@@ -872,7 +872,7 @@ proc generateIR*(
 
     let addrOfFalseExpr =
       if stmt.falseTernary.kind == AtomHolder:
-        runtime.loadIRAtom(stmt.falseTernary.atom)
+        runtime.loadIRAtom(stmt.falseTernary.atom[])
       elif stmt.falseTernary.kind == IdentHolder:
         runtime.index(stmt.falseTernary.ident, defaultParams(fn))
       else:
@@ -1023,7 +1023,7 @@ proc generateIRForScope*(
   for child in scope.children:
     runtime.generateIRForScope(child)
 
-proc findField*(atom: MAtom, accesses: FieldAccess): MAtom =
+proc findField*(atom: JSValue, accesses: FieldAccess): JSValue =
   if accesses.identifier in atom.objFields:
     if accesses.next == nil:
       return atom.objValues[atom.objFields[accesses.identifier]]
@@ -1032,7 +1032,7 @@ proc findField*(atom: MAtom, accesses: FieldAccess): MAtom =
   else:
     return undefined()
 
-proc computeTypeof*(runtime: Runtime, atom: MAtom): string =
+proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
   ## Compute the type of an atom.
   case atom.kind
   of String:
@@ -1336,7 +1336,7 @@ proc newRuntime*(
   ## If the input isn't from a file, you can set it to anything - it's primarily used for caching.
   ## The AST must be valid.
   ## You can check the options exposed to you in `InterpreterOpts` by checking its documentation.
-  initializeGC(getStackPtr(), 32) # Initialize the M&S garbage collector
+  initializeGC(getStackPtr(), 4) # Initialize the M&S garbage collector
   Runtime(
     ast: ast,
     clauses: @[],

@@ -38,7 +38,7 @@ proc optimizeAwayStateMutatorLoop*(
       if stmt.whConditionExpr.op == BinaryOperation.LesserThan:
         debug "mutator_loops: op is less-than, optimizing away loop into the value of RHS (" &
           rightTrav.atom.crush() & ')'
-        let idx = runtime.loadIRAtom(rightTrav.atom)
+        let idx = runtime.loadIRAtom(rightTrav.atom[])
         runtime.markLocal(fn, leftTrav.ident)
         return true
 
@@ -52,7 +52,7 @@ proc optimizeAwayStateMutatorLoop*(
       if stmt.whConditionExpr.op == BinaryOperation.LesserThan:
         debug "mutator_loops: op is less-than, optimizing away loop into the value of LHS (" &
           leftTrav.atom.crush() & ')'
-        let idx = runtime.loadIRAtom(leftTrav.atom)
+        let idx = runtime.loadIRAtom(leftTrav.atom[])
         runtime.markLocal(fn, rightTrav.ident)
         return true
 

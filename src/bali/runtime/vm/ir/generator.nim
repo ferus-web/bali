@@ -39,22 +39,22 @@ proc loadInt*[V: SomeInteger](
   ## This is an overloadable function and can be provided any kind of integer type (`int`, `int8`, `int16`, `int32`, `int64` or their unsigned counterparts)
   ##
   ## **See also:**
-  ## * `loadInt proc<#loadInt, IRGenerator, uint, MAtom>`
-  ## * `loadFloat proc<#loadFloat, IRGenerator, uint, MAtom>`
+  ## * `loadInt proc<#loadInt, IRGenerator, uint, JSValue>`
+  ## * `loadFloat proc<#loadFloat, IRGenerator, uint, JSValue>`
 
   gen.addOp(
     IROperation(opCode: LoadInt, arguments: @[uinteger position, integer value])
   )
 
 proc loadInt*(
-    gen: IRGenerator, position: uint, value: MAtom
+    gen: IRGenerator, position: uint, value: JSValue
 ): uint {.inline, discardable.} =
   ## Load an integer into the memory space.
-  ## This is an overloadable function and can be provided a `MAtom` that contains an integer.
+  ## This is an overloadable function and can be provided a `JSValue` that contains an integer.
   ##
   ## **See also:**
   ## * `loadInt proc<#loadInt, IRGenerator, uint, SomeInteger>`
-  ## * `loadFloat proc<#loadFloat, IRGenerator, uint, MAtom>`
+  ## * `loadFloat proc<#loadFloat, IRGenerator, uint, JSValue>`
 
   if value.kind != Integer:
     raise newException(ValueError, "Attempt to load " & $value.kind & " as an integer.")
@@ -86,16 +86,16 @@ proc jump*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## .. warning:: Validate operations: If the operation index specified is beyond the number of operations in the current clause or below the least index (0), the interpreter will assume that the execution of the program has been completed and gracefully exit with no errors or warnings. This can become a nightmare to debug if you aren't keeping track of the operation indices properly.
   ##
   ## **See also:**
-  ## * `call proc<#call, IRGenerator, string, seq[MAtom]>`
+  ## * `call proc<#call, IRGenerator, string, seq[JSValue]>`
   gen.addOp(IROperation(opCode: Jump, arguments: @[uinteger position]))
 
 proc loadStr*(
-    gen: IRGenerator, position: uint, value: string | MAtom
+    gen: IRGenerator, position: uint, value: string | JSValue
 ): uint {.inline, discardable.} =
   ## Load a string into memory.
   ## This is an overloadable function, and can be provided:
   ## * string type
-  ## * `MAtom` that contains a string.
+  ## * `JSValue` that contains a string.
   when value is string:
     gen.addOp(IROperation(opCode: LoadStr, arguments: @[uinteger position, str value]))
   else:
@@ -140,18 +140,25 @@ proc loadUint*[P: SomeUnsignedInt](
     IROperation(opCode: LoadUint, arguments: @[uinteger position, uinteger value])
   )
 
+proc loadUint*(
+  gen: IRGenerator, position: uint, value: JSValue
+): uint {.inline, discardable.} =
+  gen.addOp(
+    IROperation(opCode: LoadUint, arguments: @[uinteger position, value])
+  )
+
 proc returnFn*(gen: IRGenerator, position: int = -1): uint {.inline, discardable.} =
   ## Halt the execution of this clause, and optionally return an atom. The returned atom can be retrieved by reading the `CallArgument` register.
   ## .. warning:: Make sure to mark the atom as a global before passing it on!
   gen.addOp(IROperation(opCode: Return, arguments: @[integer position]))
 
 proc loadBool*(
-    gen: IRGenerator, position: uint, value: bool | MAtom
+    gen: IRGenerator, position: uint, value: bool | JSValue
 ): uint {.inline, discardable.} =
   ## Load a boolean into memory.
   ## **This is an overloadable function, and can be provided:**
   ## * a boolean
-  ## * a `MAtom` containing a boolean
+  ## * a `JSValue` containing a boolean
   when value is bool:
     gen.addOp(
       IROperation(opCode: LoadBool, arguments: @[uinteger position, boolean value])
@@ -159,23 +166,8 @@ proc loadBool*(
   else:
     gen.addOp(IROperation(opCode: LoadBool, arguments: @[uinteger position, value]))
 
-proc castStr*(gen: IRGenerator, src, dest: uint): uint {.inline, discardable.} =
-  ## Cast an atom in memory into a string.
-  ## This simply calls the `toString` function on the atom and stores the result in its position.
-  gen.addOp(IROperation(opCode: CastStr, arguments: @[uinteger src, uinteger dest]))
-
-proc castInt*(gen: IRGenerator, src, dest: uint): uint {.inline, discardable.} =
-  ## Cast an atom in memory into an integer.
-  ## This simply calls the `toInt` function on the atom, causing the following conversions:
-  ## * String -> Contents are parsed and stored as integer. If parsing fails, zero is saved in its position instead.
-  ## * List -> The list's length is stored as an integer.
-  ## * Null -> Zero is stored
-  ## * Bool -> The boolean is converted to true (1) or false (0)
-  ## * Object -> Not converted at all as there is no good or non-nonsensical way to do this. Zero is stored.
-  gen.addOp(IROperation(opCode: CastInt, arguments: @[uinteger src, uinteger dest]))
-
 proc call*(
-    gen: IRGenerator, function: string, arguments: seq[MAtom] = @[]
+    gen: IRGenerator, function: string, arguments: seq[JSValue] = @[]
 ): uint {.inline, discardable.} =
   ## Call a function/clause. This halts the current function's execution, enters the other function, executes it and returns back to where it left off.
   ## .. warning:: The `arguments` argument is not meant to be used to pass real arguments! They're used for passing arguments to the `Call` operation.
@@ -191,19 +183,19 @@ proc loadObject*(gen: IRGenerator, position: uint): uint {.inline, discardable.}
   ##
   ## **See also:**
   ## * `createField proc<#createField, IRGenerator, uint, int, string>`
-  ## * `writeField proc<#writeField, IRGenerator, uint, int, MAtom>`
-  ## * `writeField proc<#writeField, IRGenerator, uint, string, MAtom>`
+  ## * `writeField proc<#writeField, IRGenerator, uint, int, JSValue>`
+  ## * `writeField proc<#writeField, IRGenerator, uint, string, JSValue>`
   gen.addOp(IROperation(opCode: LoadObject, arguments: @[uinteger position]))
 
 proc createField*(
     gen: IRGenerator, position: uint, index: int, name: string
 ): uint {.inline, discardable.} =
   ## Create a field in the object with a name and index.
-  ## By default, the field will be occupied by a NULL `MAtom`.
+  ## By default, the field will be occupied by a NULL `JSValue`.
   ##
   ## **See also:**
-  ## * `writeField proc<#writeField, IRGenerator, uint, int, MAtom>`
-  ## * `writeField proc<#writeField, IRGenerator, uint, string, MAtom>`
+  ## * `writeField proc<#writeField, IRGenerator, uint, int, JSValue>`
+  ## * `writeField proc<#writeField, IRGenerator, uint, string, JSValue>`
   gen.addOp(
     IROperation(
       opCode: CreateField, arguments: @[uinteger position, integer index, str name]
@@ -212,21 +204,21 @@ proc createField*(
 
 # "slow"
 proc writeField*(
-    gen: IRGenerator, position: uint, name: string, value: MAtom
+    gen: IRGenerator, position: uint, name: string, value: JSValue
 ): uint {.inline, discardable.} =
   ## Modify a field of an object. 
   ## Keep in mind that this can be slow* as it requires a search in the field name-to-index lookup table.
-  ## For a faster alternative (direct index access), use the `writeField proc<#writeField, IRGenerator, uint, int, MAtom>` instead.
+  ## For a faster alternative (direct index access), use the `writeField proc<#writeField, IRGenerator, uint, int, JSValue>` instead.
   gen.addOp(
     IROperation(opCode: WriteField, arguments: @[uinteger position, str name, value])
   )
 
 # "fast"
 proc writeField*(
-    gen: IRGenerator, position: uint, index: int, value: MAtom
+    gen: IRGenerator, position: uint, index: int, value: JSValue
 ): uint {.inline, discardable.} =
   ## Modify a field of an object.
-  ## This is the faster alternative to `writeField proc<#writeField, IRGenerator, uint, string, MAtom>`
+  ## This is the faster alternative to `writeField proc<#writeField, IRGenerator, uint, string, JSValue>`
   gen.addOp(
     IROperation(
       opCode: FastWriteField, arguments: @[uinteger position, integer index, value]
@@ -264,7 +256,7 @@ proc placeholder*(gen: IRGenerator, opCode: Ops): uint {.inline, discardable.} =
   gen.addOp(IROperation(opCode: opCode))
 
 proc overrideArgs*(
-    gen: IRGenerator, instruction: uint, arguments: seq[MAtom]
+    gen: IRGenerator, instruction: uint, arguments: seq[JSValue]
 ) {.inline.} =
   for i, _ in gen.modules:
     var module = gen.modules[i]
@@ -342,12 +334,12 @@ proc passArgument*(gen: IRGenerator, position: uint): uint {.inline, discardable
   gen.addOp(IROperation(opCode: PassArgument, arguments: @[uinteger position]))
 
 proc loadFloat*(
-    gen: IRGenerator, position: uint, value: float | MAtom
+    gen: IRGenerator, position: uint, value: float | JSValue
 ): uint {.inline, discardable.} =
   ## Load a float into memory.
   ## **This function is overloadable, and can be provided:**
   ## * a floating point value
-  ## * a `MAtom` containing a floating point value
+  ## * a `JSValue` containing a floating point value
   when value is float:
     gen.addOp(
       IROperation(opCode: LoadFloat, arguments: @[uinteger position, floating value])
@@ -359,7 +351,7 @@ proc loadFloat*(
     gen.addOp(IROperation(opCode: LoadFloat, arguments: @[uinteger position, value]))
 
 proc moveAtom*(gen: IRGenerator, source, dest: uint): uint {.inline, discardable.} =
-  ## Move an atom from one index to another. The source index is replaced with a NULL `MAtom` and 
+  ## Move an atom from one index to another. The source index is replaced with a NULL `JSValue` and 
   ## the destination index occupies what was previously the content stored at the source index.
   gen.addOp(IROperation(opCode: MoveAtom, arguments: @[uinteger source, uinteger dest]))
 

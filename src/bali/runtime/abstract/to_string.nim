@@ -5,10 +5,10 @@ import bali/runtime/[atom_helpers, types]
 import bali/runtime/abstract/to_primitive
 import pkg/gmp
 
-proc ToString*(runtime: Runtime, value: MAtom): string =
+proc ToString*(runtime: Runtime, value: JSValue): string =
   ## 7.1.17 ToString ( argument )
   ## The abstract operation ToString takes argument argument (an ECMAScript language value) and returns either a normal completion containing a String or a throw completion. It converts argument to a value of type String. It performs the following steps when called
-  debug "runtime: toString(): " & value.crush()
+  # debug "runtime: toString(): " & value.crush()
 
   case value.kind
   of String: # 1. If argument is a String, return argument.

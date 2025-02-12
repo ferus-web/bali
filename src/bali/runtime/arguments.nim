@@ -6,7 +6,7 @@ import bali/stdlib/errors
 
 proc argument*(
     runtime: Runtime, position: Natural, required: bool = false, message: string = ""
-): Option[MAtom] =
+): Option[JSValue] =
   ## Get an argument from the call arguments register.
   ## If `required` is `true`, then a TypeError with an error message of your choice will be thrown.
   ## This routine is guaranteed to return a value when `required` is set to `false`, which it is by default.

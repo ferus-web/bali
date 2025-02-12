@@ -8,27 +8,27 @@ import bali/stdlib/errors
 import bali/runtime/vm/atom
 import jsony
 
-proc convertJsonNodeToAtom*(node: JsonNode): MAtom =
+proc convertJsonNodeToAtom*(node: JsonNode): JSValue =
   if node.kind == JInt:
     let value = node.getInt()
     if value > -1:
-      return uinteger(value.uint())
+      return uinteger(value.uint(), inRuntime = true)
     else:
-      return integer(value)
+      return integer(value, inRuntime = true)
   elif node.kind == JString:
-    return str(node.getStr())
+    return str(node.getStr(), inRuntime = true)
   elif node.kind == JNull:
-    return null()
+    return null(true)
   elif node.kind == JBool:
-    return boolean(node.getBool())
+    return boolean(node.getBool(), true)
   elif node.kind == JArray:
-    var arr = sequence(@[])
+    var arr = sequence(@[], true)
     for elem in node.getElems():
       arr.sequence &= elem.convertJsonNodeToAtom()
 
     return arr
   elif node.kind == JFloat:
-    return floating(node.getFloat())
+    return floating(node.getFloat(), true)
   elif node.kind == JObject:
     var jObj = obj()
 
@@ -42,7 +42,7 @@ proc convertJsonNodeToAtom*(node: JsonNode): MAtom =
 
 type JSON = object
 
-proc atomToJsonNode*(atom: MAtom): JsonNode =
+proc atomToJsonNode*(atom: JSValue): JsonNode =
   if atom.kind == Integer:
     return newJInt(&atom.getInt())
   elif atom.kind == UnsignedInt:

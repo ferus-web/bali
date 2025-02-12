@@ -23,7 +23,7 @@ type JSURL = object
   source*: string
   hash*: string
 
-proc transposeUrlToObject(runtime: Runtime, parsed: URL, source: string): MAtom =
+proc transposeUrlToObject(runtime: Runtime, parsed: URL, source: string): JSValue =
   # TODO: port to JSString
   var url = runtime.createObjFromType(JSURL)
   url["hostname"] = str(parsed.hostname())
@@ -33,11 +33,13 @@ proc transposeUrlToObject(runtime: Runtime, parsed: URL, source: string): MAtom 
   url["search"] = parsed.query().str(inRuntime = true)
   url["hostname"] = parsed.hostname().str(inRuntime = true)
   url["source"] = source.str(inRuntime = true)
-  url["origin"] =
-    str(parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port(), inRuntime = true)
-  url["hash"] =
-    (if parsed.fragment().len > 0: str('#' & parsed.fragment(), inRuntime = true)
-    else: str(newString(0), inRuntime = true))
+  url["origin"] = str(
+    parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port(), inRuntime = true
+  )
+  url["hash"] = (
+    if parsed.fragment().len > 0: str('#' & parsed.fragment(), inRuntime = true)
+    else: str(newString(0), inRuntime = true)
+  )
 
   url
 
@@ -50,7 +52,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.defineConstructor(
     "URL",
     proc() =
-      var osource: Option[MAtom]
+      var osource: Option[JSValue]
 
       if (;
         osource = runtime.argument(
@@ -94,7 +96,7 @@ proc generateStdIR*(runtime: Runtime) =
     JSURL,
     "parse",
     proc() =
-      var osource: Option[MAtom]
+      var osource: Option[JSValue]
 
       if (;
         osource = runtime.argument(
