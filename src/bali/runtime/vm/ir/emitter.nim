@@ -19,7 +19,7 @@ proc emitOperation*(gen: IRGenerator, op: IROperation): string {.inline.} =
       elif content.contains('\''):
         result &= '"' & content & '"' & ' '
       else:
-        result &= arg.crush() & ' '
+        result &= '"' & content & "\" "
 
 proc emitModule*(gen: IRGenerator, module: CodeModule): string {.inline.} =
   when not defined(release):

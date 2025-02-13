@@ -5,6 +5,7 @@ mkShell {
     pkg-config
     simdutf
     gmp
+    boehmgc
     icu76
     spidermonkey_128
     quickjs
@@ -17,6 +18,7 @@ mkShell {
     simdutf
     gmp.dev
     icu76.dev
+    boehmgc.dev
     mimalloc.dev
   ];
 }

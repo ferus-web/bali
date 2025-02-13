@@ -194,16 +194,16 @@ proc markLocal*(
 
   inc runtime.addrIdx
 
-proc loadIRAtom*(runtime: Runtime, atom: sink MAtom): uint =
+proc loadIRAtom*(runtime: Runtime, atom: JSValue): uint =
   case atom.kind
   of Integer:
-    runtime.ir.loadInt(runtime.addrIdx, atom.addr)
+    runtime.ir.loadInt(runtime.addrIdx, atom)
     return runtime.addrIdx
   of UnsignedInt:
-    runtime.ir.loadUint(runtime.addrIdx, atom.addr)
+    runtime.ir.loadUint(runtime.addrIdx, atom)
     return runtime.addrIdx
   of String:
-    runtime.ir.loadStr(runtime.addrIdx, atom.addr)
+    runtime.ir.loadStr(runtime.addrIdx, atom)
     runtime.ir.passArgument(runtime.addrIdx)
     runtime.ir.call("BALI_CONSTRUCTOR_STRING")
     runtime.ir.resetArgs()
@@ -215,16 +215,16 @@ proc loadIRAtom*(runtime: Runtime, atom: sink MAtom): uint =
   of Ident:
     unreachable
   of Boolean:
-    runtime.ir.loadBool(runtime.addrIdx, atom.addr)
+    runtime.ir.loadBool(runtime.addrIdx, atom)
     return runtime.addrIdx
   of Object:
-    if atom.addr.isUndefined():
+    if atom.isUndefined():
       runtime.ir.loadObject(runtime.addrIdx)
       return runtime.addrIdx
     else:
       unreachable # FIXME
   of Float:
-    runtime.ir.loadFloat(runtime.addrIdx, atom.addr)
+    runtime.ir.loadFloat(runtime.addrIdx, atom)
     return runtime.addrIdx
   of Sequence:
     runtime.ir.loadList(runtime.addrIdx)
@@ -232,7 +232,7 @@ proc loadIRAtom*(runtime: Runtime, atom: sink MAtom): uint =
 
     for item in atom.sequence:
       inc runtime.addrIdx
-      let idx = runtime.loadIRAtom(item[])
+      let idx = runtime.loadIRAtom(item)
       runtime.ir.appendList(result, idx)
   else:
     unreachable

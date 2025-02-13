@@ -11,7 +11,7 @@ import
     bridge, describe,
   ]
 import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
-import bali/runtime/vm/heap/mark_and_sweep
+import bali/runtime/vm/heap/boehm
 import bali/runtime/abstract/equating
 import bali/stdlib/prelude
 import crunchy, pretty
@@ -39,7 +39,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
       if arg.kind == cakAtom:
         debug "ir: load immutable value to expand Call's immediate arguments: " &
           arg.atom.crush()
-        discard runtime.loadIRAtom(arg.atom[])
+        discard runtime.loadIRAtom(arg.atom)
         runtime.markInternal(stmt, $i)
       elif arg.kind == cakImmediateExpr:
         debug "ir: add code to solve expression to expand Call's immediate arguments"
@@ -250,8 +250,8 @@ proc generateIR*(
   of CreateImmutVal:
     debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
-
-    let idx = runtime.loadIRAtom(stmt.imAtom[])
+    
+    let idx = runtime.loadIRAtom(deepCopy(stmt.imAtom[]))
 
     if not internal:
       if fn.name == "outer":
@@ -1336,7 +1336,11 @@ proc newRuntime*(
   ## If the input isn't from a file, you can set it to anything - it's primarily used for caching.
   ## The AST must be valid.
   ## You can check the options exposed to you in `InterpreterOpts` by checking its documentation.
-  initializeGC(getStackPtr(), 4) # Initialize the M&S garbage collector
+  # initializeGC(getStackPtr(), 4) # Initialize the M&S garbage collector
+  
+  boehmGCinit()
+  boehmGC_enable()
+
   Runtime(
     ast: ast,
     clauses: @[],

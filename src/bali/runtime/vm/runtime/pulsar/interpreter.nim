@@ -50,29 +50,6 @@ type
 
 const SequenceBasedRegisters* = [some(1)]
 
-proc getStackPtr*(): pointer =
-  ## Cross-architecture function that returns the stack pointer.
-  ## Used for initializing Bali's internal GC.
-  when defined(amd64):
-    asm """
-      mov %%rsp, %0
-      :"=r"(`result`)
-    """
-  elif defined(arm):
-    asm """
-      mov %0, sp
-      :"=r"(`result`)
-    """
-  elif defined(riscv):
-    asm """
-      mv %0, sp
-      :"=r"(`result`)
-    """
-  else:
-    {.
-      error: "Unsupported platform - the Bali GC does not work on your CPU architecture"
-    .}
-
 proc find*(clause: Clause, id: uint): Option[Operation] =
   for op in clause.operations:
     if op.index == id:

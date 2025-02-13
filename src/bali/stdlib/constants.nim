@@ -20,7 +20,7 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.ir.markGlobal(undefined)
 
   let nan = runtime.index("NaN", params)
-  runtime.ir.loadFloat(nan, floating(NaN))
+  runtime.ir.loadFloat(nan, floating(NaN, inRuntime = true))
   runtime.ir.markGlobal(nan)
 
   let vTrue = runtime.index("true", params)

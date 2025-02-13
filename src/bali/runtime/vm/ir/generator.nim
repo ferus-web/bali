@@ -97,7 +97,7 @@ proc loadStr*(
   ## * string type
   ## * `JSValue` that contains a string.
   when value is string:
-    gen.addOp(IROperation(opCode: LoadStr, arguments: @[uinteger position, str value]))
+    gen.addOp(IROperation(opCode: LoadStr, arguments: @[uinteger position, when value is string: str value else: value]))
   else:
     if value.kind != String:
       raise newException(ValueError, "Attempt to load " & $value.kind & " as a string.")

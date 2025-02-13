@@ -804,7 +804,7 @@ proc parseAtom*(parser: Parser, token: Token): Option[JSValue] =
     if (let err = token.getError(); *err):
       parser.error Other, &err
 
-    debug "parser: parseAtom: token is String"
+    debug "parser: parseAtom: token is String: " & token.str
     return some str(token.str)
   of TokenKind.True:
     return some boolean(true)

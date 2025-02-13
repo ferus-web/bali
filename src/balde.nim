@@ -11,6 +11,7 @@ import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/prelude
 import bali/private/argparser
+import bali/runtime/vm/heap/[prelude, boehm]
 import pkg/[colored_logger, jsony, pretty, noise, fuzzy]
 
 const Version {.strdefine: "NimblePkgVersion".} = "<version not defined>"
@@ -186,6 +187,15 @@ proc dumpStatisticsPretty(runtime: Runtime) =
     $stats.clausesGenerated,
     resetStyle,
   )
+  stdout.styledWriteLine(
+    fgGreen,
+    "GC Heap Size",
+    resetStyle,
+    ": ",
+    styleBright,
+    $boehmGetHeapSize(),
+    resetStyle
+  )
 
 func `%`(
     t: tuple[str: Option[string], exc: Option[void], ident: Option[string]]
@@ -238,6 +248,10 @@ proc execFile(ctx: Input, file: string) {.inline.} =
 
   if ctx.enabled("dump-no-eval"):
     print ast
+    if ctx.enabled("dump-statistics"):
+      var runtime = allocRuntime(ctx, file = file, ast = ast)
+      runtime.dumpStatisticsPretty()
+
     quit 0
 
   if ctx.enabled("dump-ast"):
@@ -465,6 +479,8 @@ proc main() {.inline.} =
 
     baldeRepl(input)
     quit(0)
+
+  initializeGC(GCKind.Boehm)
 
   if input.command.len > 0:
     baldeRun(input)

@@ -4,7 +4,7 @@
 
 import std/[strutils, tables, hashes, options]
 import pkg/gmp
-import ./heap/mark_and_sweep
+import ./heap/boehm
 import ./utils
 
 type
@@ -55,7 +55,6 @@ type
       fn*: proc()
 
   JSValue* = ptr MAtom
-  MAtomSeq* = distinct seq[MAtom]
 
 #[ proc `=destroy`*(dest: MAtom) =
   case dest.kind
@@ -207,13 +206,6 @@ proc markHomogenous*(atom: var MAtom) {.inline.} =
         " as a homogenous data type. Only List(s) can be marked as such.",
     )
 
-proc len*(s: MAtomSeq): int {.borrow.}
-proc `[]`*(s: MAtomSeq, i: Natural): MAtom {.inline.} =
-  if i < s.len and i >= 0:
-    s[i]
-  else:
-    MAtom(kind: Null)
-
 proc getStr*(atom: JSValue): Option[string] {.inline.} =
   if atom.kind == String:
     return some(atom.str)
@@ -245,7 +237,7 @@ proc getSequence*(atom: JSValue): Option[seq[JSValue]] {.inline.} =
 proc newJSValue*(kind: MAtomKind): JSValue =
   ## Allocate a new `JSValue` using Bali's garbage collector.
   ## A `JSValue` is a pointer to an atom.
-  var mem = cast[ptr MAtom](baliMSAlloc(uint(sizeof(MAtom))))
+  var mem = cast[ptr MAtom](baliAlloc(sizeof(MAtom)))
 
   {.cast(uncheckedAssign).}:
     mem[].kind = kind
@@ -253,78 +245,50 @@ proc newJSValue*(kind: MAtomKind): JSValue =
   ensureMove(mem)
 
 proc str*(s: string, inRuntime: bool = false): JSValue {.inline.} =
-  if inRuntime:
-    var mem = newJSValue(String)
-    mem.str = s
+  var mem = newJSValue(String)
+  mem.str = s
     
-    ensureMove(mem)
-  else:
-    var atom = MAtom(kind: String, str: s)
-    return atom.addr
+  ensureMove(mem)
 
 proc ident*(ident: string, inRuntime: bool = false): JSValue {.inline.} =
-  if inRuntime:
-    var mem = newJSValue(Ident)
-    mem.ident = ident
+  var mem = newJSValue(Ident)
+  mem.ident = ident
     
-    ensureMove(mem)
-  else:
-    var atom = MAtom(kind: Ident, ident: ident)
-    return atom.addr
+  ensureMove(mem)
 
 proc integer*(i: int, inRuntime: bool = false): JSValue =
-  if inRuntime:
-    var mem = newJSValue(Integer)
-    mem.integer = i
+  var mem = newJSValue(Integer)
+  mem.integer = i
 
-    ensureMove(mem)
-  else:
-    var atom = MAtom(kind: Integer, integer: i)
-    atom.addr
+  ensureMove(mem)
 
 proc uinteger*(u: uint, inRuntime: bool = false): JSValue =
-  if inRuntime:
-    var mem = newJSValue(UnsignedINt)
-    mem.uinteger = u
+  var mem = newJSValue(UnsignedINt)
+  mem.uinteger = u
 
-    ensureMove(mem)
-  else:
-    var atom = MAtom(kind: UnsignedInt, uinteger: u)
-    atom.addr
+  ensureMove(mem)
 
 proc boolean*(b: bool, inRuntime: bool = false): JSValue =
-  if inRuntime:
-    var mem = newJSValue(Boolean)
-    mem.state = b
+  var mem = newJSValue(Boolean)
+  mem.state = b
 
-    ensureMove(mem)
-  else:
-    var atom = MAtom(kind: Boolean, state: b)
-    atom.addr
+  ensureMove(mem)
 
 proc bytecodeCallable*(clause: string, inRuntime: bool = false): JSValue =
-  if inRuntime:
-    var mem = newJSValue(BytecodeCallable)
-    mem.clauseName = clause
+  var mem = newJSValue(BytecodeCallable)
+  mem.clauseName = clause
 
-    ensureMove(mem)
-  else:
-    var mem = MAtom(kind: BytecodeCallable, clauseName: clause)
-    mem.addr
+  ensureMove(mem)
 
 proc getBytecodeClause*(atom: JSValue): Option[string] =
   if atom.kind == BytecodeCallable:
     return some(atom.clauseName)
 
 proc floating*(value: float64, inRuntime: bool = false): JSValue =
-  if inRuntime:
-    var mem = newJSValue(Float)
-    mem.floatVal = value
+  var mem = newJSValue(Float)
+  mem.floatVal = value
 
-    ensureMove(mem)
-  else:
-    var atom = MAtom(kind: Float, floatVal: value)
-    atom.addr
+  mem
 
 proc boolean*(s: string, inRuntime: bool = false): Option[JSValue] =
   try:
@@ -333,11 +297,7 @@ proc boolean*(s: string, inRuntime: bool = false): Option[JSValue] =
     discard
 
 proc null*(inRuntime: bool = false): JSValue {.inline.} =
-  if inRuntime:
-    newJSValue(Null)
-  else:
-    var atom = MAtom(kind: Null)
-    atom.addr
+  newJSValue(Null)
 
 proc sequence*(s: seq[JSValue], inRuntime: bool = false): JSValue {.inline.} =
   if inRuntime:
