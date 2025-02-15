@@ -1038,7 +1038,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.addAtom(floating(a ^ b), pos)
     inc interpreter.currIndex
   of ZeroRetval:
-    baliDealloc(&interpreter.registers.retVal)
     interpreter.registers.retVal = none(JSValue)
     inc interpreter.currIndex
   of LoadBytecodeCallable:
