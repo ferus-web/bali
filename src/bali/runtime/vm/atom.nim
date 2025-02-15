@@ -4,7 +4,7 @@
 
 import std/[strutils, tables, hashes, options]
 import pkg/gmp
-import ./heap/mark_and_sweep
+import ./heap/boehm
 import ./utils
 
 type
@@ -34,7 +34,7 @@ type
     of Integer:
       integer*: int
     of Sequence:
-      sequence*: seq[MAtom]
+      sequence*: seq[JSValue]
       lCap*: Option[int]
       lHomogenous*: bool = false
     of UnsignedInt:
@@ -43,7 +43,7 @@ type
       state*: bool
     of Object:
       objFields*: Table[string, int]
-      objValues*: seq[MAtom]
+      objValues*: seq[JSValue]
     of Null: discard
     of Float:
       floatVal*: float64
@@ -54,7 +54,7 @@ type
     of NativeCallable:
       fn*: proc()
 
-  MAtomSeq* = distinct seq[MAtom]
+  JSValue* = ptr MAtom
 
 #[ proc `=destroy`*(dest: MAtom) =
   case dest.kind
@@ -104,7 +104,7 @@ proc `=copy`*(dest: var MAtom, src: MAtom) =
   of Null: discard
 ]#
 
-proc hash*(atom: MAtom): Hash {.inline.} =
+proc hash*(atom: MAtom): Hash =
   var h: Hash = 0
 
   case atom.kind
@@ -135,7 +135,9 @@ proc hash*(atom: MAtom): Hash {.inline.} =
 
   !$h
 
-proc crush*(atom: MAtom, id: string = "", quote: bool = true): string {.inline.} =
+proc hash*(value: ptr MAtom): Hash {.inline.} = hash(value[])
+
+proc crush*(atom: MAtom | JSValue, id: string = "", quote: bool = true): string {.inline.} =
   case atom.kind
   of String:
     if quote:
@@ -204,155 +206,181 @@ proc markHomogenous*(atom: var MAtom) {.inline.} =
         " as a homogenous data type. Only List(s) can be marked as such.",
     )
 
-proc len*(s: MAtomSeq): int {.borrow.}
-proc `[]`*(s: MAtomSeq, i: Natural): MAtom {.inline.} =
-  if i < s.len and i >= 0:
-    s[i]
-  else:
-    MAtom(kind: Null)
-
-proc getStr*(atom: MAtom): Option[string] {.inline.} =
+proc getStr*(atom: MAtom | JSValue): Option[string] {.inline.} =
   if atom.kind == String:
     return some(atom.str)
 
-proc getInt*(atom: MAtom): Option[int] {.inline.} =
+proc getInt*(atom: MAtom | JSValue): Option[int] {.inline.} =
   if atom.kind == Integer:
     return some(atom.integer)
 
-proc getBool*(atom: MAtom): Option[bool] {.inline.} =
+proc getBool*(atom: MAtom | JSValue): Option[bool] {.inline.} =
   if atom.kind == Boolean:
     return some atom.state
 
-proc getIdent*(atom: MAtom): Option[string] {.inline.} =
+proc getIdent*(atom: MAtom | JSValue): Option[string] {.inline.} =
   if atom.kind == Ident:
     return some atom.ident
 
-proc getUint*(atom: MAtom): Option[uint] {.inline.} =
+proc getUint*(atom: MAtom | JSValue): Option[uint] {.inline.} =
   if atom.kind == UnsignedInt:
     return some atom.uinteger
 
-proc getFloat*(atom: MAtom): Option[float64] {.inline.} =
+proc getFloat*(atom: MAtom | JSValue): Option[float64] {.inline.} =
   if atom.kind == Float:
     return some atom.floatVal
 
-proc getSequence*(atom: MAtom): Option[seq[MAtom]] {.inline.} =
+proc getSequence*(atom: MAtom | JSValue): Option[seq[JSValue]] {.inline.} =
   if atom.kind == Sequence:
     return some(atom.sequence)
 
-proc str*(s: string, inRuntime: bool = false): MAtom {.inline.} =
-  if inRuntime:
-    var mem = cast[ptr MAtom](
-      baliMSAlloc(
-        uint(sizeof(MAtom))
-      )
-    )
-    zeroMem(mem, sizeof(MAtom))
+proc newJSValue*(kind: MAtomKind): JSValue =
+  ## Allocate a new `JSValue` using Bali's garbage collector.
+  ## A `JSValue` is a pointer to an atom.
+  var mem = cast[ptr MAtom](baliAlloc(sizeof(MAtom)))
 
-    {.cast(uncheckedAssign).}: 
-      mem[].kind = String # segfaults for some reason...
-      mem[].str = s
+  {.cast(uncheckedAssign).}:
+    mem[].kind = kind
 
-    mem[]
-  else:
-    return MAtom(kind: String, str: s)
+  ensureMove(mem)
 
-proc integer*(i: int): MAtom {.inline, gcsafe, noSideEffect.} =
-  MAtom(kind: Integer, integer: i)
+proc str*(s: string, inRuntime: bool = false): JSValue {.inline.} =
+  var mem = newJSValue(String)
+  mem.str = s
+    
+  ensureMove(mem)
 
-proc uinteger*(u: uint): MAtom {.inline, gcsafe, noSideEffect.} =
-  MAtom(kind: UnsignedInt, uinteger: u)
+func stackStr*(s: string): MAtom =
+  ## Allocate a String atom on the stack.
+  ## This is used by the parser.
+  MAtom(
+    kind: String,
+    str: s
+  )
 
-proc boolean*(b: bool): MAtom {.inline, gcsafe, noSideEffect.} =
-  MAtom(kind: Boolean, state: b)
+proc ident*(ident: string, inRuntime: bool = false): JSValue {.inline.} =
+  var mem = newJSValue(Ident)
+  mem.ident = ident
+    
+  ensureMove(mem)
 
-proc bytecodeCallable*(clause: string): MAtom {.inline, gcsafe, noSideEffect.} =
-  MAtom(kind: BytecodeCallable, clauseName: clause)
+func stackIdent*(i: string): MAtom =
+  ## Allocate a Ident atom on the stack.
+  ## This is used by the parser.
+  MAtom(
+    kind: Ident,
+    ident: i
+  )
 
-proc getBytecodeClause*(atom: MAtom): Option[string] =
+proc integer*(i: int, inRuntime: bool = false): JSValue =
+  var mem = newJSValue(Integer)
+  mem.integer = i
+
+  ensureMove(mem)
+
+func stackInteger*(i: int): MAtom =
+  ## Allocate a Integer atom on the stack.
+  ## This is used by the parser.
+  MAtom(
+    kind: Integer,
+    integer: i
+  )
+
+proc uinteger*(u: uint, inRuntime: bool = false): JSValue =
+  var mem = newJSValue(UnsignedInt)
+  mem.uinteger = u
+
+  ensureMove(mem)
+
+func stackUinteger*(u: uint): MAtom =
+  ## Allocate a UnsignedInt atom on the stack.
+  ## This is used by the parser.
+  MAtom(
+    kind: UnsignedInt,
+    uinteger: u
+  )
+
+proc boolean*(b: bool, inRuntime: bool = false): JSValue =
+  var mem = newJSValue(Boolean)
+  mem.state = b
+
+  ensureMove(mem)
+
+func stackBoolean*(b: bool): MAtom =
+  MAtom(
+    kind: Boolean,
+    state: b
+  )
+
+proc bytecodeCallable*(clause: string, inRuntime: bool = false): JSValue =
+  var mem = newJSValue(BytecodeCallable)
+  mem.clauseName = clause
+
+  ensureMove(mem)
+
+func stackBytecodeCallable*(clause: string): MAtom =
+  MAtom(
+    kind: BytecodeCallable,
+    clauseName: clause
+  )
+
+proc getBytecodeClause*(atom: JSValue): Option[string] =
   if atom.kind == BytecodeCallable:
     return some(atom.clauseName)
 
-proc floating*(value: float64): MAtom {.inline, gcsafe, noSideEffect.} =
-  MAtom(kind: Float, floatVal: value)
+proc floating*(value: float64, inRuntime: bool = false): JSValue =
+  var mem = newJSValue(Float)
+  mem.floatVal = value
 
-proc boolean*(s: string): Option[MAtom] {.inline, gcsafe, noSideEffect.} =
+  mem
+
+func stackFloating*(value: float64): MAtom =
+  MAtom(
+    kind: Float,
+    floatVal: value
+  )
+
+func stackUndefined*: MAtom =
+  MAtom(
+    kind: Object
+  )
+
+proc boolean*(s: string, inRuntime: bool = false): Option[JSValue] =
   try:
-    return some(MAtom(kind: Boolean, state: parseBool(s)))
+    return some(boolean(parseBool(s)))
   except ValueError:
     discard
 
-proc ident*(i: string): MAtom {.inline, gcsafe, noSideEffect.} =
-  MAtom(kind: Ident, ident: i)
+proc null*(inRuntime: bool = false): JSValue {.inline.} =
+  newJSValue(Null)
 
-proc null*(): MAtom {.inline, gcsafe, noSideEffect.} =
+func stackNull*: MAtom =
   MAtom(kind: Null)
 
-proc sequence*(s: seq[MAtom]): MAtom {.inline.} =
-  MAtom(kind: Sequence, sequence: s)
+proc sequence*(s: seq[JSValue], inRuntime: bool = false): JSValue {.inline.} =
+  var mem = newJSValue(Sequence)
+  mem.sequence = s
 
-proc bigint*(value: SomeSignedInt): MAtom =
-  MAtom(kind: BigInteger, bigint: initBigInt(value))
+  ensureMove(mem)
 
-proc bigint*(value: string): MAtom =
-  MAtom(kind: BigInteger, bigint: initBigInt(value))
+func stackSequence*(s: seq[MAtom]): MAtom {.inline.} =
+  var sequence = newSeq[JSValue](s.len)
+  var s = deepCopy(s)
 
-proc obj*(): MAtom {.inline.} =
-  MAtom(kind: Object, objFields: initTable[string, int](), objValues: @[])
+  for i, _ in s:
+    sequence[i] = s[i].addr
 
-proc toString*(atom: MAtom): MAtom {.inline.} =
-  case atom.kind
-  of String:
-    return atom
-  of Ident:
-    return str(atom.ident)
-  of Integer:
-    return str($atom.integer)
-  of Sequence:
-    return str($atom.sequence)
-  of UnsignedInt:
-    return str($atom.uinteger)
-  of Boolean:
-    return str($atom.state)
-  of Object:
-    var msg = "<object structure>\n"
+  MAtom(kind: Sequence, sequence: sequence)
 
-    for field, index in atom.objFields:
-      msg &= field & ": " & atom.objValues[index].crush("") & '\n'
+proc bigint*(value: SomeSignedInt | string): JSValue =
+  var mem = newJSValue(BigInteger)
+  mem.bigint = initBigInt(value)
+  
+  ensureMove(mem)
 
-    msg &= "<end object structure>"
-    return msg.str()
-  of Float:
-    return str($atom.floatVal)
-  of Null:
-    return str "Null"
-  of BigInteger:
-    return str $atom.bigint
-  of BytecodeCallable:
-    return str atom.clauseName
-  of NativeCallable:
-    return str "<native code>"
-
-proc toInt*(atom: MAtom): MAtom {.inline.} =
-  case atom.kind
-  of String:
-    try:
-      return parseInt(atom.str).integer()
-    except ValueError:
-      return integer 0
-  of Ident:
-    try:
-      return parseInt(atom.ident).integer()
-    except ValueError:
-      return integer 0
-  of Integer, UnsignedInt:
-    return atom
-  of Sequence:
-    return atom.sequence.len.integer()
-  of Null:
-    return integer 0
-  of Boolean:
-    return atom.state.int.integer()
-  of Float:
-    return integer(atom.floatVal.int)
-  of Object, BigInteger, BytecodeCallable, NativeCallable:
-    return integer 0
+proc obj*(): JSValue {.inline.} =
+  var mem = newJSValue(Object)
+  mem.objFields = initTable[string, int]()
+  mem.objValues = newSeq[JSValue]()
+  
+  ensureMove(mem)

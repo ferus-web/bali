@@ -3,6 +3,7 @@
 ##
 
 import std/[math, tables, options]
+import ../../heap/boehm
 import ../../[atom, utils]
 import ../[shared, tokenizer, exceptions]
 import ./[operation, bytecodeopsetconv]
@@ -29,17 +30,17 @@ type
     opIndex*: uint = 1
 
   Registers* = object
-    retVal*: Option[MAtom]
-    callArgs*: seq[MAtom]
+    retVal*: Option[JSValue]
+    callArgs*: seq[JSValue]
 
-  PulsarInterpreter* = ref object
+  PulsarInterpreter* = object
     tokenizer: Tokenizer
     currClause: int
     currIndex: uint = 1
     clauses: seq[Clause]
     currJumpOnErr: Option[uint]
 
-    stack*: Table[uint, MAtom]
+    stack*: Table[uint, JSValue]
     locals*: Table[uint, string]
     builtins*: Table[string, proc(op: Operation)]
     errors*: seq[RuntimeException]
@@ -50,28 +51,6 @@ type
 
 const SequenceBasedRegisters* = [some(1)]
 
-proc getStackPtr*: pointer =
-  ## Cross-architecture function that returns the stack pointer.
-  ## Used for initializing Bali's internal GC.
-  when defined(amd64):
-    asm """
-      mov %%rsp, %0
-      :"=r"(`result`)
-    """
-  elif defined(arm):
-    asm """
-      mov %0, sp
-      :"=r"(`result`)
-    """
-  elif defined(riscv):
-    asm """
-      mv %0, sp
-      :"=r"(`result`)
-    """
-  else:
-    {.error: "Unsupported platform - the Bali GC does not work on your CPU architecture".}
-
-{.push checks: on, inline.}
 proc find*(clause: Clause, id: uint): Option[Operation] =
   for op in clause.operations:
     if op.index == id:
@@ -93,15 +72,8 @@ func getClause*(
 
 proc get*(
     interpreter: PulsarInterpreter, id: uint, ignoreLocalityRules: bool = false
-): Option[MAtom] =
+): Option[JSValue] =
   if interpreter.stack.contains(id):
-    #[ if interpreter.locals.contains(id) and
-        not (
-          interpreter.locals[id] == (&interpreter.getClause()).name or
-          ignoreLocalityRules
-        ):
-      return ]#
-
     return some(interpreter.stack[id])
 
 proc getClause*(interpreter: PulsarInterpreter, name: string): Option[Clause] =
@@ -109,9 +81,7 @@ proc getClause*(interpreter: PulsarInterpreter, name: string): Option[Clause] =
     if clause.name == name:
       return clause.some()
 
-{.pop.}
-
-proc analyze*(interpreter: PulsarInterpreter) =
+proc analyze*(interpreter: var PulsarInterpreter) =
   var cTok = interpreter.tokenizer.deepCopy()
   while not interpreter.tokenizer.isEof:
     let
@@ -138,15 +108,22 @@ proc analyze*(interpreter: PulsarInterpreter) =
       continue
 
 {.push checks: on, inline.}
-proc addAtom*(interpreter: PulsarInterpreter, atom: MAtom, id: uint) =
-  interpreter.stack[id] = atom
+proc addAtom*(interpreter: var PulsarInterpreter, atom: sink MAtom, id: uint) =
+  interpreter.stack[id] = atom.addr
+  interpreter.locals[id] = interpreter.clauses[interpreter.currClause].name
+
+proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) =
+  if id in interpreter.stack:
+    boehmDealloc(interpreter.stack[id])
+
+  interpreter.stack[id] = value
   interpreter.locals[id] = interpreter.clauses[interpreter.currClause].name
 
 proc hasBuiltin*(interpreter: PulsarInterpreter, name: string): bool =
   name in interpreter.builtins
 
 proc registerBuiltin*(
-    interpreter: PulsarInterpreter, name: string, builtin: proc(op: Operation)
+    interpreter: var PulsarInterpreter, name: string, builtin: proc(op: Operation)
 ) =
   interpreter.builtins[name] = builtin
 
@@ -156,7 +133,7 @@ proc callBuiltin*(interpreter: PulsarInterpreter, name: string, op: Operation) =
 {.pop.}
 
 proc throw*(
-    interpreter: PulsarInterpreter, exception: RuntimeException, bubbling: bool = false
+  interpreter: var PulsarInterpreter, exception: RuntimeException, bubbling: bool = false
 ) =
   if *interpreter.currJumpOnErr:
     return # TODO: implement error handling
@@ -239,12 +216,6 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
       op.consume(Integer, "JUMP expects exactly one integer as an argument")
   of AddInt, AddStr, SubInt, MultInt, DivInt, PowerInt, MultFloat, DivFloat, PowerFloat,
       AddFloat, SubFloat:
-    for x in 1 .. 2:
-      op.arguments &=
-        op.consume(
-          Integer, OpCodeToString[op.opCode] & " expects an integer at position " & $x
-        )
-  of CastStr, CastInt:
     for x in 1 .. 2:
       op.arguments &=
         op.consume(
@@ -414,7 +385,7 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
 
   some(msg)
 
-proc appendAtom*(interpreter: PulsarInterpreter, src, dest: uint) =
+proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: uint) =
   let
     a = interpreter.get(src)
     b = interpreter.get(dest)
@@ -458,13 +429,12 @@ proc appendAtom*(interpreter: PulsarInterpreter, src, dest: uint) =
   else:
     discard
 
-proc zeroOut*(interpreter: PulsarInterpreter, index: uint) {.inline.} =
+proc zeroOut*(interpreter: var PulsarInterpreter, index: uint) {.inline.} =
   ## Remove a stack index.
-  ## 
-  ## WARNING: **The index is then left empty and accesses to it will raise KeyErrors, so make sure to add something in its place unless it is truly no longer needed!**
+  boehmDealloc(interpreter.stack[index])
   interpreter.stack.del(index)
 
-proc swap*(interpreter: PulsarInterpreter, a, b: int) {.inline.} =
+proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
   var
     atomA = interpreter.get(a.uint)
     atomB = interpreter.get(b.uint)
@@ -478,14 +448,15 @@ proc swap*(interpreter: PulsarInterpreter, a, b: int) {.inline.} =
   interpreter.addAtom(&atomA, b.uint)
   interpreter.addAtom(&atomB, a.uint)
 
-proc call*(interpreter: PulsarInterpreter, name: string, op: Operation) =
+proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
   if interpreter.hasBuiltin(name):
     interpreter.callBuiltin(name, op)
     inc interpreter.currIndex
   else:
+    let interp = interpreter.addr
     let (index, clause) = (
       proc(): tuple[index: int, clause: Option[Clause]] {.gcsafe.} =
-        for i, cls in interpreter.clauses:
+        for i, cls in interp[].clauses:
           if cls.name == name:
             return (index: i, clause: some cls)
     )()
@@ -506,7 +477,7 @@ proc call*(interpreter: PulsarInterpreter, name: string, op: Operation) =
     else:
       raise newException(ValueError, "Reference to unknown clause: " & name)
 
-proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
+proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   when not defined(mirageNoJit):
     inc op.called
 
@@ -543,6 +514,10 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
     else:
       interpreter.currIndex += 2
   of Jump:
+    if gcStats.pressure > 0.9f:
+      # Assuming we're in a while-loop, perhaps perform a collection...
+      boehmGCFullCollect()
+
     let pos = op.arguments[0].getInt()
 
     if not *pos:
@@ -568,24 +543,6 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
   of Call:
     let name = &op.arguments[0].getStr()
     interpreter.call(name, op)
-  of CastStr:
-    let atom = interpreter.get((&op.arguments[0].getInt()).uint)
-
-    if not *atom:
-      inc interpreter.currIndex
-      return
-
-    interpreter.addAtom((&atom).toString(), (&op.arguments[1].getInt()).uint)
-    inc interpreter.currIndex
-  of CastInt:
-    let atom = interpreter.get((&op.arguments[0].getInt()).uint)
-
-    if not *atom:
-      inc interpreter.currIndex
-      return
-
-    interpreter.addAtom((&atom).toInt(), (&op.arguments[1].getInt()).uint)
-    inc interpreter.currIndex
   of LoadUint:
     interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
     inc interpreter.currIndex
@@ -607,26 +564,6 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
     if list.kind != Sequence:
       inc interpreter.currIndex
       return # TODO: type errors
-
-    if list.sequence.len - 1 > list.getCap():
-      raise newException(
-        AtomOverflowError,
-        "Attempt to insert element beyond atom's limit of " & $(&list.lCap) & " items",
-      )
-
-    if list.lHomogenous:
-      let inferredType =
-        if list.sequence.len > 0:
-          some(list.sequence[0].kind)
-        else:
-          none(MAtomKind)
-
-      if *inferredType and (&source).kind != &inferredType:
-        raise newException(
-          SequenceError,
-          "Attempt to add different type to sequence's homogenous type: " &
-            $(&source).kind,
-        )
 
     list.sequence.add(&source)
 
@@ -945,18 +882,10 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
     interpreter.addAtom(integer(res[0]), pos1.uint)
     interpreter.addAtom(integer(res[1]), pos2.uint)
     interpreter.addAtom(integer(res[2]), pos3.uint)
-  of SetCapList:
-    let idx = (&op.arguments[0].getInt()).uint
-    var atom = &interpreter.get(idx)
-
-    atom.setCap(&op.arguments[1].getInt())
-    interpreter.addAtom(atom, idx)
-    inc interpreter.currIndex
   of MarkHomogenous:
     let idx = (&op.arguments[0].getInt()).uint
     var atom = &interpreter.get(idx)
 
-    atom.markHomogenous()
     interpreter.addAtom(atom, idx)
     inc interpreter.currIndex
   of LoadNull:
@@ -1019,7 +948,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       dest = (&op.arguments[1].getInt()).uint
 
     interpreter.stack[dest] = &interpreter.get(src)
-    `=destroy`(interpreter.stack[src])
+    baliDealloc(interpreter.stack[src])
     interpreter.stack[src] = null()
     inc interpreter.currIndex
   of LoadFloat:
@@ -1109,7 +1038,8 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
     interpreter.addAtom(floating(a ^ b), pos)
     inc interpreter.currIndex
   of ZeroRetval:
-    interpreter.registers.retVal = some(null())
+    baliDealloc(&interpreter.registers.retVal)
+    interpreter.registers.retVal = none(JSValue)
     inc interpreter.currIndex
   of LoadBytecodeCallable:
     let
@@ -1129,7 +1059,7 @@ proc execute*(interpreter: PulsarInterpreter, op: var Operation) =
       echo "Unimplemented opcode: " & $op.opCode
       quit(1)
 
-proc setEntryPoint*(interpreter: PulsarInterpreter, name: string) {.inline.} =
+proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.} =
   for i, clause in interpreter.clauses:
     if clause.name == name:
       interpreter.currClause = i
@@ -1137,7 +1067,7 @@ proc setEntryPoint*(interpreter: PulsarInterpreter, name: string) {.inline.} =
 
   raise newException(ValueError, "setEntryPoint(): cannot find clause \"" & name & "\"")
 
-proc run*(interpreter: PulsarInterpreter) =
+proc run*(interpreter: var PulsarInterpreter) =
   while not interpreter.halt:
     let cls = interpreter.getClause()
 
@@ -1167,7 +1097,7 @@ proc newPulsarInterpreter*(source: string): PulsarInterpreter =
     clauses: @[],
     builtins: initTable[string, proc(op: Operation)](),
     locals: initTable[uint, string](),
-    stack: initTable[uint, MAtom](),
+    stack: initTable[uint, JSValue](),
   )
   interp.registerBuiltin(
     "print",

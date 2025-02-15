@@ -9,7 +9,7 @@ type PrimitiveHint* {.pure.} = enum
   String
   Number
 
-proc OrdinaryToPrimitive*(runtime: Runtime, input: MAtom, hint: PrimitiveHint): MAtom =
+proc OrdinaryToPrimitive*(runtime: Runtime, input: JSValue, hint: PrimitiveHint): JSValue =
   # 1. If hint is string, then
   let methodNames =
     if hint == PrimitiveHint.String:
@@ -42,8 +42,8 @@ proc OrdinaryToPrimitive*(runtime: Runtime, input: MAtom, hint: PrimitiveHint): 
   runtime.typeError("Cannot convert object into primitive")
 
 proc ToPrimitive*(
-    runtime: Runtime, input: MAtom, preferredType: Option[MAtomKind] = none(MAtomKind)
-): MAtom =
+    runtime: Runtime, input: JSValue, preferredType: Option[MAtomKind] = none(MAtomKind)
+): JSValue =
   # 1. If input is an Object, then
   if input.kind == Object:
     # a. Let exoticToPrim be ? GetMethod(input, @@toPrimitive).

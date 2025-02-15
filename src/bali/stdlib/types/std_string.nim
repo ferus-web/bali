@@ -20,7 +20,7 @@ type JSString* = object
 func value*(str: JSString): string {.inline.} =
   str.`@ internal`
 
-proc isString*(runtime: Runtime, a: MAtom): bool =
+proc isString*(runtime: Runtime, a: JSValue): bool =
   (a.kind == String or runtime.isA(a, JSString))
 
 proc generateStdIr*(runtime: Runtime) =
@@ -47,7 +47,7 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSString,
     "toString",
-    proc(str: MAtom) =
+    proc(str: JSValue) =
       let value = &str.tagged("internal")
       debug "String.toString(): returning value: " & &getStr(value)
 
@@ -58,7 +58,7 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSString,
     "indexOf",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       ## 22.1.3.9 String.prototype.indexOf ( searchString [ , position ] )
       ## If searchString appears as a substring of the result of converting this object to a String, at one or
       ## more indices that are greater than or equal to position, then the smallest such index is returned;
@@ -105,7 +105,7 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSString,
     "concat",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       ## 22.1.3.5 String.prototype.concat ( ...args )
 
       # 1. Let O be ? RequireObjectCoercible(this value).
@@ -132,7 +132,7 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSString,
     "trim",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       ## 22.1.3.32 String.prototype.trim ( )
 
       # 1. Let S be the this value.
@@ -143,7 +143,7 @@ proc generateStdIr*(runtime: Runtime) =
     ,
   )
 
-  proc trimStart(value: MAtom) =
+  proc trimStart(value: JSValue) =
     ## 22.1.3.34 String.prototype.trimStart ( )
     ## B.2.2.15 String.prototype.trimLeft ( )       [ LEGACY VERSION, USE 22.1.3.34 INSTEAD! ]
 
@@ -153,7 +153,7 @@ proc generateStdIr*(runtime: Runtime) =
     # 2. Return ? TrimString (S, start)
     ret runtime.trimString(value, TrimMode.Left)
 
-  proc trimEnd(value: MAtom) =
+  proc trimEnd(value: JSValue) =
     ## 22.1.3.33 String.prototype.trimEnd ( )
     ## B.2.2.16 String.prototype.trimRight ( )     [ LEGACY VERSION, USE 22.1.3.33 INSTEAD! ]
 
@@ -174,7 +174,7 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSString,
     "toLowerCase",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       let value = &value.tagged("internal")
 
       ret strutils.toLowerAscii(runtime.ToString(value))
@@ -184,7 +184,7 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSString,
     "toUpperCase",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       let value = &value.tagged("internal")
 
       ret strutils.toUpperAscii(runtime.ToString(value))
@@ -194,7 +194,7 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSString,
     "repeat",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       let value = runtime.ToString(&value.tagged("internal"))
       var repeatCnt: int
 
@@ -232,7 +232,7 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSString,
     "codePointAt",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       # 22.1.3.4 String.prototype.codePointAt ( pos )
       let
         # 1. Let O be ? RequireObjectCoercible(this value).

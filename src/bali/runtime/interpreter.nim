@@ -11,7 +11,7 @@ import
     bridge, describe,
   ]
 import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
-import bali/runtime/vm/heap/mark_and_sweep
+import bali/runtime/vm/heap/boehm
 import bali/runtime/abstract/equating
 import bali/stdlib/prelude
 import crunchy, pretty
@@ -66,7 +66,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
     if *stmt.error.str:
       runtime.generateIR(
         fn,
-        createImmutVal("error_msg", str(&stmt.error.str)),
+        createImmutVal("error_msg", stackStr(&stmt.error.str)),
         ownerStmt = some(stmt),
         internal = true,
       )
@@ -96,7 +96,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
       )
     #else:
     #  debug "ir: BinaryOp left term is an ident, reserving new index for result"
-    #  runtime.generateIR(fn, createImmutVal("store_in", null()), ownerStmt = some(stmt), internal = true)
+    #  runtime.generateIR(fn, createImmutVal("store_in", stackNull()), ownerStmt = some(stmt), internal = true)
 
     if stmt.binRight.kind == AtomHolder:
       debug "ir: BinaryOp right term is an atom"
@@ -158,7 +158,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
     else:
       runtime.generateIR(
         fn,
-        createImmutVal("retval", undefined()),
+        createImmutVal("retval", stackUndefined()),
         internal = true,
         ownerStmt = some(stmt),
       ) # load undefined atom
@@ -202,7 +202,7 @@ proc resolveFieldAccess*(
 ): uint =
   let internalName = $(hash(stmt) !& hash(ident) !& hash(access.identifier))
   runtime.generateIR(
-    fn, createImmutVal(internalName, null()), internal = true, ownerStmt = some(stmt)
+    fn, createImmutVal(internalName, stackNull()), internal = true, ownerStmt = some(stmt)
   )
   let accessResult = runtime.addrIdx - 1 # index where the value will be stored
 
@@ -250,8 +250,8 @@ proc generateIR*(
   of CreateImmutVal:
     debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
-
-    let idx = runtime.loadIRAtom(stmt.imAtom)
+    
+    let idx = runtime.loadIRAtom(deepCopy(stmt.imAtom))
 
     if not internal:
       if fn.name == "outer":
@@ -348,7 +348,7 @@ proc generateIR*(
       discard runtime.ir.addOp(
         IROperation(
           opcode: ExecuteBytecodeCallable,
-          arguments: @[uinteger(runtime.index(nam, defaultParams(fn)))],
+          arguments: @[stackUinteger(runtime.index(nam, defaultParams(fn)))],
         )
       )
       runtime.ir.resetArgs() ]#
@@ -371,6 +371,7 @@ proc generateIR*(
       "\" or index " & $index
     runtime.ir.loadObject(index) # load `undefined` on that index
     runtime.ir.readRegister(index, Register.ReturnValue)
+    runtime.ir.zeroRetval()
   of ConstructObject:
     runtime.expand(fn, stmt, internal)
     for i, arg in stmt.args:
@@ -411,7 +412,7 @@ proc generateIR*(
         discard runtime.ir.loadStr(index, stmt.reAtom)
       of Float:
         discard runtime.ir.addOp(
-          IROperation(opcode: LoadFloat, arguments: @[uinteger index, stmt.reAtom])
+          IROperation(opcode: LoadFloat, arguments: @[stackUinteger index, stmt.reAtom])
         ) # FIXME: mirage: loadFloat isn't implemented
       else:
         unreachable
@@ -427,7 +428,7 @@ proc generateIR*(
       # prepare for internal call
       runtime.ir.passArgument(
         runtime.loadIRAtom(
-          uinteger(runtime.index(accesses.identifier, defaultParams(fn)))
+          stackUinteger(runtime.index(accesses.identifier, defaultParams(fn)))
         )
       ) # 1: Atom index that needs its field to be overwritten
 
@@ -513,7 +514,7 @@ proc generateIR*(
           runtime.ir.loadBool(leftIdx, true)
         else:
           runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), true)
-      runtime.ir.overrideArgs(equalJmp, @[uinteger(equalBranch)])
+      runtime.ir.overrideArgs(equalJmp, @[stackUinteger(equalBranch)])
       runtime.ir.jump(equalBranch + 3)
 
       # left != right branch
@@ -522,7 +523,7 @@ proc generateIR*(
           runtime.ir.loadBool(leftIdx, false)
         else:
           runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
-      runtime.ir.overrideArgs(unequalJmp, @[uinteger(unequalBranch)])
+      runtime.ir.overrideArgs(unequalJmp, @[stackUinteger(unequalBranch)])
     of BinaryOperation.NotEqual:
       runtime.ir.passArgument(leftIdx)
       runtime.ir.passArgument(rightIdx)
@@ -539,7 +540,7 @@ proc generateIR*(
           runtime.ir.loadBool(leftIdx, true)
         else:
           runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), true)
-      runtime.ir.overrideArgs(unequalJmp, @[uinteger(unequalBranch)])
+      runtime.ir.overrideArgs(unequalJmp, @[stackUinteger(unequalBranch)])
       runtime.ir.jump(unequalBranch + 3)
 
       # left == right branch: false
@@ -548,11 +549,11 @@ proc generateIR*(
           runtime.ir.loadBool(leftIdx, false)
         else:
           runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
-      runtime.ir.overrideArgs(equalJmp, @[uinteger(equalBranch)])
+      runtime.ir.overrideArgs(equalJmp, @[stackUinteger(equalBranch)])
     of BinaryOperation.GreaterThan, BinaryOperation.LesserThan:
       discard runtime.ir.addOp(
         IROperation(
-          opcode: GreaterThanInt, arguments: @[uinteger leftIdx, uinteger rightIdx]
+          opcode: GreaterThanInt, arguments: @[stackUinteger leftIdx, stackUinteger rightIdx]
         ) # FIXME: mirage doesn't have a nicer IR function for this.
       )
 
@@ -560,13 +561,13 @@ proc generateIR*(
         trueJump = runtime.ir.placeholder(Jump) - 1
         falseJump = runtime.ir.placeholder(Jump) - 1
       
-      runtime.ir.overrideArgs(trueJump, @[uinteger runtime.ir.loadBool(leftIdx, true)])
+      runtime.ir.overrideArgs(trueJump, @[stackUinteger runtime.ir.loadBool(leftIdx, true)])
       let jmpAfterTrueBranch = runtime.ir.placeholder(Jump) - 1
 
       let falseBranch = runtime.ir.loadBool(leftIdx, false) - 1
       
-      runtime.ir.overrideArgs(jmpAfterTrueBranch, @[uinteger(falseBranch + 1)])
-      runtime.ir.overrideArgs(falseJump, @[uinteger(falseBranch + 1)]) ]#
+      runtime.ir.overrideArgs(jmpAfterTrueBranch, @[stackUinteger(falseBranch + 1)])
+      runtime.ir.overrideArgs(falseJump, @[stackUinteger(falseBranch + 1)]) ]#
     else:
       warn "emitter: unimplemented binary operation: " & $stmt.op
 
@@ -628,7 +629,7 @@ proc generateIR*(
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
         IROperation(
-          opcode: GreaterThanInt, arguments: @[uinteger lhsIdx, uinteger rhsIdx]
+          opcode: GreaterThanInt, arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
         ) # FIXME: mirage doesn't have a nicer IR function for this.
       )
     else:
@@ -655,21 +656,21 @@ proc generateIR*(
     runtime.generateIRForScope(stmt.branchFalse, allocateConstants = false)
       # generate branch two
     let endOfBranchTwo = getCurrOpNum().uint
-    runtime.ir.overrideArgs(skipBranchTwoJmp, @[uinteger(endOfBranchTwo)])
+    runtime.ir.overrideArgs(skipBranchTwoJmp, @[stackUinteger(endOfBranchTwo)])
 
     case stmt.conditionExpr.op
     of Equal, GreaterThan, TrueEqual:
-      runtime.ir.overrideArgs(falseJump, @[uinteger(endOfBranchOne)])
-      runtime.ir.overrideArgs(trueJump, @[uinteger(falseJump + 2)])
+      runtime.ir.overrideArgs(falseJump, @[stackUinteger(endOfBranchOne)])
+      runtime.ir.overrideArgs(trueJump, @[stackUinteger(falseJump + 2)])
     of NotEqual, LesserThan:
-      runtime.ir.overrideArgs(trueJump, @[uinteger(getCurrOpNum().uint)])
-      runtime.ir.overrideArgs(falseJump, @[uinteger(falseJump + 2)])
+      runtime.ir.overrideArgs(trueJump, @[stackUinteger(getCurrOpNum().uint)])
+      runtime.ir.overrideArgs(falseJump, @[stackUinteger(falseJump + 2)])
     else:
       unreachable
   of CopyValMut:
     debug "emitter: generate IR for copying value to a mutable address with source: " &
       stmt.cpMutSourceIdent & " and destination: " & stmt.cpMutDestIdent
-    runtime.generateIR(fn, createMutVal(stmt.cpMutDestIdent, null()), internal = false)
+    runtime.generateIR(fn, createMutVal(stmt.cpMutDestIdent, stackNull()), internal = false)
     let dest = runtime.addrIdx - 1
 
     runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
@@ -677,7 +678,7 @@ proc generateIR*(
     debug "emitter: generate IR for copying value to an immutable address with source: " &
       stmt.cpImmutSourceIdent & " and destination: " & stmt.cpImmutDestIdent
     runtime.generateIR(
-      fn, createMutVal(stmt.cpImmutDestIdent, null()), internal = false
+      fn, createMutVal(stmt.cpImmutDestIdent, stackNull()), internal = false
     )
     let dest = runtime.addrIdx - 1
 
@@ -751,7 +752,7 @@ proc generateIR*(
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
         IROperation(
-          opcode: GreaterThanInt, arguments: @[uinteger lhsIdx, uinteger rhsIdx]
+          opcode: GreaterThanInt, arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
         ) # FIXME: mirage doesn't have a nicer IR function for this.
       )
     else:
@@ -782,19 +783,19 @@ proc generateIR*(
 
     if runtime.irHints.breaksGeneratedAt.len > 0:
       for brk in runtime.irHints.breaksGeneratedAt:
-        runtime.ir.overrideArgs(brk, @[uinteger(jmpPastBody.uint)])
+        runtime.ir.overrideArgs(brk, @[stackUinteger(jmpPastBody.uint)])
     else:
-      runtime.ir.overrideArgs(dummyJump, @[uinteger(jmpPastBody.uint)])
+      runtime.ir.overrideArgs(dummyJump, @[stackUinteger(jmpPastBody.uint)])
 
     runtime.irHints.breaksGeneratedAt.reset()
 
     case stmt.whConditionExpr.op
     of BinaryOperation.Equal, BinaryOperation.TrueEqual, BinaryOperation.GreaterThan:
-      runtime.ir.overrideArgs(trueJump, @[uinteger(jmpIntoBody.uint)])
-      runtime.ir.overrideArgs(escapeJump, @[uinteger(jmpPastBody.uint)])
+      runtime.ir.overrideArgs(trueJump, @[stackUinteger(jmpIntoBody.uint)])
+      runtime.ir.overrideArgs(escapeJump, @[stackUinteger(jmpPastBody.uint)])
     of BinaryOperation.NotEqual, BinaryOperation.LesserThan:
-      runtime.ir.overrideArgs(trueJump, @[uinteger(jmpPastBody.uint)])
-      runtime.ir.overrideArgs(escapeJump, @[uinteger(jmpIntoBody.uint)])
+      runtime.ir.overrideArgs(trueJump, @[stackUinteger(jmpPastBody.uint)])
+      runtime.ir.overrideArgs(escapeJump, @[stackUinteger(jmpIntoBody.uint)])
     else:
       unreachable
   of Increment:
@@ -931,7 +932,7 @@ proc generateIR*(
     # Now, generate the jumps for either going into the loop body or outside it.
     # If conditional is true, jump into the body
     # else, jump outside
-    let jmpIntoBody = uinteger(getCurrOpNum() + 2'u)
+    let jmpIntoBody = stackUinteger(getCurrOpNum() + 2'u)
 
     let jump1 = runtime.ir.placeholder(Jump) - 1
     let jump2 = runtime.ir.placeholder(Jump) - 1
@@ -942,7 +943,7 @@ proc generateIR*(
     if *stmt.forLoopIter:
       runtime.generateIR(fn, &stmt.forLoopIter)
 
-    let jmpOutsideBody = uinteger(getCurrOpNum() + 1'u)
+    let jmpOutsideBody = stackUinteger(getCurrOpNum() + 1'u)
 
     if not inverted:
       runtime.ir.overrideArgs(jump1, @[jmpIntoBody])
@@ -1004,7 +1005,7 @@ proc generateIRForScope*(
         let fnIndex = runtime.index(clause, defaultParams(fn))
         discard runtime.ir.addOp(
           IROperation(
-            opcode: LoadBytecodeCallable, arguments: @[uinteger(fnIndex), str(clause)]
+            opcode: LoadBytecodeCallable, arguments: @[stackUinteger(fnIndex), stackStr(clause)]
           )
         )
         runtime.ir.markGlobal(fnIndex)
@@ -1023,7 +1024,7 @@ proc generateIRForScope*(
   for child in scope.children:
     runtime.generateIRForScope(child)
 
-proc findField*(atom: MAtom, accesses: FieldAccess): MAtom =
+proc findField*(atom: JSValue, accesses: FieldAccess): JSValue =
   if accesses.identifier in atom.objFields:
     if accesses.next == nil:
       return atom.objValues[atom.objFields[accesses.identifier]]
@@ -1032,7 +1033,7 @@ proc findField*(atom: MAtom, accesses: FieldAccess): MAtom =
   else:
     return undefined()
 
-proc computeTypeof*(runtime: Runtime, atom: MAtom): string =
+proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
   ## Compute the type of an atom.
   case atom.kind
   of String:
@@ -1087,7 +1088,7 @@ proc generateInternalIR*(runtime: Runtime) =
         runtime.typeError("value is undefined")
 
       if atom.isNull():
-        runtime.typeError("value is null")
+        runtime.typeError("value is stackNull")
 
       if atom.kind != Object:
         debug "runtime: atom is not an object, returning undefined."
@@ -1217,7 +1218,7 @@ proc generateInternalIR*(runtime: Runtime) =
           runtime.typeError("Value is undefined")
 
         if destAtom.isNull:
-          runtime.typeError("Value is null")
+          runtime.typeError("Value is stackNull")
 
       checkDestAtom
 
@@ -1294,7 +1295,7 @@ proc run*(runtime: Runtime) =
           quit(0)
     )
 
-  for ident in ["undefined", "NaN", "true", "false", "null"]:
+  for ident in ["undefined", "NaN", "true", "false", "stackNull"]:
     runtime.markGlobal(ident)
 
   runtime.generateIRForScope(runtime.ast.scopes[0])
@@ -1336,7 +1337,11 @@ proc newRuntime*(
   ## If the input isn't from a file, you can set it to anything - it's primarily used for caching.
   ## The AST must be valid.
   ## You can check the options exposed to you in `InterpreterOpts` by checking its documentation.
-  initializeGC(getStackPtr(), 32) # Initialize the M&S garbage collector
+  # initializeGC(getStackPtr(), 4) # Initialize the M&S garbage collector
+  
+  boehmGCinit()
+  boehmGC_enable()
+
   Runtime(
     ast: ast,
     clauses: @[],

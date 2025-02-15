@@ -42,7 +42,7 @@ proc internalTrim*(str: string, things: set[char], mode: TrimMode): string {.inl
 
   str[substringStart ..< substringStart + substringLength]
 
-proc trimString*(runtime: Runtime, input: MAtom, where: TrimMode): string =
+proc trimString*(runtime: Runtime, input: JSValue, where: TrimMode): string =
   # 1. Let str be ? RequireObjectCoercible(string).
   let inputString = RequireObjectCoercible(runtime, input)
 

@@ -10,9 +10,9 @@ import pkg/gmp
 import bali/runtime/vm/atom
 
 type JSNumber* = object
-  `@ value`*: MAtom
+  `@ value`*: JSValue
 
-proc thisNumberValue*(runtime: Runtime, value: MAtom): MAtom =
+proc thisNumberValue*(runtime: Runtime, value: JSValue): JSValue =
   ## 21.1.3.7.1 ThisNumberValue ( value )
 
   if value.isNumber:
@@ -138,7 +138,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSNumber,
     "toString",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       ## 21.1.3.6 Number.prototype.toString ( [ radix ] )
       # FIXME: Not compliant.
 
@@ -150,7 +150,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSNumber,
     "valueOf",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       ## 21.1.3.7 Number.prototype.valueOf ( )
 
       # 1. Return ? ThisNumberValue(this value).

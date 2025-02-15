@@ -14,7 +14,7 @@ type Operation* = object
   opcode*: Ops
   rawArgs*: seq[Token] # should be zero'd out once `computeArgs` is called
 
-  arguments*: seq[MAtom]
+  arguments*: seq[JSValue]
   consumed*: bool = false
   lastConsume: int = 0
 
@@ -41,7 +41,7 @@ proc consume*(
     expects: string,
     enforce: bool = true,
     position: Option[int] = none(int),
-): MAtom {.inline.} =
+): JSValue {.inline.} =
   operation.consumed = true
 
   let
