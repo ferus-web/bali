@@ -45,7 +45,7 @@ type
     of cakIdent:
       ident*: string
     of cakAtom:
-      atom*: JSValue
+      atom*: MAtom
     of cakFieldAccess:
       access*: FieldAccess
     of cakImmediateExpr:
@@ -88,10 +88,10 @@ type
     case kind*: StatementKind
     of CreateMutVal:
       mutIdentifier*: string
-      mutAtom*: JSValue
+      mutAtom*: MAtom
     of CreateImmutVal:
       imIdentifier*: string
-      imAtom*: JSValue
+      imAtom*: MAtom
     of Call:
       fn*: FunctionCall
       arguments*: PositionedArguments
@@ -101,7 +101,7 @@ type
       fnName*: string
       body*: Scope
     of ReturnFn:
-      retVal*: Option[JSValue]
+      retVal*: Option[MAtom]
       retIdent*: Option[string]
     of CallAndStoreResult:
       mutable*: bool
@@ -112,7 +112,7 @@ type
       args*: PositionedArguments
     of ReassignVal:
       reIdentifier*: string
-      reAtom*: JSValue
+      reAtom*: MAtom
     of ThrowError:
       error*: tuple[str: Option[string], exc: Option[void], ident: Option[string]]
     of BinaryOp:
@@ -122,7 +122,7 @@ type
     of IdentHolder:
       ident*: string
     of AtomHolder:
-      atom*: JSValue
+      atom*: MAtom
     of AccessField:
       identifier*: string
       field*: string
@@ -144,12 +144,12 @@ type
     of Decrement:
       decIdent*: string
     of Waste:
-      wstAtom*: Option[JSValue]
+      wstAtom*: Option[MAtom]
       wstIdent*: Option[string]
     of Break: discard
     of AccessArrayIndex:
       arrAccIdent*: string
-      arrAccIndex*: Option[JSValue]
+      arrAccIndex*: Option[MAtom]
       arrAccIdentIndex*: Option[string]
     of TernaryOp:
       ternaryCond*: Statement
@@ -242,7 +242,7 @@ func createFieldAccess*(splitted: seq[string]): FieldAccess =
 proc pushFieldAccess*(args: var PositionedArguments, access: FieldAccess) {.inline.} =
   args &= CallArg(kind: cakFieldAccess, access: access)
 
-proc pushAtom*(args: var PositionedArguments, atom: JSValue) {.inline.} =
+proc pushAtom*(args: var PositionedArguments, atom: MAtom) {.inline.} =
   args &= CallArg(kind: cakAtom, atom: atom)
 
 proc pushImmExpr*(args: var PositionedArguments, expr: Statement) {.inline.} =
@@ -261,7 +261,7 @@ proc throwError*(
 
   Statement(kind: ThrowError, error: (str: errorStr, exc: errorExc, ident: errorIdent))
 
-proc createImmutVal*(name: string, atom: JSValue): Statement =
+proc createImmutVal*(name: string, atom: MAtom): Statement =
   Statement(kind: CreateImmutVal, imIdentifier: name, imAtom: atom)
 
 proc breakStmt*(): Statement =
@@ -270,7 +270,7 @@ proc breakStmt*(): Statement =
 proc returnFunc*(): Statement =
   Statement(kind: ReturnFn)
 
-proc waste*(atom: JSValue): Statement =
+proc waste*(atom: MAtom): Statement =
   Statement(kind: Waste, wstAtom: atom.some())
 
 proc waste*(ident: string): Statement =
@@ -290,7 +290,7 @@ proc forLoop*(
 proc increment*(ident: string): Statement =
   Statement(kind: Increment, incIdent: ident)
 
-proc arrayAccess*(ident: string, index: JSValue): Statement =
+proc arrayAccess*(ident: string, index: MAtom): Statement =
   Statement(kind: AccessArrayIndex, arrAccIdent: ident, arrAccIndex: index.some)
 
 proc arrayAccess*(ident: string, index: string): Statement =
@@ -307,7 +307,7 @@ proc ifStmt*(condition: Statement, body, elseScope: Scope): Statement =
     kind: IfStmt, conditionExpr: condition, branchTrue: body, branchFalse: elseScope
   )
 
-proc atomHolder*(atom: JSValue): Statement =
+proc atomHolder*(atom: MAtom): Statement =
   Statement(kind: AtomHolder, atom: atom)
 
 proc identHolder*(ident: string): Statement =
@@ -334,10 +334,10 @@ proc binOp*(
         none(string),
   )
 
-proc reassignVal*(identifier: string, atom: JSValue): Statement =
+proc reassignVal*(identifier: string, atom: MAtom): Statement =
   Statement(kind: ReassignVal, reIdentifier: identifier, reAtom: atom)
 
-proc returnFunc*(retVal: JSValue): Statement =
+proc returnFunc*(retVal: MAtom): Statement =
   Statement(kind: ReturnFn, retVal: some(retVal))
 
 proc returnFunc*(ident: string): Statement =
@@ -353,13 +353,13 @@ proc callAndStoreMut*(ident: string, fn: Statement): Statement =
   fn.expectsReturnVal = true
   Statement(kind: CallAndStoreResult, mutable: true, storeIdent: ident, storeFn: fn)
 
-proc createMutVal*(name: string, atom: JSValue): Statement =
+proc createMutVal*(name: string, atom: MAtom): Statement =
   Statement(kind: CreateMutVal, mutIdentifier: name, mutAtom: atom)
 
 proc identArg*(ident: string): CallArg =
   CallArg(kind: cakIdent, ident: ident)
 
-proc atomArg*(atom: JSValue): CallArg =
+proc atomArg*(atom: MAtom): CallArg =
   CallArg(kind: cakAtom, atom: atom)
 
 proc constructObject*(name: string, args: PositionedArguments): Statement =

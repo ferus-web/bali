@@ -3,7 +3,6 @@
 import std/[options, logging, strutils, tables]
 import bali/grammar/[token, tokenizer, ast, errors, statement]
 import bali/internal/sugar
-import bali/runtime/atom_helpers
 import pkg/bali/runtime/vm/atom
 import pkg/[results, pretty, yaml]
 
@@ -72,7 +71,7 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
   else:
     return some call(name.callFunction, arguments)
 
-proc parseAtom*(parser: Parser, token: Token): Option[JSValue]
+proc parseAtom*(parser: Parser, token: Token): Option[MAtom]
 
 proc parseExpression*(
     parser: Parser, storeIn: Option[string] = none(string)
@@ -192,18 +191,18 @@ proc parseExpression*(
       debug "parser: whilst parsing arithmetic expr, found boolean (true)"
       if term.binLeft == nil:
         debug "parser: boolean will fill left term"
-        term.binLeft = atomHolder(boolean(true))
+        term.binLeft = atomHolder(stackBoolean(true))
       else:
-        parseRHSExpression(atomHolder(boolean(true)))
-        term.binRight = atomHolder(boolean(true))
+        parseRHSExpression(atomHolder(stackBoolean(true)))
+        term.binRight = atomHolder(stackBoolean(true))
     of TokenKind.False:
       debug "parser: whilst parsing arithmetic expr, found boolean (false)"
       if term.binLeft == nil:
         debug "parser: boolean will fill left term"
-        term.binLeft = atomHolder(boolean(false))
+        term.binLeft = atomHolder(stackBoolean(false))
       else:
         debug "parser: boolean will fill right term"
-        term.binRight = atomHolder(boolean(false))
+        term.binRight = atomHolder(stackBoolean(false))
     of TokenKind.Comment:
       debug "parser: whilst parsing arithmetic expr, found comment - ignoring"
       discard
@@ -309,9 +308,9 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
       let key =
         case token.kind
         of TokenKind.Identifier:
-          str(token.ident)
+          stackStr(token.ident)
         of TokenKind.String:
-          str(token.str)
+          stackStr(token.str)
         of TokenKind.Number:
           &parser.parseAtom(token)
         else:
@@ -342,14 +341,14 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
   if not metLCurly:
     parser.error Other, "property list must be ended by }" ]#
 
-proc parseArray*(parser: Parser): Option[JSValue] =
+proc parseArray*(parser: Parser): Option[MAtom] =
   # We are assuming that the starting bracket (`[`) has been consumed.
   debug "parser: parsing array"
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
   var
-    arr: seq[JSValue]
+    arr: seq[MAtom]
     prev = TokenKind.LBracket
     metRBracket = false
 
@@ -369,7 +368,7 @@ proc parseArray*(parser: Parser): Option[JSValue] =
       if prev in {TokenKind.LBracket, TokenKind.Comma}:
         debug "parser: previous token was left bracket or comma, appending `undefined` to array"
         prev = TokenKind.Comma
-        arr &= undefined()
+        arr &= stackUndefined()
       else:
         debug "parser: previous token wasn't those two, continuing."
         prev = TokenKind.Comma
@@ -408,7 +407,7 @@ proc parseArray*(parser: Parser): Option[JSValue] =
   if not metRBracket:
     parser.error Other, "array is not closed off by bracket"
 
-  some sequence(arr)
+  some stackSequence(arr)
 
 proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
   # We are assuming that the starting bracket (`[`) has been consumed.
@@ -481,7 +480,7 @@ proc expectEqualsSign*(
 proc parseTernaryOp*(
     parser: Parser,
     ident: Option[string] = none(string),
-    atom: Option[JSValue] = none(JSValue),
+    atom: Option[MAtom] = none(MAtom),
 ): Option[Statement] =
   assert(
     *ident or *atom,
@@ -496,7 +495,7 @@ proc parseTernaryOp*(
       atomHolder(&atom)
     else:
       unreachable
-      atomHolder(null())
+      atomHolder(stackNull())
 
   debug "parser: parsing ternary's true expression"
   # TODO: add support for expressions like x ? (a + b) : (c + d)
@@ -564,9 +563,9 @@ proc parseDeclaration*(
   proc stubDef(): Result[Option[Statement], void] =
     case initialIdent
     of "let", "const":
-      return ok(some(createImmutVal(ident, undefined())))
+      return ok(some(createImmutVal(ident, stackUndefined())))
     of "var":
-      return ok(some(createMutVal(ident, undefined())))
+      return ok(some(createMutVal(ident, stackUndefined())))
 
   if parser.tokenizer.eof():
     if ident == initialIdent:
@@ -599,7 +598,7 @@ proc parseDeclaration*(
     return expr
 
   var
-    atom: Option[JSValue]
+    atom: Option[MAtom]
     vIdent: Option[string]
     ternary: Option[Statement]
     toCall: Option[Statement]
@@ -612,7 +611,7 @@ proc parseDeclaration*(
       if (let err = tok.getError(); *err):
         parser.error Other, &err
 
-      atom = some(str tok.str)
+      atom = some(stackStr tok.str)
       break
     of TokenKind.Identifier:
       if not parser.tokenizer.eof():
@@ -635,15 +634,15 @@ proc parseDeclaration*(
           break
     of TokenKind.Number:
       if *tok.intVal:
-        atom = some(uinteger uint32(&tok.intVal))
+        atom = some(stackUinteger uint32(&tok.intVal))
       else:
-        atom = some(floating(tok.floatVal))
+        atom = some(stackFloating(tok.floatVal))
     of TokenKind.Whitespace:
       discard
     of TokenKind.True:
-      atom = some(boolean(true))
+      atom = some(stackBoolean(true))
     of TokenKind.False:
-      atom = some(boolean(false))
+      atom = some(stackBoolean(false))
     of TokenKind.New:
       toCall = parser.parseConstructor()
       break
@@ -788,7 +787,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
   info "parser: parsed function: " & &name
   some function(&name, body, arguments)
 
-proc parseAtom*(parser: Parser, token: Token): Option[JSValue] =
+proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
   info "parser: trying to parse an atom out of " & $token.kind
 
   case token.kind
@@ -796,20 +795,20 @@ proc parseAtom*(parser: Parser, token: Token): Option[JSValue] =
     debug "parser: parseAtom: token is Number"
     if *token.intVal:
       debug "parser: parseAtom: token contains integer value"
-      return some integer(&token.intVal)
+      return some stackInteger(&token.intVal)
     else:
       debug "parser: parseAtom: token contains floating-point value"
-      return some floating(token.floatVal)
+      return some stackFloating(token.floatVal)
   of TokenKind.String:
     if (let err = token.getError(); *err):
       parser.error Other, &err
 
     debug "parser: parseAtom: token is String: " & token.str
-    return some str(token.str)
+    return some stackStr(token.str)
   of TokenKind.True:
-    return some boolean(true)
+    return some stackBoolean(true)
   of TokenKind.False:
-    return some boolean(false)
+    return some stackBoolean(false)
   of TokenKind.LBracket:
     return parser.parseArray()
   else:
@@ -876,9 +875,9 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
 
       args.pushAtom(&atom)
     of TokenKind.True:
-      args.pushAtom(boolean(true))
+      args.pushAtom(stackBoolean(true))
     of TokenKind.False:
-      args.pushAtom(boolean(false))
+      args.pushAtom(stackBoolean(false))
     of TokenKind.RParen:
       metEnd = true
       break
@@ -930,7 +929,7 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
   info "parser: parsing re-assignment to identifier: " & ident
 
   var
-    atom: Option[JSValue]
+    atom: Option[MAtom]
     vIdent: Option[string]
     toCall: Option[Statement]
 

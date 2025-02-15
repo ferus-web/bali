@@ -137,7 +137,7 @@ proc hash*(atom: MAtom): Hash =
 
 proc hash*(value: ptr MAtom): Hash {.inline.} = hash(value[])
 
-proc crush*(atom: JSValue, id: string = "", quote: bool = true): string {.inline.} =
+proc crush*(atom: MAtom | JSValue, id: string = "", quote: bool = true): string {.inline.} =
   case atom.kind
   of String:
     if quote:
@@ -250,11 +250,27 @@ proc str*(s: string, inRuntime: bool = false): JSValue {.inline.} =
     
   ensureMove(mem)
 
+func stackStr*(s: string): MAtom =
+  ## Allocate a String atom on the stack.
+  ## This is used by the parser.
+  MAtom(
+    kind: String,
+    str: s
+  )
+
 proc ident*(ident: string, inRuntime: bool = false): JSValue {.inline.} =
   var mem = newJSValue(Ident)
   mem.ident = ident
     
   ensureMove(mem)
+
+func stackIdent*(i: string): MAtom =
+  ## Allocate a Ident atom on the stack.
+  ## This is used by the parser.
+  MAtom(
+    kind: Ident,
+    ident: i
+  )
 
 proc integer*(i: int, inRuntime: bool = false): JSValue =
   var mem = newJSValue(Integer)
@@ -262,11 +278,27 @@ proc integer*(i: int, inRuntime: bool = false): JSValue =
 
   ensureMove(mem)
 
+func stackInteger*(i: int): MAtom =
+  ## Allocate a Integer atom on the stack.
+  ## This is used by the parser.
+  MAtom(
+    kind: Integer,
+    integer: i
+  )
+
 proc uinteger*(u: uint, inRuntime: bool = false): JSValue =
-  var mem = newJSValue(UnsignedINt)
+  var mem = newJSValue(UnsignedInt)
   mem.uinteger = u
 
   ensureMove(mem)
+
+func stackUinteger*(u: uint): MAtom =
+  ## Allocate a UnsignedInt atom on the stack.
+  ## This is used by the parser.
+  MAtom(
+    kind: UnsignedInt,
+    uinteger: u
+  )
 
 proc boolean*(b: bool, inRuntime: bool = false): JSValue =
   var mem = newJSValue(Boolean)
@@ -274,11 +306,23 @@ proc boolean*(b: bool, inRuntime: bool = false): JSValue =
 
   ensureMove(mem)
 
+func stackBoolean*(b: bool): MAtom =
+  MAtom(
+    kind: Boolean,
+    state: b
+  )
+
 proc bytecodeCallable*(clause: string, inRuntime: bool = false): JSValue =
   var mem = newJSValue(BytecodeCallable)
   mem.clauseName = clause
 
   ensureMove(mem)
+
+func stackBytecodeCallable*(clause: string): MAtom =
+  MAtom(
+    kind: BytecodeCallable,
+    clauseName: clause
+  )
 
 proc getBytecodeClause*(atom: JSValue): Option[string] =
   if atom.kind == BytecodeCallable:
@@ -290,6 +334,17 @@ proc floating*(value: float64, inRuntime: bool = false): JSValue =
 
   mem
 
+func stackFloating*(value: float64): MAtom =
+  MAtom(
+    kind: Float,
+    floatVal: value
+  )
+
+func stackUndefined*: MAtom =
+  MAtom(
+    kind: Object
+  )
+
 proc boolean*(s: string, inRuntime: bool = false): Option[JSValue] =
   try:
     return some(boolean(parseBool(s)))
@@ -299,15 +354,23 @@ proc boolean*(s: string, inRuntime: bool = false): Option[JSValue] =
 proc null*(inRuntime: bool = false): JSValue {.inline.} =
   newJSValue(Null)
 
-proc sequence*(s: seq[JSValue], inRuntime: bool = false): JSValue {.inline.} =
-  if inRuntime:
-    var mem = newJSValue(Sequence)
-    mem.sequence = s
+func stackNull*: MAtom =
+  MAtom(kind: Null)
 
-    ensureMove(mem)
-  else:
-    var mem = MAtom(kind: Sequence, sequence: s)
-    mem.addr
+proc sequence*(s: seq[JSValue], inRuntime: bool = false): JSValue {.inline.} =
+  var mem = newJSValue(Sequence)
+  mem.sequence = s
+
+  ensureMove(mem)
+
+func stackSequence*(s: seq[MAtom]): MAtom {.inline.} =
+  var sequence = newSeq[JSValue](s.len)
+  var s = deepCopy(s)
+
+  for i, _ in s:
+    sequence[i] = s[i].addr
+
+  MAtom(kind: Sequence, sequence: sequence)
 
 proc bigint*(value: SomeSignedInt | string): JSValue =
   var mem = newJSValue(BigInteger)
