@@ -35,34 +35,34 @@ proc addOp*(gen: IRGenerator, operation: IROperation): uint {.inline.} =
 proc loadInt*[V: SomeInteger](
     gen: IRGenerator, position: uint, value: V
 ): uint {.inline, discardable.} =
-  ## Load an integer into the memory space.
-  ## This is an overloadable function and can be provided any kind of integer type (`int`, `int8`, `int16`, `int32`, `int64` or their unsigned counterparts)
+  ## Load an stackInteger into the memory space.
+  ## This is an overloadable function and can be provided any kind of stackInteger type (`int`, `int8`, `int16`, `int32`, `int64` or their unsigned counterparts)
   ##
   ## **See also:**
-  ## * `loadInt proc<#loadInt, IRGenerator, uint, JSValue>`
-  ## * `loadFloat proc<#loadFloat, IRGenerator, uint, JSValue>`
+  ## * `loadInt proc<#loadInt, IRGenerator, uint, MAtom>`
+  ## * `loadFloat proc<#loadFloat, IRGenerator, uint, MAtom>`
 
   gen.addOp(
-    IROperation(opCode: LoadInt, arguments: @[uinteger position, integer value])
+    IROperation(opCode: LoadInt, arguments: @[stackUinteger position, stackInteger value])
   )
 
 proc loadInt*(
-    gen: IRGenerator, position: uint, value: JSValue
+    gen: IRGenerator, position: uint, value: MAtom
 ): uint {.inline, discardable.} =
-  ## Load an integer into the memory space.
-  ## This is an overloadable function and can be provided a `JSValue` that contains an integer.
+  ## Load an stackInteger into the memory space.
+  ## This is an overloadable function and can be provided a `MAtom` that contains an stackInteger.
   ##
   ## **See also:**
   ## * `loadInt proc<#loadInt, IRGenerator, uint, SomeInteger>`
-  ## * `loadFloat proc<#loadFloat, IRGenerator, uint, JSValue>`
+  ## * `loadFloat proc<#loadFloat, IRGenerator, uint, MAtom>`
 
   if value.kind != Integer:
-    raise newException(ValueError, "Attempt to load " & $value.kind & " as an integer.")
+    raise newException(ValueError, "Attempt to load " & $value.kind & " as an stackInteger.")
 
-  gen.addOp(IROperation(opCode: LoadInt, arguments: @[uinteger position, value]))
+  gen.addOp(IROperation(opCode: LoadInt, arguments: @[stackUinteger position, value]))
 
 proc loadList*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
-  ## Load a list (vector, sequence, whatever you like to call it) into memory.
+  ## Load a list (vector, stackSequence, whatever you like to call it) into memory.
   ## This list initially starts out empty and you can fill it up as you wish.
   ## You can mark this list as homogenous to only allow a single type of atoms to populate it, 
   ## and you can set a cap on this list to prevent its element list from growing beyond what you intend.
@@ -71,14 +71,14 @@ proc loadList*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## * `appendList proc<#appendList, IRGenerator, uint, uint>`
   ## * `markHomogenous proc<#markHomogenous, IRGenerator, uint>`
   ## * `setCap proc<#setCap, IRGenerator, uint, int>`
-  gen.addOp(IROperation(opCode: LoadList, arguments: @[uinteger position]))
+  gen.addOp(IROperation(opCode: LoadList, arguments: @[stackUinteger position]))
 
 proc appendList*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
   ## Append an atom that has already been loaded into memory onto a list.
   ## This can fail, if:
   ## * the list is marked as homogenous and the atom you are attempting to load does not belong to the inferred type.
   ## * the list has a cap and appending this element will cause an overflow.
-  gen.addOp(IROperation(opCode: AddList, arguments: @[uinteger dest, uinteger source]))
+  gen.addOp(IROperation(opCode: AddList, arguments: @[stackUinteger dest, stackUinteger source]))
 
 proc jump*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Jump to an operation index in the current clause. 
@@ -86,31 +86,31 @@ proc jump*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## .. warning:: Validate operations: If the operation index specified is beyond the number of operations in the current clause or below the least index (0), the interpreter will assume that the execution of the program has been completed and gracefully exit with no errors or warnings. This can become a nightmare to debug if you aren't keeping track of the operation indices properly.
   ##
   ## **See also:**
-  ## * `call proc<#call, IRGenerator, string, seq[JSValue]>`
-  gen.addOp(IROperation(opCode: Jump, arguments: @[uinteger position]))
+  ## * `call proc<#call, IRGenerator, string, seq[MAtom]>`
+  gen.addOp(IROperation(opCode: Jump, arguments: @[stackUinteger position]))
 
 proc loadStr*(
-    gen: IRGenerator, position: uint, value: string | JSValue
+    gen: IRGenerator, position: uint, value: string | MAtom
 ): uint {.inline, discardable.} =
   ## Load a string into memory.
   ## This is an overloadable function, and can be provided:
   ## * string type
-  ## * `JSValue` that contains a string.
+  ## * `MAtom` that contains a string.
   when value is string:
-    gen.addOp(IROperation(opCode: LoadStr, arguments: @[uinteger position, when value is string: str value else: value]))
+    gen.addOp(IROperation(opCode: LoadStr, arguments: @[stackUinteger position, when value is string: stackStr value else: value]))
   else:
     if value.kind != String:
       raise newException(ValueError, "Attempt to load " & $value.kind & " as a string.")
 
-    gen.addOp(IROperation(opCode: LoadStr, arguments: @[uinteger position, value]))
+    gen.addOp(IROperation(opCode: LoadStr, arguments: @[stackUinteger position, value]))
 
 proc loadNull*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Load a NULL atom into memory.
-  gen.addOp(IROperation(opCode: LoadNull, arguments: @[uinteger position]))
+  gen.addOp(IROperation(opCode: LoadNull, arguments: @[stackUinteger position]))
 
 proc markGlobal*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Mark an atom at a particular position as global, i.e it can be accessed by any other clause, matterless of whichever clause created it.
-  gen.addOp(IROperation(opCode: MarkGlobal, arguments: @[uinteger position]))
+  gen.addOp(IROperation(opCode: MarkGlobal, arguments: @[stackUinteger position]))
 
 proc readRegister*(
     gen: IRGenerator, position: uint, register: Register
@@ -118,7 +118,7 @@ proc readRegister*(
   ## Read a register (what the interpreter uses to hold data that is shared across clauses).
   gen.addOp(
     IROperation(
-      opCode: ReadRegister, arguments: @[uinteger position, integer int(register)]
+      opCode: ReadRegister, arguments: @[stackUinteger position, stackInteger int(register)]
     )
   )
 
@@ -129,7 +129,7 @@ proc readRegister*(
   gen.addOp(
     IROperation(
       opCode: ReadRegister,
-      arguments: @[uinteger position, uinteger index, integer int(register)],
+      arguments: @[stackUinteger position, stackUinteger index, stackInteger int(register)],
     )
   )
 
@@ -137,37 +137,37 @@ proc loadUint*[P: SomeUnsignedInt](
     gen: IRGenerator, position, value: P
 ): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: LoadUint, arguments: @[uinteger position, uinteger value])
+    IROperation(opCode: LoadUint, arguments: @[stackUinteger position, stackUinteger value])
   )
 
 proc loadUint*(
-  gen: IRGenerator, position: uint, value: JSValue
+  gen: IRGenerator, position: uint, value: MAtom
 ): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: LoadUint, arguments: @[uinteger position, value])
+    IROperation(opCode: LoadUint, arguments: @[stackUinteger position, value])
   )
 
 proc returnFn*(gen: IRGenerator, position: int = -1): uint {.inline, discardable.} =
   ## Halt the execution of this clause, and optionally return an atom. The returned atom can be retrieved by reading the `CallArgument` register.
   ## .. warning:: Make sure to mark the atom as a global before passing it on!
-  gen.addOp(IROperation(opCode: Return, arguments: @[integer position]))
+  gen.addOp(IROperation(opCode: Return, arguments: @[stackInteger position]))
 
 proc loadBool*(
-    gen: IRGenerator, position: uint, value: bool | JSValue
+    gen: IRGenerator, position: uint, value: bool | MAtom
 ): uint {.inline, discardable.} =
   ## Load a boolean into memory.
   ## **This is an overloadable function, and can be provided:**
   ## * a boolean
-  ## * a `JSValue` containing a boolean
+  ## * a `MAtom` containing a boolean
   when value is bool:
     gen.addOp(
-      IROperation(opCode: LoadBool, arguments: @[uinteger position, boolean value])
+      IROperation(opCode: LoadBool, arguments: @[stackUinteger position, stackBoolean value])
     )
   else:
-    gen.addOp(IROperation(opCode: LoadBool, arguments: @[uinteger position, value]))
+    gen.addOp(IROperation(opCode: LoadBool, arguments: @[stackUinteger position, value]))
 
 proc call*(
-    gen: IRGenerator, function: string, arguments: seq[JSValue] = @[]
+    gen: IRGenerator, function: string, arguments: seq[MAtom] = @[]
 ): uint {.inline, discardable.} =
   ## Call a function/clause. This halts the current function's execution, enters the other function, executes it and returns back to where it left off.
   ## .. warning:: The `arguments` argument is not meant to be used to pass real arguments! They're used for passing arguments to the `Call` operation.
@@ -175,7 +175,7 @@ proc call*(
   ## **See also:**
   ## * `passArgument proc<#passArgument, IRGenerator, uint>` for actually passing arguments to a function.
   ## * `resetArgs proc<#resetArgs, IRGenerator>` for resetting the list of arguments passed to a function.
-  gen.addOp(IROperation(opCode: Call, arguments: @[ident function] & arguments))
+  gen.addOp(IROperation(opCode: Call, arguments: @[stackIdent function] & arguments))
 
 proc loadObject*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Load an object into memory.
@@ -183,71 +183,71 @@ proc loadObject*(gen: IRGenerator, position: uint): uint {.inline, discardable.}
   ##
   ## **See also:**
   ## * `createField proc<#createField, IRGenerator, uint, int, string>`
-  ## * `writeField proc<#writeField, IRGenerator, uint, int, JSValue>`
-  ## * `writeField proc<#writeField, IRGenerator, uint, string, JSValue>`
-  gen.addOp(IROperation(opCode: LoadObject, arguments: @[uinteger position]))
+  ## * `writeField proc<#writeField, IRGenerator, uint, int, MAtom>`
+  ## * `writeField proc<#writeField, IRGenerator, uint, string, MAtom>`
+  gen.addOp(IROperation(opCode: LoadObject, arguments: @[stackUinteger position]))
 
 proc createField*(
     gen: IRGenerator, position: uint, index: int, name: string
 ): uint {.inline, discardable.} =
   ## Create a field in the object with a name and index.
-  ## By default, the field will be occupied by a NULL `JSValue`.
+  ## By default, the field will be occupied by a NULL `MAtom`.
   ##
   ## **See also:**
-  ## * `writeField proc<#writeField, IRGenerator, uint, int, JSValue>`
-  ## * `writeField proc<#writeField, IRGenerator, uint, string, JSValue>`
+  ## * `writeField proc<#writeField, IRGenerator, uint, int, MAtom>`
+  ## * `writeField proc<#writeField, IRGenerator, uint, string, MAtom>`
   gen.addOp(
     IROperation(
-      opCode: CreateField, arguments: @[uinteger position, integer index, str name]
+      opCode: CreateField, arguments: @[stackUinteger position, stackInteger index, stackStr name]
     )
   )
 
 # "slow"
 proc writeField*(
-    gen: IRGenerator, position: uint, name: string, value: JSValue
+    gen: IRGenerator, position: uint, name: string, value: MAtom
 ): uint {.inline, discardable.} =
   ## Modify a field of an object. 
   ## Keep in mind that this can be slow* as it requires a search in the field name-to-index lookup table.
-  ## For a faster alternative (direct index access), use the `writeField proc<#writeField, IRGenerator, uint, int, JSValue>` instead.
+  ## For a faster alternative (direct index access), use the `writeField proc<#writeField, IRGenerator, uint, int, MAtom>` instead.
   gen.addOp(
-    IROperation(opCode: WriteField, arguments: @[uinteger position, str name, value])
+    IROperation(opCode: WriteField, arguments: @[stackUinteger position, stackStr name, value])
   )
 
 # "fast"
 proc writeField*(
-    gen: IRGenerator, position: uint, index: int, value: JSValue
+    gen: IRGenerator, position: uint, index: int, value: MAtom
 ): uint {.inline, discardable.} =
   ## Modify a field of an object.
-  ## This is the faster alternative to `writeField proc<#writeField, IRGenerator, uint, string, JSValue>`
+  ## This is the faster alternative to `writeField proc<#writeField, IRGenerator, uint, string, MAtom>`
   gen.addOp(
     IROperation(
-      opCode: FastWriteField, arguments: @[uinteger position, integer index, value]
+      opCode: FastWriteField, arguments: @[stackUinteger position, stackInteger index, value]
     )
   )
 
 proc incrementInt*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
-  ## Increment an integer at the specified position by one.
-  gen.addOp(IROperation(opCode: Increment, arguments: @[uinteger position]))
+  ## Increment an stackInteger at the specified position by one.
+  gen.addOp(IROperation(opCode: Increment, arguments: @[stackUinteger position]))
 
 proc decrementInt*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
-  ## Decrement an integer at the specified position by one.
-  gen.addOp(IROperation(opCode: Decrement, arguments: @[uinteger position]))
+  ## Decrement an stackInteger at the specified position by one.
+  gen.addOp(IROperation(opCode: Decrement, arguments: @[stackUinteger position]))
 
 proc addFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   ## Add two floats together
-  gen.addOp(IROperation(opCode: AddFloat, arguments: @[uinteger a, uinteger b]))
+  gen.addOp(IROperation(opCode: AddFloat, arguments: @[stackUinteger a, stackUinteger b]))
 
 proc subFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  gen.addOp(IROperation(opCode: SubFloat, arguments: @[uinteger a, uinteger b]))
+  gen.addOp(IROperation(opCode: SubFloat, arguments: @[stackUinteger a, stackUinteger b]))
 
 proc multFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  gen.addOp(IROperation(opCode: MultFloat, arguments: @[uinteger a, uinteger b]))
+  gen.addOp(IROperation(opCode: MultFloat, arguments: @[stackUinteger a, stackUinteger b]))
 
 proc divFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  gen.addOp(IROperation(opCode: DivFloat, arguments: @[uinteger a, uinteger b]))
+  gen.addOp(IROperation(opCode: DivFloat, arguments: @[stackUinteger a, stackUinteger b]))
 
 proc powerFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  gen.addOp(IROperation(opCode: PowerFloat, arguments: @[uinteger a, uinteger b]))
+  gen.addOp(IROperation(opCode: PowerFloat, arguments: @[stackUinteger a, stackUinteger b]))
 
 proc zeroRetval*(gen: IRGenerator): uint {.inline, discardable.} =
   gen.addOp(IROperation(opCode: ZeroRetval))
@@ -256,7 +256,7 @@ proc placeholder*(gen: IRGenerator, opCode: Ops): uint {.inline, discardable.} =
   gen.addOp(IROperation(opCode: opCode))
 
 proc overrideArgs*(
-    gen: IRGenerator, instruction: uint, arguments: seq[JSValue]
+    gen: IRGenerator, instruction: uint, arguments: seq[MAtom]
 ) {.inline.} =
   for i, _ in gen.modules:
     var module = gen.modules[i]
@@ -270,94 +270,94 @@ proc overrideArgs*(
 proc equate*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   ## Equate two atoms together.
   ## If they match, the operation directly below this conditional is executed. Otherwise, the operation two operations down this conditional is executed.
-  gen.addOp(IROperation(opCode: Equate, arguments: @[uinteger a, uinteger b]))
+  gen.addOp(IROperation(opCode: Equate, arguments: @[stackUinteger a, stackUinteger b]))
 
 proc addInt*(
     gen: IRGenerator, destination, source: uint
 ): uint {.inline, discardable.} =
-  ## Add two integers together.
+  ## Add two stackIntegers together.
   gen.addOp(
-    IROperation(opCode: AddInt, arguments: @[uinteger destination, uinteger source])
+    IROperation(opCode: AddInt, arguments: @[stackUinteger destination, stackUinteger source])
   )
 
 proc multInt*(
     gen: IRGenerator, destination, source: uint
 ): uint {.inline, discardable.} =
-  ## Multiply two integers together.
+  ## Multiply two stackIntegers together.
   gen.addOp(
-    IROperation(opCode: MultInt, arguments: @[uinteger destination, uinteger source])
+    IROperation(opCode: MultInt, arguments: @[stackUinteger destination, stackUinteger source])
   )
 
 proc divInt*(
     gen: IRGenerator, destination, source: uint
 ): uint {.inline, discardable.} =
-  ## Divide two integers together.
+  ## Divide two stackIntegers together.
   gen.addOp(
-    IROperation(opCode: DivInt, arguments: @[uinteger destination, uinteger source])
+    IROperation(opCode: DivInt, arguments: @[stackUinteger destination, stackUinteger source])
   )
 
 proc powerInt*(
     gen: IRGenerator, destination, source: uint
 ): uint {.inline, discardable.} =
-  ## Exponentiate an integer
+  ## Exponentiate an stackInteger
   gen.addOp(
-    IROperation(opCode: PowerInt, arguments: @[uinteger destination, uinteger source])
+    IROperation(opCode: PowerInt, arguments: @[stackUinteger destination, stackUinteger source])
   )
 
 proc subInt*(
     gen: IRGenerator, destination, source: uint
 ): uint {.inline, discardable.} =
-  ## Subtract an integer from another.
+  ## Subtract an stackInteger from another.
   gen.addOp(
-    IROperation(opCode: SubInt, arguments: @[uinteger destination, uinteger source])
+    IROperation(opCode: SubInt, arguments: @[stackUinteger destination, stackUinteger source])
   )
 
 proc mult2xBatch*(
     gen: IRGenerator, vec1, vec2: array[2, uint], # pos to vector
 ): uint {.inline, discardable.} =
-  ## Multiply a 2x batch of integers together. On most modern CPUs, this would be SIMD accelerated unless Mirage was compiled with SIMD support disabled.
+  ## Multiply a 2x batch of stackIntegers together. On most modern CPUs, this would be SIMD accelerated unless Mirage was compiled with SIMD support disabled.
   gen.addOp(
     IROperation(
       opCode: Mult2xBatch,
       arguments:
-        @[uinteger vec1[0], uinteger vec1[1], uinteger vec2[0], uinteger vec2[1]],
+        @[stackUinteger vec1[0], stackUinteger vec1[1], stackUinteger vec2[0], stackUinteger vec2[1]],
     )
   )
 
 proc setCap*(gen: IRGenerator, source: uint, cap: int): uint {.inline, discardable.} =
   ## Set a cap on a list. This prevents more than `cap` number of elements from being added ot it.
   ## .. warning:: This does not perform the overflow checks if the cap has already been reached before calling this function. Hence, it is recommended to call this function immediately upon the list's initialization if possible.
-  gen.addOp(IROperation(opCode: SetCapList, arguments: @[uinteger source, integer cap]))
+  gen.addOp(IROperation(opCode: SetCapList, arguments: @[stackUinteger source, stackInteger cap]))
 
 proc passArgument*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Adds an atom index to the call arguments register.
-  gen.addOp(IROperation(opCode: PassArgument, arguments: @[uinteger position]))
+  gen.addOp(IROperation(opCode: PassArgument, arguments: @[stackUinteger position]))
 
 proc loadFloat*(
-    gen: IRGenerator, position: uint, value: float | JSValue
+    gen: IRGenerator, position: uint, value: float | MAtom
 ): uint {.inline, discardable.} =
   ## Load a float into memory.
   ## **This function is overloadable, and can be provided:**
   ## * a floating point value
-  ## * a `JSValue` containing a floating point value
+  ## * a `MAtom` containing a floating point value
   when value is float:
     gen.addOp(
-      IROperation(opCode: LoadFloat, arguments: @[uinteger position, floating value])
+      IROperation(opCode: LoadFloat, arguments: @[stackUinteger position, floating value])
     )
   else:
     if value.kind != Float:
       raise newException(ValueError, "Attempt to load " & $value.kind & " as float.")
 
-    gen.addOp(IROperation(opCode: LoadFloat, arguments: @[uinteger position, value]))
+    gen.addOp(IROperation(opCode: LoadFloat, arguments: @[stackUinteger position, value]))
 
 proc moveAtom*(gen: IRGenerator, source, dest: uint): uint {.inline, discardable.} =
-  ## Move an atom from one index to another. The source index is replaced with a NULL `JSValue` and 
+  ## Move an atom from one index to another. The source index is replaced with a NULL `MAtom` and 
   ## the destination index occupies what was previously the content stored at the source index.
-  gen.addOp(IROperation(opCode: MoveAtom, arguments: @[uinteger source, uinteger dest]))
+  gen.addOp(IROperation(opCode: MoveAtom, arguments: @[stackUinteger source, stackUinteger dest]))
 
 proc copyAtom*(gen: IRGenerator, source, dest: uint): uint {.inline, discardable.} =
   ## Copy an atom from one index to another.
-  gen.addOp(IROperation(opCode: CopyAtom, arguments: @[uinteger source, uinteger dest]))
+  gen.addOp(IROperation(opCode: CopyAtom, arguments: @[stackUinteger source, stackUinteger dest]))
 
 proc markHomogenous*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Mark a list as homogenous (i.e, it cannot store more than one type of value).
@@ -365,28 +365,28 @@ proc markHomogenous*(gen: IRGenerator, position: uint): uint {.inline, discardab
   ## The first element of the list's type is inferred to be the type of the rest of the elements and this will be enforced with every append.
   ## .. warning:: This does not check if the list already contains more than one type of value and only performs this check on newly added atoms. It is recommended to call this directly after initializing the list, if possible.
   ## .. warning:: This does not aim to provide any speed boosts whatsoever. Once the JIT compiler is implemented, this might come in handy as a programmer-specified optimization hint, but for now it does absolutely nothing for optimization. It simply exists for semantics.
-  gen.addOp(IROperation(opCode: MarkHomogenous, arguments: @[uinteger position]))
+  gen.addOp(IROperation(opCode: MarkHomogenous, arguments: @[stackUinteger position]))
 
 proc resetArgs*(gen: IRGenerator): uint {.inline, discardable.} =
   ## Reset the call arguments register.
   gen.addOp(IROperation(opCode: ResetArgs))
 
 proc popList*(gen: IRGenerator, listPos, storeAt: uint): uint {.inline, discardable.} =
-  ## Pop the last element of a sequence at `listPos` and store it in `storeAt`.
+  ## Pop the last element of a stackSequence at `listPos` and store it in `storeAt`.
   ## **See also:**
   ## * `popListPrefix proc<#popListPrefix, IRGenerator, uint, uint>` to pop the first element instead of the last
   gen.addOp(
-    IROperation(opCode: PopList, arguments: @[uinteger listPos, uinteger storeAt])
+    IROperation(opCode: PopList, arguments: @[stackUinteger listPos, stackUinteger storeAt])
   )
 
 proc popListPrefix*(
     gen: IRGenerator, listPos, storeAt: uint
 ): uint {.inline, discardable.} =
-  ## Pop the first element of a sequence at `listPos` and store it in `storeAt`.
+  ## Pop the first element of a stackSequence at `listPos` and store it in `storeAt`.
   ## **See also:**
   ## * `popList proc<#popList, IRGenerator, uint, uint>` to pop the last element
   gen.addOp(
-    IROperation(opCode: PopListPrefix, arguments: @[uinteger listPos, uinteger storeAt])
+    IROperation(opCode: PopListPrefix, arguments: @[stackUinteger listPos, stackUinteger storeAt])
   )
 
 proc emit*(gen: IRGenerator, ignoreCache: bool = false): string {.inline.} =

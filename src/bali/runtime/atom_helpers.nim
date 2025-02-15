@@ -5,7 +5,7 @@ import bali/runtime/vm/atom
 
 {.push warning[UnreachableCode]: off, inline.}
 
-func isUndefined*(atom: JSValue): bool =
+func isUndefined*(atom: MAtom | JSValue): bool =
   atom.kind == Object and atom.objFields.len < 1
 
 func isObject*(atom: JSValue): bool =

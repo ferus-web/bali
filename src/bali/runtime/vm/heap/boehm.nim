@@ -9,7 +9,7 @@ import std/strutils
 proc boehmGCinit* {.importc: "GC_init", boehmGC.}
 proc boehmGC_disable* {.importc: "GC_disable", boehmGC.}
 proc boehmGC_enable* {.importc: "GC_enable", boehmGC.}
-proc boehmGCincremental8 {.
+proc boehmGCincremental* {.
   importc: "GC_enable_incremental", boehmGC.}
 proc boehmGCfullCollect* {.importc: "GC_gcollect", boehmGC.}
 proc boehmGC_set_all_interior_pointers*(flag: cint) {.

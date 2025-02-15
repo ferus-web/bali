@@ -194,7 +194,7 @@ proc markLocal*(
 
   inc runtime.addrIdx
 
-proc loadIRAtom*(runtime: Runtime, atom: JSValue): uint =
+proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   case atom.kind
   of Integer:
     runtime.ir.loadInt(runtime.addrIdx, atom)
@@ -231,8 +231,9 @@ proc loadIRAtom*(runtime: Runtime, atom: JSValue): uint =
     result = runtime.addrIdx
 
     for item in atom.sequence:
+      assert(item != nil)
       inc runtime.addrIdx
-      let idx = runtime.loadIRAtom(item)
+      let idx = runtime.loadIRAtom(item[])
       runtime.ir.appendList(result, idx)
   else:
     unreachable

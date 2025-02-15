@@ -206,31 +206,31 @@ proc markHomogenous*(atom: var MAtom) {.inline.} =
         " as a homogenous data type. Only List(s) can be marked as such.",
     )
 
-proc getStr*(atom: JSValue): Option[string] {.inline.} =
+proc getStr*(atom: MAtom | JSValue): Option[string] {.inline.} =
   if atom.kind == String:
     return some(atom.str)
 
-proc getInt*(atom: JSValue): Option[int] {.inline.} =
+proc getInt*(atom: MAtom | JSValue): Option[int] {.inline.} =
   if atom.kind == Integer:
     return some(atom.integer)
 
-proc getBool*(atom: JSValue): Option[bool] {.inline.} =
+proc getBool*(atom: MAtom | JSValue): Option[bool] {.inline.} =
   if atom.kind == Boolean:
     return some atom.state
 
-proc getIdent*(atom: JSValue): Option[string] {.inline.} =
+proc getIdent*(atom: MAtom | JSValue): Option[string] {.inline.} =
   if atom.kind == Ident:
     return some atom.ident
 
-proc getUint*(atom: JSValue): Option[uint] {.inline.} =
+proc getUint*(atom: MAtom | JSValue): Option[uint] {.inline.} =
   if atom.kind == UnsignedInt:
     return some atom.uinteger
 
-proc getFloat*(atom: JSValue): Option[float64] {.inline.} =
+proc getFloat*(atom: MAtom | JSValue): Option[float64] {.inline.} =
   if atom.kind == Float:
     return some atom.floatVal
 
-proc getSequence*(atom: JSValue): Option[seq[JSValue]] {.inline.} =
+proc getSequence*(atom: MAtom | JSValue): Option[seq[JSValue]] {.inline.} =
   if atom.kind == Sequence:
     return some(atom.sequence)
 

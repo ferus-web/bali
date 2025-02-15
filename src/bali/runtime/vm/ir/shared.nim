@@ -11,7 +11,7 @@ type
 
   IROperation* = object
     opCode*: Ops
-    arguments*: seq[JSValue]
+    arguments*: seq[MAtom]
 
   CodeModule* = object
     name*: string
