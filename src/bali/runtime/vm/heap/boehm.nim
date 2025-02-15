@@ -43,15 +43,56 @@ proc boehmGetTotalBytes*: int {.importc: "GC_get_total_bytes", boehmGC.}
 proc boehmVersion*: string {.inline.} =
   $GC_VERSION_MAJOR & '.' & $GC_VERSION_MINOR & '.' & $GC_VERSION_MICRO
 
+const
+  BaliGCStatsTrackingPerFrame* {.intdefine.} = 32
+
 type
   BaliGCStatistics* = object
+    ## This structure captures the GC statistics for a particular "frame".
+    ## A frame refers to any GC event (allocation, deallocation, collection)
     peakAllocatedBytes*: int ## Maximum number of bytes allocated in the execution time
-    avgLiberationRate*: int  ## At what rate are bytes "liberated" per collection?
+    allocationRate*: int     ## At what rate are bytes allocated per collection?
+    liberationRate*: int     ## At what rate are bytes "liberated" per collection?
+    liveMemory*: int         ## How much memory in bytes is still reachable
+    totalMemory*: int        ## Size of the total heap in bytes
+    
+    currFrame*: int
 
-var gcStats {.global.}: BaliGCStatistics
+var gcStats* {.global.}: BaliGCStatistics
+
+proc update(stats: var BaliGCStatistics) =
+  stats.peakAllocatedBytes = boehmGetTotalBytes()
+  stats.allocationRate = boehmGetBytesSinceGC()
+  stats.liberationRate = stats.peakAllocatedBytes - stats.allocationRate
+  stats.totalMemory = boehmGetHeapSize()
+  stats.liveMemory = stats.totalMemory - boehmGetFreeBytes()
+
+func pressure*(stats: BaliGCStatistics, generalBias: float = 1f, spaceBias: float = 1f): float64 =
+  ## Calculate the GC pressure by accounting for a bunch of stuff, depending
+  ## on what we're focusing on.
+  ##
+  ## Increasing a bias results in it playing a larger role in the overall pressure.
+
+  (
+    generalBias * (stats.liveMemory / stats.totalMemory) +
+    spaceBias * (stats.liberationRate / stats.allocationRate)
+  ) #/ (generalBias + spaceBias)
+
+proc baliDealloc*(p: pointer) {.inline.} =
+  boehmDealloc(p)
+
+  inc gcStats.currFrame
+  if gcStats.currFrame >= BaliGCStatsTrackingPerFrame:
+    update gcStats
+    gcStats.currFrame = 0
 
 proc baliAlloc*(size: SomeInteger): pointer {.inline.} =
   var pointr = boehmAlloc(size)
   zeroMem(pointr, size)
+
+  inc gcStats.currFrame
+  if gcStats.currFrame >= BaliGCStatsTrackingPerFrame:
+    update gcStats
+    gcStats.currFrame = 0
 
   pointr

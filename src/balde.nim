@@ -483,7 +483,7 @@ proc main() {.inline.} =
     baldeRepl(input)
     quit(0)
 
-  initializeGC(GCKind.Boehm)
+  initializeGC(GCKind.Boehm, input.enabled("incremental"))
 
   if input.command.len > 0:
     baldeRun(input)

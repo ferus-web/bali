@@ -114,8 +114,7 @@ proc addAtom*(interpreter: var PulsarInterpreter, atom: sink MAtom, id: uint) =
 
 proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) =
   if id in interpreter.stack:
-    interpreter.stack.del(id)
-    # boehmDealloc(interpreter.stack[id])
+    boehmDealloc(interpreter.stack[id])
 
   interpreter.stack[id] = value
   interpreter.locals[id] = interpreter.clauses[interpreter.currClause].name
@@ -482,8 +481,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   when not defined(mirageNoJit):
     inc op.called
 
-  boehmGCfullCollect()
-
   case op.opCode
   of LoadStr:
     interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
@@ -517,6 +514,10 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     else:
       interpreter.currIndex += 2
   of Jump:
+    if gcStats.pressure > 0.9f:
+      # Assuming we're in a while-loop, perhaps perform a collection...
+      boehmGCFullCollect()
+
     let pos = op.arguments[0].getInt()
 
     if not *pos:
@@ -947,7 +948,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       dest = (&op.arguments[1].getInt()).uint
 
     interpreter.stack[dest] = &interpreter.get(src)
-    # `=destroy`(interpreter.stack[src])
+    baliDealloc(interpreter.stack[src])
     interpreter.stack[src] = null()
     inc interpreter.currIndex
   of LoadFloat:
@@ -1037,7 +1038,8 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.addAtom(floating(a ^ b), pos)
     inc interpreter.currIndex
   of ZeroRetval:
-    interpreter.registers.retVal = some(null())
+    baliDealloc(&interpreter.registers.retVal)
+    interpreter.registers.retVal = none(JSValue)
     inc interpreter.currIndex
   of LoadBytecodeCallable:
     let

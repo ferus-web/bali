@@ -371,6 +371,7 @@ proc generateIR*(
       "\" or index " & $index
     runtime.ir.loadObject(index) # load `undefined` on that index
     runtime.ir.readRegister(index, Register.ReturnValue)
+    runtime.ir.zeroRetval()
   of ConstructObject:
     runtime.expand(fn, stmt, internal)
     for i, arg in stmt.args:

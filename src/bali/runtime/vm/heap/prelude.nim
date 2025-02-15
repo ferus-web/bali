@@ -30,7 +30,7 @@ proc getStackPtr*(): pointer =
     .}
 
 
-proc initializeGC*(kind: GCKind = Boehm, incremental: bool = true) =
+proc initializeGC*(kind: GCKind = Boehm, incremental: bool = false) =
   debug "heap: initializing garbage collector: " & $kind
   case kind
   of GCKind.Boehm:
