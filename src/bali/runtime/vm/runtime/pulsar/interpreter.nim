@@ -3,6 +3,7 @@
 ##
 
 import std/[math, tables, options]
+import ../../heap/boehm
 import ../../[atom, utils]
 import ../[shared, tokenizer, exceptions]
 import ./[operation, bytecodeopsetconv]
@@ -112,6 +113,10 @@ proc addAtom*(interpreter: var PulsarInterpreter, atom: sink MAtom, id: uint) =
   interpreter.locals[id] = interpreter.clauses[interpreter.currClause].name
 
 proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) =
+  if id in interpreter.stack:
+    interpreter.stack.del(id)
+    # boehmDealloc(interpreter.stack[id])
+
   interpreter.stack[id] = value
   interpreter.locals[id] = interpreter.clauses[interpreter.currClause].name
 
@@ -427,8 +432,7 @@ proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: uint) =
 
 proc zeroOut*(interpreter: var PulsarInterpreter, index: uint) {.inline.} =
   ## Remove a stack index.
-  ## 
-  ## WARNING: **The index is then left empty and accesses to it will raise KeyErrors, so make sure to add something in its place unless it is truly no longer needed!**
+  boehmDealloc(interpreter.stack[index])
   interpreter.stack.del(index)
 
 proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
@@ -477,6 +481,8 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
 proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   when not defined(mirageNoJit):
     inc op.called
+
+  boehmGCfullCollect()
 
   case op.opCode
   of LoadStr:

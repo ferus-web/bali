@@ -19,6 +19,10 @@ proc boehmAllocAtomic*(size: int): pointer {.
   importc: "GC_malloc_atomic", boehmGC.}
 proc boehmRealloc*(p: pointer, size: int): pointer {.
   importc: "GC_realloc", boehmGC.}
+var 
+  GC_VERSION_MAJOR* {.importc, boehmGC.}: cint
+  GC_VERSION_MINOR* {.importc, boehmGC.}: cint
+  GC_VERSION_MICRO* {.importc, boehmGC.}: cint
 proc boehmDealloc*(p: pointer) {.importc: "GC_free", boehmGC.}
 
 proc boehmGetHeapSize*: int {.importc: "GC_get_heap_size", boehmGC.}
@@ -36,5 +40,18 @@ proc boehmGetTotalBytes*: int {.importc: "GC_get_total_bytes", boehmGC.}
   ## Return the total number of bytes allocated in this process.
   ## Never decreases.
 
+proc boehmVersion*: string {.inline.} =
+  $GC_VERSION_MAJOR & '.' & $GC_VERSION_MINOR & '.' & $GC_VERSION_MICRO
+
+type
+  BaliGCStatistics* = object
+    peakAllocatedBytes*: int ## Maximum number of bytes allocated in the execution time
+    avgLiberationRate*: int  ## At what rate are bytes "liberated" per collection?
+
+var gcStats {.global.}: BaliGCStatistics
+
 proc baliAlloc*(size: SomeInteger): pointer {.inline.} =
-  boehmAlloc(size)
+  var pointr = boehmAlloc(size)
+  zeroMem(pointr, size)
+
+  pointr

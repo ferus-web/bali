@@ -30,12 +30,15 @@ proc getStackPtr*(): pointer =
     .}
 
 
-proc initializeGC*(kind: GCKind = Boehm) =
+proc initializeGC*(kind: GCKind = Boehm, incremental: bool = true) =
   debug "heap: initializing garbage collector: " & $kind
   case kind
   of GCKind.Boehm:
     boehmGCinit()
     boehmGC_enable()
+
+    if incremental:
+      boehmGCincremental()
   of GCKind.MarkAndSweep:
     warn "heap: garbage collector was forced to mark-and-sweep: this is highly unstable and is not recommended!"
     warn "heap: if this was a mistake, please revert it!"

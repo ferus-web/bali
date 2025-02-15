@@ -449,6 +449,7 @@ Options:
   --insert-debug-hooks, -H                Insert some debug hooks that expose JavaScript code to the engine's internals.
   --test262                               Insert some functions similar to those found in Test262.
   --dump-statistics                       Dump some diagnostic statistics from the runtime.
+  --incremental                           Set the garbage collector mode to incremental, potentially reducing GC latency.
   --version, -V                           Output the version of Bali/Balde in the standard output
 
 Codegen Flags:
@@ -464,7 +465,9 @@ proc main() {.inline.} =
 
   let input = parseInput()
   if input.enabled("version", "V"):
-    echo Version
+    echo "Bali: " & Version
+    echo "Boehm-Demers-Weiser GC: " & $boehmVersion()
+    echo "Bali is developed by the Ferus Project. All of the source code is licensed under the GNU General Public License 3."
     quit(0)
 
   if input.enabled("verbose", "v"):

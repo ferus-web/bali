@@ -21,7 +21,7 @@ jobs:
           nim-version: '2.2.0'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       
-      - run: sudo apt-get install gcc libicu-dev libgmp-dev
+      - run: sudo apt-get install gcc libicu-dev libgmp-dev libgc-dev
       - run: git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install . -j$(nproc) && cd .. && nimble refresh && nimble build --define:release --define:baliStaticallyLinkLibICU --define:speed --out:./
 
       - name: Upload Build Artifact (balde)
