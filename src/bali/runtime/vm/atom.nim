@@ -109,6 +109,8 @@ proc `=copy`*(dest: var MAtom, src: MAtom) =
 proc hash*(atom: MAtom): Hash =
   var h: Hash = 0
 
+  h = h !& atom.kind.int
+
   case atom.kind
   of String:
     h = h !& atom.str.hash()

@@ -283,15 +283,15 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
 
   some(args)
 
-#[ proc parseTable*(parser: Parser): Option[JSValue] =
+proc parseTable*(parser: Parser): Option[MAtom] =
   # We are assuming that the starting curly bracket (`{`) has been consumed.
   debug "parser: parsing table"
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
   var
-    table: Table[JSValue, JSValue]
-    currentKey: JSValue
+    table: seq[(MAtom, MAtom)]
+    currentKey: MAtom
 
     metLCurly = false
     state = TableParsingState.Key
@@ -316,7 +316,7 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
         else:
           parser.error UnexpectedToken, $token.kind & " (expected identifier or string)"
 
-      table[key] = null()
+      table.add((key, stackNull()))
       currentKey = key
       state = TableParsingState.Colon
     of TableParsingState.Colon:
@@ -335,11 +335,11 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
         if !atom:
           parser.error UnexpectedToken, "expected value, got " & $token.kind
         
-        table[currentKey] = &atom
+        table &= (currentKey, &atom)
         state = TableParsingState.Key
 
   if not metLCurly:
-    parser.error Other, "property list must be ended by }" ]#
+    parser.error Other, "property list must be ended by }"
 
 proc parseArray*(parser: Parser): Option[MAtom] =
   # We are assuming that the starting bracket (`[`) has been consumed.
@@ -654,6 +654,9 @@ proc parseDeclaration*(
     of TokenKind.LBracket:
       atom = parser.parseArray()
       break
+    of TokenKind.LCurly:
+      atom = parser.parseTable()
+      break
     else:
       parser.error UnexpectedToken, $tok.kind
 
@@ -811,6 +814,8 @@ proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
     return some stackBoolean(false)
   of TokenKind.LBracket:
     return parser.parseArray()
+  of TokenKind.LCurly:
+    return parser.parseTable()
   else:
     return
     # parser.error UnexpectedToken, "expected value, got " & $token.kind & " instead."
@@ -1325,7 +1330,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     parser.error Other, "shebang cannot be preceded by whitespace"
   of TokenKind.Break:
     return some breakStmt()
-  of TokenKind.String, TokenKind.Number, TokenKind.Null, TokenKind.LBracket:
+  of TokenKind.String, TokenKind.Number, TokenKind.Null, TokenKind.LBracket, TokenKind.LCurly:
     return some waste(&parser.parseAtom(token))
   of TokenKind.Comment:
     if token.multiline:
