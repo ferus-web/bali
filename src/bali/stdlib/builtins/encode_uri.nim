@@ -1,8 +1,9 @@
 ## Implementation of encodeURI()
 ## Author(s):
 ## Trayambak Rai (xtrayambak at disroot dot org)
-import bali/runtime/[arguments, atom_helpers, bridge, types]
+import bali/runtime/[arguments, bridge, types]
 import bali/runtime/abstract/coercion
+import bali/runtime/vm/atom
 import bali/internal/[sugar, uri_coding]
 
 proc generateStdIR*(runtime: Runtime) =

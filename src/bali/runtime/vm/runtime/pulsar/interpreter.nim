@@ -3,10 +3,10 @@
 ##
 
 import std/[math, tables, options]
-import ../../heap/boehm
-import ../../[atom, utils]
-import ../[shared, tokenizer, exceptions]
-import ./[operation, bytecodeopsetconv]
+import bali/runtime/vm/heap/boehm
+import bali/runtime/vm/[atom, utils]
+import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
+import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
 
 when not defined(mirageNoSimd):
   import nimsimd/sse2
@@ -114,7 +114,8 @@ proc addAtom*(interpreter: var PulsarInterpreter, atom: sink MAtom, id: uint) =
 
 proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) =
   if id in interpreter.stack:
-    boehmDealloc(interpreter.stack[id])
+    # boehmDealloc(interpreter.stack[id])
+    discard
 
   interpreter.stack[id] = value
   interpreter.locals[id] = interpreter.clauses[interpreter.currClause].name
@@ -133,7 +134,9 @@ proc callBuiltin*(interpreter: PulsarInterpreter, name: string, op: Operation) =
 {.pop.}
 
 proc throw*(
-  interpreter: var PulsarInterpreter, exception: RuntimeException, bubbling: bool = false
+    interpreter: var PulsarInterpreter,
+    exception: RuntimeException,
+    bubbling: bool = false,
 ) =
   if *interpreter.currJumpOnErr:
     return # TODO: implement error handling
@@ -256,6 +259,8 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
         )
   of LoadObject:
     op.arguments &= op.consume(Integer, "LOADO expects an integer at position 1")
+  of LoadUndefined:
+    op.arguments &= op.consume(Integer, "LOADUD expects an integer at position 1")
   of CreateField:
     for x in 1 .. 2:
       op.arguments &= op.consume(Integer, "CFIELD expects an integer at position " & $x)
@@ -477,6 +482,9 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
     else:
       raise newException(ValueError, "Reference to unknown clause: " & name)
 
+  if gcStats.pressure > 0.9f:
+    boehmGCFullCollect()
+
 proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   when not defined(mirageNoJit):
     inc op.called
@@ -515,7 +523,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       interpreter.currIndex += 2
   of Jump:
     if gcStats.pressure > 0.9f:
-      # Assuming we're in a while-loop, perhaps perform a collection...
+      # Assuming we're in a while-loop, perhaps perform a collection
+      # the GC pressure is high so it's best we try to conserve memory
+      # until this memory intensive loop ends
       boehmGCFullCollect()
 
     let pos = op.arguments[0].getInt()
@@ -1051,6 +1061,12 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     let callable = &getBytecodeClause(&interpreter.get(uint(&op.arguments[0].getInt())))
 
     interpreter.call(callable, op)
+  of LoadUndefined:
+    interpreter.addAtom(
+      undefined(),
+      uint(&op.arguments[0].getInt())
+    )
+    inc interpreter.currIndex
   else:
     when defined(release):
       inc interpreter.currIndex

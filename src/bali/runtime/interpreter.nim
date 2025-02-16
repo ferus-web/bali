@@ -202,7 +202,10 @@ proc resolveFieldAccess*(
 ): uint =
   let internalName = $(hash(stmt) !& hash(ident) !& hash(access.identifier))
   runtime.generateIR(
-    fn, createImmutVal(internalName, stackNull()), internal = true, ownerStmt = some(stmt)
+    fn,
+    createImmutVal(internalName, stackNull()),
+    internal = true,
+    ownerStmt = some(stmt),
   )
   let accessResult = runtime.addrIdx - 1 # index where the value will be stored
 
@@ -250,7 +253,7 @@ proc generateIR*(
   of CreateImmutVal:
     debug "emitter: generate IR for creating immutable value with identifier: " &
       stmt.imIdentifier
-    
+
     let idx = runtime.loadIRAtom(deepCopy(stmt.imAtom))
 
     if not internal:
@@ -553,7 +556,8 @@ proc generateIR*(
     of BinaryOperation.GreaterThan, BinaryOperation.LesserThan:
       discard runtime.ir.addOp(
         IROperation(
-          opcode: GreaterThanInt, arguments: @[stackUinteger leftIdx, stackUinteger rightIdx]
+          opcode: GreaterThanInt,
+          arguments: @[stackUinteger leftIdx, stackUinteger rightIdx],
         ) # FIXME: mirage doesn't have a nicer IR function for this.
       )
 
@@ -629,7 +633,8 @@ proc generateIR*(
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
         IROperation(
-          opcode: GreaterThanInt, arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
+          opcode: GreaterThanInt,
+          arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx],
         ) # FIXME: mirage doesn't have a nicer IR function for this.
       )
     else:
@@ -670,7 +675,9 @@ proc generateIR*(
   of CopyValMut:
     debug "emitter: generate IR for copying value to a mutable address with source: " &
       stmt.cpMutSourceIdent & " and destination: " & stmt.cpMutDestIdent
-    runtime.generateIR(fn, createMutVal(stmt.cpMutDestIdent, stackNull()), internal = false)
+    runtime.generateIR(
+      fn, createMutVal(stmt.cpMutDestIdent, stackNull()), internal = false
+    )
     let dest = runtime.addrIdx - 1
 
     runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
@@ -752,7 +759,8 @@ proc generateIR*(
     of GreaterThan, LesserThan:
       discard runtime.ir.addOp(
         IROperation(
-          opcode: GreaterThanInt, arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
+          opcode: GreaterThanInt,
+          arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx],
         ) # FIXME: mirage doesn't have a nicer IR function for this.
       )
     else:
@@ -1005,7 +1013,8 @@ proc generateIRForScope*(
         let fnIndex = runtime.index(clause, defaultParams(fn))
         discard runtime.ir.addOp(
           IROperation(
-            opcode: LoadBytecodeCallable, arguments: @[stackUinteger(fnIndex), stackStr(clause)]
+            opcode: LoadBytecodeCallable,
+            arguments: @[stackUinteger(fnIndex), stackStr(clause)],
           )
         )
         runtime.ir.markGlobal(fnIndex)
@@ -1054,6 +1063,8 @@ proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
     return "boolean"
   of BigInteger:
     return "bigint"
+  of Undefined:
+    return "undefined"
   else:
     unreachable
 
@@ -1338,7 +1349,7 @@ proc newRuntime*(
   ## The AST must be valid.
   ## You can check the options exposed to you in `InterpreterOpts` by checking its documentation.
   # initializeGC(getStackPtr(), 4) # Initialize the M&S garbage collector
-  
+
   boehmGCinit()
   boehmGC_enable()
 

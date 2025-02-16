@@ -9,7 +9,9 @@ type PrimitiveHint* {.pure.} = enum
   String
   Number
 
-proc OrdinaryToPrimitive*(runtime: Runtime, input: JSValue, hint: PrimitiveHint): JSValue =
+proc OrdinaryToPrimitive*(
+    runtime: Runtime, input: JSValue, hint: PrimitiveHint
+): JSValue =
   # 1. If hint is string, then
   let methodNames =
     if hint == PrimitiveHint.String:

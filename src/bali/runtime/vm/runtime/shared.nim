@@ -234,6 +234,9 @@ type
     ## Execute a bytecode callable
     ExecuteBytecodeCallable = 0x36
 
+    ## Load undefined
+    LoadUndefined = 0x37
+
 const
   OpCodeToTable* = {
     "CALL": Call,
@@ -285,6 +288,7 @@ const
     "ZRETV": ZeroRetval,
     "LOADBC": LoadBytecodeCallable,
     "EXEBC": ExecuteBytecodeCallable,
+    "LOADUD": LoadUndefined
   }.toTable
 
   OpCodeToString* = static:

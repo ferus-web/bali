@@ -6,7 +6,7 @@ import bali/runtime/vm/atom
 {.push warning[UnreachableCode]: off, inline.}
 
 func isUndefined*(atom: MAtom | JSValue): bool =
-  atom.kind == Object and atom.objFields.len < 1
+  atom.kind == Undefined
 
 func isObject*(atom: JSValue): bool =
   atom.kind == Object
@@ -93,8 +93,5 @@ proc `[]=`*[T: not JSValue](atom: var JSValue, name: string, value: T) =
 
 proc tag*[T](atom: var JSValue, tag: string, value: T) =
   atom['@' & tag] = value.wrap()
-
-proc undefined*(): JSValue =
-  obj()
 
 {.pop.}

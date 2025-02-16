@@ -194,7 +194,7 @@ proc dumpStatisticsPretty(runtime: Runtime) =
     ": ",
     styleBright,
     $boehmGetHeapSize(),
-    resetStyle
+    resetStyle,
   )
 
 func `%`(

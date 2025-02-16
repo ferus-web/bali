@@ -259,6 +259,13 @@ proc generateStdIr*(runtime: Runtime) =
     ,
   )
 
+  runtime.definePrototypeFn(
+    JSString,
+    "turnIntoInt",
+    proc(value: JSValue) =
+      value[] = integer(1337)[],
+  )
+
   #[ runtime.definePrototypeFn(
     JSString,
     "substring",

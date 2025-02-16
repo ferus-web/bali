@@ -1,10 +1,9 @@
 import std/[logging]
 import bali/runtime/vm/heap/[mark_and_sweep, boehm]
 
-type
-  GCKind* {.pure.} = enum
-    Boehm = 0        ## The Boehm-Demers-Weiser conservative garbage collector. The default.
-    MarkAndSweep = 1 ## Bali's internal mark-and-sweep implementation. Highly unstable.
+type GCKind* {.pure.} = enum
+  Boehm = 0 ## The Boehm-Demers-Weiser conservative garbage collector. The default.
+  MarkAndSweep = 1 ## Bali's internal mark-and-sweep implementation. Highly unstable.
 
 proc getStackPtr*(): pointer =
   ## Cross-architecture function that returns the stack pointer.
@@ -28,7 +27,6 @@ proc getStackPtr*(): pointer =
     {.
       error: "Unsupported platform - the Bali GC does not work on your CPU architecture"
     .}
-
 
 proc initializeGC*(kind: GCKind = Boehm, incremental: bool = false) =
   debug "heap: initializing garbage collector: " & $kind

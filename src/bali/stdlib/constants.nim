@@ -16,7 +16,7 @@ proc generateStdIr*(runtime: Runtime) =
 
   debug "constants: generating constant values"
   let undefined = runtime.index("undefined", params)
-  runtime.ir.loadObject(undefined)
+  runtime.ir.loadUndefined(undefined)
   runtime.ir.markGlobal(undefined)
 
   let nan = runtime.index("NaN", params)

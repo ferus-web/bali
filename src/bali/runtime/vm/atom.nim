@@ -21,6 +21,7 @@ type
     BigInteger = 9
     BytecodeCallable = 10
     NativeCallable = 11
+    Undefined = 12
 
   AtomOverflowError* = object of CatchableError
   SequenceError* = object of CatchableError
@@ -44,7 +45,7 @@ type
     of Object:
       objFields*: Table[string, int]
       objValues*: seq[JSValue]
-    of Null: discard
+    of Undefined: discard
     of Float:
       floatVal*: float64
     of BigInteger:
@@ -53,6 +54,7 @@ type
       clauseName*: string
     of NativeCallable:
       fn*: proc()
+    of Null: discard
 
   JSValue* = ptr MAtom
 
@@ -135,9 +137,12 @@ proc hash*(atom: MAtom): Hash =
 
   !$h
 
-proc hash*(value: ptr MAtom): Hash {.inline.} = hash(value[])
+proc hash*(value: ptr MAtom): Hash {.inline.} =
+  hash(value[])
 
-proc crush*(atom: MAtom | JSValue, id: string = "", quote: bool = true): string {.inline.} =
+proc crush*(
+    atom: MAtom | JSValue, id: string = "", quote: bool = true
+): string {.inline.} =
   case atom.kind
   of String:
     if quote:
@@ -174,6 +179,8 @@ proc crush*(atom: MAtom | JSValue, id: string = "", quote: bool = true): string 
     return "Callable [" & atom.clauseName & ']'
   of NativeCallable:
     return "Native Callable"
+  of Undefined:
+    return "Undefined"
 
 proc setCap*(atom: var MAtom, cap: int) {.inline.} =
   case atom.kind
@@ -247,30 +254,24 @@ proc newJSValue*(kind: MAtomKind): JSValue =
 proc str*(s: string, inRuntime: bool = false): JSValue {.inline.} =
   var mem = newJSValue(String)
   mem.str = s
-    
+
   ensureMove(mem)
 
 func stackStr*(s: string): MAtom =
   ## Allocate a String atom on the stack.
   ## This is used by the parser.
-  MAtom(
-    kind: String,
-    str: s
-  )
+  MAtom(kind: String, str: s)
 
 proc ident*(ident: string, inRuntime: bool = false): JSValue {.inline.} =
   var mem = newJSValue(Ident)
   mem.ident = ident
-    
+
   ensureMove(mem)
 
 func stackIdent*(i: string): MAtom =
   ## Allocate a Ident atom on the stack.
   ## This is used by the parser.
-  MAtom(
-    kind: Ident,
-    ident: i
-  )
+  MAtom(kind: Ident, ident: i)
 
 proc integer*(i: int, inRuntime: bool = false): JSValue =
   var mem = newJSValue(Integer)
@@ -281,10 +282,7 @@ proc integer*(i: int, inRuntime: bool = false): JSValue =
 func stackInteger*(i: int): MAtom =
   ## Allocate a Integer atom on the stack.
   ## This is used by the parser.
-  MAtom(
-    kind: Integer,
-    integer: i
-  )
+  MAtom(kind: Integer, integer: i)
 
 proc uinteger*(u: uint, inRuntime: bool = false): JSValue =
   var mem = newJSValue(UnsignedInt)
@@ -295,10 +293,7 @@ proc uinteger*(u: uint, inRuntime: bool = false): JSValue =
 func stackUinteger*(u: uint): MAtom =
   ## Allocate a UnsignedInt atom on the stack.
   ## This is used by the parser.
-  MAtom(
-    kind: UnsignedInt,
-    uinteger: u
-  )
+  MAtom(kind: UnsignedInt, uinteger: u)
 
 proc boolean*(b: bool, inRuntime: bool = false): JSValue =
   var mem = newJSValue(Boolean)
@@ -307,10 +302,7 @@ proc boolean*(b: bool, inRuntime: bool = false): JSValue =
   ensureMove(mem)
 
 func stackBoolean*(b: bool): MAtom =
-  MAtom(
-    kind: Boolean,
-    state: b
-  )
+  MAtom(kind: Boolean, state: b)
 
 proc bytecodeCallable*(clause: string, inRuntime: bool = false): JSValue =
   var mem = newJSValue(BytecodeCallable)
@@ -319,10 +311,7 @@ proc bytecodeCallable*(clause: string, inRuntime: bool = false): JSValue =
   ensureMove(mem)
 
 func stackBytecodeCallable*(clause: string): MAtom =
-  MAtom(
-    kind: BytecodeCallable,
-    clauseName: clause
-  )
+  MAtom(kind: BytecodeCallable, clauseName: clause)
 
 proc getBytecodeClause*(atom: JSValue): Option[string] =
   if atom.kind == BytecodeCallable:
@@ -335,15 +324,13 @@ proc floating*(value: float64, inRuntime: bool = false): JSValue =
   mem
 
 func stackFloating*(value: float64): MAtom =
-  MAtom(
-    kind: Float,
-    floatVal: value
-  )
+  MAtom(kind: Float, floatVal: value)
 
-func stackUndefined*: MAtom =
-  MAtom(
-    kind: Object
-  )
+proc undefined*(): JSValue {.inline.} =
+  newJSValue(Undefined)
+
+func stackUndefined*(): MAtom =
+  MAtom(kind: Undefined)
 
 proc boolean*(s: string, inRuntime: bool = false): Option[JSValue] =
   try:
@@ -354,7 +341,7 @@ proc boolean*(s: string, inRuntime: bool = false): Option[JSValue] =
 proc null*(inRuntime: bool = false): JSValue {.inline.} =
   newJSValue(Null)
 
-func stackNull*: MAtom =
+func stackNull*(): MAtom =
   MAtom(kind: Null)
 
 proc sequence*(s: seq[JSValue], inRuntime: bool = false): JSValue {.inline.} =
@@ -375,12 +362,12 @@ func stackSequence*(s: seq[MAtom]): MAtom {.inline.} =
 proc bigint*(value: SomeSignedInt | string): JSValue =
   var mem = newJSValue(BigInteger)
   mem.bigint = initBigInt(value)
-  
+
   ensureMove(mem)
 
 proc obj*(): JSValue {.inline.} =
   var mem = newJSValue(Object)
   mem.objFields = initTable[string, int]()
   mem.objValues = newSeq[JSValue]()
-  
+
   ensureMove(mem)
