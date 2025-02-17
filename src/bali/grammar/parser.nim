@@ -724,6 +724,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
     arguments: seq[string]
 
   # TODO: parameter parsing
+  var last: Option[TokenKind]
   while not parser.tokenizer.eof:
     let tok = parser.tokenizer.next()
 
@@ -731,6 +732,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
     of TokenKind.LParen:
       info "parser: met left-paren"
       metLParen = true
+      last = some(TokenKind.LParen)
       continue
     of TokenKind.RParen:
       info "parser: met right-paren"
@@ -738,6 +740,8 @@ proc parseFunction*(parser: Parser): Option[Function] =
 
       if not metLParen:
         parser.error Other, "missing ( before formal parameters"
+
+      last = some(TokenKind.RParen)
     of TokenKind.LCurly:
       info "parser: met beginning of curly bracket block"
 
@@ -749,14 +753,34 @@ proc parseFunction*(parser: Parser): Option[Function] =
 
       break
     of TokenKind.Whitespace:
-      discard
+      last = some(TokenKind.Whitespace)
     of TokenKind.Identifier:
       info "parser: appending identifier to expected function argument signature: " &
         tok.ident
       if metRParen:
         parser.error Other, "unexpected identifier after end of function signature"
-
+      
+      # If the identifier is not preceded by:
+      # - Commas
+      # - Whitespace 
+      # - Left parenthesis
+      # Then raise a parsing error
+      # Example of erroneous sample this will catch:
+      # function x(a b c) { }
+      #            ^^^^^ It should be (a, b, c)
+      if *last and &last notin { TokenKind.Comma, TokenKind.Whitespace, TokenKind.LParen }:
+        parser.error Other, "unexpected identifier after " & $(&last)
+      
       arguments &= tok.ident
+      last = some(TokenKind.Identifier)
+    of TokenKind.Comma:
+      if !last:
+        parser.error Other, "expected identifier for parameter name, got comma instead."
+
+      if &last == TokenKind.Comma:
+        parser.error UnexpectedToken, "expected identifier, got Comma instead"
+
+      last = some(TokenKind.Comma)
     else:
       warn "parser (unimplemented): whilst parsing parameters: "
       print tok
@@ -828,8 +852,9 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
     metEnd = false
     args: PositionedArguments
     idx = -1
+    last: Option[TokenKind]
 
-  while not parser.tokenizer.eof():
+  while not parser.tokenizer.eof and not metEnd:
     inc idx
     let copiedTok = deepCopy(parser.tokenizer)
 
@@ -844,9 +869,14 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
     let token = parser.tokenizer.next()
 
     case token.kind
-    of TokenKind.Whitespace, TokenKind.Comma:
-      discard
+    of TokenKind.Whitespace: discard
+    of TokenKind.Comma:
+      if *last and &last == TokenKind.Comma:
+        parser.error UnexpectedToken, "expected identifier, value or right parenthesis after comma, got another comma instead."
+
+      last = some(TokenKind.Comma)
     of TokenKind.Identifier:
+      last = some(TokenKind.Identifier)
       let
         prevPos = parser.tokenizer.pos
         prevLocation = parser.tokenizer.location
@@ -873,22 +903,27 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
           args.pushFieldAccess(createFieldAccess(splitted))
         else:
           args.pushIdent(token.ident)
-    of TokenKind.Number, TokenKind.String:
+    of TokenKind.Number, TokenKind.String, TokenKind.LParen, TokenKind.LCurly:
+      last = some(token.kind)
       let atom = parser.parseAtom(token)
 
       if !atom:
         parser.error Other, "expected atom, got malformed data instead."
           # FIXME: make this less vague!
-
+      
       args.pushAtom(&atom)
     of TokenKind.True:
+      last = some(TokenKind.True)
       args.pushAtom(stackBoolean(true))
     of TokenKind.False:
+      last = some(TokenKind.False)
       args.pushAtom(stackBoolean(false))
     of TokenKind.RParen:
+      last = some(TokenKind.RParen)
+      debug "parser: met right parenthesis, ending function call parsing"
       metEnd = true
-      break
     of TokenKind.New:
+      last = some(TokenKind.New)
       # constructor!
       let
         call = parser.parseConstructor()

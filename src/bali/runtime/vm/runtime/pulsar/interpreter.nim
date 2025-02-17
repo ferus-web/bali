@@ -2,7 +2,7 @@
 ## into a more modular and efficient form. You shouldn't import this directly, import `mirage/interpreter/prelude` instead.
 ##
 
-import std/[math, tables, options]
+import std/[math, tables, options, logging]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, utils]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
@@ -925,8 +925,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       )
     of 1:
       # 1 - callargs register
+      debug "vm: read call arguments register (#1); placing index " & $(&op.arguments[1].getInt()) & " into stack position " & $idx
       interpreter.addAtom(
-        interpreter.registers.callArgs[&op.arguments[1].getInt() - 1], idx
+        interpreter.registers.callArgs[&op.arguments[1].getInt()], idx
       )
     else:
       raise newException(
