@@ -1,4 +1,4 @@
-import std/[tables]
+import std/[tables, strutils]
 import bali/grammar/statement
 
 proc getValueDefinitions*(body: Scope): seq[string] =
@@ -39,6 +39,11 @@ proc getValueCaptures*(body: Scope): seq[string] =
       capture stmt.incIdent
     of Decrement:
       capture stmt.decIdent
+    of Call:
+      for arg in stmt.arguments:
+        # Capture all arguments that aren't internal ones 
+        if arg.kind == cakIdent and not arg.ident.startsWith('@'):
+          capture arg.ident
     else:
       discard
 
