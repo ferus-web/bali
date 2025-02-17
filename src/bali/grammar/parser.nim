@@ -1336,7 +1336,11 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     return some breakStmt()
   of TokenKind.String, TokenKind.Number, TokenKind.Null, TokenKind.LBracket, TokenKind.LCurly:
-    return some waste(&parser.parseAtom(token))
+    let atom = parser.parseAtom(token)
+    if !atom:
+      return
+
+    return some atomHolder(&atom)
   of TokenKind.Comment:
     if token.multiline:
       parser.precededByMultilineComment = true

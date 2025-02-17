@@ -246,6 +246,7 @@ proc getSequence*(atom: MAtom | JSValue): Option[seq[MAtom]] {.inline.} =
 proc newJSValue*(kind: MAtomKind): JSValue =
   ## Allocate a new `JSValue` using Bali's garbage collector.
   ## A `JSValue` is a pointer to an atom.
+  
   var mem = cast[ptr MAtom](baliAlloc(sizeof(MAtom)))
 
   {.cast(uncheckedAssign).}:
