@@ -231,7 +231,6 @@ proc generateIRForScope*(runtime: Runtime, scope: Scope, allocateConstants: bool
 
 func willIRGenerateClause*(runtime: Runtime, clause: string): bool {.inline.} =
   for cls in runtime.ir.modules:
-    debugecho "> " & cls.name
     if cls.name == clause:
       return true
 
@@ -311,7 +310,7 @@ proc generateIR*(
         runtime.ir.passArgument(
           runtime.index((&stmt.fn.field).identifier, defaultParams(fn))
         )
-
+    
     for i, arg in stmt.arguments:
       case arg.kind
       of cakIdent:
@@ -970,9 +969,10 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
   for i, arg in fn.arguments:
     runtime.markLocal(fn, arg)
     runtime.ir.readRegister(
-      runtime.index(arg, defaultParams(fn)), Register.CallArgument
+      runtime.index(arg, defaultParams(fn)), i.uint, Register.CallArgument
     )
-    runtime.ir.resetArgs() # reset the call param register
+
+  runtime.ir.resetArgs() # reset the call param register
 
 proc generateIRForScope*(
     runtime: Runtime, scope: Scope, allocateConstants: bool = true
