@@ -575,7 +575,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       inc interpreter.currIndex
       return # TODO: type errors
 
-    list.sequence.add(&source)
+    list.sequence.add((&source)[])
 
     interpreter.stack[pos] = list
     inc interpreter.currIndex

@@ -293,16 +293,12 @@ proc parseTable*(parser: Parser): Option[MAtom] =
     table: seq[(MAtom, MAtom)]
     currentKey: MAtom
 
-    metLCurly = false
+    metRCurly = false
     state = TableParsingState.Key
 
-  while not parser.tokenizer.eof and not metLCurly:
+  while not parser.tokenizer.eof and not metRCurly:
     let token = parser.tokenizer.next()
 
-    if token.kind == TokenKind.LCurly:
-      metLCurly = true
-      break
-    
     case state
     of TableParsingState.Key:
       let key =
@@ -313,6 +309,11 @@ proc parseTable*(parser: Parser): Option[MAtom] =
           stackStr(token.str)
         of TokenKind.Number:
           &parser.parseAtom(token)
+        of TokenKind.RCurly: 
+          metRCurly = true
+          break
+          stackNull()
+        of TokenKind.Whitespace: continue; stackNull()
         else:
           parser.error UnexpectedToken, $token.kind & " (expected identifier or string)"
 
@@ -330,6 +331,7 @@ proc parseTable*(parser: Parser): Option[MAtom] =
       case token.kind
       of TokenKind.Identifier:
         parser.error Other, "identifiers are not supported in maps yet"
+      of TokenKind.Whitespace: discard
       else:
         let atom = parser.parseAtom(token)
         if !atom:
@@ -338,7 +340,7 @@ proc parseTable*(parser: Parser): Option[MAtom] =
         table &= (currentKey, &atom)
         state = TableParsingState.Key
 
-  if not metLCurly:
+  if not metRCurly:
     parser.error Other, "property list must be ended by }"
 
 proc parseArray*(parser: Parser): Option[MAtom] =
@@ -1329,6 +1331,9 @@ proc parseStatement*(parser: Parser): Option[Statement] =
   of TokenKind.InvalidShebang:
     parser.error Other, "shebang cannot be preceded by whitespace"
   of TokenKind.Break:
+    if token.containsUnicodeEsc:
+      parser.error Other, "keyword `break` cannot contain unicode escape(s)."
+
     return some breakStmt()
   of TokenKind.String, TokenKind.Number, TokenKind.Null, TokenKind.LBracket, TokenKind.LCurly:
     return some waste(&parser.parseAtom(token))

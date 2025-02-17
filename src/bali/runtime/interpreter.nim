@@ -1155,11 +1155,11 @@ proc generateInternalIR*(runtime: Runtime) =
       )
 
       let idx = &(&index).getInt()
-      let vec = (&atom).sequence
+      var vec = (&atom).sequence
       if idx < 0 or idx > vec.len - 1:
         ret undefined()
 
-      ret vec[idx] # TODO: add indexing for tables/object fields
+      ret vec[idx].addr # TODO: add indexing for tables/object fields
     ,
   )
   runtime.ir.call("BALI_INDEX_INTERNAL")
@@ -1333,7 +1333,7 @@ proc run*(runtime: Runtime) =
   runtime.vm.setEntryPoint("outer")
 
   for error in runtime.ast.errors:
-    runtime.syntaxError(error, if runtime.opts.test262: 0 else: 1)
+    runtime.syntaxError($error, if runtime.opts.test262: 0 else: 1)
 
   if runtime.ast.doNotEvaluate and runtime.opts.test262:
     debug "runtime: `doNotEvaluate` is set to `true` in Test262 mode - skipping execution."
