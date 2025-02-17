@@ -58,8 +58,8 @@ proc ToString*(runtime: Runtime, value: JSValue): string =
     var buffer = "["
 
     # FIXME: not spec compliant!
-    for i, item in value.sequence:
-      buffer &= runtime.ToString(item)
+    for i, _ in value.sequence:
+      buffer &= runtime.ToString(value.sequence[i].addr)
       if i < value.sequence.len - 1:
         buffer &= ", "
 

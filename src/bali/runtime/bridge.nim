@@ -215,12 +215,23 @@ proc defineConstructor*(runtime: Runtime, name: string, fn: NativeFunction) {.in
       ValueError, "Attempt to define constructor for unknown type: " & name
     )
 
-template ret*(atom: MAtom) =
+template ret*(atom: JSValue) =
   ## Shorthand for:
   ## ..code-block:: Nim
   ##  runtime.vm.registers.retVal = some(atom)
   ##  return
   runtime.vm.registers.retVal = some(atom)
+  return
+
+template dangerRet*(atom: sink MAtom) =
+  {.warning: "Don't use `dangerRet(MAtom)`, use `ret(JSValue)` instead. This is dangerous!".}
+  ## Return an atom.
+  ## **WARNING**: The atom **MUST** be allocated on the heap, otherwise you
+  ## will be rewarded with undefined behaviour and undiagnosable crashes.
+  ## The functions `str`, `integer`, `floating`, `obj`, and any other atom creation
+  ## functions that don't have "stack" in their name allocate on the heap alongside
+  ## `createObjFromType`
+  runtime.vm.registers.retVal = some(atom.addr)
   return
 
 template ret*[T](value: T) =
@@ -241,7 +252,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
 
   for fname, fatom in prototype().fieldPairs:
     when fatom is JSValue:
-      jsType.members[fname] = initAtomOrFunction[NativeFunction](null())
+      jsType.members[fname] = initAtomOrFunction[NativeFunction](undefined())
     else:
       jsType.members[fname] = initAtomOrFunction[NativeFunction](fatom.wrap())
 

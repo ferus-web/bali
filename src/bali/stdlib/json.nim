@@ -20,15 +20,15 @@ proc convertJsonNodeToAtom*(node: JsonNode): JSValue =
   elif node.kind == JNull:
     return null(true)
   elif node.kind == JBool:
-    return boolean(node.getBool(), true)
+    return boolean(node.getBool())
   elif node.kind == JArray:
-    var arr = sequence(@[], true)
+    var arr = sequence(@[])
     for elem in node.getElems():
-      arr.sequence &= elem.convertJsonNodeToAtom()
+      arr.sequence &= elem.convertJsonNodeToAtom()[]
 
     return arr
   elif node.kind == JFloat:
-    return floating(node.getFloat(), true)
+    return floating(node.getFloat())
   elif node.kind == JObject:
     var jObj = obj()
 
@@ -42,7 +42,7 @@ proc convertJsonNodeToAtom*(node: JsonNode): JSValue =
 
 type JSON = object
 
-proc atomToJsonNode*(atom: JSValue): JsonNode =
+proc atomToJsonNode*(atom: JSValue | MAtom): JsonNode =
   if atom.kind == Integer:
     return newJInt(&atom.getInt())
   elif atom.kind == UnsignedInt:

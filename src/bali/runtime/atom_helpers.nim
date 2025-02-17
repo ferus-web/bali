@@ -86,7 +86,12 @@ proc wrap*[T: object](obj: T): JSValue =
   mObj
 
 proc wrap*(val: seq[JSValue]): JSValue =
-  sequence(val)
+  var atoms = newSeq[MAtom](val.len)
+
+  for i, value in val:
+    atoms[i] = val[i][]
+
+  sequence(move(atoms))
 
 proc `[]=`*[T: not JSValue](atom: var JSValue, name: string, value: T) =
   atom[name] = wrap(value)

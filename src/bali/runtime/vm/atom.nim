@@ -35,7 +35,7 @@ type
     of Integer:
       integer*: int
     of Sequence:
-      sequence*: seq[JSValue]
+      sequence*: seq[MAtom]
       lCap*: Option[int]
       lHomogenous*: bool = false
     of UnsignedInt:
@@ -108,6 +108,8 @@ proc `=copy`*(dest: var MAtom, src: MAtom) =
 
 proc hash*(atom: MAtom): Hash =
   var h: Hash = 0
+
+  h = h !& atom.kind.int
 
   case atom.kind
   of String:
@@ -237,7 +239,7 @@ proc getFloat*(atom: MAtom | JSValue): Option[float64] {.inline.} =
   if atom.kind == Float:
     return some atom.floatVal
 
-proc getSequence*(atom: MAtom | JSValue): Option[seq[JSValue]] {.inline.} =
+proc getSequence*(atom: MAtom | JSValue): Option[seq[MAtom]] {.inline.} =
   if atom.kind == Sequence:
     return some(atom.sequence)
 
@@ -262,7 +264,8 @@ func stackStr*(s: string): MAtom =
   ## This is used by the parser.
   MAtom(kind: String, str: s)
 
-proc ident*(ident: string, inRuntime: bool = false): JSValue {.inline.} =
+proc ident*(ident: string): JSValue {.inline.} =
+  assert off
   var mem = newJSValue(Ident)
   mem.ident = ident
 
@@ -344,20 +347,14 @@ proc null*(inRuntime: bool = false): JSValue {.inline.} =
 func stackNull*(): MAtom =
   MAtom(kind: Null)
 
-proc sequence*(s: seq[JSValue], inRuntime: bool = false): JSValue {.inline.} =
+proc sequence*(s: seq[MAtom]): JSValue {.inline.} =
   var mem = newJSValue(Sequence)
   mem.sequence = s
 
   ensureMove(mem)
 
 func stackSequence*(s: seq[MAtom]): MAtom {.inline.} =
-  var sequence = newSeq[JSValue](s.len)
-  var s = deepCopy(s)
-
-  for i, _ in s:
-    sequence[i] = s[i].addr
-
-  MAtom(kind: Sequence, sequence: sequence)
+  MAtom(kind: Sequence, sequence: s)
 
 proc bigint*(value: SomeSignedInt | string): JSValue =
   var mem = newJSValue(BigInteger)

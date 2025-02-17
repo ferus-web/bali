@@ -195,6 +195,7 @@ proc markLocal*(
   inc runtime.addrIdx
 
 proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
+  debug "codegen: loading atom with kind: " & $atom.kind
   case atom.kind
   of Integer:
     runtime.ir.loadInt(runtime.addrIdx, atom)
@@ -230,11 +231,10 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   of Sequence:
     runtime.ir.loadList(runtime.addrIdx)
     result = runtime.addrIdx
-
+    
     for item in atom.sequence:
-      assert(item != nil)
       inc runtime.addrIdx
-      let idx = runtime.loadIRAtom(item[])
+      let idx = runtime.loadIRAtom(item)
       runtime.ir.appendList(result, idx)
   else:
     unreachable
