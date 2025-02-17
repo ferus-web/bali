@@ -1,4 +1,6 @@
 # Bali Manual
+**Author**: Trayambak Rai (xtrayambak at disroot dot org)
+**Version Series Targetted**: 0.6.x \
 This manual is largely inspired by Monoucha's manual. \
 **WARNING**: Bali is only tested with the default memory management strategy (ORC). It uses ORC extensively and as such, it will probably not compile with other strategies. \
 **WARNING**: If you embed Bali in your program, you must compile it with the C++ backend as Bali relies on some C++ libraries.
@@ -47,6 +49,8 @@ An atom is a variant type discriminated by its `kind` field that can be:
 - A sequence (of more atoms, but you can mark it as homogenous to restrict it to one type)
 - An object (basically, an overglorified hashmap)
 There's also an identifier type, but that's only internally used by Mirage.
+
+A `JSValue` is a pointer to an atom.
 
 ## Baby's First Scripts
 Now, we'll learn how to write a Nim program that can load and evaluate JavaScript. You'll need to import two of Bali's components:
@@ -109,6 +113,7 @@ assert aLikes.kind == Sequence
 assert aName.isSome and aName.getStr().get() == name
 assert aAge.isSome and aAge.getUint().get() == age
 ```
+**NOTE**: When you call `wrap()`, Bali allocates the object's on the heap, which is normally controlled by the Boehm GC! Do not free the pointer unless you're 100% sure it's no longer needed. Due to how Bali is designed, deallocating a `JSValue` can cause a ripple effect where other parts of the code holding onto the pointer won't notice it, and will subsequently perform a user-after-free! Henceforth, leave deallocations to the GC, because it's smarter than you. \
 Here, we just turned Nim types into atoms, which can be of any type, only dictated by their `kind` field. We can also turn the first two atoms back into their original representation. \
 Unfortunately, it isn't as simple for the sequence, which can be dynamically typed with heterogenous types at this point. \
 The `getXXX` functions return `Option[requested type]` as they need to safely provide a way to tell if an atom can be of the requested primitive type. 
@@ -166,7 +171,7 @@ Let us assume you want a `greet` function for all `Person`(s) that returns "<nam
 runtime.definePrototypeFn(
     Person,
     "greet",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       let 
         name = runtime.ToString(value["name"])
         age = runtime.ToNumber(value["age"])
@@ -196,7 +201,7 @@ The `Math` type contains the following methods.
 
 ### `Math.random`
 This function uses the global RNG instance created via [librng](https://github.com/xTrayambak/librng) to generate a float between 0 and 1.
-**WARNING**: Do _NOT_ use this function in places like cryptography! All of the PRNG algorithms used are highly predictable!
+**WARNING**: Do _NOT_ tuse this function in places like cryptography! All of the PRNG algorithms used are highly predictable!
 
 #### Using another RNG algorithm
 You can pass the following values as arguments for `--define:BaliRNGAlgorithm`:
