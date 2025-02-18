@@ -310,7 +310,7 @@ proc generateIR*(
         runtime.ir.passArgument(
           runtime.index((&stmt.fn.field).identifier, defaultParams(fn))
         )
-    
+
     for i, arg in stmt.arguments:
       case arg.kind
       of cakIdent:

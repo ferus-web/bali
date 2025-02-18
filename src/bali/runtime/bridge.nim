@@ -224,7 +224,10 @@ template ret*(atom: JSValue) =
   return
 
 template dangerRet*(atom: sink MAtom) =
-  {.warning: "Don't use `dangerRet(MAtom)`, use `ret(JSValue)` instead. This is dangerous!".}
+  {.
+    warning:
+      "Don't use `dangerRet(MAtom)`, use `ret(JSValue)` instead. This is dangerous!"
+  .}
   ## Return an atom.
   ## **WARNING**: The atom **MUST** be allocated on the heap, otherwise you
   ## will be rewarded with undefined behaviour and undiagnosable crashes.

@@ -231,7 +231,7 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   of Sequence:
     runtime.ir.loadList(runtime.addrIdx)
     result = runtime.addrIdx
-    
+
     for item in atom.sequence:
       inc runtime.addrIdx
       let idx = runtime.loadIRAtom(item)

@@ -288,7 +288,7 @@ const
     "ZRETV": ZeroRetval,
     "LOADBC": LoadBytecodeCallable,
     "EXEBC": ExecuteBytecodeCallable,
-    "LOADUD": LoadUndefined
+    "LOADUD": LoadUndefined,
   }.toTable
 
   OpCodeToString* = static:

@@ -309,11 +309,13 @@ proc parseTable*(parser: Parser): Option[MAtom] =
           stackStr(token.str)
         of TokenKind.Number:
           &parser.parseAtom(token)
-        of TokenKind.RCurly: 
+        of TokenKind.RCurly:
           metRCurly = true
           break
           stackNull()
-        of TokenKind.Whitespace: continue; stackNull()
+        of TokenKind.Whitespace:
+          continue
+          stackNull()
         else:
           parser.error UnexpectedToken, $token.kind & " (expected identifier or string)"
 
@@ -324,19 +326,22 @@ proc parseTable*(parser: Parser): Option[MAtom] =
       case token.kind
       of TokenKind.Colon:
         state = TableParsingState.Value
-      of TokenKind.Whitespace: discard
+      of TokenKind.Whitespace:
+        discard
       else:
-        parser.error Other, "expected Colon after property id, got " & $token.kind & " instead"
+        parser.error Other,
+          "expected Colon after property id, got " & $token.kind & " instead"
     of TableParsingState.Value:
       case token.kind
       of TokenKind.Identifier:
         parser.error Other, "identifiers are not supported in maps yet"
-      of TokenKind.Whitespace: discard
+      of TokenKind.Whitespace:
+        discard
       else:
         let atom = parser.parseAtom(token)
         if !atom:
           parser.error UnexpectedToken, "expected value, got " & $token.kind
-        
+
         table &= (currentKey, &atom)
         state = TableParsingState.Key
 
@@ -759,7 +764,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
         tok.ident
       if metRParen:
         parser.error Other, "unexpected identifier after end of function signature"
-      
+
       # If the identifier is not preceded by:
       # - Commas
       # - Whitespace 
@@ -768,9 +773,9 @@ proc parseFunction*(parser: Parser): Option[Function] =
       # Example of erroneous sample this will catch:
       # function x(a b c) { }
       #            ^^^^^ It should be (a, b, c)
-      if *last and &last notin { TokenKind.Comma, TokenKind.Whitespace, TokenKind.LParen }:
+      if *last and &last notin {TokenKind.Comma, TokenKind.Whitespace, TokenKind.LParen}:
         parser.error Other, "unexpected identifier after " & $(&last)
-      
+
       arguments &= tok.ident
       last = some(TokenKind.Identifier)
     of TokenKind.Comma:
@@ -869,10 +874,12 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
     let token = parser.tokenizer.next()
 
     case token.kind
-    of TokenKind.Whitespace: discard
+    of TokenKind.Whitespace:
+      discard
     of TokenKind.Comma:
       if *last and &last == TokenKind.Comma:
-        parser.error UnexpectedToken, "expected identifier, value or right parenthesis after comma, got another comma instead."
+        parser.error UnexpectedToken,
+          "expected identifier, value or right parenthesis after comma, got another comma instead."
 
       last = some(TokenKind.Comma)
     of TokenKind.Identifier:
@@ -910,7 +917,7 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
       if !atom:
         parser.error Other, "expected atom, got malformed data instead."
           # FIXME: make this less vague!
-      
+
       args.pushAtom(&atom)
     of TokenKind.True:
       last = some(TokenKind.True)
@@ -1370,7 +1377,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       parser.error Other, "keyword `break` cannot contain unicode escape(s)."
 
     return some breakStmt()
-  of TokenKind.String, TokenKind.Number, TokenKind.Null, TokenKind.LBracket, TokenKind.LCurly:
+  of TokenKind.String, TokenKind.Number, TokenKind.Null, TokenKind.LBracket,
+      TokenKind.LCurly:
     let atom = parser.parseAtom(token)
     if !atom:
       return

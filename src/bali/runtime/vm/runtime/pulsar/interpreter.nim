@@ -925,7 +925,8 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       )
     of 1:
       # 1 - callargs register
-      debug "vm: read call arguments register (#1); placing index " & $(&op.arguments[1].getInt()) & " into stack position " & $idx
+      debug "vm: read call arguments register (#1); placing index " &
+        $(&op.arguments[1].getInt()) & " into stack position " & $idx
       interpreter.addAtom(
         interpreter.registers.callArgs[&op.arguments[1].getInt()], idx
       )
@@ -1063,10 +1064,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
 
     interpreter.call(callable, op)
   of LoadUndefined:
-    interpreter.addAtom(
-      undefined(),
-      uint(&op.arguments[0].getInt())
-    )
+    interpreter.addAtom(undefined(), uint(&op.arguments[0].getInt()))
     inc interpreter.currIndex
   else:
     when defined(release):
