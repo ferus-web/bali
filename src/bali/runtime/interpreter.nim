@@ -248,6 +248,7 @@ proc generateIR*(
 ) =
   ## Given a statement `stmt` and its encompassing functional scope `fn` (which can be a plain scope as well),
   ## generate the bytecode for that statement.
+  ## **NOTE**: This function can be recursive in nature and has side effects.
   case stmt.kind
   of CreateImmutVal:
     debug "emitter: generate IR for creating immutable value with identifier: " &
@@ -1291,6 +1292,7 @@ proc run*(runtime: Runtime) =
   date.generateStdIR(runtime)
   std_bigint.generateStdIR(runtime)
   std_number.generateStdIR(runtime)
+  std_set.generateStdIR(runtime)
 
   parseIntGenerateStdIR(runtime)
 
@@ -1306,7 +1308,7 @@ proc run*(runtime: Runtime) =
           quit(0)
     )
 
-  for ident in ["undefined", "NaN", "true", "false", "stackNull"]:
+  for ident in ["undefined", "NaN", "true", "false", "null"]:
     runtime.markGlobal(ident)
 
   runtime.generateIRForScope(runtime.ast.scopes[0])

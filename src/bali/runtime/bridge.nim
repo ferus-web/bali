@@ -233,7 +233,7 @@ template dangerRet*(atom: sink MAtom) =
   ## will be rewarded with undefined behaviour and undiagnosable crashes.
   ## The functions `str`, `integer`, `floating`, `obj`, and any other atom creation
   ## functions that don't have "stack" in their name allocate on the heap alongside
-  ## `createObjFromType`
+  ## `createObjFromType` are safe to use.
   runtime.vm.registers.retVal = some(atom.addr)
   return
 

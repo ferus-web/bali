@@ -3,12 +3,13 @@
 import std/[options]
 import bali/runtime/[arguments, atom_helpers, types, bridge]
 import bali/runtime/abstract/[coercion, equating]
+import bali/internal/sugar
 import bali/runtime/vm/atom
 
 type JSSet* = object
-  `@ internal`*: MAtom ## Sequence MAtom
+  `@ internal`*: JSValue ## Sequence MAtom
 
-proc generateInternalIR*(runtime: Runtime) =
+proc generateStdIR*(runtime: Runtime) =
   runtime.registerType("Set", JSSet)
   runtime.defineConstructor(
     "Set",
@@ -24,19 +25,37 @@ proc generateInternalIR*(runtime: Runtime) =
 
   runtime.definePrototypeFn(
     JSSet,
+    "toString",
+    proc(setAtom: JSValue) =
+      # FIXME: non-compliant.
+      # this just exists to make primitive coercion happy
+
+      var setVal = &(&setAtom.tagged("internal")).getSequence()
+      var str = "{"
+      for i, elem in setVal:
+        str &= ' ' & runtime.ToString(setVal[i].addr)
+        if i < setVal.len - 1:
+          str &= ','
+
+      ret str & " }"
+    ,
+  )
+
+  runtime.definePrototypeFn(
+    JSSet,
     "add",
-    proc(setAtom: MAtom) =
+    proc(setAtom: JSValue) =
       # 24.2.3.1 Set.prototype.add ( value )
 
       var value = &runtime.argument(1)
 
       # 1. Let S be the this value.
-      var setVal = setAtom.tagged("internal").getSequence()
+      var setVal = &(&setAtom.tagged("internal")).getSequence()
 
       # 3. For each element e of S.[[SetData]], do
-      for elem in setVal:
+      for i, _ in setVal:
         # a. If e is not EMPTY and SameValueZero(e, value) is true, then
-        if runtime.isStrictlyEqual(elem, value):
+        if runtime.isStrictlyEqual(setVal[i].addr, value):
           # i. Return S.
           ret setAtom
 
@@ -45,13 +64,10 @@ proc generateInternalIR*(runtime: Runtime) =
         value = floating(0f)
 
       # 5. Append value to S.[[SetData]].
-      setVal.sequence.add(move(value))
-
-      var setAtom = setAtom
-      setAtom.tag("internal", move(setVal))
-        # FIXME: We aren't changing the original set right now due to a limitation in Mirage. Fix this!
+      setVal.add(value[])
+      setAtom.tag("internal", setVal)
 
       # 6. Return S.
-      ret move(setAtom)
+      ret setAtom
     ,
   )

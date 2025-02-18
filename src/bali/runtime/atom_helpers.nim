@@ -26,7 +26,7 @@ proc `[]`*(atom: JSValue, name: string): JSValue =
 
   atom.objValues[atom.objFields[name]]
 
-proc `[]=`*(atom: var JSValue, name: string, value: sink JSValue) =
+proc `[]=`*(atom: JSValue, name: string, value: sink JSValue) =
   if atom.kind != Object:
     raise newException(ValueError, $atom.kind & " does not have field access methods")
 
@@ -60,14 +60,14 @@ proc wrap*(val: SomeSignedInt | SomeUnsignedInt | string | float | bool): JSValu
     return floating(val)
 
 proc wrap*[T: not JSValue](val: openArray[T]): JSValue =
-  var vec = sequence(newSeq[JSValue](0))
+  var vec = sequence(newSeq[MAtom](0))
 
   for v in val:
     vec.sequence &= v.wrap()
 
   vec
 
-proc wrap*(atom: JSValue): JSValue {.inline.} =
+proc wrap*[V: JSValue | MAtom](atom: V): V {.inline.} =
   atom
 
 proc wrap*[A, B](val: Table[A, B]): JSValue =
@@ -93,10 +93,10 @@ proc wrap*(val: seq[JSValue]): JSValue =
 
   sequence(move(atoms))
 
-proc `[]=`*[T: not JSValue](atom: var JSValue, name: string, value: T) =
+proc `[]=`*[T: not JSValue](atom: JSValue, name: string, value: T) =
   atom[name] = wrap(value)
 
-proc tag*[T](atom: var JSValue, tag: string, value: T) =
+proc tag*[T](atom: JSValue, tag: string, value: T) =
   atom['@' & tag] = value.wrap()
 
 {.pop.}
