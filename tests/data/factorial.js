@@ -1,4 +1,6 @@
 function fac(n, acc) {
+	console.log("n:", n)
+	console.log("acc:", acc)
 	if (n == 0) {
 		return acc;
 	}

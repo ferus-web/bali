@@ -236,6 +236,9 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
       inc runtime.addrIdx
       let idx = runtime.loadIRAtom(item)
       runtime.ir.appendList(result, idx)
+  of Undefined:
+    runtime.ir.loadUndefined(runtime.addrIdx)
+    return runtime.addrIdx
   else:
     unreachable
 
