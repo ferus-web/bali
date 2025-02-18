@@ -1,0 +1,73 @@
+name: Report a bug
+description: Create a report to help us reproduce and fix a bug.
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the problem in 1 or 2 short sentences.
+      placeholder: When I evaluate .. in Bali, the .. component causes a bug
+    validations:
+      required: true
+  - type: textarea
+    id: minimal-reproduction-sample
+    attributes:
+      label: Minimal Reproduction Sample
+      description: Produce a minimal JavaScript code sample that can be used to reproduce the bug.
+      placeholder: while (true) { }
+      render: javascript
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Output
+      description: Describe what you expected to happen
+    validations:
+      required: true
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      description: Describe what actually happened
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        &nbsp; <!-- add some vertical whitespace -->
+  - type: textarea
+    id: log-output
+    attributes:
+      label: |
+        Log output and (if possible) backtrace
+      description: |
+        Copy the entire backtrace Bali generates. Use `balde -v` to generate all the logs emitted by the components.
+      value:
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    attributes:
+      label: |
+        Bali Version
+      description: |
+        Run `balde -V` and paste the result here.
+      value:
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: build-flags
+    attributes:
+      label: Build flags or config settings
+      description: If you’re building with any non-default build flags or other non-default config settings in your environment, list them out below.
+  - type: checkboxes
+    id: will-patch
+    attributes:
+      label: Contribute a patch?
+      description: |
+        If you plan to contribute a patch for this issue yourself, please check the box below — to tell us and others looking at the issue that someone’s already working on it. If you do check this box, please try to send a pull request within 7 days or so.
+      options:
+        - label: I’ll contribute a patch for this myself.
