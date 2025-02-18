@@ -27,6 +27,7 @@ type
     foundShebang: bool = false
 
 template error(parser: Parser, errorKind: ParseErrorKind, msg: string) =
+  debug "parser: got parsing error (" & $errorKind & "): " & msg
   parser.errors &=
     ParseError(kind: errorKind, location: parser.tokenizer.location, message: msg)
 

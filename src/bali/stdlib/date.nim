@@ -7,7 +7,7 @@ import bali/internal/sugar
 import bali/stdlib/errors
 import bali/runtime/vm/atom
 import bali/runtime/[normalize, atom_helpers, arguments, types, bridge]
-import bali/runtime/abstract/coercion
+import bali/runtime/abstract/[coercion, slots]
 import bali/internal/date/[utils, constants, parser]
 import bali/internal/timezone
 
@@ -174,7 +174,7 @@ proc generateStdIR*(runtime: Runtime) =
       let dateObject = value
 
       # 2. Perform ? RequireInternalSlot(dateObject, [[DateValue]]).
-      assert(runtime.isA(dateObject, JSDate))
+      runtime.RequireInternalSlot(dateObject, JSDate)
 
       # 3. Let t be dateObject.[[DateValue]].
       let time = runtime.ToNumber(&dateObject.tagged("epoch"))
@@ -200,7 +200,7 @@ proc generateStdIR*(runtime: Runtime) =
       let dateObject = value
 
       # 2. Perform ? RequireInternalSlot(dateObject, [[DateValue]]).
-      assert(runtime.isA(dateObject, JSDate))
+      runtime.RequireInternalSlot(dateObject, JSDate)
 
       # 3. Let t be dateObject.[[DateValue]].
       let time = runtime.ToNumber(&dateObject.tagged("epoch"))
@@ -224,7 +224,7 @@ proc generateStdIR*(runtime: Runtime) =
       let dateObject = value
 
       # 2. Perform ? RequireInternalSlot(dateObject, [[DateValue]])
-      assert(runtime.isA(dateObject, JSDate))
+      runtime.RequireInternalSlot(dateObject, JSDate)
 
       # 3. Let tv be dateObject.[[DateValue]].
       let time = runtime.ToNumber(&dateObject.tagged("epoch"))
@@ -244,7 +244,7 @@ proc generateStdIR*(runtime: Runtime) =
       let dateObject = value
 
       # 2. Perform ? RequireInternalSlot(dateObject, [[DateValue]]).
-      assert(runtime.isA(dateObject, JSDate))
+      runtime.RequireInternalSlot(dateObject, JSDate)
 
       # 3. Let t be dateObject.[[DateValue]].
       let time = runtime.ToNumber(&dateObject.tagged("epoch"))
@@ -268,7 +268,7 @@ proc generateStdIR*(runtime: Runtime) =
       let dateObject = value
 
       # 2. Perform ? RequireInternalSlot(dateObject, [[DateValue]]).
-      assert(runtime.isA(dateObject, JSDate))
+      runtime.RequireInternalSlot(dateObject, JSDate)
 
       # 3. Let t be dateObject.[[DateValue]].
       let time = runtime.ToNumber(&dateObject.tagged("epoch"))

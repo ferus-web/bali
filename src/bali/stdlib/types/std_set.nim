@@ -2,7 +2,7 @@
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import std/[options]
 import bali/runtime/[arguments, atom_helpers, types, bridge]
-import bali/runtime/abstract/[coercion, equating]
+import bali/runtime/abstract/[coercion, equating, slots]
 import bali/internal/sugar
 import bali/runtime/vm/atom
 
@@ -52,6 +52,9 @@ proc generateStdIR*(runtime: Runtime) =
       # 1. Let S be the this value.
       var setVal = &(&setAtom.tagged("internal")).getSequence()
 
+      # 2. Perform ? RequireInternalSlot(S, [[SetData]]).
+      runtime.RequireInternalSlot(setAtom, JSSet)
+
       # 3. For each element e of S.[[SetData]], do
       for i, _ in setVal:
         # a. If e is not EMPTY and SameValueZero(e, value) is true, then
@@ -70,4 +73,16 @@ proc generateStdIR*(runtime: Runtime) =
       # 6. Return S.
       ret setAtom
     ,
+  )
+
+  runtime.definePrototypeFn(
+    JSSet,
+    "size",
+    proc(setAtom: JSValue) =
+      # 24.2.3.9 Set.prototype.size
+      # Set.prototype.size is an accessor property whose set accessor function is undefined. Its get accessor
+      # function performs the following steps when called:
+
+      # 1. Let S be this value.
+      var setVal = &(&setAtom.tagged("internal")).getSequence(),
   )
