@@ -11,6 +11,7 @@ mkShell {
     quickjs
     boa
     nph
+    emscripten
     mimalloc
   ];
 
