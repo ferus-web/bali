@@ -296,7 +296,7 @@ const
     "EXEBC": ExecuteBytecodeCallable,
     "LOADUD": LoadUndefined,
     "GTEI": GreaterThanEqualInt,
-    "LTEI": LesserThanEqualInt
+    "LTEI": LesserThanEqualInt,
   }.toTable
 
   OpCodeToString* = static:

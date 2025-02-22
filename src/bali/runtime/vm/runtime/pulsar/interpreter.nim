@@ -7,6 +7,7 @@ import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, utils]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
+import pkg/pretty
 
 when not defined(mirageNoSimd):
   import nimsimd/sse2
@@ -1107,6 +1108,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
 
     if not *aI or not *bI:
       return
+
+    print &ai
+    print &bi
 
     if &aI <= &bI:
       inc interpreter.currIndex

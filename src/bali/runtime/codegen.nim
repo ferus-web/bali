@@ -630,25 +630,32 @@ proc generateIR*(
         else:
           "BALI_EQUATE_ATOMS_STRICT"
       )
-    of BinaryOperation.GreaterThan, BinaryOperation.LesserThan:
+    of BinaryOperation.GreaterThan:
       discard runtime.ir.addOp(
         IROperation(
           opcode: GreaterThanInt,
           arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx],
         ) # FIXME: mirage doesn't have a nicer IR function for this.
       )
+    of BinaryOperation.LesserThan:
+      discard runtime.ir.addOp(
+        IROperation(
+          opcode: LesserThanInt,
+          arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx],
+        )
+      )
     of BinaryOperation.GreaterOrEqual:
       discard runtime.ir.addOp(
         IROperation(
           opcode: GreaterThanEqualInt,
-          arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
+          arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx],
         )
       )
     of BinaryOperation.LesserOrEqual:
       discard runtime.ir.addOp(
         IROperation(
           opcode: LesserThanEqualInt,
-          arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
+          arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx],
         )
       )
     else:
@@ -678,10 +685,12 @@ proc generateIR*(
     runtime.ir.overrideArgs(skipBranchTwoJmp, @[stackUinteger(endOfBranchTwo)])
 
     case stmt.conditionExpr.op
-    of BinaryOperation.Equal, BinaryOperation.GreaterThan, BinaryOperation.TrueEqual, BinaryOperation.GreaterOrEqual:
+    of BinaryOperation.Equal, BinaryOperation.GreaterThan, BinaryOperation.TrueEqual,
+        BinaryOperation.GreaterOrEqual, BinaryOperation.LesserThan,
+        BinaryOperation.LesserOrEqual:
       runtime.ir.overrideArgs(falseJump, @[stackUinteger(endOfBranchOne)])
       runtime.ir.overrideArgs(trueJump, @[stackUinteger(falseJump + 2)])
-    of BinaryOperation.NotEqual, BinaryOperation.LesserThan, BinaryOperation.LesserOrEqual:
+    of BinaryOperation.NotEqual:
       runtime.ir.overrideArgs(trueJump, @[stackUinteger(getCurrOpNum().uint)])
       runtime.ir.overrideArgs(falseJump, @[stackUinteger(falseJump + 2)])
     else:
