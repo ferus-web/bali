@@ -262,7 +262,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   jsType.proto = hash($prototype)
   jsType.name = name
 
-  runtime.types &= jsType.move()
+  runtime.types &= ensureMove(jsType)
   let typIdx = runtime.types.len - 1
 
   runtime.vm.registerBuiltin(

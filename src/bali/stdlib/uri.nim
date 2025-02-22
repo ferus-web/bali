@@ -63,7 +63,7 @@ proc generateStdIR*(runtime: Runtime) =
       ):
         return
 
-      let source = &move(osource)
+      let source = &ensureMove(osource)
 
       if not runtime.isA(source, JSString):
         runtime.typeError(
@@ -106,7 +106,7 @@ proc generateStdIR*(runtime: Runtime) =
       ):
         return
 
-      let source = &move(osource)
+      let source = &ensureMove(osource)
 
       if not runtime.isA(source, JSString):
         ret null()

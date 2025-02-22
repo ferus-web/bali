@@ -27,9 +27,9 @@ proc stringToBigInt*(runtime: Runtime, str: JSValue): JSValue =
 
   # 6. Return ℤ(mv).
   var bigintAtom = runtime.createObjFromType(JSBigInt)
-  bigintAtom.tag("value", move(bigint))
+  bigintAtom.tag("value", ensureMove(bigint))
 
-  move(bigintAtom)
+  ensureMove(bigintAtom)
 
 proc toBigInt*(runtime: Runtime, atom: JSValue): JSValue =
   ## 7.1.13 ToBigInt ( argument ), https://tc39.es/ecma262/#sec-tobigint

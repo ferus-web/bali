@@ -1269,7 +1269,7 @@ proc generateInternalIR*(runtime: Runtime) =
 
       destAtom[accesses.identifier] = writeAtom
 
-      runtime.vm.stack[destinationAtomIndex] = move(destAtom)
+      runtime.vm.stack[destinationAtomIndex] = ensureMove(destAtom)
       ret writeAtom
     ,
   )

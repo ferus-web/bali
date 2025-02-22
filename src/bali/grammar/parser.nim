@@ -101,7 +101,7 @@ proc parseExpression*(
         else:
           parser.error Other, "expected expression"
       else:
-        parser.tokenizer = move(copiedTok)
+        parser.tokenizer = ensureMove(copiedTok)
 
   while not parser.tokenizer.eof and (term.binLeft == nil or term.binRight == nil):
     let next = parser.tokenizer.next()
@@ -406,7 +406,7 @@ proc parseArray*(parser: Parser): Option[MAtom] =
           "expected comma (,) or right bracket (]) after array element, got " &
             $(&tok).kind
       else:
-        parser.tokenizer = move(copiedTok)
+        parser.tokenizer = ensureMove(copiedTok)
     else:
       parser.error Other, "missing ] after element list"
 
@@ -1149,7 +1149,7 @@ proc parseForLoop*(parser: Parser): Option[Statement] =
   var copiedTok = parser.tokenizer.deepCopy()
   let initializer = parser.parseStatement()
   if !initializer:
-    parser.tokenizer = move(copiedTok)
+    parser.tokenizer = ensureMove(copiedTok)
 
   # Now, expect a semicolon.
   expectSemicolon "initializer"
@@ -1160,7 +1160,7 @@ proc parseForLoop*(parser: Parser): Option[Statement] =
   copiedTok = parser.tokenizer.deepCopy()
   let condition = parser.parseExpression()
   if !condition:
-    parser.tokenizer = move(copiedTok)
+    parser.tokenizer = ensureMove(copiedTok)
 
   # Now, expect a semicolon
   expectSemicolon "conditional"
@@ -1171,7 +1171,7 @@ proc parseForLoop*(parser: Parser): Option[Statement] =
   copiedTok = parser.tokenizer.deepCopy()
   let incrementor = parser.parseStatement()
   if !incrementor:
-    parser.tokenizer = move(copiedTok)
+    parser.tokenizer = ensureMove(copiedTok)
 
   # Now, parse the n- just kidding
   # Expect left parenthesis
@@ -1236,7 +1236,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     fn.prev = some(scope)
     scope.children &= Scope(fn)
 
-    parser.ast.scopes[parser.ast.currentScope] = move(scope)
+    parser.ast.scopes[parser.ast.currentScope] = ensureMove(scope)
   of TokenKind.Identifier:
     let
       prevPos = parser.tokenizer.pos

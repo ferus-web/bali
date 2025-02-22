@@ -31,10 +31,10 @@ proc `[]=`*(atom: JSValue, name: string, value: sink JSValue) =
     raise newException(ValueError, $atom.kind & " does not have field access methods")
 
   if not atom.objFields.contains(name):
-    atom.objValues &= move(value)
+    atom.objValues &= ensureMove(value)
     atom.objFields[name] = atom.objValues.len - 1
   else:
-    atom.objValues[atom.objFields[name]] = move(value)
+    atom.objValues[atom.objFields[name]] = ensureMove(value)
 
 proc contains*(atom: JSValue, name: string): bool =
   atom.objFields.contains(name)
@@ -91,7 +91,7 @@ proc wrap*(val: seq[JSValue]): JSValue =
   for i, value in val:
     atoms[i] = val[i][]
 
-  sequence(move(atoms))
+  sequence(ensureMove(atoms))
 
 proc `[]=`*[T: not JSValue](atom: JSValue, name: string, value: T) =
   atom[name] = wrap(value)

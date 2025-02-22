@@ -71,7 +71,7 @@ proc generateStdIR*(runtime: Runtime) =
       obj.tag("value", wrap(number))
 
       # 6. Return 0.
-      ret move(obj)
+      ret ensureMove(obj)
     ,
   )
 

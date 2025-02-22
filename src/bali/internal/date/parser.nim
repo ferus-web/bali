@@ -50,8 +50,8 @@ proc parseSimplifiedISO8601*(date: string): Option[float] =
     if (h = lexer.lexNDigits(2); *h and &h >= 0 and &h <= 24) and
         lexer.consumeSpecific(':') and
         (m = lexer.lexNDigits(2); *m and &m >= 0 and &m <= 59):
-      oHours = move(h)
-      oMinutes = move(m)
+      oHours = ensureMove(h)
+      oMinutes = ensureMove(m)
       return true
 
   proc lexSeconds(): bool =
