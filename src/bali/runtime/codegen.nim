@@ -644,6 +644,13 @@ proc generateIR*(
           arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
         )
       )
+    of BinaryOperation.LesserOrEqual:
+      discard runtime.ir.addOp(
+        IROperation(
+          opcode: LesserThanEqualInt,
+          arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
+        )
+      )
     else:
       unreachable
 
@@ -674,7 +681,7 @@ proc generateIR*(
     of BinaryOperation.Equal, BinaryOperation.GreaterThan, BinaryOperation.TrueEqual, BinaryOperation.GreaterOrEqual:
       runtime.ir.overrideArgs(falseJump, @[stackUinteger(endOfBranchOne)])
       runtime.ir.overrideArgs(trueJump, @[stackUinteger(falseJump + 2)])
-    of BinaryOperation.NotEqual, BinaryOperation.LesserThan:
+    of BinaryOperation.NotEqual, BinaryOperation.LesserThan, BinaryOperation.LesserOrEqual:
       runtime.ir.overrideArgs(trueJump, @[stackUinteger(getCurrOpNum().uint)])
       runtime.ir.overrideArgs(falseJump, @[stackUinteger(falseJump + 2)])
     else:

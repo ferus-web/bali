@@ -240,6 +240,9 @@ type
     ## Greater-or-equal
     GreaterThanEqualInt = 0x38
 
+    ## Lesser-or-equal
+    LesserThanEqualInt = 0x39
+
 const
   OpCodeToTable* = {
     "CALL": Call,
@@ -292,7 +295,8 @@ const
     "LOADBC": LoadBytecodeCallable,
     "EXEBC": ExecuteBytecodeCallable,
     "LOADUD": LoadUndefined,
-    "GTEI": GreaterThanEqualInt
+    "GTEI": GreaterThanEqualInt,
+    "LTEI": LesserThanEqualInt
   }.toTable
 
   OpCodeToString* = static:
