@@ -1,4 +1,5 @@
 import std/[options, strutils, tables]
+import bali/internal/sugar
 
 type
   TokenKind* {.pure.} = enum
@@ -114,6 +115,7 @@ type
     InvalidShebang
 
   MalformedStringReason* {.pure.} = enum
+    None
     UnclosedString
     BadUnicodeEscape
     UnicodeEscapeIntTooBig
@@ -163,6 +165,8 @@ func getError*(token: Token): Option[string] =
         some("Unicode codepoint must not be greater than 0x10FFFF in escape sequence")
     of MalformedStringReason.UnicodeEscapeIntTooSmall:
       return some("Unicode codepoint cannot be less than zero")
+    of MalformedStringReason.None:
+      unreachable
   else:
     discard
 

@@ -1,6 +1,5 @@
 ## MAtoms are a dynamic-ish type used by all of Mirage to pass around values from the emitter to the interpreter, 
 ## to the calling Nim code itself.
-##
 
 import std/[strutils, tables, hashes, options]
 import pkg/gmp

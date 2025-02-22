@@ -5,6 +5,8 @@ import bali/grammar/token
 import bali/internal/sugar
 import results
 
+{.experimental: "strictDefs".}
+
 type
   TokenizerOpts* = object
     ignoreWhitespace*: bool = false
@@ -65,7 +67,7 @@ proc next*(tokenizer: Tokenizer): Token
 proc tokenize*(
     tokenizer: Tokenizer, opts: TokenizerOpts = default(TokenizerOpts)
 ): seq[Token] =
-  var tokens: seq[Token]
+  var tokens: seq[Token] = @[]
 
   while not tokenizer.eof():
     let token = tokenizer.next()
@@ -88,6 +90,8 @@ proc charToDecimalDigit*(c: char): Option[uint32] {.inline.} =
   ## Convert characters to decimal digits
   if c >= '0' and c <= '9':
     return some(uint32(cast[uint8](c) - (uint8) '0'))
+
+  none(uint32)
 
 proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
   if not tokenizer.hasAtleast(1):
@@ -122,8 +126,8 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
   #  tokenizer.advance(1)
 
   var
-    integralPart: float64
-    digit: uint32
+    integralPart = 0'f64
+    digit = 0'u32
 
   while not tokenizer.eof and unpack(charToDecimalDigit(&tokenizer.charAt()), digit):
     integralPart = integralPart * 10'f64 + digit.float64
@@ -211,7 +215,7 @@ proc consumeBackslash*(tokenizer: Tokenizer): Result[char, MalformedStringReason
         # Fix that crap, this is a temporary solution.
         debug "tokenizer: wanted to get numeric unicode codepoint, got `" &
           &tokenizer.charAt(1) & "` instead."
-        return
+        return err(MalformedStringReason.BadUnicodeEscape)
 
       let numeric = tokenizer.consumeNumeric(negative = false)
       let uniHex =
@@ -249,11 +253,14 @@ proc consumeBackslash*(tokenizer: Tokenizer): Result[char, MalformedStringReason
   else:
     debug "tokenizer: got ANSI escape `\\" & &tokenizer.charAt() & '`'
     return ok(('\\' & &tokenizer.charAt())[0])
+  
+  unreachable
+  return err(MalformedStringReason.BadUnicodeEscape)
 
 proc consumeIdentifier*(tokenizer: Tokenizer): Token =
   debug "tokenizer: consume identifier"
   var
-    ident: string
+    ident = newString(0)
     containsUnicodeEsc = false
 
   while not tokenizer.eof():
@@ -286,7 +293,7 @@ proc consumeIdentifier*(tokenizer: Tokenizer): Token =
 
 proc consumeWhitespace*(tokenizer: Tokenizer): Token =
   debug "tokenizer: consume whitespace"
-  var ws: string
+  var ws = newString(0)
 
   while not tokenizer.eof():
     let c = &tokenizer.charAt()
@@ -330,10 +337,10 @@ proc consumeString*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
 
   var
-    str: string
+    str = newString(0)
     ignoreNextQuote = false
     malformed = false
-    malformationReason: MalformedStringReason
+    malformationReason = MalformedStringReason.None
 
   while not tokenizer.eof():
     let c = &tokenizer.charAt()
@@ -380,7 +387,7 @@ proc consumeString*(tokenizer: Tokenizer): Token =
 proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
   debug "tokenizer: consuming comment"
   tokenizer.advance()
-  var comment: string
+  var comment = newString(0)
 
   while (not tokenizer.eof()):
     let c = &tokenizer.charAt()
@@ -449,7 +456,7 @@ proc consumePlus*(tokenizer: Tokenizer): Token =
   of strutils.Whitespace:
     return Token(kind: TokenKind.Add)
   else:
-    discard
+    return Token(kind: TokenKind.Invalid)
 
 proc consumeAmpersand*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
@@ -491,7 +498,7 @@ proc consumeHash*(tokenizer: Tokenizer): Token =
       tokenizer.advance()
       return Token(kind: TokenKind.InvalidShebang)
 
-    var shebang: string
+    var shebang = newString(0)
     while not tokenizer.eof:
       let c = tokenizer.consume()
 

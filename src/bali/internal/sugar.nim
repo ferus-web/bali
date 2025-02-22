@@ -32,11 +32,12 @@ func `&`*[T, E](opt: Result[T, E]): T {.inline.} =
 func `@`*[T, E](opt: Result[T, E]): E {.inline.} =
   opt.error()
 
-func unpack*[T](opt: Option[T], x: var T): bool {.inline.} =
+func unpack*[T](opt: Option[T], x: out T): bool {.inline.} =
   if *opt:
     x = unsafeGet(opt)
     return true
 
+  x = default(T)
   false
 
 template unreachable*() =
