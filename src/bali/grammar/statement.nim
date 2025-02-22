@@ -3,6 +3,8 @@ import bali/runtime/vm/atom
 import bali/runtime/normalize
 import bali/internal/sugar
 
+{.experimental: "strictDefs".}
+
 type
   StatementKind* = enum
     CreateImmutVal
@@ -167,7 +169,7 @@ func hash*(access: FieldAccess): Hash {.inline.} =
 proc hash*(scope: Scope): Hash {.inline.}
 
 proc hash*(call: FunctionCall): Hash {.inline.} =
-  var hash: Hash
+  var hash = Hash(0)
   if *call.field:
     hash = hash !& hash(&call.field)
 
@@ -177,7 +179,7 @@ proc hash*(call: FunctionCall): Hash {.inline.} =
   hash
 
 proc hash*(stmt: Statement): Hash {.inline.} =
-  var hash: Hash
+  var hash = Hash(0)
 
   hash = hash !& stmt.kind.int
   case stmt.kind
@@ -213,7 +215,7 @@ proc hash*(fn: Function): Hash {.inline.} =
     hash((fn.name, fn.arguments))
 
 proc hash*(scope: Scope): Hash {.inline.} =
-  var hash: Hash
+  var hash = Hash(0)
 
   if *scope.prev:
     hash = hash(&scope.prev)

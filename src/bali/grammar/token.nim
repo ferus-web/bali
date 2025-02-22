@@ -1,5 +1,6 @@
 import std/[options, strutils, tables]
-import bali/internal/sugar
+
+{.experimental: "strictDefs".}
 
 type
   TokenKind* {.pure.} = enum
@@ -166,9 +167,9 @@ func getError*(token: Token): Option[string] =
     of MalformedStringReason.UnicodeEscapeIntTooSmall:
       return some("Unicode codepoint cannot be less than zero")
     of MalformedStringReason.None:
-      unreachable
+      return none(string)
   else:
-    discard
+    return none(string)
 
 const Keywords* = {
   "const": TokenKind.Const,

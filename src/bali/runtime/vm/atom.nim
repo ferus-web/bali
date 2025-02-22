@@ -6,6 +6,8 @@ import pkg/gmp
 import ./heap/boehm
 import ./utils
 
+{.experimental: "strictDefs".}
+
 type
   MAtomKind* {.size: sizeof(uint8).} = enum
     Null = 0
@@ -56,54 +58,6 @@ type
     of Null: discard
 
   JSValue* = ptr MAtom
-
-#[ proc `=destroy`*(dest: MAtom) =
-  case dest.kind
-  of String:
-    `=destroy`(dest.str)
-  of Ident:
-    `=destroy`(dest.ident)
-  of Sequence:
-    for atom in dest.sequence:
-      `=destroy`(atom)
-  of Object:
-    for atom in dest.objValues:
-      `=destroy`(atom)
-  else:
-    discard
-]#
-
-#[
-proc `=copy`*(dest: var MAtom, src: MAtom) =
-  `=destroy`(dest)
-  wasMoved dest
-
-  dest.kind = src.kind
-  case src.kind
-  of String:
-    dest.str = cast[string](alloc(sizeof src.str))
-    for i, elem in 0..<dest.str.len:
-      dest.str[i] = elem
-  of Integer:
-    var ival = cast[ptr int](alloc(sizeof int))
-    ival[] = src.integer
-
-    dest.integer = ival
-  of Sequence:
-    dest.sequence = cast[seq[MAtom]](alloc(sizeof src.sequence))
-
-    for i, elem in src.sequence:
-      dest.sequence[i] = elem
-  of Ref:
-    var sval = cast[string](alloc(sizeof str.link))
-    
-    for i, elem in src.link:
-      sval[i] = src.link[i]
-
-    dest.reference = deepCopy(src.reference)
-    dest.link = sval
-  of Null: discard
-]#
 
 proc hash*(atom: MAtom): Hash =
   var h: Hash = 0
@@ -320,6 +274,8 @@ proc getBytecodeClause*(atom: JSValue): Option[string] =
   if atom.kind == BytecodeCallable:
     return some(atom.clauseName)
 
+  none(string)
+
 proc floating*(value: float64, inRuntime: bool = false): JSValue =
   var mem = newJSValue(Float)
   mem.floatVal = value
@@ -339,7 +295,7 @@ proc boolean*(s: string, inRuntime: bool = false): Option[JSValue] =
   try:
     return some(boolean(parseBool(s)))
   except ValueError:
-    discard
+    return none(JSValue)
 
 proc null*(inRuntime: bool = false): JSValue {.inline.} =
   newJSValue(Null)
