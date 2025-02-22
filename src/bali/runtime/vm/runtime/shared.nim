@@ -237,6 +237,9 @@ type
     ## Load undefined
     LoadUndefined = 0x37
 
+    ## Greater-or-equal
+    GreaterThanEqualInt = 0x38
+
 const
   OpCodeToTable* = {
     "CALL": Call,
@@ -289,6 +292,7 @@ const
     "LOADBC": LoadBytecodeCallable,
     "EXEBC": ExecuteBytecodeCallable,
     "LOADUD": LoadUndefined,
+    "GTEI": GreaterThanEqualInt
   }.toTable
 
   OpCodeToString* = static:

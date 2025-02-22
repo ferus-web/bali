@@ -203,7 +203,7 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
   of Equate:
     for x, _ in op.rawArgs.deepCopy():
       op.arguments &= op.consume(Integer, "EQU expects an integer at position " & $x)
-  of GreaterThanInt, LesserThanInt:
+  of GreaterThanInt, LesserThanInt, GreaterThanEqualInt:
     for x in 1 .. 2:
       op.arguments &=
         op.consume(
@@ -1066,6 +1066,29 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   of LoadUndefined:
     interpreter.addAtom(undefined(), uint(&op.arguments[0].getInt()))
     inc interpreter.currIndex
+  of GreaterThanEqualInt:
+    if op.arguments.len < 2:
+      inc interpreter.currIndex
+      return
+
+    let
+      a = interpreter.get((&op.arguments[0].getInt()).uint)
+      b = interpreter.get((&op.arguments[1].getInt()).uint)
+
+    if not *a or not *b:
+      return
+
+    let
+      aI = (&a).getInt()
+      bI = (&b).getInt()
+
+    if not *aI or not *bI:
+      return
+
+    if &aI >= &bI:
+      inc interpreter.currIndex
+    else:
+      interpreter.currIndex += 2
   else:
     when defined(release):
       inc interpreter.currIndex
