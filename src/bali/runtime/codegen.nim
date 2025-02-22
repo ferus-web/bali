@@ -248,7 +248,7 @@ proc generateIR*(
 ) =
   ## Given a statement `stmt` and its encompassing functional scope `fn` (which can be a plain scope as well),
   ## generate the bytecode for that statement.
-  ## **NOTE**: This function can be recursive in nature and has side effects.
+  ## **NOTE**: This function can be _HIGHLY_ recursive in nature and has side effects.
   case stmt.kind
   of CreateImmutVal:
     debug "emitter: generate IR for creating immutable value with identifier: " &

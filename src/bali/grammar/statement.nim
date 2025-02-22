@@ -223,7 +223,7 @@ proc hash*(scope: Scope): Hash {.inline.} =
 proc pushIdent*(args: var PositionedArguments, ident: string) {.inline.} =
   args &= CallArg(kind: cakIdent, ident: ident)
 
-func createFieldAccess*(splitted: seq[string]): FieldAccess =
+proc createFieldAccess*(splitted: seq[string]): FieldAccess =
   ## From a sequence of identifiers (assuming they are in sorted order of accesses),
   ## create a `FieldAccess`, which has a "view" of the top of the field access chain.
   var
