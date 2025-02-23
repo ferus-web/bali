@@ -10,6 +10,7 @@ mkShell {
     spidermonkey_128
     quickjs
     boa
+    pcre
     nph
     emscripten
     mimalloc
@@ -19,6 +20,7 @@ mkShell {
     simdutf
     gmp.dev
     icu76.dev
+    pcre.dev
     boehmgc.dev
     mimalloc.dev
   ];

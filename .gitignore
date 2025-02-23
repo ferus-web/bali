@@ -5,6 +5,7 @@
 
 success.txt
 failed.txt
+nimalyzer.log
 balde
 *.out
 *.log

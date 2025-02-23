@@ -37,3 +37,7 @@ requires "ptr_math >= 0.3.0"
 taskRequires "fmt", "nph#master"
 task fmt, "Format code":
   exec "nph src/ tests/"
+
+taskRequires "analyze", "nimalyzer >= 0.12.0"
+task analyze, "Run the static analyzer":
+  exec "nimalyzer nimalyzer.cfg"
