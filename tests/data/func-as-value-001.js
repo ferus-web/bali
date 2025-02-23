@@ -1,5 +1,4 @@
 function callSomething(x) {
-	// console.log(x)
 	console.log(x)
 }
 

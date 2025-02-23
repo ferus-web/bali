@@ -1020,6 +1020,23 @@ proc generateIRForScope*(
     runtime.clauses.add(name)
     runtime.ir.newModule(name.normalizeIRName())
 
+  for child in scope.children:
+    let clause =
+      try:
+        Function(child).name
+      except ObjectConversionDefect:
+        newString(0)
+
+    if clause.len > 0:
+      let fnIndex = runtime.addrIdx
+      runtime.markGlobal(clause, some(fnIndex))
+      discard runtime.ir.addOp(
+        IROperation(
+          opcode: LoadBytecodeCallable,
+          arguments: @[stackUinteger(fnIndex), stackStr(clause)],
+        )
+      )
+
   runtime.irHints.generatedClauses &= name
 
   if name != "outer":
@@ -1029,19 +1046,6 @@ proc generateIRForScope*(
     if allocateConstants:
       constants.generateStdIr(runtime)
       inc runtime.addrIdx
-
-      for clause in runtime.clauses:
-        if clause == "outer":
-          continue # Nothing should be able to call into the outer scope.
-
-        let fnIndex = runtime.index(clause, defaultParams(fn))
-        discard runtime.ir.addOp(
-          IROperation(
-            opcode: LoadBytecodeCallable,
-            arguments: @[stackUinteger(fnIndex), stackStr(clause)],
-          )
-        )
-        runtime.ir.markGlobal(fnIndex)
 
       for i, typ in runtime.types:
         let idx = runtime.addrIdx
