@@ -122,7 +122,7 @@ runtime.run()
 - String prototype                     [X]
 - Date prototype                       [X]
 - Ternary operations                   [X]
-- Functions as values                  [ ]
+- Functions as values                  [X]
 - For-loops                            [X]
 - Modules                              [ ]
 - Async                                [ ]

@@ -7,7 +7,6 @@ import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, utils]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
-import pkg/pretty
 
 when not defined(mirageNoSimd):
   import nimsimd/sse2
@@ -333,6 +332,13 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
     op.arguments &= op.consume(String, "LOADBC expects a string at position 2")
   of ExecuteBytecodeCallable:
     op.arguments &= op.consume(Integer, "EXEBC expects an integer at position 1")
+  of Invoke:
+    if op.rawArgs[0].kind == tkInteger:
+      # Bytecode callable
+      op.arguments &= op.consume(Integer, "INVK expects an integer at position 1")
+    elif op.rawArgs[0].kind in {tkIdent, tkQuotedString}:
+      # Clause/Builtin
+      op.arguments &= op.consume(String, "INVK expects an ident/string at position 1")
 
   op.rawArgs = mRawArgs
 
@@ -1109,13 +1115,18 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     if not *aI or not *bI:
       return
 
-    print &ai
-    print &bi
-
     if &aI <= &bI:
       inc interpreter.currIndex
     else:
       interpreter.currIndex += 2
+  of Invoke:
+    let value = op.arguments[0]
+
+    if value.kind == Integer:
+      let callable = &getBytecodeClause(&interpreter.get(uint(&getInt(value))))
+      interpreter.call(callable, op)
+    elif value.kind == String:
+      interpreter.call(&getStr(value), op)
   else:
     when defined(release):
       inc interpreter.currIndex

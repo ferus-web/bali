@@ -339,7 +339,15 @@ proc generateIR*(
     debug "interpreter: generate IR for calling traditional function: " & nam &
       (if stmt.mangle: " (mangled)" else: newString 0)
 
-    runtime.ir.call(nam)
+    let indexed = runtime.index(nam, defaultParams(fn))
+
+    if indexed == runtime.index("undefined", defaultParams(fn)):
+      discard runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackStr nam]))
+    else:
+      discard runtime.ir.addOp(
+        IROperation(opcode: Invoke, arguments: @[stackUinteger indexed])
+      )
+
     runtime.ir.resetArgs()
     # Reset the call arguments register to prevent this call's arguments from leaking into future calls
 

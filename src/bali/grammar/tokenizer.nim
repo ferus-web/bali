@@ -253,7 +253,7 @@ proc consumeBackslash*(tokenizer: Tokenizer): Result[char, MalformedStringReason
   else:
     debug "tokenizer: got ANSI escape `\\" & &tokenizer.charAt() & '`'
     return ok(('\\' & &tokenizer.charAt())[0])
-  
+
   unreachable
   return err(MalformedStringReason.BadUnicodeEscape)
 
