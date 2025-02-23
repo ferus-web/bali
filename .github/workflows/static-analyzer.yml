@@ -1,0 +1,45 @@
+name: Static analyzer
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: '2.2.0'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libpcre3-dev
+
+      - name: Run Nimble Analyze
+        id: analyze
+        run: |
+          set -o pipefail
+          nimble analyze | sed -E 's/\x1B\[[0-9;]*[mK]//g' | tee nimalyzer.log
+
+      - name: Create GitHub Issue on Failure
+        if: ${{ failure() }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "# Static Analysis Failed!" > body.md
+          echo "Ello there, a commit has managed to trigger the static analyzer." >> body.md
+          echo "**Commit**: ${{github.sha}}" >> body.md
+          echo "" >> body.md
+          echo "# Nimalyzer Output" >> body.md
+          echo '```' >> body.md
+          cat nimalyzer.log >> body.md
+          echo '```' >> body.md
+
+          gh issue create --title "Commit ${{github.sha}}" \
+                          --body-file body.md \
+                          --label "static analysis"
