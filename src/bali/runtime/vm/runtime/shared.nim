@@ -243,6 +243,9 @@ type
     ## Lesser-or-equal
     LesserThanEqualInt = 0x39
 
+    ## Generic opcode to invoke either a bytecode callable (reference to clause), clause or builtin.
+    Invoke = 0x3a
+
 const
   OpCodeToTable* = {
     "CALL": Call,
@@ -297,6 +300,7 @@ const
     "LOADUD": LoadUndefined,
     "GTEI": GreaterThanEqualInt,
     "LTEI": LesserThanEqualInt,
+    "INVK": Invoke,
   }.toTable
 
   OpCodeToString* = static:

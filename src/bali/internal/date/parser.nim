@@ -6,6 +6,8 @@ import bali/internal/[generic_lexer, trim_string, sugar]
 
 proc parseSimplifiedISO8601*(date: string): Option[float] =
   ## 21.4.3.2 Date.parse ( string ), https://tc39.es/ecma262/#sec-date.parse
+
+  # TODO: Make this function less complex. The static analyzer shouts at us when it sees this function.
   var lexer = newGenericLexer(date)
 
   var year, month, day, hours, minutes, seconds, milliseconds: Option[int]

@@ -339,7 +339,15 @@ proc generateIR*(
     debug "interpreter: generate IR for calling traditional function: " & nam &
       (if stmt.mangle: " (mangled)" else: newString 0)
 
-    runtime.ir.call(nam)
+    let indexed = runtime.index(nam, defaultParams(fn))
+
+    if indexed == runtime.index("undefined", defaultParams(fn)):
+      discard runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackStr nam]))
+    else:
+      discard runtime.ir.addOp(
+        IROperation(opcode: Invoke, arguments: @[stackUinteger indexed])
+      )
+
     runtime.ir.resetArgs()
     # Reset the call arguments register to prevent this call's arguments from leaking into future calls
 
@@ -1020,6 +1028,23 @@ proc generateIRForScope*(
     runtime.clauses.add(name)
     runtime.ir.newModule(name.normalizeIRName())
 
+  for child in scope.children:
+    let clause =
+      try:
+        Function(child).name
+      except ObjectConversionDefect:
+        newString(0)
+
+    if clause.len > 0:
+      let fnIndex = runtime.addrIdx
+      runtime.markGlobal(clause, some(fnIndex))
+      discard runtime.ir.addOp(
+        IROperation(
+          opcode: LoadBytecodeCallable,
+          arguments: @[stackUinteger(fnIndex), stackStr(clause)],
+        )
+      )
+
   runtime.irHints.generatedClauses &= name
 
   if name != "outer":
@@ -1029,19 +1054,6 @@ proc generateIRForScope*(
     if allocateConstants:
       constants.generateStdIr(runtime)
       inc runtime.addrIdx
-
-      for clause in runtime.clauses:
-        if clause == "outer":
-          continue # Nothing should be able to call into the outer scope.
-
-        let fnIndex = runtime.index(clause, defaultParams(fn))
-        discard runtime.ir.addOp(
-          IROperation(
-            opcode: LoadBytecodeCallable,
-            arguments: @[stackUinteger(fnIndex), stackStr(clause)],
-          )
-        )
-        runtime.ir.markGlobal(fnIndex)
 
       for i, typ in runtime.types:
         let idx = runtime.addrIdx
