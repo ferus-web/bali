@@ -1,11 +1,10 @@
 ## JavaScript URL API - uses sanchar's builtin URL parser
-import std/[options, logging, tables]
+import std/[options, logging]
 import bali/internal/sugar
-import bali/runtime/[normalize, arguments, types, atom_helpers, bridge]
+import bali/runtime/[arguments, types, atom_helpers, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/stdlib/types/std_string
-import bali/runtime/vm/ir/generator
 import bali/runtime/vm/atom
 import sanchar/parse/url
 

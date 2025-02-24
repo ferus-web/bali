@@ -816,7 +816,8 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
         uinteger(&atom.getUint() + 1), (&op.arguments[0].getInt()).uint
       )
     else:
-      discard
+      interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()).uint)
+        # If an invalid atom is attempted to be incremented, set its value to NaN.
 
     inc interpreter.currIndex
   of Decrement:
@@ -830,7 +831,8 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
         uinteger(&atom.getUint() - 1), (&op.arguments[0].getInt()).uint
       )
     else:
-      discard
+      interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()).uint)
+        # If an invalid atom is attempted to be decremented, set its value to NaN.
 
     inc interpreter.currIndex
   of Mult2xBatch:
@@ -1123,10 +1125,16 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     let value = op.arguments[0]
 
     if value.kind == Integer:
-      let callable = &getBytecodeClause(&interpreter.get(uint(&getInt(value))))
-      interpreter.call(callable, op)
+      let callable = &interpreter.get(uint(&getInt(value)))
+
+      if callable.kind == BytecodeCallable:
+        interpreter.call(&getBytecodeClause(callable), op)
+      elif callable.kind == NativeCallable:
+        callable.fn()
     elif value.kind == String:
       interpreter.call(&getStr(value), op)
+
+    inc interpreter.currIndex
   else:
     when defined(release):
       inc interpreter.currIndex

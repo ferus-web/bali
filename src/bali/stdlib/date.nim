@@ -4,9 +4,8 @@
 ## Trayambak Rai (xtrayambak at disroot dot org)
 import std/[math, strformat, times, logging, options]
 import bali/internal/sugar
-import bali/stdlib/errors
 import bali/runtime/vm/atom
-import bali/runtime/[normalize, atom_helpers, arguments, types, bridge]
+import bali/runtime/[atom_helpers, arguments, types, bridge]
 import bali/runtime/abstract/[coercion, slots]
 import bali/internal/date/[utils, constants, parser]
 import bali/internal/timezone

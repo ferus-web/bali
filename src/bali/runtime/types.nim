@@ -126,6 +126,9 @@ proc getMethods*(
 proc defaultParams*(fn: Function): IndexParams {.inline.} =
   IndexParams(fn: some fn)
 
+proc globalIndex*(): IndexParams {.inline.} =
+  IndexParams(priorities: @[vkGlobal])
+
 proc internalIndex*(stmt: Statement): IndexParams {.inline.} =
   IndexParams(priorities: @[vkInternal], stmt: some stmt)
 

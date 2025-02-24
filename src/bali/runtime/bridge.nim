@@ -30,17 +30,17 @@ proc defineFn*[T](
       ValueError, "Attempt to define function `" & name & "` for undefined prototype"
     )
 
-  let moduleName = normalizeIRName(&typName & '.' & name)
+  #[ let moduleName = normalizeIRName(&typName & '.' & name)
   runtime.ir.newModule(moduleName)
   let name =
     "BALI_" & toUpperAscii((&typName).normalizeIRName()) & '_' &
-    toUpperAscii(normalizeIRName name)
-  runtime.vm.registerBuiltin(
-    name,
-    proc(_: Operation) =
-      fn(),
-  )
-  runtime.ir.call(name)
+    toUpperAscii(normalizeIRName name) ]#
+
+  for i, typ in runtime.types:
+    if typ.proto != hash($prototype):
+      continue
+
+    runtime.types[i].members[name] = initAtomOrFunction[NativeFunction](fn)
 
 proc setProperty*[T](
     runtime: Runtime, prototype: typedesc[T], name: string, value: JSValue
@@ -131,6 +131,11 @@ proc createAtom*(typ: JSType): JSValue =
       atom.objValues &= undefined()
       atom.objFields[name] = idx
 
+  for name, protoFn in typ.prototypeFunctions:
+    atom[name] = nativeCallable(
+      proc() =
+        protoFn(atom)
+    )
   atom.tag("bali_object_type", typ.proto.int)
 
   atom
@@ -248,6 +253,19 @@ template ret*[T](value: T) =
 func argumentCount*(runtime: Runtime): int {.inline.} =
   ## Get the number of atoms in the `CallArgs` register
   runtime.vm.registers.callArgs.len
+
+proc typeRegistrationFinalizer*(runtime: Runtime) =
+  for typ in runtime.types:
+    let index = runtime.index(typ.name, globalIndex())
+    var jsObj = obj()
+
+    for name, fn in typ.members:
+      if not fn.isFn:
+        continue
+
+      jsObj[name] = nativeCallable(fn.fn())
+
+    runtime.vm.stack[index] = jsObj
 
 proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   ## Register a type in the JavaScript engine instance with the name of the type (`name`) alongside its prototype (`prototype`).

@@ -258,6 +258,12 @@ proc boolean*(b: bool, inRuntime: bool = false): JSValue =
 
   ensureMove(mem)
 
+proc nativeCallable*(fn: proc()): JSValue =
+  var mem = newJSValue(NativeCallable)
+  mem.fn = fn
+
+  ensureMove(mem)
+
 func stackBoolean*(b: bool): MAtom =
   MAtom(kind: Boolean, state: b)
 

@@ -290,79 +290,70 @@ proc generateIR*(
       else:
         stmt.fn.function
 
+    proc fillArguments() =
+      for i, arg in stmt.arguments:
+        case arg.kind
+        of cakIdent:
+          debug "interpreter: passing ident parameter to function with ident: " &
+            arg.ident
+
+          runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
+        of cakAtom: # already loaded via the statement expander
+          let ident = $i
+          debug "interpreter: passing atom parameter to function with ident: " & ident
+          runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
+        of cakFieldAccess:
+          let index = runtime.resolveFieldAccess(
+            fn,
+            stmt,
+            runtime.index(arg.access.identifier, defaultParams(fn)),
+            arg.access,
+          )
+          runtime.ir.markGlobal(index)
+          runtime.ir.passArgument(index)
+        of cakImmediateExpr:
+          let index = runtime.index($i, internalIndex(stmt))
+          runtime.ir.markGlobal(index)
+          runtime.ir.passArgument(index)
+
     if *stmt.fn.field:
-      let typName = block:
-        var curr = &stmt.fn.field
-        while true:
-          if curr.prev == nil:
-            break
+      let identName = (&stmt.fn.field).identifier
+      let funName = (&stmt.fn.field).next.identifier
 
-          curr = curr.prev
+      # TODO: recursive field solving
 
-        curr.identifier
-
-      let typ = runtime.getTypeFromName(typName)
-
-      if *typ:
-        nam =
-          "BALI_" & toUpperAscii(typName) & '_' &
-          toUpperAscii(stmt.fn.function.normalizeIRName())
-      else:
-        runtime.ir.passArgument(
-          runtime.index((&stmt.fn.field).identifier, defaultParams(fn))
-        )
-
-    for i, arg in stmt.arguments:
-      case arg.kind
-      of cakIdent:
-        debug "interpreter: passing ident parameter to function with ident: " & arg.ident
-
-        runtime.ir.passArgument(runtime.index(arg.ident, defaultParams(fn)))
-      of cakAtom: # already loaded via the statement expander
-        let ident = $i
-        debug "interpreter: passing atom parameter to function with ident: " & ident
-        runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
-      of cakFieldAccess:
-        let index = runtime.resolveFieldAccess(
-          fn, stmt, runtime.index(arg.access.identifier, defaultParams(fn)), arg.access
-        )
-        runtime.ir.markGlobal(index)
-        runtime.ir.passArgument(index)
-      of cakImmediateExpr:
-        let index = runtime.index($i, internalIndex(stmt))
-        runtime.ir.markGlobal(index)
-        runtime.ir.passArgument(index)
-
-    # Traditional function calls (pre-defined functions)
-    #[ if runtime.willIRGenerateClause(nam) or
-        runtime.vm.builtins.contains(nam):]#
-    debug "interpreter: generate IR for calling traditional function: " & nam &
-      (if stmt.mangle: " (mangled)" else: newString 0)
-
-    let indexed = runtime.index(nam, defaultParams(fn))
-
-    if indexed == runtime.index("undefined", defaultParams(fn)):
-      discard runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackStr nam]))
-    else:
-      discard runtime.ir.addOp(
-        IROperation(opcode: Invoke, arguments: @[stackUinteger indexed])
+      # firstly, try to get the bytecode callable / native callable
+      let fn = runtime.resolveFieldAccess(
+        fn, stmt, runtime.index(identName, defaultParams(fn)), &stmt.fn.field
       )
 
+      fillArguments()
+
+      # then, invoke it.
+      discard
+        runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackUinteger fn]))
+    else:
+      debug "interpreter: generate IR for calling traditional function: " & nam &
+        (if stmt.mangle: " (mangled)" else: newString 0)
+
+      fillArguments()
+
+      let indexed = runtime.index(nam, defaultParams(fn))
+
+      if indexed == runtime.index("undefined", defaultParams(fn)):
+        discard
+          runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackStr nam]))
+      else:
+        discard runtime.ir.addOp(
+          IROperation(opcode: Invoke, arguments: @[stackUinteger indexed])
+        )
+
     runtime.ir.resetArgs()
-    # Reset the call arguments register to prevent this call's arguments from leaking into future calls
+      # Reset the call arguments register to prevent this call's arguments from leaking into future calls
 
     if not stmt.expectsReturnVal and runtime.opts.codegen.aggressivelyFreeRetvals:
       runtime.ir.zeroRetval()
         # Destroy the return value, if any. This helps conserve memory.
-    #[ else:
-      # Dynamic bytecode segment references
-      discard runtime.ir.addOp(
-        IROperation(
-          opcode: ExecuteBytecodeCallable,
-          arguments: @[stackUinteger(runtime.index(nam, defaultParams(fn)))],
-        )
-      )
-      runtime.ir.resetArgs() ]#
   of ReturnFn:
     assert not (*stmt.retVal and *stmt.retIdent),
       "ReturnFn statement cannot have both return atom and return ident at once!"
@@ -1058,7 +1049,6 @@ proc generateIRForScope*(
       for i, typ in runtime.types:
         let idx = runtime.addrIdx
         runtime.markGlobal(typ.name)
-        runtime.ir.loadObject(idx)
         runtime.ir.createField(idx, 0, "@bali_object_type")
         runtime.ir.markGlobal(idx)
         runtime.types[i].singletonId = idx
@@ -1128,8 +1118,7 @@ proc generateInternalIR*(runtime: Runtime) =
           )()
         )
 
-      let atom = runtime.vm.stack[index]
-        # FIXME: weird bug with mirage, `get` returns a NULL atom.
+      let atom = &runtime.vm.get(index)
 
       if atom.isUndefined():
         runtime.typeError("value is undefined")
@@ -1354,6 +1343,7 @@ proc run*(runtime: Runtime) =
 
   privateAccess(PulsarInterpreter) # modern problems require modern solutions
   runtime.vm.tokenizer = tokenizer.newTokenizer(source)
+  runtime.typeRegistrationFinalizer()
 
   debug "interpreter: the following bytecode will now be executed"
 

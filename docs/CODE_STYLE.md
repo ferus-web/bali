@@ -4,6 +4,8 @@ This document aims to be a vast corpus of rules that a contributor must follow. 
 Some code in Bali is currently a violation of the rules here. Feel free to send pull requests to fix them.
 
 ## General Rules
+Each commit made to Bali is passed through [Nimalyzer](https://github.com/thindil/nimalyzer), a static analyzer for Nim. Make sure that none of your code messes with it and/or makes its job harder.
+
 ### Minimize the usage of templates to places where it makes sense.
 Don't abuse templates. They dilute the codebase with unfollowable stack traces and can also worsen compilation times. \
 Whenever you're about to use a template, think to yourself: "Would this be better off as a function?"

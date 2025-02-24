@@ -68,7 +68,7 @@ proc ToString*(runtime: Runtime, value: JSValue): string =
     return buffer
   of NativeCallable:
     # FIXME: not spec compliant!
-    return "function () { [native code] }"
+    return "function () {\n      [native code]\n}"
   of BytecodeCallable:
     # FIXME: not spec compliant!
     return "function " & value.clauseName & "() { }"
