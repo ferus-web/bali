@@ -371,7 +371,7 @@ proc generateIR*(
     let index = runtime.index(stmt.storeIdent, defaultParams(fn))
     debug "emitter: call-and-store result will be stored in ident \"" & stmt.storeIdent &
       "\" or index " & $index
-    runtime.ir.loadObject(index) # load `undefined` on that index
+    runtime.ir.loadUndefined(index) # load `undefined` on that index
     runtime.ir.readRegister(index, Register.ReturnValue)
     runtime.ir.zeroRetval()
   of ConstructObject:
