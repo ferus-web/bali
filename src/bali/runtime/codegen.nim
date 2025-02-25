@@ -1293,7 +1293,10 @@ proc run*(runtime: Runtime) =
   json.generateStdIR(runtime)
   encodeUri.generateStdIR(runtime)
   std_string.generateStdIR(runtime)
-  date.generateStdIR(runtime)
+
+  when not defined(baliTest262FyiDisableICULinkingCode):
+    date.generateStdIR(runtime)
+
   std_bigint.generateStdIR(runtime)
   std_number.generateStdIR(runtime)
   std_set.generateStdIR(runtime)
