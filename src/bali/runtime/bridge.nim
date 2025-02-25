@@ -1,6 +1,6 @@
 ## A neat JavaScript <-> Nim bridge.
 
-import std/[logging, tables, options, strutils, hashes, importutils]
+import std/[logging, tables, options, strutils, hashes, importutils, sugar]
 import bali/runtime/vm/runtime/prelude
 import bali/runtime/vm/ir/generator
 import bali/runtime/[atom_obj_variant, atom_helpers, types, normalize]
@@ -100,13 +100,13 @@ proc definePrototypeFn*[T](
 ) =
   ## Add a function to a type's prototype.
   ## Each instance of this type will be able to invoke the provided function.
-  runtime.vm.registerBuiltin(
+  #[ runtime.vm.registerBuiltin(
     name,
     proc(_: Operation) =
       let typ = deepCopy(runtime.vm.registers.callArgs[0])
       runtime.vm.registers.callArgs.delete(0)
       fn(typ),
-  )
+  ) ]#
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
       runtime.types[i].prototypeFunctions[name] = fn
@@ -116,11 +116,11 @@ proc getReturnValue*(runtime: Runtime): Option[JSValue] =
   ## NOTE: You need to disable the aggressive retval scrubbing optimization if you want to get the return value of a function called in bytecode
   runtime.vm.registers.retVal
 
-proc createAtom*(typ: JSType): JSValue =
+proc createAtom*(runtime: Runtime, typ: JSType): JSValue =
   ## Create an atom (object) based off of a provided type.
   ## All fields of the provided `typ` are initialized in the object with `undefined`.
   ## The object will also gain an internal Bali-specific data slot/tag called `bali_object_type` which helps the engine
-  ## in determining what type this object belongs to.
+  ## in determining what type this object belongs to. It also attaches all the prototype functions needed.
   ##
   ## **This value will be allocated via Bali's internal garbage collector. Don't unnecessarily call this or else you might trigger a GC collection sweep.**
   var atom = obj()
@@ -132,13 +132,15 @@ proc createAtom*(typ: JSType): JSValue =
       atom.objFields[name] = idx
 
   for name, protoFn in typ.prototypeFunctions:
-    atom[name] = nativeCallable(
-      proc() =
-        protoFn(atom)
-    )
+    capture name, protoFn:
+      atom[name] = nativeCallable(
+        proc() =
+          typ.prototypeFunctions[name](atom)
+      )
+
   atom.tag("bali_object_type", typ.proto.int)
 
-  atom
+  ensureMove(atom)
 
 proc isA*[T: object](runtime: Runtime, atom: JSValue, typ: typedesc[T]): bool =
   ## This function returns a boolean based off of whether `atom` is a replica of the supplied Nim-native type `typ`.
@@ -200,7 +202,7 @@ proc getTypeFromName*(runtime: Runtime, name: string): Option[JSType] =
 proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): JSValue =
   for etyp in runtime.types:
     if etyp.proto == hash($typ):
-      return etyp.createAtom()
+      return runtime.createAtom(etyp)
 
   raise newException(ValueError, "No such registered type: `" & $typ & '`')
 
@@ -263,9 +265,13 @@ proc typeRegistrationFinalizer*(runtime: Runtime) =
       if not fn.isFn:
         continue
 
-      jsObj[name] = nativeCallable(fn.fn())
+      capture name, fn:
+        jsObj[name] = nativeCallable(
+          proc =
+            fn.fn()()
+        )
 
-    runtime.vm.stack[index] = jsObj
+    runtime.vm.stack[index] = ensureMove(jsObj)
 
 proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   ## Register a type in the JavaScript engine instance with the name of the type (`name`) alongside its prototype (`prototype`).

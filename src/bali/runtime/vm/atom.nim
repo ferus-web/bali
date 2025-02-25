@@ -196,6 +196,10 @@ proc getSequence*(atom: MAtom | JSValue): Option[seq[MAtom]] {.inline.} =
   if atom.kind == Sequence:
     return some(atom.sequence)
 
+proc getNativeCallable*(atom: MAtom | JSValue): Option[proc()] {.inline.} =
+  if atom.kind == NativeCallable:
+    return some(atom.fn)
+
 proc newJSValue*(kind: MAtomKind): JSValue =
   ## Allocate a new `JSValue` using Bali's garbage collector.
   ## A `JSValue` is a pointer to an atom.
@@ -219,7 +223,6 @@ func stackStr*(s: string): MAtom =
   MAtom(kind: String, str: s)
 
 proc ident*(ident: string): JSValue {.inline.} =
-  assert off
   var mem = newJSValue(Ident)
   mem.ident = ident
 

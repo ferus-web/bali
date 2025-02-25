@@ -96,7 +96,7 @@ proc generateStdIr*(runtime: Runtime) =
       # 8. Return 𝔽(StringIndexOf(S, searchStr, start)).
       if value.len < BaliStringAccelerationThreshold:
         ret strutils.find(value[start ..< value.len], searchStr)
-          # Don't use SIMD acceleration if a string is smaller than 512 characters
+          # Optimization: Don't use SIMD acceleration if a string is smaller than 512 characters
       else:
         ret search.find(value[start ..< value.len], searchStr)
     ,
@@ -147,6 +147,7 @@ proc generateStdIr*(runtime: Runtime) =
     ## 22.1.3.34 String.prototype.trimStart ( )
     ## B.2.2.15 String.prototype.trimLeft ( )       [ LEGACY VERSION, USE 22.1.3.34 INSTEAD! ]
 
+
     # 1. Let S be the this value.
     let value = &value.tagged("internal")
 
@@ -156,6 +157,7 @@ proc generateStdIr*(runtime: Runtime) =
   proc trimEnd(value: JSValue) =
     ## 22.1.3.33 String.prototype.trimEnd ( )
     ## B.2.2.16 String.prototype.trimRight ( )     [ LEGACY VERSION, USE 22.1.3.33 INSTEAD! ]
+    
 
     # 1. Let S be the this value.
     let value = &value.tagged("internal")
@@ -257,13 +259,6 @@ proc generateStdIr*(runtime: Runtime) =
       # Return 𝔽(cp.[[CodePoint]]).
       ret codepoint
     ,
-  )
-
-  runtime.definePrototypeFn(
-    JSString,
-    "turnIntoInt",
-    proc(value: JSValue) =
-      value[] = integer(1337)[],
   )
 
   #[ runtime.definePrototypeFn(

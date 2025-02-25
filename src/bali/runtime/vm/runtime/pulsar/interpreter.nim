@@ -1131,8 +1131,12 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
         interpreter.call(&getBytecodeClause(callable), op)
       elif callable.kind == NativeCallable:
         callable.fn()
+      else:
+        raise newException(ValueError, "INVK cannot deal with atom: " & $callable.kind)
     elif value.kind == String:
       interpreter.call(&getStr(value), op)
+    else:
+      raise newException(ValueError, "INVK cannot deal with atom: " & $value.kind)
 
     inc interpreter.currIndex
   else:

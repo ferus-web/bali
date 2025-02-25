@@ -7,7 +7,7 @@ import bali/grammar/prelude
 import bali/internal/sugar
 import
   bali/runtime/[
-    normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils,
+    normalize, types, atom_helpers, arguments, statement_utils,
     bridge, describe,
   ]
 import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
@@ -1128,27 +1128,9 @@ proc generateInternalIR*(runtime: Runtime) =
 
       if atom.kind != Object:
         debug "runtime: atom is not an object, returning undefined."
-        runtime.vm.addAtom(obj(), storeAt)
+        runtime.vm.addAtom(undefined(), storeAt)
         return
-
-      for typ in runtime.types:
-        if typ.singletonId == index:
-          debug "runtime: singleton ID for type `" & typ.name &
-            "` matches field access index"
-
-          for name, member in typ.members:
-            if member.isFn:
-              continue
-            if name != accesses.identifier:
-              continue
-
-            if accesses.next != nil:
-              assert(member.atom().kind == Object)
-              runtime.vm.addAtom(member.atom().findField(accesses.next), storeAt)
-            else:
-              runtime.vm.addAtom(member.atom(), storeAt)
-            return
-
+      
       runtime.vm.addAtom(atom.findField(accesses), storeAt),
   )
   runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")
@@ -1254,7 +1236,7 @@ proc generateInternalIR*(runtime: Runtime) =
           runtime.typeError("Value is undefined")
 
         if destAtom.isNull:
-          runtime.typeError("Value is stackNull")
+          runtime.typeError("Value is null")
 
       checkDestAtom
 
