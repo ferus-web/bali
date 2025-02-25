@@ -6,10 +6,8 @@ import bali/runtime/vm/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
 import
-  bali/runtime/[
-    normalize, types, atom_helpers, atom_obj_variant, arguments, statement_utils,
-    bridge, describe,
-  ]
+  bali/runtime/
+    [normalize, types, atom_helpers, arguments, statement_utils, bridge, describe]
 import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/abstract/equating
@@ -371,7 +369,7 @@ proc generateIR*(
     let index = runtime.index(stmt.storeIdent, defaultParams(fn))
     debug "emitter: call-and-store result will be stored in ident \"" & stmt.storeIdent &
       "\" or index " & $index
-    runtime.ir.loadObject(index) # load `undefined` on that index
+    runtime.ir.loadUndefined(index) # load `undefined` on that index
     runtime.ir.readRegister(index, Register.ReturnValue)
     runtime.ir.zeroRetval()
   of ConstructObject:
@@ -1128,26 +1126,8 @@ proc generateInternalIR*(runtime: Runtime) =
 
       if atom.kind != Object:
         debug "runtime: atom is not an object, returning undefined."
-        runtime.vm.addAtom(obj(), storeAt)
+        runtime.vm.addAtom(undefined(), storeAt)
         return
-
-      for typ in runtime.types:
-        if typ.singletonId == index:
-          debug "runtime: singleton ID for type `" & typ.name &
-            "` matches field access index"
-
-          for name, member in typ.members:
-            if member.isFn:
-              continue
-            if name != accesses.identifier:
-              continue
-
-            if accesses.next != nil:
-              assert(member.atom().kind == Object)
-              runtime.vm.addAtom(member.atom().findField(accesses.next), storeAt)
-            else:
-              runtime.vm.addAtom(member.atom(), storeAt)
-            return
 
       runtime.vm.addAtom(atom.findField(accesses), storeAt),
   )
@@ -1254,7 +1234,7 @@ proc generateInternalIR*(runtime: Runtime) =
           runtime.typeError("Value is undefined")
 
         if destAtom.isNull:
-          runtime.typeError("Value is stackNull")
+          runtime.typeError("Value is null")
 
       checkDestAtom
 
@@ -1313,7 +1293,10 @@ proc run*(runtime: Runtime) =
   json.generateStdIR(runtime)
   encodeUri.generateStdIR(runtime)
   std_string.generateStdIR(runtime)
-  date.generateStdIR(runtime)
+
+  when not defined(baliTest262FyiDisableICULinkingCode):
+    date.generateStdIR(runtime)
+
   std_bigint.generateStdIR(runtime)
   std_number.generateStdIR(runtime)
   std_set.generateStdIR(runtime)

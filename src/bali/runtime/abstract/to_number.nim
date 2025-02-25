@@ -37,15 +37,12 @@ proc ToNumber*(runtime: Runtime, value: JSValue): float =
   of UnsignedInt:
     return float(&value.getUint())
   of Object:
-    if value.isUndefined():
-      return NaN # 3. If argument is undefined, return NaN.
-    else:
-      # 8. Let primValue be ? ToPrimitive(argument, NUMBER).
-      let primValue = runtime.ToPrimitive(value, some(Float))
-      assert(primValue.kind != Object)
+    # 8. Let primValue be ? ToPrimitive(argument, NUMBER).
+    let primValue = runtime.ToPrimitive(value, some(Float))
+    assert(primValue.kind != Object)
 
-      # 10. Return ? ToNumber(primValue)
-      return runtime.ToNumber(primValue)
+    # 10. Return ? ToNumber(primValue)
+    return runtime.ToNumber(primValue)
   of Null:
     return 0f # 4. If argument is either null or false, return +0𝔽.
   of Boolean:
@@ -57,6 +54,9 @@ proc ToNumber*(runtime: Runtime, value: JSValue): float =
     return runtime.StringToNumber(value)
   of Float:
     return &value.getFloat()
+  of Undefined:
+    # 3. If argument is undefined, return NaN.
+    return NaN
   else:
     unreachable
 
