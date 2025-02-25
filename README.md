@@ -18,6 +18,11 @@ You can check how much Bali progresses/regresses by each day's run.
 # How fast is it?
 With some recent codegen optimizations, Bali is already pretty fast on cherry-picked benchmarks. Bali can perform some optimizations when it is generating code for the provided JavaScript source, granted that it can prove that there is an opportunity to optimize away things.
 
+# How "well written" is it?
+Bali is formatted using the [nph](https://github.com/arnetheduck/nph) code formatter and each commit is statically analyzed by [Nimalyzer](https://github.com/thindil/nimalyzer).
+
+It isn't indicative of the code quality, but I do put some extent into making the code slightly readable. :^)
+
 ## Iterating 999999999 times and incrementing an integer each loop
 Bali has some loop elision optimizations in place which can fully eliminate an expensive loop when it sees the opportunity. \
 Node is run without a JIT compiler just to be fair to Bali and QuickJS. QuickJS turns out to be the slowest whilst Bali

@@ -40,6 +40,10 @@ jobs:
           cat nimalyzer.log >> body.md
           echo '```' >> body.md
 
-          gh issue create --title "Commit ${{github.sha}}" \
+          ISSUE_URL=$(gh issue create --title "Commit ${{github.sha}}" \
                           --body-file body.md \
-                          --label "static analysis"
+                          --label "static analysis")
+          
+          ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
+
+          gh issue close $ISSUE_NUMBER
