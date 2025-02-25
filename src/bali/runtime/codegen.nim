@@ -6,10 +6,8 @@ import bali/runtime/vm/runtime/[tokenizer, prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
 import
-  bali/runtime/[
-    normalize, types, atom_helpers, arguments, statement_utils,
-    bridge, describe,
-  ]
+  bali/runtime/
+    [normalize, types, atom_helpers, arguments, statement_utils, bridge, describe]
 import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/abstract/equating
@@ -1130,7 +1128,7 @@ proc generateInternalIR*(runtime: Runtime) =
         debug "runtime: atom is not an object, returning undefined."
         runtime.vm.addAtom(undefined(), storeAt)
         return
-      
+
       runtime.vm.addAtom(atom.findField(accesses), storeAt),
   )
   runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")

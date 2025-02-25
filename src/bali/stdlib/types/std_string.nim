@@ -147,7 +147,6 @@ proc generateStdIr*(runtime: Runtime) =
     ## 22.1.3.34 String.prototype.trimStart ( )
     ## B.2.2.15 String.prototype.trimLeft ( )       [ LEGACY VERSION, USE 22.1.3.34 INSTEAD! ]
 
-
     # 1. Let S be the this value.
     let value = &value.tagged("internal")
 
@@ -157,7 +156,6 @@ proc generateStdIr*(runtime: Runtime) =
   proc trimEnd(value: JSValue) =
     ## 22.1.3.33 String.prototype.trimEnd ( )
     ## B.2.2.16 String.prototype.trimRight ( )     [ LEGACY VERSION, USE 22.1.3.33 INSTEAD! ]
-    
 
     # 1. Let S be the this value.
     let value = &value.tagged("internal")

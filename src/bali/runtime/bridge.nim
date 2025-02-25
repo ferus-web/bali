@@ -267,7 +267,7 @@ proc typeRegistrationFinalizer*(runtime: Runtime) =
 
       capture name, fn:
         jsObj[name] = nativeCallable(
-          proc =
+          proc() =
             fn.fn()()
         )
 
