@@ -930,7 +930,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
         if *interpreter.registers.retVal:
           &interpreter.registers.retVal
         else:
-          obj(),
+          undefined(),
         idx,
       )
     of 1:
