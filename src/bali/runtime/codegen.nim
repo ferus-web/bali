@@ -700,7 +700,14 @@ proc generateIR*(
     )
     let dest = runtime.addrIdx - 1
 
-    runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
+    if stmt.cpMutDestIdent.contains('.'):
+      # Field access.
+      let fields = createFieldAccess(stmt.cpMutDestIdent.split('.'))
+
+      # TODO: recursively find the field to modify
+      runtime.ir.writeField(runtime.index(fields.identifier, defaultParams(fn)), fields.next.identifier, runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)))
+    else:
+      runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
   of CopyValImmut:
     debug "emitter: generate IR for copying value to an immutable address with source: " &
       stmt.cpImmutSourceIdent & " and destination: " & stmt.cpImmutDestIdent

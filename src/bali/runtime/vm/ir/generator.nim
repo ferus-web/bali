@@ -233,27 +233,27 @@ proc createField*(
 
 # "slow"
 proc writeField*(
-    gen: IRGenerator, position: uint, name: string, value: MAtom
+    gen: IRGenerator, position: uint, name: string, value: uint
 ): uint {.inline, discardable.} =
   ## Modify a field of an object. 
   ## Keep in mind that this can be slow* as it requires a search in the field name-to-index lookup table.
-  ## For a faster alternative (direct index access), use the `writeField proc<#writeField, IRGenerator, uint, int, MAtom>` instead.
+  ## For a faster alternative (direct index access), use the `writeField proc<#writeField, IRGenerator, uint, int, uint>` instead.
   gen.addOp(
     IROperation(
-      opCode: WriteField, arguments: @[stackUinteger position, stackStr name, value]
+      opCode: WriteField, arguments: @[stackUinteger position, stackStr name, stackUinteger value]
     )
   )
 
 # "fast"
 proc writeField*(
-    gen: IRGenerator, position: uint, index: int, value: MAtom
+    gen: IRGenerator, position: uint, index: int, value: uint
 ): uint {.inline, discardable.} =
   ## Modify a field of an object.
-  ## This is the faster alternative to `writeField proc<#writeField, IRGenerator, uint, string, MAtom>`
+  ## This is the faster alternative to `writeField proc<#writeField, IRGenerator, uint, string, uint>`
   gen.addOp(
     IROperation(
       opCode: FastWriteField,
-      arguments: @[stackUinteger position, stackInteger index, value],
+      arguments: @[stackUinteger position, stackInteger index, stackUinteger value],
     )
   )
 
