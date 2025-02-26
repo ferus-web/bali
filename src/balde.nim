@@ -319,6 +319,7 @@ proc baldeRepl(ctx: Input) =
       runtime.values = prevRuntime.values
       runtime.vm.stack = prevRuntime.vm.stack
         # Copy all atoms of the previous runtime to the new one
+
     runtime.run()
     prevRuntime = runtime
 

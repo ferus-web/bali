@@ -282,6 +282,7 @@ proc generateIR*(
       runtime.markInternal(&ownerStmt, stmt.mutIdentifier)
   of Call:
     runtime.expand(fn, stmt)
+    runtime.ir.resetArgs()
     var nam =
       if stmt.mangle:
         stmt.fn.normalizeIRName()
@@ -1130,21 +1131,8 @@ proc generateInternalIR*(runtime: Runtime) =
     proc(op: Operation) =
       inc runtime.statFieldAccesses
       let
-        idxAtom = &runtime.argument(1)
-
-        index =
-          if idxAtom.kind == Integer:
-            (&idxAtom.getInt()).uint()
-          else:
-            &idxAtom.getUint()
-
-        storeAtAtom = &runtime.argument(2)
-
-        storeAt =
-          if idxAtom.kind == Integer:
-            (&storeAtAtom.getInt()).uint()
-          else:
-            &storeAtAtom.getUint()
+        index = uint(&getInt(&runtime.argument(1)))
+        storeAt = uint(&getInt(&runtime.argument(2)))
 
         accesses = createFieldAccess(
           (
