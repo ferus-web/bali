@@ -749,6 +749,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     let
       oatomIndex = (&op.arguments[0].getInt()).uint
       oatomId = interpreter.get(oatomIndex)
+      fieldName = &op.arguments[1].getStr()
 
     if not *oatomId:
       inc interpreter.currIndex
@@ -759,15 +760,15 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       fieldIndex = none(int)
 
     for field, idx in atom.objFields:
-      if field == &(op.arguments[1].getStr()):
+      if field == fieldName:
         fieldIndex = some(idx)
 
     if not *fieldIndex:
-      inc interpreter.currIndex
-      return
+      atom.objValues &= undefined()
+      fieldIndex = some(atom.objValues.len - 1)
 
     let toWrite = op.consume(Integer, "", enforce = false, some(op.rawArgs.len - 1))
-    atom.objValues[&fieldIndex] = toWrite
+    atom.objValues[&fieldIndex] = &interpreter.get(uint(&toWrite.getInt()))
 
     interpreter.addAtom(atom, oatomIndex)
     inc interpreter.currIndex
