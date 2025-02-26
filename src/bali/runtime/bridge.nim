@@ -174,24 +174,35 @@ proc isA*[T: object](runtime: Runtime, atom: JSValue, typ: typedesc[T]): bool =
 
   false
 
-proc getMethod*(
-    runtime: Runtime, v: JSValue, p: string
-): Option[NativePrototypeFunction] =
+proc getMethod*(runtime: Runtime, v: JSValue, p: string): Option[proc()] =
   ## Get a method from the provided object's prototype.
-  ## Returns an `Option[NativePrototypeFunction]` if a function with the name `p` is found,
+  ## Returns an `Option[proc()]` if a function with the name `p` is found (it is wrapped!),
   ## else it returns an empty `Option`.
-  assert(v.kind == Object, "Cannot search object for methods if it isn't an object.")
+  ##
+  ## If a `BytecodeCallable` is found, `getMethod` creates its own wrapper function.
+  if v.contains(p):
+    debug "runtime: getMethod(): value has field: " & p
 
-  if not v.contains("@bali_object_type"):
-    return
+    case v[p].kind
+    of NativeCallable:
+      debug "runtime: getMethod(): method is a native callable"
+      return some(v[p].fn)
+    of BytecodeCallable:
+      debug "runtime: getMethod(): method is a bytecode callable; generating wrapper."
+      return some(
+        proc() =
+          runtime.vm.registers.callArgs.add(v)
+          runtime.vm.call(&getBytecodeClause(v[p]), default(Operation))
+            # FIXME: I don't think giving a bogus operation will allow us to get proper tracebacks...
 
-  for typ in runtime.types:
-    if typ.proto.int != &getInt(&v.tagged("bali_object_type")):
-      continue
-
-    for name, meth in typ.prototypeFunctions:
-      if name == p:
-        return some(meth)
+          # If the function returned nothing, just push undefined to that register.
+          if !runtime.vm.registers.retVal:
+            runtime.vm.registers.retVal = some(undefined())
+      )
+    else:
+      debug "runtime: getMethod(): field is not callable"
+  else:
+    debug "runtime: getMethod(): value does not have function member: " & p
 
 proc getTypeFromName*(runtime: Runtime, name: string): Option[JSType] =
   ## Returns a registered JS type based on its name, if it exists.
