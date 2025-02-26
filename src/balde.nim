@@ -313,13 +313,13 @@ proc baldeRepl(ctx: Input) =
   var prevRuntime: Runtime
   var noise = Noise.init()
 
-  template evaluateSource(line: string) =
-    let ast = newParser(line).parse()
+  template evaluateSource(ast: AST) =
     var runtime = allocRuntime(ctx, "<repl>", ast, repl = true)
     if prevRuntime != nil:
       runtime.values = prevRuntime.values
       runtime.vm.stack = prevRuntime.vm.stack
         # Copy all atoms of the previous runtime to the new one
+
     runtime.run()
     prevRuntime = runtime
 
@@ -422,7 +422,7 @@ You can also just type in JavaScript expressions to evaluate them."""
             )
         else:
           noise.historyAdd(line)
-          evaluateSource line
+          evaluateSource ast
 
   when promptHistory:
     discard noise.historySave(file)

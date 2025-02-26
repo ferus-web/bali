@@ -749,6 +749,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     let
       oatomIndex = (&op.arguments[0].getInt()).uint
       oatomId = interpreter.get(oatomIndex)
+      fieldName = &op.arguments[1].getStr()
 
     if not *oatomId:
       inc interpreter.currIndex
@@ -759,15 +760,15 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       fieldIndex = none(int)
 
     for field, idx in atom.objFields:
-      if field == &(op.arguments[1].getStr()):
+      if field == fieldName:
         fieldIndex = some(idx)
 
     if not *fieldIndex:
-      inc interpreter.currIndex
-      return
+      atom.objValues &= undefined()
+      fieldIndex = some(atom.objValues.len - 1)
 
     let toWrite = op.consume(Integer, "", enforce = false, some(op.rawArgs.len - 1))
-    atom.objValues[&fieldIndex] = toWrite
+    atom.objValues[&fieldIndex] = &interpreter.get(uint(&toWrite.getInt()))
 
     interpreter.addAtom(atom, oatomIndex)
     inc interpreter.currIndex
@@ -925,11 +926,14 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     case regId
     of 0:
       # 0 - retval register
+      debug "vm: read retval register (#0); placing onto stack pos " & $idx
       interpreter.addAtom(
         if *interpreter.registers.retVal:
+          debug "vm: RREG: retval register is not empty"
           &interpreter.registers.retVal
         else:
-          obj(),
+          debug "vm: RREG: retval register is empty, filling in with undefined"
+          undefined(),
         idx,
       )
     of 1:
@@ -947,9 +951,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of PassArgument:
     # append to callArgs register
-    let
-      idx = (&op.arguments[0].getInt()).uint
-      value = &interpreter.get(idx)
+    let idx = (&op.arguments[0].getInt()).uint
+    debug "vm: PARG: appending index to callargs register: " & $idx
+    let value = &interpreter.get(idx)
 
     interpreter.registers.callArgs.add(value)
     inc interpreter.currIndex

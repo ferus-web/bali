@@ -1,5 +1,5 @@
-import std/[options, tables]
-import bali/runtime/[types, atom_helpers, bridge]
+import std/[options]
+import bali/runtime/[types, bridge]
 import bali/internal/sugar
 import bali/stdlib/errors
 import bali/runtime/vm/runtime/prelude
@@ -31,7 +31,7 @@ proc OrdinaryToPrimitive*(
       continue
 
     # b. If IsCallable(method) is true, then
-    (&meth)(input)
+    (&meth)()
     # i. Let result be ? Call(method, O).
     let res = runtime.getReturnValue()
 
@@ -74,7 +74,7 @@ proc ToPrimitive*(
             default PrimitiveHint
 
       # iv. Let result be ? Call(exoticToPrim, input, « hint »).
-      (&exoticToPrim)(wrap(toTable {"hint": hint.int.integer(), "input": input}))
+      (&exoticToPrim)() # wrap(toTable {"hint": hint.int.integer(), "input": input}))
       let res = runtime.getReturnValue()
       assert(*res, "BUG: Expected toPrimitive() to return value, got nothing.")
 

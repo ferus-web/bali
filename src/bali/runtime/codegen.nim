@@ -12,7 +12,7 @@ import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/abstract/equating
 import bali/stdlib/prelude
-import crunchy, pretty
+import pkg/[crunchy, pretty]
 
 privateAccess(PulsarInterpreter)
 privateAccess(Runtime)
@@ -282,6 +282,7 @@ proc generateIR*(
       runtime.markInternal(&ownerStmt, stmt.mutIdentifier)
   of Call:
     runtime.expand(fn, stmt)
+    runtime.ir.resetArgs()
     var nam =
       if stmt.mangle:
         stmt.fn.normalizeIRName()
@@ -700,7 +701,18 @@ proc generateIR*(
     )
     let dest = runtime.addrIdx - 1
 
-    runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
+    if stmt.cpMutDestIdent.contains('.'):
+      # Field access.
+      let fields = createFieldAccess(stmt.cpMutDestIdent.split('.'))
+
+      # TODO: recursively find the field to modify
+      runtime.ir.writeField(
+        runtime.index(fields.identifier, defaultParams(fn)),
+        fields.next.identifier,
+        runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)),
+      )
+    else:
+      runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
   of CopyValImmut:
     debug "emitter: generate IR for copying value to an immutable address with source: " &
       stmt.cpImmutSourceIdent & " and destination: " & stmt.cpImmutDestIdent
@@ -853,7 +865,26 @@ proc generateIR*(
 
     if runtime.opts.repl:
       runtime.ir.passArgument(idx)
-      runtime.ir.call(normalizeIRName "console.log")
+      var args: PositionedArguments
+
+      if *stmt.wstAtom:
+        args.pushAtom(&stmt.wstAtom)
+      elif *stmt.wstIdent:
+        args.pushIdent(&stmt.wstIdent)
+      else:
+        unreachable
+
+      runtime.generateIR(
+        fn,
+        call(
+          callFunction(
+            "console",
+            FieldAccess(identifier: "console", next: FieldAccess(identifier: "log")),
+          ), # FIXME: why do we have to specify console twice? :/
+          ensureMove(args),
+          expectsReturnVal = false,
+        ),
+      )
   of AccessArrayIndex:
     debug "emitter: generate IR for array indexing"
     let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
@@ -1100,8 +1131,9 @@ proc generateInternalIR*(runtime: Runtime) =
     proc(op: Operation) =
       inc runtime.statFieldAccesses
       let
-        index = uint(&(&runtime.argument(1)).getInt())
-        storeAt = uint(&(&runtime.argument(2)).getInt())
+        index = uint(&getInt(&runtime.argument(1)))
+        storeAt = uint(&getInt(&runtime.argument(2)))
+
         accesses = createFieldAccess(
           (
             proc(): seq[string] =
@@ -1115,6 +1147,9 @@ proc generateInternalIR*(runtime: Runtime) =
               accesses
           )()
         )
+
+      debug "hooks: BALI_RESOLVEFIELD_INTERNAL: index = " & $index & ", destination = " &
+        $storeAt
 
       let atom = &runtime.vm.get(index)
 
