@@ -12,7 +12,7 @@ import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/abstract/equating
 import bali/stdlib/prelude
-import crunchy, pretty
+import pkg/[crunchy, pretty]
 
 privateAccess(PulsarInterpreter)
 privateAccess(Runtime)
@@ -864,7 +864,26 @@ proc generateIR*(
 
     if runtime.opts.repl:
       runtime.ir.passArgument(idx)
-      runtime.ir.call(normalizeIRName "console.log")
+      var args: PositionedArguments
+
+      if *stmt.wstAtom:
+        args.pushAtom(&stmt.wstAtom)
+      elif *stmt.wstIdent:
+        args.pushIdent(&stmt.wstIdent)
+      else:
+        unreachable
+
+      runtime.generateIR(
+        fn,
+        call(
+          callFunction(
+            "console",
+            FieldAccess(identifier: "console", next: FieldAccess(identifier: "log")),
+          ), # FIXME: why do we have to specify console twice? :/
+          ensureMove(args),
+          expectsReturnVal = false,
+        ),
+      )
   of AccessArrayIndex:
     debug "emitter: generate IR for array indexing"
     let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
@@ -1111,8 +1130,22 @@ proc generateInternalIR*(runtime: Runtime) =
     proc(op: Operation) =
       inc runtime.statFieldAccesses
       let
-        index = uint(&(&runtime.argument(1)).getInt())
-        storeAt = uint(&(&runtime.argument(2)).getInt())
+        idxAtom = &runtime.argument(1)
+
+        index =
+          if idxAtom.kind == Integer:
+            (&idxAtom.getInt()).uint()
+          else:
+            &idxAtom.getUint()
+
+        storeAtAtom = &runtime.argument(2)
+
+        storeAt =
+          if idxAtom.kind == Integer:
+            (&storeAtAtom.getInt()).uint()
+          else:
+            &storeAtAtom.getUint()
+
         accesses = createFieldAccess(
           (
             proc(): seq[string] =
