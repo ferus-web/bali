@@ -926,10 +926,13 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     case regId
     of 0:
       # 0 - retval register
+      debug "vm: read retval register (#0); placing onto stack pos " & $idx
       interpreter.addAtom(
         if *interpreter.registers.retVal:
+          debug "vm: RREG: retval register is not empty"
           &interpreter.registers.retVal
         else:
+          debug "vm: RREG: retval register is empty, filling in with undefined"
           undefined(),
         idx,
       )
@@ -948,9 +951,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of PassArgument:
     # append to callArgs register
-    let
-      idx = (&op.arguments[0].getInt()).uint
-      value = &interpreter.get(idx)
+    let idx = (&op.arguments[0].getInt()).uint
+    debug "vm: PARG: appending index to callargs register: " & $idx
+    let value = &interpreter.get(idx)
 
     interpreter.registers.callArgs.add(value)
     inc interpreter.currIndex

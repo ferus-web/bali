@@ -1127,6 +1127,9 @@ proc generateInternalIR*(runtime: Runtime) =
           )()
         )
 
+      debug "hooks: BALI_RESOLVEFIELD_INTERNAL: index = " & $index & ", destination = " &
+        $storeAt
+
       let atom = &runtime.vm.get(index)
 
       if atom.isUndefined():
