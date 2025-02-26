@@ -705,7 +705,11 @@ proc generateIR*(
       let fields = createFieldAccess(stmt.cpMutDestIdent.split('.'))
 
       # TODO: recursively find the field to modify
-      runtime.ir.writeField(runtime.index(fields.identifier, defaultParams(fn)), fields.next.identifier, runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)))
+      runtime.ir.writeField(
+        runtime.index(fields.identifier, defaultParams(fn)),
+        fields.next.identifier,
+        runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)),
+      )
     else:
       runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
   of CopyValImmut:

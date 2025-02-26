@@ -240,7 +240,8 @@ proc writeField*(
   ## For a faster alternative (direct index access), use the `writeField proc<#writeField, IRGenerator, uint, int, uint>` instead.
   gen.addOp(
     IROperation(
-      opCode: WriteField, arguments: @[stackUinteger position, stackStr name, stackUinteger value]
+      opCode: WriteField,
+      arguments: @[stackUinteger position, stackStr name, stackUinteger value],
     )
   )
 
