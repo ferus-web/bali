@@ -98,6 +98,7 @@ type
     allocStatsStart*: AllocStats
 
     types*: seq[JSType]
+    predefinedBytecode*: string
 
 {.push warning[UnreachableCode]: off.}
 proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =

@@ -1442,7 +1442,11 @@ proc run*(runtime: Runtime) =
 
   constants.generateStdIR(runtime)
 
-  let source = runtime.ir.emit()
+  let source =
+    if runtime.predefinedBytecode.len < 1:
+      runtime.ir.emit()
+    else:
+      runtime.predefinedBytecode
 
   privateAccess(PulsarInterpreter) # modern problems require modern solutions
   runtime.vm.tokenizer = tokenizer.newTokenizer(source)
@@ -1472,7 +1476,10 @@ proc run*(runtime: Runtime) =
   runtime.vm.run()
 
 proc newRuntime*(
-    file: string, ast: AST, opts: InterpreterOpts = default(InterpreterOpts)
+    file: string,
+    ast: AST = default(AST),
+    opts: InterpreterOpts = default(InterpreterOpts),
+    predefinedBytecode: string = "",
 ): Runtime {.inline.} =
   ## Instantiate the runtime by feeding it the name of the file executed and the AST, alongside the interpreter settings.
   ## If the input isn't from a file, you can set it to anything - it's primarily used for caching.
@@ -1487,8 +1494,9 @@ proc newRuntime*(
     ast: ast,
     clauses: @[],
     ir: newIRGenerator("bali-" & $sha256(file).toHex()),
-    vm: newPulsarInterpreter(""),
+    vm: newPulsarInterpreter(predefinedBytecode),
     opts: opts,
+    predefinedBytecode: predefinedBytecode,
   )
 
 export types
