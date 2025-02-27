@@ -366,23 +366,6 @@ proc subInt*(
     )
   )
 
-proc mult2xBatch*(
-    gen: IRGenerator, vec1, vec2: array[2, uint], # pos to vector
-): uint {.inline, discardable.} =
-  ## Multiply a 2x batch of stackIntegers together. On most modern CPUs, this would be SIMD accelerated unless Mirage was compiled with SIMD support disabled.
-  gen.addOp(
-    IROperation(
-      opCode: Mult2xBatch,
-      arguments:
-        @[
-          stackUinteger vec1[0],
-          stackUinteger vec1[1],
-          stackUinteger vec2[0],
-          stackUinteger vec2[1],
-        ],
-    )
-  )
-
 proc setCap*(gen: IRGenerator, source: uint, cap: int): uint {.inline, discardable.} =
   ## Set a cap on a list. This prevents more than `cap` number of elements from being added ot it.
   ## .. warning:: This does not perform the overflow checks if the cap has already been reached before calling this function. Hence, it is recommended to call this function immediately upon the list's initialization if possible.

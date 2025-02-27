@@ -8,14 +8,6 @@ import bali/runtime/vm/[atom, utils]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
 
-when not defined(mirageNoSimd):
-  import nimsimd/sse2
-else:
-  {.
-    warn:
-      "SIMD support has been explicitly disabled. There will be visible slowdowns in batch operations. If this was a mistake, check your build configurations for `-d:mirageNoSimd`"
-  .}
-
 type
   Clause* = object
     name*: string
@@ -282,15 +274,6 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
       )
   of CrashInterpreter:
     discard
-  of Mult3xBatch:
-    for i in 1 .. 7:
-      op.arguments &=
-        op.consume(Integer, "THREEMULT expects an integer at position " & $i)
-  of Mult2xBatch:
-    for i in 1 .. 5:
-      op.arguments &= op.consume(
-        Integer, "TWOMULT expects an integer at position " & $i
-      )
   of MarkHomogenous:
     op.arguments &= op.consume(Integer, "MARKHOMO expects an integer at position 1")
   of LoadNull:
@@ -836,72 +819,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
         # If an invalid atom is attempted to be decremented, set its value to NaN.
 
     inc interpreter.currIndex
-  of Mult2xBatch:
-    let
-      pos1 = &op.arguments[0].getInt()
-      pos2 = &op.arguments[1].getInt()
-
-    var
-      vec1 = [
-        &(&interpreter.get((&op.arguments[2].getInt()).uint)).getInt(),
-        &(&interpreter.get((&op.arguments[3].getInt()).uint)).getInt(),
-      ]
-      vec2 = [
-        &(&interpreter.get((&op.arguments[4].getInt()).uint)).getInt(),
-        &(&interpreter.get((&op.arguments[5].getInt()).uint)).getInt(),
-      ]
-
-    var res: array[2, int]
-
-    when not defined(mirageNoSimd):
-      # fast path via SIMD
-      let
-        svec1 = mm_loadu_si128(vec1.addr)
-        svec2 = mm_loadu_si128(vec2.addr)
-        simdMulRes = mm_mullo_epi16(svec1, svec2)
-
-      mm_storeu_si128(res.addr, simdMulRes)
-    else:
-      # slow path
-      res = [vec1[0] * vec2[0], vec1[1] * vec2[1]]
-
-    interpreter.addAtom(integer(res[0]), pos1.uint)
-    interpreter.addAtom(integer(res[1]), pos2.uint)
-  of Mult3xBatch:
-    let
-      pos1 = &op.arguments[0].getInt()
-      pos2 = &op.arguments[1].getInt()
-      pos3 = &op.arguments[2].getInt()
-
-    var
-      vec1 = [
-        &(&interpreter.get((&op.arguments[3].getInt()).uint)).getInt(),
-        &(&interpreter.get((&op.arguments[4].getInt()).uint)).getInt(),
-        &(&interpreter.get((&op.arguments[5].getInt()).uint)).getInt(),
-      ]
-
-      vec2 = [
-        &(&interpreter.get((&op.arguments[6].getInt()).uint)).getInt(),
-        &(&interpreter.get((&op.arguments[7].getInt()).uint)).getInt(),
-        &(&interpreter.get((&op.arguments[8].getInt()).uint)).getInt(),
-      ]
-
-      res: array[3, int]
-
-    when not defined(mirageNoSimd):
-      # fast path via SIMD
-      let
-        svec1 = mm_loadu_si128(vec1.addr)
-        svec2 = mm_loadu_si128(vec2.addr)
-        simdMulRes = mm_mullo_epi16(svec1, svec2)
-
-      mm_storeu_si128(res.addr, simdMulRes)
-    else:
-      res = [vec1[0] * vec2[0], vec1[1] * vec2[1], vec1[2] * vec2[2]]
-
-    interpreter.addAtom(integer(res[0]), pos1.uint)
-    interpreter.addAtom(integer(res[1]), pos2.uint)
-    interpreter.addAtom(integer(res[2]), pos3.uint)
   of MarkHomogenous:
     let idx = (&op.arguments[0].getInt()).uint
     var atom = &interpreter.get(idx)
@@ -1178,9 +1095,16 @@ proc run*(interpreter: var PulsarInterpreter) =
       continue
 
     var operation = &op
+    let index = interpreter.currIndex - 1
+    let clauseIndex = interpreter.currClause
 
-    interpreter.resolve(clause, operation)
+    if not operation.resolved:
+      interpreter.resolve(clause, operation)
+      operation.resolved = true
+
     interpreter.execute(operation)
+
+    interpreter.clauses[clauseIndex].operations[index] = ensureMove(operation)
 
 proc newPulsarInterpreter*(source: string): PulsarInterpreter =
   var interp = PulsarInterpreter(
