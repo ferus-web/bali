@@ -45,6 +45,8 @@ proc defineFn*[T](
 proc setProperty*[T](
     runtime: Runtime, prototype: typedesc[T], name: string, value: JSValue
 ) =
+  ## Set the property of a static object.
+  ## This function accepts a JavaScript value as the property's new value.
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
       runtime.types[i].members[name] = initAtomOrFunction[NativeFunction](value)
@@ -52,6 +54,8 @@ proc setProperty*[T](
 proc setProperty*[T, V](
     runtime: Runtime, prototype: typedesc[T], name: string, value: V
 ) =
+  ## Set the property of a static object.
+  ## This function accepts any value that can be wrapped into a JavaScript value.
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
       runtime.types[i].members[name] = initAtomOrFunction[NativeFunction](wrap(value))
@@ -100,20 +104,13 @@ proc definePrototypeFn*[T](
 ) =
   ## Add a function to a type's prototype.
   ## Each instance of this type will be able to invoke the provided function.
-  #[ runtime.vm.registerBuiltin(
-    name,
-    proc(_: Operation) =
-      let typ = deepCopy(runtime.vm.registers.callArgs[0])
-      runtime.vm.registers.callArgs.delete(0)
-      fn(typ),
-  ) ]#
   for i, typ in runtime.types:
     if typ.proto == hash($prototype):
       runtime.types[i].prototypeFunctions[name] = fn
 
 proc getReturnValue*(runtime: Runtime): Option[JSValue] =
   ## Get the value in the return-value register, if there is any.
-  ## NOTE: You need to disable the aggressive retval scrubbing optimization if you want to get the return value of a function called in bytecode
+  ## **NOTE**: You need to disable the aggressive retval scrubbing optimization if you want to get the return value of a function called in bytecode
   runtime.vm.registers.retVal
 
 proc createAtom*(runtime: Runtime, typ: JSType): JSValue =
@@ -234,6 +231,7 @@ proc defineConstructor*(runtime: Runtime, name: string, fn: NativeFunction) {.in
     )
 
 template ret*(atom: JSValue) =
+  ## Return an atom.
   ## Shorthand for:
   ## ..code-block:: Nim
   ##  runtime.vm.registers.retVal = some(atom)
@@ -256,6 +254,7 @@ template dangerRet*(atom: sink MAtom) =
   return
 
 template ret*[T](value: T) =
+  ## Return an atom.
   ## Shorthand for:
   ## ..code-block:: Nim
   ##  runtime.vm.registers.retVal = some(wrap(value))
@@ -268,6 +267,7 @@ func argumentCount*(runtime: Runtime): int {.inline.} =
   runtime.vm.registers.callArgs.len
 
 proc typeRegistrationFinalizer*(runtime: Runtime) =
+  ## Called by the engine when it needs to register all types' function properties.
   for typ in runtime.types:
     let index = runtime.index(typ.name, globalIndex())
     var jsObj = obj()
