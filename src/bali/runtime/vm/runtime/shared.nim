@@ -164,12 +164,6 @@ type
     ## Decrement an integer/unsigned integer atom by one. This just exists to avoid creating ints again and again to use for `LoadInt`.
     Decrement = 0x20
 
-    ## Multiply a vector with 3 integers against another vector with 3 integers.
-    Mult3xBatch = 0x21
-
-    ## Multiply a vector with 2 integers against another vector with 2 integers.
-    Mult2xBatch = 0x22
-
     ## Mark a list as homogenous.
     MarkHomogenous = 0x23
 
@@ -275,8 +269,6 @@ const
     "CRASHINTERP": CrashInterpreter,
     "INC": Increment,
     "DEC": Decrement,
-    "THREEMULT": Mult3xBatch,
-    "TWOMULT": Mult2xBatch,
     "MARKHOMO": MarkHomogenous,
     "LOADN": LoadNull,
     "GLOB": MarkGlobal,

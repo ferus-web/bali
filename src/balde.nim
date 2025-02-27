@@ -92,6 +92,49 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
 
   runtime
 
+proc allocRuntime*(ctx: Input, file: string): Runtime =
+  let test262 = ctx.enabled("test262")
+  var runtime = newRuntime(
+    file = file,
+    opts = InterpreterOpts(
+      test262: test262,
+      dumpBytecode: ctx.enabled("dump-bytecode", "D"),
+      repl: false,
+      insertDebugHooks: ctx.enabled("insert-debug-hooks", "H"),
+      codegen: CodegenOpts(
+        elideLoops: not ctx.enabled("disable-loop-elision"),
+        loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim"),
+        aggressivelyFreeRetvals: not ctx.enabled("dont-aggressively-free-retvals"),
+      ),
+    ),
+    predefinedBytecode = readFile(file),
+  )
+  let expStr = ctx.flag("enable-experiments")
+
+  var success = true
+  let exps =
+    if *expStr:
+      split(&expStr, ';')
+    else:
+      newSeq[string](0)
+
+  for experiment in exps:
+    if not runtime.opts.experiments.setExperiment(experiment, true):
+      success = false
+      break
+
+  if not success:
+    assert(*expStr)
+    error "Failed to enable certain experiments."
+    quit(1)
+
+  if *expStr and not ctx.enabled("disable-experiment-warning"):
+    info "You have enabled certain experiments."
+    info "By enabling them, you know that the engine will be more unstable than it already is."
+    info "These features are not production ready!"
+
+  runtime
+
 proc dumpStatisticsPretty(runtime: Runtime) =
   let stats = runtime.dumpStatistics()
 
@@ -283,22 +326,29 @@ proc execFile(ctx: Input, file: string) {.inline.} =
     case mode
     of dmPretty:
       print ast
-    # Pretty-print the AST
     else:
       die "dump mode not implemented"
-    #[of dmJson:
-      # convert the AST to JSON using jsony
-      let serialized = toJson(ast)
-      echo serialized
-    of dmJsonPretty:
-      let serialized = pretty(parseJson(toJson(ast))) # FIXME: this is horribly inefficient but it works
-      echo serialized]#
 
   if ctx.enabled("dump-statistics"):
     runtime.dumpStatisticsPretty()
 
   if ctx.enabled("dump-runtime-after-exec"):
     print runtime
+
+proc execBytecodeFile(file: string) =
+  if not fileExists(file):
+    die "file not found:", file
+
+  let perms = getFilePermissions(file)
+  if fpGroupRead notin perms and fpUserRead notin perms:
+    die "access denied:", file
+
+  let bytecode = readFile(file)
+  if bytecode.len < 1:
+    die "empty bytecode file: " & file
+
+  let runtime = newRuntime(file = file, ast = AST(), predefinedBytecode = bytecode)
+  runtime.run()
 
 proc baldeRun(ctx: Input) =
   if not ctx.enabled("verbose", "v"):
@@ -451,6 +501,7 @@ Options:
   --dump-statistics                       Dump some diagnostic statistics from the runtime.
   --incremental                           Set the garbage collector mode to incremental, potentially reducing GC latency.
   --version, -V                           Output the version of Bali/Balde in the standard output
+  --evaluate-bytecode, -B                 Evaluate the provided source as bytecode instead of parsing it as JavaScript.
 
 Codegen Flags:
   --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
@@ -486,7 +537,10 @@ proc main() {.inline.} =
   initializeGC(GCKind.Boehm, input.enabled("incremental"))
 
   if input.command.len > 0:
-    baldeRun(input)
+    if not input.enabled("evaluate-bytecode", "B"):
+      baldeRun(input)
+    else:
+      execBytecodeFile(input.command)
   else:
     baldeRepl(input)
 
