@@ -178,9 +178,6 @@ proc throw*(
   interpreter.trace = newTrace
 
 proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation) =
-  let mRawArgs = op.rawArgs
-  op.arguments.reset()
-
   case op.opCode
   of LoadStr:
     op.arguments &= op.consume(Integer, "LOADS expects an integer at position 1")
@@ -322,8 +319,6 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
     elif op.rawArgs[0].kind in {tkIdent, tkQuotedString}:
       # Clause/Builtin
       op.arguments &= op.consume(String, "INVK expects an ident/string at position 1")
-
-  op.rawArgs = mRawArgs
 
 proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
   var
