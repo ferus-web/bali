@@ -1200,6 +1200,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
   let token = &tok
 
+  # TODO: decrease the cyclomatic complexity here.
   case token.kind
   of TokenKind.Let:
     if token.containsUnicodeEsc:
@@ -1424,7 +1425,7 @@ proc parse*(parser: Parser): AST {.inline.} =
   parser.ast.errors = deepCopy(parser.errors)
   parser.ast
 
-proc newParser*(
+func newParser*(
     input: string, opts: ParserOpts = default(ParserOpts)
 ): Parser {.inline.} =
   Parser(tokenizer: newTokenizer(input), opts: opts)

@@ -1100,7 +1100,7 @@ proc generateBytecode(
   else:
     warn "emitter: unimplemented bytecode generation directive: " & $stmt.kind
 
-proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
+proc loadArgumentsOntoStack(runtime: Runtime, fn: Function) =
   info "emitter: loading up function signature arguments onto stack via IR: " & fn.name
 
   for i, arg in fn.arguments:
@@ -1111,7 +1111,7 @@ proc loadArgumentsOntoStack*(runtime: Runtime, fn: Function) =
 
   runtime.ir.resetArgs() # reset the call param register
 
-proc generateBytecodeForScope*(
+proc generateBytecodeForScope(
     runtime: Runtime, scope: Scope, allocateConstants: bool = true
 ) =
   let

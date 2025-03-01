@@ -474,6 +474,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   when not defined(mirageNoJit):
     inc op.called
 
+  {.computedGoto.}
   case op.opCode
   of LoadStr:
     interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
@@ -838,20 +839,15 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     case regId
     of 0:
       # 0 - retval register
-      debug "vm: read retval register (#0); placing onto stack pos " & $idx
       interpreter.addAtom(
         if *interpreter.registers.retVal:
-          debug "vm: RREG: retval register is not empty"
           &interpreter.registers.retVal
         else:
-          debug "vm: RREG: retval register is empty, filling in with undefined"
           undefined(),
         idx,
       )
     of 1:
       # 1 - callargs register
-      debug "vm: read call arguments register (#1); placing index " &
-        $(&op.arguments[1].getInt()) & " into stack position " & $idx
       interpreter.addAtom(
         interpreter.registers.callArgs[&op.arguments[1].getInt()], idx
       )
@@ -864,7 +860,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   of PassArgument:
     # append to callArgs register
     let idx = (&op.arguments[0].getInt()).uint
-    debug "vm: PARG: appending index to callargs register: " & $idx
     let value = &interpreter.get(idx)
 
     interpreter.registers.callArgs.add(value)
