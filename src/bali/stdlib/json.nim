@@ -99,16 +99,27 @@ proc generateStdIR*(runtime: Runtime) =
   )
 
   ## 25.5.2 JSON.stringify ( value [ , replacer [ , space ] ] )
-  # FIXME: not compliant yet!
   ## This function returns a String in UTF-16 encoded JSON format representing an ECMAScript language value, or undefined. It can take three parameters. The value parameter is an ECMAScript language value, which is usually an object or array, although it can also be a String, Boolean, Number or null. The optional replacer parameter is either a function that alters the way objects and arrays are stringified, or an array of Strings and Numbers that acts as an inclusion list for selecting the object properties that will be stringified. The optional space parameter is a String or Number that allows the result to have white space injected into it to improve human readability.
-  runtime.defineFn(
-    JSON,
-    "stringify",
-    proc() =
-      let
-        atom = &runtime.argument(1)
-        node = atomToJsonNode(atom)
 
-      ret str(pretty node)
-    ,
-  )
+  when defined(baliOldJsonStringifyImpl):
+    # Old implementation, not compliant.
+    runtime.defineFn(
+      JSON,
+      "stringify",
+      proc() =
+        let
+          atom = &runtime.argument(1)
+          node = atomToJsonNode(atom)
+
+        ret str(pretty node)
+      ,
+    )
+  else:
+    # New implementation, compliant.
+    runtime.defineFn(
+      JSON,
+      "stringify",
+      proc =
+        # 1. Let stack be a new empty List.
+        var stack: seq[JSValue] # Not to be confused with stack atoms!
+    )
