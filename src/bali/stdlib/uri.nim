@@ -4,7 +4,7 @@ import bali/internal/sugar
 import bali/runtime/[arguments, types, atom_helpers, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
-import bali/stdlib/types/std_string
+import bali/stdlib/types/std_string_type
 import bali/runtime/vm/atom
 import sanchar/parse/url
 

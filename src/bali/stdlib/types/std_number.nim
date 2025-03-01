@@ -1,7 +1,7 @@
 ## Number type
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import std/[fenv, logging]
-import bali/runtime/[arguments, bridge, atom_helpers, types]
+import bali/runtime/[arguments, bridge, atom_helpers, wrapping, types]
 import bali/runtime/abstract/[to_number, to_string]
 import bali/stdlib/builtins/parse_int
 import bali/stdlib/errors
@@ -68,7 +68,7 @@ proc generateStdIR*(runtime: Runtime) =
       var obj = runtime.createObjFromType(JSNumber)
 
       # 5. Set O.[[NumberData]] to n.
-      obj.tag("value", wrap(number))
+      obj.tag("value", runtime.wrap(number))
 
       # 6. Return 0.
       ret ensureMove(obj)

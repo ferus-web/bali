@@ -25,7 +25,7 @@ proc OrdinaryToPrimitive*(
   # 3. For each element name of methodNames, do
   for name in methodNames:
     # a. Let method be ? Get(O, name).
-    let meth = runtime.getMethod(input, name)
+    let meth = bridge.getMethod(runtime, input, name)
 
     if !meth:
       continue

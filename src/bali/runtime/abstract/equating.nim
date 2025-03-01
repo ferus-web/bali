@@ -6,7 +6,7 @@ import pkg/ferrite/utf16view
 import bali/runtime/[atom_helpers, types, bridge]
 import bali/runtime/abstract/[coercion]
 import bali/internal/sugar
-import bali/stdlib/types/[std_bigint, std_string]
+import bali/stdlib/types/[std_bigint, std_string_type]
 
 proc equateNumbers*(runtime: Runtime, x, y: JSValue): bool =
   runtime.ToNumber(x) == runtime.ToNumber(y)
@@ -78,7 +78,7 @@ proc isLooselyEqual*(runtime: Runtime, x, y: JSValue): bool =
     return true
 
   # FIXME: NON-COMPLIANT: BALI-SPECIFIC HACK TO GET AROUND JSSTRING BOXING!
-  if runtime.isString(x) and runtime.isString(y):
+  if runtime.isA(x, JSString) and runtime.isA(y, JSString):
     # a. If x and y have the same length and the same code units in the same positions, return true; otherwise, return false.
     let
       xVal = newUtf16View(runtime.ToString(x))

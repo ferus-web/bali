@@ -1,7 +1,7 @@
 ## Arbitrary-precision integers
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import std/[options]
-import bali/runtime/[arguments, atom_helpers, types, bridge]
+import bali/runtime/[arguments, atom_helpers, types, wrapping, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/internal/[sugar, trim_string]

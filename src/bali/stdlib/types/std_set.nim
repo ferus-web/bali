@@ -1,7 +1,7 @@
 ## Set type implementation
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import std/[options]
-import bali/runtime/[arguments, atom_helpers, types, bridge]
+import bali/runtime/[arguments, atom_helpers, types, wrapping, bridge]
 import bali/runtime/abstract/[coercion, equating, slots]
 import bali/internal/sugar
 import bali/runtime/vm/atom
@@ -68,7 +68,7 @@ proc generateStdIR*(runtime: Runtime) =
 
       # 5. Append value to S.[[SetData]].
       setVal.add(value[])
-      setAtom.tag("internal", setVal)
+      setAtom.tag("internal", sequence(setVal))
 
       # 6. Return S.
       ret setAtom

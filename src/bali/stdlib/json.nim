@@ -119,7 +119,8 @@ proc generateStdIR*(runtime: Runtime) =
     runtime.defineFn(
       JSON,
       "stringify",
-      proc =
+      proc() =
         # 1. Let stack be a new empty List.
         var stack: seq[JSValue] # Not to be confused with stack atoms!
+      ,
     )

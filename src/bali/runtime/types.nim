@@ -1,6 +1,6 @@
 ## Runtime types
 
-import std/[options, hashes, logging, tables]
+import std/[options, hashes, logging, tables, sugar]
 import bali/runtime/vm/ir/generator
 import bali/runtime/vm/runtime/prelude
 import bali/grammar/prelude
@@ -123,6 +123,39 @@ proc getMethods*(
       return typ.prototypeFunctions
 
   raise newException(KeyError, "No such type with proto hash: " & $proto & " exists!")
+
+proc createAtom*(runtime: Runtime, typ: JSType): JSValue =
+  ## Create an atom (object) based off of a provided type.
+  ## All fields of the provided `typ` are initialized in the object with `undefined`.
+  ## The object will also gain an internal Bali-specific data slot/tag called `bali_object_type` which helps the engine
+  ## in determining what type this object belongs to. It also attaches all the prototype functions needed.
+  ##
+  ## **This value will be allocated via Bali's internal garbage collector. Don't unnecessarily call this or else you might trigger a GC collection sweep.**
+  var atom = obj()
+
+  for name, member in typ.members:
+    if member.isAtom():
+      let idx = atom.objValues.len
+      atom.objValues &= undefined()
+      atom.objFields[name] = idx
+
+  for name, protoFn in typ.prototypeFunctions:
+    capture name, protoFn:
+      atom[name] = nativeCallable(
+        proc() =
+          typ.prototypeFunctions[name](atom)
+      )
+
+  atom.tag("bali_object_type", integer(typ.proto.int))
+
+  ensureMove(atom)
+
+proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): JSValue =
+  for etyp in runtime.types:
+    if etyp.proto == hash($typ):
+      return runtime.createAtom(etyp)
+
+  raise newException(ValueError, "No such registered type: `" & $typ & '`')
 
 proc defaultParams*(fn: Function): IndexParams {.inline.} =
   IndexParams(fn: some fn)

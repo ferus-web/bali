@@ -3,9 +3,9 @@
 ## Author(s):
 ## Trayambak Rai (xtrayambak at disroot dot org)
 import std/[logging, tables, strutils, hashes, unicode]
-import bali/runtime/[arguments, bridge, atom_helpers, types]
+import bali/runtime/[arguments, bridge, wrapping, atom_helpers, types]
 import bali/runtime/abstract/[coercible, to_number, to_string]
-import bali/stdlib/errors
+import bali/stdlib/errors, bali/stdlib/types/std_string_type
 import bali/internal/[trim_string, sugar]
 import bali/runtime/vm/atom
 import pkg/[kaleidoscope/search, ferrite/utf16view]
@@ -13,15 +13,6 @@ import pkg/[kaleidoscope/search, ferrite/utf16view]
 const
   ## At what point should Bali start SIMD-accelerating string related operations?
   BaliStringAccelerationThreshold* {.intdefine.} = 128
-
-type JSString* = object
-  `@ internal`*: string
-
-func value*(str: JSString): string {.inline.} =
-  str.`@ internal`
-
-proc isString*(runtime: Runtime, a: JSValue): bool =
-  (a.kind == String or runtime.isA(a, JSString))
 
 proc generateStdIr*(runtime: Runtime) =
   runtime.registerType(prototype = JSString, name = "String")
@@ -37,8 +28,8 @@ proc generateStdIr*(runtime: Runtime) =
 
     var atom = runtime.createObjFromType(JSString)
     let value = runtime.ToString(argument)
-    atom.tag("internal", value)
-    atom["length"] = newUtf16View(value).codeunitLen()
+    runtime.tag(atom, "internal", value)
+    atom["length"] = newUtf16View(value).codeunitLen().uinteger()
     ret atom
 
   runtime.defineConstructor("String", stringConstructor)

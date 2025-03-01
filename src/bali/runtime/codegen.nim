@@ -1405,6 +1405,7 @@ proc run*(runtime: Runtime) =
 
   runtime.allocStatsStart = getAllocStats()
   runtime.test262 = runtime.ast.test262
+  std_string.generateStdIR(runtime)
   console.generateStdIR(runtime)
   math.generateStdIR(runtime)
   uri.generateStdIR(runtime)
@@ -1412,7 +1413,6 @@ proc run*(runtime: Runtime) =
   base64.generateStdIR(runtime)
   json.generateStdIR(runtime)
   encodeUri.generateStdIR(runtime)
-  std_string.generateStdIR(runtime)
 
   when not defined(baliTest262FyiDisableICULinkingCode):
     date.generateStdIR(runtime)

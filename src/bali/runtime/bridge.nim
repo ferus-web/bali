@@ -3,7 +3,7 @@
 import std/[logging, tables, options, strutils, hashes, importutils, sugar]
 import bali/runtime/vm/runtime/prelude
 import bali/runtime/vm/ir/generator
-import bali/runtime/[atom_obj_variant, atom_helpers, types, normalize]
+import bali/runtime/[atom_obj_variant, wrapping, atom_helpers, types, normalize]
 import bali/stdlib/errors
 import bali/internal/sugar
 
@@ -113,32 +113,6 @@ proc getReturnValue*(runtime: Runtime): Option[JSValue] =
   ## **NOTE**: You need to disable the aggressive retval scrubbing optimization if you want to get the return value of a function called in bytecode
   runtime.vm.registers.retVal
 
-proc createAtom*(runtime: Runtime, typ: JSType): JSValue =
-  ## Create an atom (object) based off of a provided type.
-  ## All fields of the provided `typ` are initialized in the object with `undefined`.
-  ## The object will also gain an internal Bali-specific data slot/tag called `bali_object_type` which helps the engine
-  ## in determining what type this object belongs to. It also attaches all the prototype functions needed.
-  ##
-  ## **This value will be allocated via Bali's internal garbage collector. Don't unnecessarily call this or else you might trigger a GC collection sweep.**
-  var atom = obj()
-
-  for name, member in typ.members:
-    if member.isAtom():
-      let idx = atom.objValues.len
-      atom.objValues &= undefined()
-      atom.objFields[name] = idx
-
-  for name, protoFn in typ.prototypeFunctions:
-    capture name, protoFn:
-      atom[name] = nativeCallable(
-        proc() =
-          typ.prototypeFunctions[name](atom)
-      )
-
-  atom.tag("bali_object_type", typ.proto.int)
-
-  ensureMove(atom)
-
 proc isA*[T: object](runtime: Runtime, atom: JSValue, typ: typedesc[T]): bool =
   ## This function returns a boolean based off of whether `atom` is a replica of the supplied Nim-native type `typ`.
   ## It checks the `bali_object_type` that's attached to all objects created by `createAtom` (and by extension, `createObjFromType`)
@@ -207,13 +181,6 @@ proc getTypeFromName*(runtime: Runtime, name: string): Option[JSType] =
     if typ.name == name:
       return some(typ)
 
-proc createObjFromType*[T](runtime: Runtime, typ: typedesc[T]): JSValue =
-  for etyp in runtime.types:
-    if etyp.proto == hash($typ):
-      return runtime.createAtom(etyp)
-
-  raise newException(ValueError, "No such registered type: `" & $typ & '`')
-
 proc defineConstructor*(runtime: Runtime, name: string, fn: NativeFunction) {.inline.} =
   ## Expose a constructor for a type to a JavaScript runtime.
   debug "runtime: exposing constructor for type: " & name
@@ -257,9 +224,9 @@ template ret*[T](value: T) =
   ## Return an atom.
   ## Shorthand for:
   ## ..code-block:: Nim
-  ##  runtime.vm.registers.retVal = some(wrap(value))
+  ##  runtime.vm.registers.retVal = some(runtime.wrap(value))
   ##  return
-  runtime.vm.registers.retVal = some(wrap(value))
+  runtime.vm.registers.retVal = some(runtime.wrap(value))
   return
 
 func argumentCount*(runtime: Runtime): int {.inline.} =
@@ -288,16 +255,19 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   ## Register a type in the JavaScript engine instance with the name of the type (`name`) alongside its prototype (`prototype`).
   var jsType: JSType
 
+  let index = runtime.types.len
+  jsType.proto = hash($prototype)
+  jsType.name = name
+
+  runtime.types &= jsType
+
   for fname, fatom in prototype().fieldPairs:
     when fatom is JSValue:
       jsType.members[fname] = initAtomOrFunction[NativeFunction](undefined())
     else:
-      jsType.members[fname] = initAtomOrFunction[NativeFunction](fatom.wrap())
+      jsType.members[fname] = initAtomOrFunction[NativeFunction](runtime.wrap(fatom))
 
-  jsType.proto = hash($prototype)
-  jsType.name = name
-
-  runtime.types &= ensureMove(jsType)
+  runtime.types[index] = ensureMove(jsType)
   let typIdx = runtime.types.len - 1
 
   runtime.vm.registerBuiltin(
