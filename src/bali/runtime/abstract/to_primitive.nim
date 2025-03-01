@@ -3,7 +3,6 @@ import bali/runtime/[types, bridge]
 import bali/internal/sugar
 import bali/stdlib/errors, bali/stdlib/types/std_string_type
 import bali/runtime/vm/runtime/prelude
-import pretty, tables
 
 type PrimitiveHint* {.pure.} = enum
   Default
@@ -43,7 +42,6 @@ proc OrdinaryToPrimitive*(
   # 4. Throw a TypeError exception.
   # Yes Rico, kaboom.
 
-  print input
   runtime.typeError("Cannot convert object into primitive")
 
 proc ToPrimitive*(

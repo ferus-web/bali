@@ -20,6 +20,6 @@ proc newJSString*(runtime: Runtime, native: string): JSValue =
 
   ensureMove(str)
 
-proc toNativeString*(runtime: Runtime, str: JSValue): string =
+proc toNativeString*(str: JSValue): string =
   ## Given a `JSValue`, assuming it is a proper `JSString`, convert it into its native string representation.
   &getStr(&str.tagged("internal"))

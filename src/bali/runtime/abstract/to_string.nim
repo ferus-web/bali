@@ -1,7 +1,8 @@
 import std/[logging, options]
 import bali/runtime/vm/runtime/prelude
 import bali/internal/sugar
-import bali/runtime/[types]
+import bali/runtime/[types, bridge]
+import bali/stdlib/types/std_string_type
 import bali/runtime/abstract/to_primitive
 import pkg/gmp
 
@@ -19,6 +20,9 @@ proc ToString*(runtime: Runtime, value: JSValue): string =
     # 3. If argument is undefined, return "undefined".
     return "undefined"
   of Object:
+    if runtime.isA(value, JSString):
+      return value.toNativeString()
+
     debug "runtime: toString(): atom is an object."
     # 9. Assert: argument is an Object.
     # 10. Let primValue be ? ToPrimitive(argument, string).

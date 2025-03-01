@@ -7,7 +7,6 @@ import bali/stdlib/errors
 import bali/stdlib/types/std_string_type
 import bali/runtime/vm/atom
 import sanchar/parse/url
-
 var parser = newURLParser()
 
 type JSURL = object
@@ -23,24 +22,25 @@ type JSURL = object
   hash*: string
 
 proc transposeUrlToObject(runtime: Runtime, parsed: URL, source: string): JSValue =
-  # TODO: port to JSString
   var url = runtime.createObjFromType(JSURL)
-  url["hostname"] = str(parsed.hostname())
-  url["pathname"] = parsed.path().str(inRuntime = true)
+  url["hostname"] = runtime.newJSString(parsed.hostname())
+  url["pathname"] = runtime.newJSString(parsed.path())
   url["port"] = parsed.port().int.integer()
-  url["protocol"] = str(parsed.scheme() & ':')
-  url["search"] = parsed.query().str(inRuntime = true)
-  url["hostname"] = parsed.hostname().str(inRuntime = true)
-  url["source"] = source.str(inRuntime = true)
-  url["origin"] = str(
-    parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port(), inRuntime = true
+  url["protocol"] = runtime.newJSString(parsed.scheme() & ':')
+  url["search"] = runtime.newJSString(parsed.query())
+  url["hostname"] = runtime.newJSString(parsed.hostname())
+  url["source"] = runtime.newJSString(source)
+  url["origin"] = runtime.newJSString(
+    parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port()
   )
-  url["hash"] = (
-    if parsed.fragment().len > 0: str('#' & parsed.fragment(), inRuntime = true)
-    else: str(newString(0), inRuntime = true)
+  url["hash"] = runtime.newJSString(
+    if parsed.fragment().len > 0:
+      '#' & parsed.fragment()
+    else:
+      newString(0)
   )
 
-  url
+  ensureMove(url)
 
 proc generateStdIR*(runtime: Runtime) =
   info "url: generating IR interfaces"

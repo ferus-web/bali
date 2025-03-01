@@ -23,13 +23,20 @@ proc generateStdIr*(runtime: Runtime) =
       else:
         str("")
 
+    let strVal =
+      if argument.kind == Object and runtime.isA(argument, JSString):
+        argument.toNativeString()
+      elif argument.kind == String:
+        &argument.getStr()
+      else:
+        runtime.ToString(argument)
+
     if runtime.isA(argument, JSString):
       ret argument
 
     var atom = runtime.createObjFromType(JSString)
-    let value = runtime.ToString(argument)
-    runtime.tag(atom, "internal", value)
-    atom["length"] = newUtf16View(value).codeunitLen().uinteger()
+    atom["@internal"] = str(strVal)
+    atom["length"] = newUtf16View(strVal).codeunitLen().uinteger()
     ret atom
 
   runtime.defineConstructor("String", stringConstructor)
