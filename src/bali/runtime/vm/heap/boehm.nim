@@ -78,15 +78,15 @@ func pressure*(
   ) #/ (generalBias + spaceBias)
 
 proc baliDealloc*(p: pointer) {.inline.} =
-  debug "heap: performing explicit deallocation of GC'd chunk"
+  # debug "heap: performing explicit deallocation of GC'd chunk"
   boehmDealloc(p)
 
   inc gcStats.currFrame
-  debug "heap: event deferral frame: " & $gcStats.currFrame
+  # debug "heap: event deferral frame: " & $gcStats.currFrame
   if gcStats.currFrame >= BaliGCStatsTrackingPerFrame:
-    debug "heap: hit GC-stats tracking frame deferral limit: " &
+    #[debug "heap: hit GC-stats tracking frame deferral limit: " &
       $BaliGCStatsTrackingPerFrame &
-      "; performing collection and updating GC stats (set -d:BaliGCStatsTrackingPerFrame to change this threshold)"
+      "; performing collection and updating GC stats (set -d:BaliGCStatsTrackingPerFrame to change this threshold)" ]#
     update gcStats
     gcStats.currFrame = 0
 
@@ -94,15 +94,15 @@ proc baliAlloc*(size: SomeInteger): pointer {.inline.} =
   debug "heap: allocating GC'd chunk of size: " & $size & " bytes"
   var pointr = boehmAlloc(size)
 
-  debug "heap: zeroing out chunk"
+  # debug "heap: zeroing out chunk"
   zeroMem(pointr, size)
 
   inc gcStats.currFrame
-  debug "heap: event deferral frame: " & $gcStats.currFrame
+  # debug "heap: event deferral frame: " & $gcStats.currFrame
   if gcStats.currFrame >= BaliGCStatsTrackingPerFrame:
-    debug "heap: hit GC-stats tracking frame deferral limit: " &
+    #[ debug "heap: hit GC-stats tracking frame deferral limit: " &
       $BaliGCStatsTrackingPerFrame &
-      "; performing collection and updating GC stats (set -d:BaliGCStatsTrackingPerFrame to change this threshold)"
+      "; performing collection and updating GC stats (set -d:BaliGCStatsTrackingPerFrame to change this threshold)" ]#
     boehmGcfullCollect()
     update gcStats
     gcStats.currFrame = 0

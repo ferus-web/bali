@@ -859,7 +859,7 @@ proc genIncrement(runtime: Runtime, fn: Function, stmt: Statement) {.inline.} =
 
 proc genDecrement(runtime: Runtime, fn: Function, stmt: Statement) {.inline.} =
   debug "emitter: generate IR for decrement"
-  runtime.ir.decrementInt(runtime.index(stmt.incIdent, defaultParams(fn)))
+  runtime.ir.decrementInt(runtime.index(stmt.decIdent, defaultParams(fn)))
 
 proc genBreak(runtime: Runtime, fn: Function, stmt: Statement) {.inline.} =
   debug "emitter: generate IR for break"
