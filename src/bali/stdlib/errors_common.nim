@@ -12,7 +12,12 @@ type
   DeathCallback* = proc(vm: PulsarInterpreter, exitCode: int = 1)
 
 proc DefaultDeathCallback(vm: PulsarInterpreter, exitCode: int = 1) =
-  quit(exitCode)
+  when not defined(baliCrashAndBurnEverythingOnError):
+    # Gracefully exit.
+    quit(exitCode)
+  else:
+    # Crash and burn everything down, as the above define suggests.
+    assert(false, ":(")
 
 var deathCallback*: DeathCallback = DefaultDeathCallback
 

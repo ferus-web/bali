@@ -1,8 +1,9 @@
 import std/[options]
 import bali/runtime/[types, bridge]
 import bali/internal/sugar
-import bali/stdlib/errors
+import bali/stdlib/errors, bali/stdlib/types/std_string_type
 import bali/runtime/vm/runtime/prelude
+import pretty, tables
 
 type PrimitiveHint* {.pure.} = enum
   Default
@@ -36,11 +37,13 @@ proc OrdinaryToPrimitive*(
     let res = runtime.getReturnValue()
 
     # ii. If result is not an Object, return result.
-    if (&res).kind != Object:
+    if (&res).kind != Object or runtime.isA(&res, JSString):
       return &res
 
   # 4. Throw a TypeError exception.
   # Yes Rico, kaboom.
+
+  print input
   runtime.typeError("Cannot convert object into primitive")
 
 proc ToPrimitive*(
