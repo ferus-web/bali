@@ -440,7 +440,7 @@ You can also just type in JavaScript expressions to evaluate them."""
 
         let index =
           try:
-            parseUint(args[1])
+            parseInt(args[1])
           except ValueError as exc:
             styledWriteLine(
               stdout, fgRed, "could not parse index for .express", resetStyle, ": ",
@@ -448,7 +448,7 @@ You can also just type in JavaScript expressions to evaluate them."""
             )
             continue
 
-        if prevRuntime.vm.stack.contains(index):
+        if index < prevRuntime.vm.stack.len - 1:
           print prevRuntime.vm.stack[index]
         else:
           echo "No value exists at index: " & $index & '\n' &

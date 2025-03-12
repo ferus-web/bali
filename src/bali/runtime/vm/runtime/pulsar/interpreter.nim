@@ -1,12 +1,15 @@
 ## This file contains the "Pulsar" MIR interpreter. It's a redesign of the previous bytecode analyzer (keyword: analyzer, not interpreter)
 ## into a more modular and efficient form. You shouldn't import this directly, import `mirage/interpreter/prelude` instead.
-##
 
-import std/[math, tables, options, logging]
+import std/[math, tables, options]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, utils]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
+
+const
+  BaliVMInitialPreallocatedStackSize* {.intdefine.} = 16
+  BaliVMPreallocatedStackSize* {.intdefine.} = 4
 
 type
   Clause* = object
@@ -32,7 +35,7 @@ type
     clauses: seq[Clause]
     currJumpOnErr: Option[uint]
 
-    stack*: Table[uint, JSValue]
+    stack*: seq[JSValue]
     locals*: Table[uint, string]
     builtins*: Table[string, proc(op: Operation)]
     errors*: seq[RuntimeException]
@@ -65,7 +68,7 @@ func getClause*(
 proc get*(
     interpreter: PulsarInterpreter, id: uint, ignoreLocalityRules: bool = false
 ): Option[JSValue] =
-  if interpreter.stack.contains(id):
+  if id < uint(interpreter.stack.len):
     return some(interpreter.stack[id])
 
 proc getClause*(interpreter: PulsarInterpreter, name: string): Option[Clause] =
@@ -101,13 +104,17 @@ proc analyze*(interpreter: var PulsarInterpreter) =
 
 {.push checks: on, inline.}
 proc addAtom*(interpreter: var PulsarInterpreter, atom: sink MAtom, id: uint) =
+  if id > uint(interpreter.stack.len):
+    # We need to allocate more slots.
+    interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
+
   interpreter.stack[id] = atom.addr
   interpreter.locals[id] = interpreter.clauses[interpreter.currClause].name
 
 proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) =
-  if id in interpreter.stack:
-    # boehmDealloc(interpreter.stack[id])
-    discard
+  if id > uint(interpreter.stack.len):
+    # We need to allocate more slots.
+    interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
 
   interpreter.stack[id] = value
   interpreter.locals[id] = interpreter.clauses[interpreter.currClause].name
@@ -1102,7 +1109,8 @@ proc newPulsarInterpreter*(source: string): PulsarInterpreter =
     clauses: @[],
     builtins: initTable[string, proc(op: Operation)](),
     locals: initTable[uint, string](),
-    stack: initTable[uint, JSValue](),
+    stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
+      # Pre-allocate space for some value pointers
   )
   interp.registerBuiltin(
     "print",
