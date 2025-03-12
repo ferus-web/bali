@@ -1,4 +1,4 @@
-import std/[strutils, tables, terminal]
+import std/[strutils, terminal]
 import bali/runtime/vm/atom
 import bali/runtime/[bridge, arguments, types]
 import bali/internal/sugar
@@ -17,7 +17,7 @@ proc generateDescribeFnCode*(runtime: Runtime) =
           )
         )
       )
-      if not runtime.vm.stack.contains(argument):
+      if (argument < 0) or (argument > uint(runtime.vm.stack.len - 1)):
         stderr.styledWriteLine(
           fgRed, "No such value exists at index " & $argument, resetStyle
         )

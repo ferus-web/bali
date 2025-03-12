@@ -27,6 +27,11 @@ type
   AtomOverflowError* = object of CatchableError
   SequenceError* = object of CatchableError
 
+  AtomMode* {.pure.} = enum
+    Default = 0
+    ReadOnly = 1
+    WriteOnly = 2
+
   MAtom* = object
     case kind*: MAtomKind
     of String:
