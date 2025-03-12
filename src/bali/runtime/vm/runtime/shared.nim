@@ -170,9 +170,6 @@ type
     ## Load a null atom onto the stack position provided.
     LoadNull = 0x24
 
-    ## Mark a local atom position on the stack as a global, allowing all clauses to access it.
-    MarkGlobal = 0x25
-
     ## Read a builtin interpreter register and store its value (if there is any) to a specified location. If the register is empty, overwrite the
     ## location to a NULL atom
     ReadRegister = 0x26
@@ -271,7 +268,6 @@ const
     "DEC": Decrement,
     "MARKHOMO": MarkHomogenous,
     "LOADN": LoadNull,
-    "GLOB": MarkGlobal,
     "RREG": ReadRegister,
     "PARG": PassArgument,
     "RARG": ResetArgs,

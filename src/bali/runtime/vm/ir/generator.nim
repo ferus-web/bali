@@ -127,10 +127,6 @@ proc loadNull*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Load a NULL atom into memory.
   gen.addOp(IROperation(opCode: LoadNull, arguments: @[stackUinteger position]))
 
-proc markGlobal*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
-  ## Mark an atom at a particular position as global, i.e it can be accessed by any other clause, matterless of whichever clause created it.
-  gen.addOp(IROperation(opCode: MarkGlobal, arguments: @[stackUinteger position]))
-
 proc readRegister*(
     gen: IRGenerator, position: uint, register: Register
 ): uint {.inline, discardable.} =

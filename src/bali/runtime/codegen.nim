@@ -251,7 +251,6 @@ proc genCreateImmutVal(
   if not internal:
     if fn.name == "outer":
       debug "emitter: marking index as global because it's in outer-most scope: " & $idx
-      runtime.ir.markGlobal(idx)
 
     runtime.markLocal(fn, stmt.imIdentifier, index = some(idx))
   else:
@@ -267,13 +266,9 @@ proc genCreateMutVal(
 ) =
   let idx = runtime.loadIRAtom(stmt.mutAtom)
 
-  if fn.name.len < 1:
-    runtime.ir.markGlobal(idx)
-
   if not internal:
     if fn.name == "outer":
       debug "emitter: marking index as global because it's in outer-most scope: " & $idx
-      runtime.ir.markGlobal(idx)
 
     runtime.markLocal(fn, stmt.mutIdentifier, index = some(idx))
   else:
@@ -310,11 +305,9 @@ proc genCall(
         let index = runtime.resolveFieldAccess(
           fn, stmt, runtime.index(arg.access.identifier, defaultParams(fn)), arg.access
         )
-        runtime.ir.markGlobal(index)
         runtime.ir.passArgument(index)
       of cakImmediateExpr:
         let index = runtime.index($i, internalIndex(stmt))
-        runtime.ir.markGlobal(index)
         runtime.ir.passArgument(index)
 
   if *stmt.fn.field:
@@ -394,7 +387,6 @@ proc genConstructObject(
       let index = runtime.resolveFieldAccess(
         fn, stmt, runtime.index(arg.access.identifier, defaultParams(fn)), arg.access
       )
-      runtime.ir.markGlobal(index)
       runtime.ir.passArgument(index)
     of cakImmediateExpr:
       discard
@@ -423,8 +415,6 @@ proc genReassignVal(runtime: Runtime, fn: Function, stmt: Statement) =
       ) # FIXME: mirage: loadFloat isn't implemented
     else:
       unreachable
-
-    runtime.ir.markGlobal(index)
   else:
     # field overwrite!
     let accesses = createFieldAccess(stmt.reIdentifier.split('.'))
@@ -1164,7 +1154,6 @@ proc generateBytecodeForScope(
         let idx = runtime.addrIdx
         runtime.markGlobal(typ.name)
         runtime.ir.createField(idx, 0, "@bali_object_type")
-        runtime.ir.markGlobal(idx)
         runtime.types[i].singletonId = idx
 
   for i, stmt in scope.stmts:

@@ -36,7 +36,6 @@ type
     currJumpOnErr: Option[uint]
 
     stack*: seq[JSValue]
-    locals*: Table[uint, string]
     builtins*: Table[string, proc(op: Operation)]
     errors*: seq[RuntimeException]
     halt*: bool = false
@@ -104,20 +103,18 @@ proc analyze*(interpreter: var PulsarInterpreter) =
 
 {.push checks: on, inline.}
 proc addAtom*(interpreter: var PulsarInterpreter, atom: sink MAtom, id: uint) =
-  if id > uint(interpreter.stack.len):
+  if id > uint(interpreter.stack.len - 1):
     # We need to allocate more slots.
     interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
 
   interpreter.stack[id] = atom.addr
-  interpreter.locals[id] = interpreter.clauses[interpreter.currClause].name
 
 proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) =
-  if id > uint(interpreter.stack.len):
+  if id > uint(interpreter.stack.len - 1):
     # We need to allocate more slots.
     interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
 
   interpreter.stack[id] = value
-  interpreter.locals[id] = interpreter.clauses[interpreter.currClause].name
 
 proc hasBuiltin*(interpreter: PulsarInterpreter, name: string): bool =
   name in interpreter.builtins
@@ -282,8 +279,6 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
     op.arguments &= op.consume(Integer, "MARKHOMO expects an integer at position 1")
   of LoadNull:
     op.arguments &= op.consume(Integer, "LOADN expects an integer at position 1")
-  of MarkGlobal:
-    op.arguments &= op.consume(Integer, "GLOB expects an integer at position 1")
   of ReadRegister:
     op.arguments &= op.consume(Integer, "RREG expects an integer at position 1")
 
@@ -833,10 +828,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
 
     interpreter.addAtom(null(), idx)
     inc interpreter.currIndex
-  of MarkGlobal:
-    let idx = (&op.arguments[0].getInt()).uint
-    interpreter.locals.del(idx)
-    inc interpreter.currIndex
   of ReadRegister:
     let
       idx = (&op.arguments[0].getInt()).uint
@@ -1108,7 +1099,6 @@ proc newPulsarInterpreter*(source: string): PulsarInterpreter =
     tokenizer: newTokenizer(source),
     clauses: @[],
     builtins: initTable[string, proc(op: Operation)](),
-    locals: initTable[uint, string](),
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
       # Pre-allocate space for some value pointers
   )
