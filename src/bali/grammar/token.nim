@@ -188,4 +188,6 @@ const Keywords* = {
   "break": TokenKind.Break,
   "typeof": TokenKind.Typeof,
   "for": TokenKind.For,
+  "try": TokenKind.Try,
+  "catch": TokenKind.Catch
 }.toTable

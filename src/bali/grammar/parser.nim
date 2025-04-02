@@ -1189,6 +1189,26 @@ proc parseForLoop*(parser: Parser): Option[Statement] =
 
   return some(forLoop(initializer, condition, incrementor, body))
 
+proc parseTryClause*(parser: Parser): Option[Statement] =
+  ## Parse a try-catch clause.
+  debug "parser: parsing try-catch clause"
+  var statement = Statement(kind: TryCatch)
+
+  statement.tryStmtBody = Scope(stmts: parser.parseScope())
+  if parser.tokenizer.eof or
+    (let tok = (&parser.tokenizer.nextExceptWhitespace()).kind; tok != TokenKind.RCurly):
+    parser.error UnexpectedToken, "expected right facing curly bracket to close try-clause, got " & $tok
+
+  let copied = parser.tokenizer.deepCopy()
+
+  if not copied.eof and (let tok = copied.nextExceptWhitespace(); *tok and (&tok).kind == TokenKind.Catch):
+    # There's a catch clause.
+    debug "parser: try-catch clause has a catch block"
+    parser.tokenizer = copied
+    statement.tryCatchBody = some(Scope(stmts: parser.parseScope()))
+  
+  some(ensureMove(statement))
+
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
@@ -1400,6 +1420,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       some(call("BALI_TYPEOF".callFunction, &parser.parseTypeofCall(), mangle = false))
   of TokenKind.For:
     return parser.parseForLoop()
+  of TokenKind.Try:
+    return parser.parseTryClause()
   else:
     parser.error UnexpectedToken, $token.kind
 
