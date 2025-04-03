@@ -9,6 +9,12 @@ import bali/runtime/[arguments, types]
 import bali/runtime/abstract/to_string
 import bali/internal/sugar
 
+type
+  JSError* = object
+    name*: string
+    message*: string
+    stack*: string
+
 proc generateStdIr*(runtime: Runtime) =
   info "errors: generate IR interface"
 
@@ -20,6 +26,8 @@ proc generateStdIr*(runtime: Runtime) =
         required = true,
         message = "BUG: BALI_THROWERROR got {nargs} atoms, expected one!",
       )
+      
       runtime.vm.throw(jsException(runtime.ToString(&atom)))
-      runtime.logTracebackAndDie(),
+      runtime.logTracebackAndDie()
+    ,
   )

@@ -29,7 +29,7 @@ proc attachConsoleDelegate*(del: ConsoleDelegate) {.inline.} =
 
 proc console(runtime: Runtime, level: ConsoleLevel) {.inline.} =
   var accum: string
-
+  
   for i in 1 .. runtime.argumentCount():
     let value = runtime.ToString(&runtime.argument(i))
     accum &= value & ' '
