@@ -857,7 +857,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
           &interpreter.registers.error
         else:
           undefined(),
-        idx
+        idx,
       )
     else:
       raise newException(

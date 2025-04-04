@@ -1196,31 +1196,42 @@ proc parseTryClause*(parser: Parser): Option[Statement] =
 
   statement.tryStmtBody = Scope(stmts: parser.parseScope())
   if parser.tokenizer.eof or
-    (let tok = (&parser.tokenizer.nextExceptWhitespace()).kind; tok != TokenKind.RCurly):
-    parser.error UnexpectedToken, "expected right facing curly bracket to close try-clause, got " & $tok
+      (
+        let tok = (&parser.tokenizer.nextExceptWhitespace()).kind
+        tok != TokenKind.RCurly
+      ):
+    parser.error UnexpectedToken,
+      "expected right facing curly bracket to close try-clause, got " & $tok
 
   let copied = parser.tokenizer.deepCopy()
 
-  if not copied.eof and (let tok = copied.nextExceptWhitespace(); *tok and (&tok).kind == TokenKind.Catch):
+  if not copied.eof and
+      (let tok = copied.nextExceptWhitespace(); *tok and (&tok).kind == TokenKind.Catch):
     # There's a catch clause.
     debug "parser: try-catch clause has a catch block"
     parser.tokenizer = copied
-    
+
     let copiedParen = parser.tokenizer.deepCopy()
-    if not copiedParen.eof and (let paren = copiedParen.nextExceptWhitespace(); *paren and (&paren).kind == TokenKind.LParen):
+    if not copiedParen.eof and (
+      let paren = copiedParen.nextExceptWhitespace()
+      *paren and (&paren).kind == TokenKind.LParen
+    ):
       debug "parser: try-catch clause wants reference to exception"
       parser.tokenizer = copiedParen
-      let ident = parser.tokenizer.consumeIdentifier() # The identifier into which we can capture the error value into
+      let ident = parser.tokenizer.consumeIdentifier()
+        # The identifier into which we can capture the error value into
       statement.tryErrorCaptureIdent = some(ident.ident)
 
-      if not parser.tokenizer.eof and (let endingParen = parser.tokenizer.nextExceptWhitespace(); *endingParen):
+      if not parser.tokenizer.eof and
+          (let endingParen = parser.tokenizer.nextExceptWhitespace(); *endingParen):
         if (&endingParen).kind != TokenKind.RParen:
-          parser.error UnexpectedToken, "expected right parenthesis, got " & $((&endingParen).kind)
+          parser.error UnexpectedToken,
+            "expected right parenthesis, got " & $((&endingParen).kind)
       else:
         parser.error Other, "expected right parenthesis after identifier, got EOF."
 
     statement.tryCatchBody = some(Scope(stmts: parser.parseScope()))
-  
+
   some(ensureMove(statement))
 
 proc parseStatement*(parser: Parser): Option[Statement] =

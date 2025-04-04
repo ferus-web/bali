@@ -189,5 +189,5 @@ const Keywords* = {
   "typeof": TokenKind.Typeof,
   "for": TokenKind.For,
   "try": TokenKind.Try,
-  "catch": TokenKind.Catch
+  "catch": TokenKind.Catch,
 }.toTable

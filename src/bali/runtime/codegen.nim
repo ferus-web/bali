@@ -1027,7 +1027,7 @@ proc genForLoop(runtime: Runtime, fn: Function, stmt: Statement) =
 
 proc genTryClause(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate bytecode for try clause"
-  
+
   # Install a jump-on-exception handler
   let excHandler = runtime.ir.placeholder(JumpOnError) - 1
 
@@ -1041,11 +1041,10 @@ proc genTryClause(runtime: Runtime, fn: Function, stmt: Statement) =
 
     unreachable
     0
-  
+
   # Generate bytecode for catch clause, if it exists.
   runtime.ir.overrideArgs(excHandler, @[getCurrOpNum().stackInteger])
   if *stmt.tryCatchBody:
-
     if *stmt.tryErrorCaptureIdent:
       runtime.markLocal(fn = fn, ident = &stmt.tryErrorCaptureIdent)
       let errorCaptureIndex = runtime.addrIdx - 1
