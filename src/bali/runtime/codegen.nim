@@ -1045,6 +1045,13 @@ proc genTryClause(runtime: Runtime, fn: Function, stmt: Statement) =
   # Generate bytecode for catch clause, if it exists.
   runtime.ir.overrideArgs(excHandler, @[getCurrOpNum().stackInteger])
   if *stmt.tryCatchBody:
+
+    if *stmt.tryErrorCaptureIdent:
+      runtime.markLocal(fn = fn, ident = &stmt.tryErrorCaptureIdent)
+      let errorCaptureIndex = runtime.addrIdx - 1
+
+      runtime.ir.readRegister(errorCaptureIndex, Register.Error)
+
     runtime.generateBytecodeForScope(&stmt.tryCatchBody, allocateConstants = false)
 
 proc generateBytecode(
