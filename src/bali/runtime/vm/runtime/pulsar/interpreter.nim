@@ -28,6 +28,7 @@ type
   Registers* = object
     retVal*: Option[JSValue]
     callArgs*: seq[JSValue]
+    error*: Option[JSValue]
 
   PulsarInterpreter* = object
     tokenizer: Tokenizer
@@ -848,6 +849,15 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       # 1 - callargs register
       interpreter.addAtom(
         interpreter.registers.callArgs[&op.arguments[1].getInt()], idx
+      )
+    of 2:
+      # 2 - error register
+      interpreter.addAtom(
+        if *interpreter.registers.error:
+          &interpreter.registers.error
+        else:
+          undefined(),
+        idx
       )
     else:
       raise newException(
