@@ -87,6 +87,18 @@ while (commitsToBali < 2000) {
     console.log(commitsToBali)
 }
 
+for (var x = 0; x < 32; x++) { console.log("Hello, number", x) }
+
+try
+{
+    throw "woe be upon ye";
+} catch (error_thingy)
+{
+    console.log(error_thingy)
+}
+
+const encoded = btoa("Hello base64")
+
 let lemonade = fetchLemonade(4)
 console.log(lemonade)
 """
@@ -129,5 +141,6 @@ runtime.run()
 - Ternary operations                   [X]
 - Functions as values                  [X]
 - For-loops                            [X]
+- Try-catch clauses                    [X]
 - Modules                              [ ]
 - Async                                [ ]
