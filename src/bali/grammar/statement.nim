@@ -31,6 +31,7 @@ type
     AccessArrayIndex
     TernaryOp
     ForLoop
+    TryCatch
 
   FieldAccess* = ref object
     prev*, next*: FieldAccess
@@ -162,6 +163,10 @@ type
       forLoopCond*: Option[Statement]
       forLoopIter*: Option[Statement]
       forLoopBody*: Scope
+    of TryCatch:
+      tryStmtBody*: Scope
+      tryCatchBody*: Option[Scope]
+      tryErrorCaptureIdent*: Option[string]
 
 func hash*(access: FieldAccess): Hash {.inline.} =
   hash((access.identifier))

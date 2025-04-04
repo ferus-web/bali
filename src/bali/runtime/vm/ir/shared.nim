@@ -8,6 +8,7 @@ type
   Register* = enum
     ReturnValue = 0
     CallArgument = 1
+    Error = 2
 
   IROperation* = object
     opCode*: Ops

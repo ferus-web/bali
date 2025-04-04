@@ -449,9 +449,11 @@ proc genThrowError(runtime: Runtime, fn: Function, stmt: Statement, internal: bo
 
     runtime.ir.passArgument(runtime.index("error_msg", internalIndex(stmt)))
     runtime.ir.call("BALI_THROWERROR")
+    runtime.ir.resetArgs()
   elif *stmt.error.ident:
     runtime.ir.passArgument(runtime.index(&stmt.error.ident, defaultParams(fn)))
     runtime.ir.call("BALI_THROWERROR")
+    runtime.ir.resetArgs()
   else:
     unreachable
 
@@ -1023,6 +1025,34 @@ proc genForLoop(runtime: Runtime, fn: Function, stmt: Statement) =
 
   runtime.ir.jump(conditionalJump)
 
+proc genTryClause(runtime: Runtime, fn: Function, stmt: Statement) =
+  debug "emitter: generate bytecode for try clause"
+
+  # Install a jump-on-exception handler
+  let excHandler = runtime.ir.placeholder(JumpOnError) - 1
+
+  # Generate bytecode for try-block
+  runtime.generateBytecodeForScope(stmt.tryStmtBody, allocateConstants = false)
+
+  proc getCurrOpNum(): int =
+    for module in runtime.ir.modules:
+      if module.name == runtime.ir.currModule:
+        return module.operations.len + 1
+
+    unreachable
+    0
+
+  # Generate bytecode for catch clause, if it exists.
+  runtime.ir.overrideArgs(excHandler, @[getCurrOpNum().stackInteger])
+  if *stmt.tryCatchBody:
+    if *stmt.tryErrorCaptureIdent:
+      runtime.markLocal(fn = fn, ident = &stmt.tryErrorCaptureIdent)
+      let errorCaptureIndex = runtime.addrIdx - 1
+
+      runtime.ir.readRegister(errorCaptureIndex, Register.Error)
+
+    runtime.generateBytecodeForScope(&stmt.tryCatchBody, allocateConstants = false)
+
 proc generateBytecode(
     runtime: Runtime,
     fn: Function,
@@ -1087,6 +1117,8 @@ proc generateBytecode(
     runtime.genTernaryOp(fn = fn, stmt = stmt)
   of ForLoop:
     runtime.genForLoop(fn = fn, stmt = stmt)
+  of TryCatch:
+    runtime.genTryClause(fn = fn, stmt = stmt)
   else:
     warn "emitter: unimplemented bytecode generation directive: " & $stmt.kind
 

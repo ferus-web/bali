@@ -6,6 +6,7 @@ import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, utils]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
+# import pretty
 
 const
   BaliVMInitialPreallocatedStackSize* {.intdefine.} = 16
@@ -27,11 +28,12 @@ type
   Registers* = object
     retVal*: Option[JSValue]
     callArgs*: seq[JSValue]
+    error*: Option[JSValue]
 
   PulsarInterpreter* = object
     tokenizer: Tokenizer
     currClause: int
-    currIndex: uint = 1
+    currIndex*: uint = 1
     clauses: seq[Clause]
     currJumpOnErr: Option[uint]
 
@@ -135,7 +137,8 @@ proc throw*(
     bubbling: bool = false,
 ) =
   if *interpreter.currJumpOnErr:
-    return # TODO: implement error handling
+    interpreter.currIndex = &interpreter.currJumpOnErr - 2
+    return
 
   var exception = deepCopy(exception)
 
@@ -636,9 +639,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.stack[aIdx.uint] = integer(&aI - &aB)
     inc interpreter.currIndex
   of JumpOnError:
-    let beforeExecErrors = interpreter.errors.len
-
-    interpreter.currJumpOnErr = some(interpreter.currIndex)
+    interpreter.currJumpOnErr = some(uint(&op.arguments[0].getInt()))
     inc interpreter.currIndex
   of GreaterThanInt:
     if op.arguments.len < 2:
@@ -848,6 +849,15 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       # 1 - callargs register
       interpreter.addAtom(
         interpreter.registers.callArgs[&op.arguments[1].getInt()], idx
+      )
+    of 2:
+      # 2 - error register
+      interpreter.addAtom(
+        if *interpreter.registers.error:
+          &interpreter.registers.error
+        else:
+          undefined(),
+        idx,
       )
     else:
       raise newException(
