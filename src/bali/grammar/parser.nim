@@ -1205,6 +1205,20 @@ proc parseTryClause*(parser: Parser): Option[Statement] =
     # There's a catch clause.
     debug "parser: try-catch clause has a catch block"
     parser.tokenizer = copied
+    
+    let copiedParen = parser.tokenizer.deepCopy()
+    if not copiedParen.eof and (let paren = copiedParen.nextExceptWhitespace(); *paren and (&paren).kind == TokenKind.LParen):
+      debug "parser: try-catch clause wants reference to exception"
+      parser.tokenizer = copiedParen
+      let ident = parser.tokenizer.consumeIdentifier() # The identifier into which we can capture the error value into
+      statement.tryErrorCaptureIdent = some(ident.ident)
+
+      if not parser.tokenizer.eof and (let endingParen = parser.tokenizer.nextExceptWhitespace(); *endingParen):
+        if (&endingParen).kind != TokenKind.RParen:
+          parser.error UnexpectedToken, "expected right parenthesis, got " & $((&endingParen).kind)
+      else:
+        parser.error Other, "expected right parenthesis after identifier, got EOF."
+
     statement.tryCatchBody = some(Scope(stmts: parser.parseScope()))
   
   some(ensureMove(statement))
