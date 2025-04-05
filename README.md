@@ -127,20 +127,20 @@ runtime.run()
 ```
 
 # Roadmap
-- Getting a grammar to AST parser      [X]
-- Getting the MIR emitter working      [X]
-- Get arithmetic operations working    [X]
-- Console API                          [X]
-- While loops                          [X]
-- Nested object field access           [X]
-- `typeof`                             [X]
-- Arrays                               [X]
-- REPL                                 [X]
-- String prototype                     [X]
-- Date prototype                       [X]
-- Ternary operations                   [X]
-- Functions as values                  [X]
-- For-loops                            [X]
-- Try-catch clauses                    [X]
-- Modules                              [ ]
-- Async                                [ ]
+- [X] Getting a grammar to AST parser
+- [X] Getting the MIR emitter working
+- [X] Get arithmetic operations working
+- [X] Console API
+- [X] While loops
+- [X] Nested object field access
+- [X] `typeof`
+- [X] Arrays
+- [X] REPL
+- [X] String prototype
+- [X] Date prototype
+- [X] Ternary operations
+- [X] Functions as values
+- [X] For-loops
+- [X] Try-catch clauses
+- [X] Modules
+- [X] Async
