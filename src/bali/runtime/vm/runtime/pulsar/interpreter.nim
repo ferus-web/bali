@@ -6,7 +6,6 @@ import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, utils]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
-# import pretty
 
 const
   BaliVMInitialPreallocatedStackSize* {.intdefine.} = 16

@@ -1163,8 +1163,8 @@ proc generateBytecodeForScope(
         newString(0)
 
     if clause.len > 0:
-      let fnIndex = runtime.addrIdx
-      runtime.markGlobal(clause, some(fnIndex))
+      runtime.markGlobal(clause)
+      let fnIndex = runtime.addrIdx - 1
       discard runtime.ir.addOp(
         IROperation(
           opcode: LoadBytecodeCallable,
@@ -1176,7 +1176,7 @@ proc generateBytecodeForScope(
 
   if name != "outer":
     runtime.loadArgumentsOntoStack(fn)
-    runtime.markGlobal(name)
+    # runtime.markGlobal(name)
   else:
     if allocateConstants:
       constants.generateStdIr(runtime)
