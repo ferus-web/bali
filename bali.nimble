@@ -6,7 +6,7 @@ description = "The Bali JavaScript Engine"
 license = "GPL3"
 srcDir = "src"
 backend = "cpp"
-bin = @["balde", "test262"]
+# bin = @["balde", "test262"]
 installExt = @["nim"]
 binDir = "bin"
 
@@ -41,3 +41,6 @@ task fmt, "Format code":
 taskRequires "analyze", "nimalyzer >= 0.12.0"
 task analyze, "Run the static analyzer":
   exec "nimalyzer nimalyzer.cfg"
+
+task balde, "Compile balde":
+  exec "nim c -o:bin/balde src/balde.nim"
