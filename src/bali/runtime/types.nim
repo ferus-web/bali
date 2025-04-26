@@ -97,6 +97,8 @@ type
     statFieldAccesses, statTypeofCalls: uint
     allocStatsStart*: AllocStats
 
+    generatedEcmaTypes*: bool = false
+
     types*: seq[JSType]
     predefinedBytecode*: string
 
