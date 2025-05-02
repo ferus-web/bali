@@ -2,6 +2,7 @@
 !*.*
 !*/
 !LICENSE
+!Makefile
 
 success.txt
 failed.txt
