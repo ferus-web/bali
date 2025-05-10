@@ -3,7 +3,7 @@
 
 template msg*(message: string) =
   ## Execution related VM debug messages
-  when not defined(release):
+  when (not defined(release)) and not defined(silent):
     let
       pc = interpreter.currIndex
       clause = interpreter.clauses[interpreter.currClause].name
@@ -13,5 +13,5 @@ template msg*(message: string) =
 
 template vmd*(phase: string, message: string) =
   ## Non-execution related VM debug messages
-  when not defined(release):
+  when (not defined(release)) and not defined(silent):
     stdout.write("vm [" & $phase & "] " & message & '\n')
