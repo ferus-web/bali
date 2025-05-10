@@ -537,7 +537,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       return
     
     msg "jump to " & $(&pos)
-    interpreter.currIndex = (&pos).uint
+    interpreter.currIndex = (&pos).uint - 1'u
   of Return:
     let clause = interpreter.getClause()
 
@@ -670,14 +670,16 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of GreaterThanInt:
     if op.arguments.len < 2:
+      msg "gti: expected 2 args, got " & $op.arguments.len & "; ignoring"
       inc interpreter.currIndex
       return
 
     let
-      a = interpreter.get((&op.arguments[0].getInt()).uint)
-      b = interpreter.get((&op.arguments[1].getInt()).uint)
+      a = interpreter.get(&op.arguments[0].getIntOrUint())
+      b = interpreter.get(&op.arguments[1].getIntOrUint())
 
     if not *a or not *b:
+      msg "gti: a is empty=" & $(*a) & "; b is empty=" & $(*b)
       return
 
     let
@@ -685,11 +687,16 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       bI = (&b).getInt()
 
     if not *aI or not *bI:
+      msg "gti: aI is empty=" & $(*aI) & "; bI is empty=" & $(*bI)
       return
 
+    msg "gti: a=" & $(&aI) & "; b=" & $(&bI)
+
     if &aI > &bI:
+      msg "gti: a > b; pc++"
       inc interpreter.currIndex
     else:
+      msg "gti: a <= b; pc += 2"
       interpreter.currIndex += 2
   of LesserThanInt:
     if op.arguments.len < 2:

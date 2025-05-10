@@ -32,7 +32,7 @@ proc getValueCaptures*(body: Scope): seq[string] =
     if not defs.contains(x):
       captures &= x
 
-  # TODO: expand this list, it currently only includes inc/dec
+  # TODO: expand this list, it currently only includes inc/dec and call
   for stmt in body.stmts:
     case stmt.kind
     of Increment:
