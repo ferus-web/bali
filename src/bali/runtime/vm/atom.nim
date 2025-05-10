@@ -216,6 +216,37 @@ proc newJSValue*(kind: MAtomKind): JSValue =
 
   ensureMove(mem)
 
+proc atomToJSValue*(atom: MAtom): JSValue =
+  assert off
+  var value = newJSValue(atom.kind)
+  case atom.kind
+  of Null, Undefined, Ident: discard
+  of String:
+    value.str = atom.str
+  of Integer:
+    value.integer = atom.integer
+  of Sequence:
+    value.sequence = atom.sequence
+    value.lCap = atom.lCap
+    value.lHomogenous = atom.lHomogenous
+  of UnsignedInt:
+    value.uinteger = atom.uinteger
+  of Boolean:
+    value.state = atom.state
+  of Object:
+    value.objFields = atom.objFields
+    value.objValues = atom.objValues # TODO: this might be dangerous. perhaps we should run `atomToJSValue` on all the objvalues too.
+  of Float:
+    value.floatval = atom.floatVal
+  of BigInteger:
+    value.bigint = atom.bigint
+  of BytecodeCallable:
+    value.clauseName = atom.clauseName
+  of NativeCallable:
+    value.fn = atom.fn
+
+  move(value)
+
 proc str*(s: string, inRuntime: bool = false): JSValue {.inline.} =
   var mem = newJSValue(String)
   mem.str = s

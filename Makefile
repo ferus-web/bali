@@ -16,7 +16,7 @@ ifeq ($(DEBUG), 1)
 		    --define:gdb
 endif
 
-bin/balde:
+balde:
 	$(NIM) cpp $(NIMFLAGS) --define:NimblePkgVersion=$(VERSION) --cc:$(CXX) --out:bin/balde src/balde.nim
 
 clean:

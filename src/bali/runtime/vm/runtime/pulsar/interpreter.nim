@@ -3,9 +3,10 @@
 
 import std/[math, tables, options]
 import bali/runtime/vm/heap/boehm
-import bali/runtime/vm/[atom, utils]
+import bali/runtime/vm/[atom, utils, debugging]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
+# import pretty
 
 const
   BaliVMInitialPreallocatedStackSize* {.intdefine.} = 16
@@ -47,9 +48,13 @@ type
 const SequenceBasedRegisters* = [some(1)]
 
 proc find*(clause: Clause, id: uint): Option[Operation] =
-  for op in clause.operations:
-    if op.index == id:
-      return some op
+  vmd "find-op-in-clause", "target = " & $id & "; len = " & $clause.operations.len
+  if clause.operations.len.uint <= id:
+    vmd "find-op-in-clause", "id is beyond op len of " & $clause.operations.len.uint
+    return
+  
+  vmd "find-op-in-clause", "found op: " & $clause.operations[id].opcode
+  some(clause.operations[id])
 
 func getClause*(
     interpreter: PulsarInterpreter, id: Option[int] = none int
@@ -103,18 +108,21 @@ proc analyze*(interpreter: var PulsarInterpreter) =
       continue
 
 {.push checks: on, inline.}
-proc addAtom*(interpreter: var PulsarInterpreter, atom: sink MAtom, id: uint) =
+proc addAtom*(interpreter: var PulsarInterpreter, atom: MAtom, id: uint) =
+  ## Add a stack-allocated atom to the VM's memory.
+  ##
+  ## **NOTE**: This performs a copy of the atom so that it is guaranteed to never be destroyed prematurely.
   if id > uint(interpreter.stack.len - 1):
     # We need to allocate more slots.
     interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
 
-  interpreter.stack[id] = atom.addr
+  interpreter.stack[id] = atomToJSValue(atom)
 
 proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) =
   if id > uint(interpreter.stack.len - 1):
     # We need to allocate more slots.
     interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
-
+  
   interpreter.stack[id] = value
 
 proc hasBuiltin*(interpreter: PulsarInterpreter, name: string): bool =
@@ -447,13 +455,12 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
     interpreter.callBuiltin(name, op)
     inc interpreter.currIndex
   else:
-    let interp = interpreter.addr
     let (index, clause) = (
-      proc(): tuple[index: int, clause: Option[Clause]] {.gcsafe.} =
-        for i, cls in interp[].clauses:
+      proc(interp: PulsarInterpreter): tuple[index: int, clause: Option[Clause]] {.gcsafe.} =
+        for i, cls in interp.clauses:
           if cls.name == name:
             return (index: i, clause: some cls)
-    )()
+    )(interpreter)
 
     if *clause:
       var newClause = &clause # get the new clause
@@ -466,8 +473,8 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
       # set clause pointer to new index
       interpreter.currClause = index
       interpreter.clauses[index] = newClause # store clause w/ rollback data to clauses
-      interpreter.currIndex = 1
-      # set execution op index to 0 to start from the beginning
+      interpreter.currIndex = 0
+      # set execution op index to 1 to start from the beginning
     else:
       raise newException(ValueError, "Reference to unknown clause: " & name)
 
@@ -481,17 +488,21 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   {.computedGoto.}
   case op.opCode
   of LoadStr:
+    msg "load str"
     interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
     inc interpreter.currIndex
   of LoadInt:
+    msg "load int"
     interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
     inc interpreter.currIndex
   of AddInt, AddStr:
+    msg "add int or str"
     interpreter.appendAtom(
       (&op.arguments[0].getInt()).uint, (&op.arguments[1].getInt()).uint
     )
     inc interpreter.currIndex
   of Equate:
+    msg "equate"
     var
       prev = interpreter.get(uint(&op.arguments[0].getInt()))
       accumulator = false
@@ -519,37 +530,49 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       boehmGCFullCollect()
 
     let pos = op.arguments[0].getInt()
-
+    
     if not *pos:
+      msg "got jump but index is not given, ignoring"
       inc interpreter.currIndex
       return
-
+    
+    msg "jump to " & $(&pos)
     interpreter.currIndex = (&pos).uint
   of Return:
     let clause = interpreter.getClause()
 
     if not *clause:
+      msg "got return but we are not in any clause"
       inc interpreter.currIndex
       return
 
     let idx = (&op.arguments[0].getInt()).uint
+    msg "return; retval overwritten with index " & $idx
 
     # write the return value to the `retVal` register
     interpreter.registers.retVal = interpreter.get(idx)
 
     # revert back to where we left off in the previous clause (or exit if this was the final clause - that's handled by the logic in `run`)
+
+    msg "rolling back to clause " & $((&clause).rollback.clause)
     interpreter.currClause = (&clause).rollback.clause
+
+    msg "rolling back to index " & $((&clause).rollback.opIndex)
     interpreter.currIndex = (&clause).rollback.opIndex
   of Call:
     let name = &op.arguments[0].getStr()
+    msg "call " & name
     interpreter.call(name, op)
   of LoadUint:
+    msg "load uint"
     interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
     inc interpreter.currIndex
   of LoadList:
+    msg "load list"
     interpreter.addAtom(sequence @[], (&op.arguments[0].getInt()).uint)
     inc interpreter.currIndex
   of AddList:
+    msg "add list"
     let
       pos = (&op.arguments[0].getInt()).uint
       curr = interpreter.get(pos)
@@ -570,6 +593,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.stack[pos] = list
     inc interpreter.currIndex
   of PopList:
+    msg "pop list"
     let
       pos = (&op.arguments[0].getInt()).uint
       curr = interpreter.get(pos)
@@ -589,6 +613,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.stack[pos] = list
     inc interpreter.currIndex
   of PopListPrefix:
+    msg "pop list prefix"
     let
       pos = (&op.arguments[0].getInt()).uint
       curr = interpreter.get(pos)
@@ -610,9 +635,11 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.stack[pos] = list
     inc interpreter.currIndex
   of LoadBool:
+    msg "load bool"
     interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
     inc interpreter.currIndex
   of Swap:
+    msg "swap"
     let
       a = &op.arguments[0].getInt()
       b = &op.arguments[1].getInt()
@@ -620,6 +647,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.swap(a, b)
     inc interpreter.currIndex
   of SubInt:
+    msg "subint"
     let
       aIdx = &op.arguments[0].getInt()
       bIdx = &op.arguments[1].getInt()
@@ -833,7 +861,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       idx = (&op.arguments[0].getInt()).uint
       regIndex = if op.arguments.len > 2: 2 else: 1
       regId = (&op.arguments[regIndex].getInt())
-
+    
     case regId
     of 0:
       # 0 - retval register
@@ -943,6 +971,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.addAtom(floating(a + b), pos)
     inc interpreter.currIndex
   of DivFloat:
+    msg "div float"
     let
       a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getFloat()
       b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat()
@@ -956,6 +985,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.addAtom(floating(a / b), pos)
     inc interpreter.currIndex
   of MultFloat:
+    msg "mult float"
     let
       a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getFloat()
       b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat()
@@ -969,6 +999,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.addAtom(floating(a * b), pos)
     inc interpreter.currIndex
   of PowerFloat:
+    msg "exp float"
     let
       a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getFloat()
       b = int(&(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat())
@@ -977,20 +1008,27 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.addAtom(floating(a ^ b), pos)
     inc interpreter.currIndex
   of ZeroRetval:
+    msg "zero retval"
     interpreter.registers.retVal = none(JSValue)
     inc interpreter.currIndex
   of LoadBytecodeCallable:
+    msg "load bytecode segment"
     let
       index = uint(&op.arguments[0].getInt())
       clause = &op.arguments[1].getStr()
 
+    msg "index is " & $index
+    msg "clause is " & clause
+
     interpreter.addAtom(bytecodeCallable(clause), index)
     inc interpreter.currIndex
   of ExecuteBytecodeCallable:
+    msg "exec bytecode segment"
     let callable = &getBytecodeClause(&interpreter.get(uint(&op.arguments[0].getInt())))
 
     interpreter.call(callable, op)
   of LoadUndefined:
+    msg "load undefined"
     interpreter.addAtom(undefined(), uint(&op.arguments[0].getInt()))
     inc interpreter.currIndex
   of GreaterThanEqualInt:
@@ -1074,7 +1112,9 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 
 proc run*(interpreter: var PulsarInterpreter) =
   while not interpreter.halt:
+    vmd "fetch", "new frame"
     let cls = interpreter.getClause()
+    vmd "fetch", "got clause"
 
     if not *cls:
       break
@@ -1084,30 +1124,42 @@ proc run*(interpreter: var PulsarInterpreter) =
       op = clause.find(interpreter.currIndex)
 
     if not *op:
+      vmd "rollback", "no op to exec"
       if clause.rollback.clause == int.low:
+        vmd "rollback", "clause == int.low; exec has finished"
         break
-
+      
+      vmd "rollback", "rollback clause: " & $clause.rollback.clause
+      vmd "rollback", "rollback pc: " & $clause.rollback.opIndex
       interpreter.currClause = clause.rollback.clause
       interpreter.currIndex = clause.rollback.opIndex
       continue
-
+    
     var operation = &op
-    let index = interpreter.currIndex - 1
+    let index = interpreter.currIndex
     let clauseIndex = interpreter.currClause
 
+    vmd "decode", "pc is " & $index & ", clauseIndex is " & $clauseIndex
+
     if not operation.resolved:
+      vmd "decode", "op is not resolved, resolving"
       interpreter.resolve(clause, operation)
       operation.resolved = true
 
+      vmd "decode", "resolved/decoded op"
+    
+    vmd "execute", "exec phase beginning"
     interpreter.execute(operation)
-
+    vmd "execute", "exec phase ended, saving op state"
     interpreter.clauses[clauseIndex].operations[index] = ensureMove(operation)
+    vmd "execute", "saved op state"
 
 proc newPulsarInterpreter*(source: string): PulsarInterpreter =
   var interp = PulsarInterpreter(
     tokenizer: newTokenizer(source),
     clauses: @[],
     builtins: initTable[string, proc(op: Operation)](),
+    currIndex: 0'u,
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
       # Pre-allocate space for some value pointers
   )
