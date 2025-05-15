@@ -6,7 +6,6 @@ import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, utils, debugging]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
-# import pretty
 
 const
   BaliVMInitialPreallocatedStackSize* {.intdefine.} = 16
@@ -33,7 +32,7 @@ type
   PulsarInterpreter* = object
     tokenizer: Tokenizer
     currClause: int
-    currIndex*: uint = 1
+    currIndex*: uint = 0
     clauses: seq[Clause]
     currJumpOnErr: Option[uint]
 
@@ -451,10 +450,13 @@ proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
   interpreter.addAtom(&atomB, a.uint)
 
 proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
+  msg "calling function " & name
   if interpreter.hasBuiltin(name):
+    msg name & " is a builtin, calling it"
     interpreter.callBuiltin(name, op)
     inc interpreter.currIndex
   else:
+    msg name & " is not a builtin, finding bytecode clause"
     let (index, clause) = (
       proc(interp: PulsarInterpreter): tuple[index: int, clause: Option[Clause]] {.gcsafe.} =
         for i, cls in interp.clauses:
@@ -463,6 +465,7 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
     )(interpreter)
 
     if *clause:
+      msg "found bytecode clause " & name
       var newClause = &clause # get the new clause
 
       # setup rollback points
@@ -474,7 +477,8 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
       interpreter.currClause = index
       interpreter.clauses[index] = newClause # store clause w/ rollback data to clauses
       interpreter.currIndex = 0
-      # set execution op index to 1 to start from the beginning
+      msg "new op to execute chosen"
+      # set execution op index to 0 to start from the beginning
     else:
       raise newException(ValueError, "Reference to unknown clause: " & name)
 
@@ -1088,6 +1092,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     let value = op.arguments[0]
 
     if value.kind == Integer:
+      msg "atom is integer/ref to atom"
       let callable = &interpreter.get(uint(&getInt(value)))
 
       if callable.kind == BytecodeCallable:
@@ -1096,12 +1101,12 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
         callable.fn()
       else:
         raise newException(ValueError, "INVK cannot deal with atom: " & $callable.kind)
+      inc interpreter.currIndex
     elif value.kind == String:
+      msg "atom is string/ref to native function"
       interpreter.call(&getStr(value), op)
     else:
       raise newException(ValueError, "INVK cannot deal with atom: " & $value.kind)
-
-    inc interpreter.currIndex
   else:
     when defined(release):
       inc interpreter.currIndex
@@ -1119,7 +1124,7 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 
 proc run*(interpreter: var PulsarInterpreter) =
   while not interpreter.halt:
-    vmd "fetch", "new frame"
+    vmd "fetch", "new frame " & $interpreter.currIndex
     let cls = interpreter.getClause()
     vmd "fetch", "got clause"
 

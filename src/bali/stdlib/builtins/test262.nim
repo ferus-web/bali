@@ -80,3 +80,40 @@ proc generateStdIr*(runtime: Runtime) =
 
       if runtime.isLooselyEqual(a, b): yes else: no,
   )
+
+  runtime.defineFn(
+    JSAssert,
+    "fail",
+    proc() =
+      let msg = runtime.ToString(&runtime.argument(1))
+      stderr.styledWriteLine(
+        bgRed,
+        fgBlack,
+        " FAIL ",
+        resetStyle,
+        " ",
+        styleBright,
+        msg,
+        resetStyle,
+      )
+      runtime.test262Error(
+        "Assert.fail(): test case failed: " & msg
+      )
+  )
+
+  runtime.defineFn(
+    JSAssert,
+    "success",
+    proc() =
+      let msg = runtime.ToString(&runtime.argument(1))
+      stderr.styledWriteLine(
+        bgRed,
+        fgBlack,
+        " SUCCESS ",
+        resetStyle,
+        " ",
+        styleBright,
+        msg,
+        resetStyle,
+      )
+  )

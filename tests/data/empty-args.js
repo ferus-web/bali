@@ -2,4 +2,9 @@
  * This is mostly just a test for our new `argument` mechanism.
 */
 
-var x = new URL()
+try {
+	var x = new URL()
+	console.log("Failed");
+} catch (err) {
+	console.log("Success")
+}

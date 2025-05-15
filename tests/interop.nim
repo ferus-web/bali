@@ -10,7 +10,7 @@ console.log(greeting)
 """
   )
   let ast = parser.parse()
-  let runtime = newRuntime("interop.js", ast)
+  var runtime = newRuntime("interop.js", ast)
 
   runtime.defineFn(
     "greet",
