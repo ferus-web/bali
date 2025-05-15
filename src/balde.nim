@@ -152,7 +152,7 @@ proc dumpStatisticsPretty(runtime: Runtime) =
   when defined(nimAllocStats):
     stdout.styledWriteLine(
       fgGreen,
-      "Traced Allocations",
+      "Traced Allocations (Nim-land heap)",
       resetStyle,
       ": ",
       styleBright,
@@ -161,7 +161,7 @@ proc dumpStatisticsPretty(runtime: Runtime) =
     )
     stdout.styledWriteLine(
       fgGreen,
-      "Traced Deallocations",
+      "Traced Deallocations (Nim-land heap)",
       resetStyle,
       ": ",
       styleBright,
@@ -171,7 +171,7 @@ proc dumpStatisticsPretty(runtime: Runtime) =
   else:
     stdout.styledWriteLine(
       "* ", styleItalic, styleBright,
-      "Cannot show traced allocations/deallocations; compile Balde with ", resetStyle,
+      "Cannot show Nim's traced allocations/deallocations; compile Balde with ", resetStyle,
       fgGreen, "--define:nimAllocStats", resetStyle, styleItalic,
       " to see allocation/deallocation statistics.",
     )

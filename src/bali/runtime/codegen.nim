@@ -1226,6 +1226,8 @@ proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
     return "bigint"
   of Undefined:
     return "undefined"
+  of NativeCallable, BytecodeCallable:
+    return "function"
   else:
     unreachable
 
