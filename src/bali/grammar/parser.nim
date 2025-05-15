@@ -794,6 +794,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
 
   var body: seq[Statement]
   debug "parser: parse function body: " & &name
+  var metRCurly = false
   while not parser.tokenizer.eof:
     let
       prevPos = parser.tokenizer.pos
@@ -802,6 +803,7 @@ proc parseFunction*(parser: Parser): Option[Function] =
 
     if *c and (&c).kind == TokenKind.RCurly:
       info "parser: met end of curly bracket block"
+      metRCurly = true
       break
     else:
       parser.tokenizer.pos = prevPos
@@ -818,6 +820,9 @@ proc parseFunction*(parser: Parser): Option[Function] =
     statement.col = parser.tokenizer.location.col
 
     body &= statement
+
+  if not metRCurly:
+    parser.error Other, "function body must end with curly bracket"
 
   info "parser: parsed function: " & &name
   some function(&name, body, arguments)
