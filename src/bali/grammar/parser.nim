@@ -2,9 +2,8 @@
 
 import std/[options, logging, strutils, tables]
 import bali/grammar/[token, tokenizer, ast, errors, statement]
-import bali/internal/sugar
 import pkg/bali/runtime/vm/atom
-import pkg/[results, pretty, yaml]
+import pkg/[results, pretty, yaml, shakar]
 
 {.push warning[UnreachableCode]: off.}
 
@@ -982,6 +981,20 @@ proc parseThrow*(parser: Parser): Option[Statement] =
 
 proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
   info "parser: parsing re-assignment to identifier: " & ident
+
+  var expr: Option[Statement]
+
+  if not parser.tokenizer.eof:
+    let copiedTok = parser.tokenizer.deepCopy()
+    expr = parser.parseExpression()
+
+    if !expr:
+      parser.tokenizer = copiedTok
+    else:
+      expr.applyThis:
+        this.binStoreIn = some(ident)
+
+      return expr
 
   var
     atom: Option[MAtom]
