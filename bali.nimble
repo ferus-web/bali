@@ -33,6 +33,7 @@ requires "zippy >= 0.10.16"
 requires "nimsimd >= 1.3.2"
 requires "flatty >= 0.3.4"
 requires "ptr_math >= 0.3.0"
+requires "libbacktrace >= 0.0.8"
 
 taskRequires "fmt", "nph#master"
 task fmt, "Format code":
