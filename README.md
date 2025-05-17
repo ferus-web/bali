@@ -142,5 +142,6 @@ runtime.run()
 - [X] Functions as values
 - [X] For-loops
 - [X] Try-catch clauses
-- [X] Modules
-- [X] Async
+- [X] Compound assignments
+- [ ] Modules
+- [ ] Async
