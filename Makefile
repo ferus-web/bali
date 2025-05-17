@@ -17,7 +17,7 @@ ifeq ($(DEBUG), 1)
 endif
 
 balde:
-	$(NIM) cpp $(NIMFLAGS) --define:NimblePkgVersion=$(VERSION) --cc:$(CXX) --out:bin/balde src/balde.nim
+	$(NIM) cpp $(NIMFLAGS) --parallelBuild:0 --define:NimblePkgVersion=$(VERSION) --cc:$(CXX) --out:bin/balde src/balde.nim
 
 clean:
 	rm bin/balde

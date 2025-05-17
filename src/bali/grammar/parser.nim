@@ -26,7 +26,8 @@ type
     foundShebang: bool = false
 
 template error(parser: Parser, errorKind: ParseErrorKind, msg: string) =
-  debug "parser: got parsing error (" & $errorKind & "): " & msg
+  const inf = instantiationInfo()
+  warn "parser[" & $inf.line & ':' & $inf.column & "] parsing error (" & $errorKind & "): " & msg
   parser.errors &=
     ParseError(kind: errorKind, location: parser.tokenizer.location, message: msg)
 
@@ -1252,6 +1253,38 @@ proc parseTryClause*(parser: Parser): Option[Statement] =
 
   some(ensureMove(statement))
 
+proc parseCompoundAssignment*(parser: Parser, target: string, compound: Token): Option[Statement] =
+  if parser.tokenizer.eof:
+    parser.error Other, "expected equal-sign to start compound assignment, got EOF instead."
+
+  let expEquals = parser.tokenizer.next()
+  if expEquals.kind != TokenKind.EqualSign:
+    parser.error Other, "expected equal-sign to start compound assignment, got " & $expEquals.kind & " instead."
+  
+  let copiedTok = parser.tokenizer.deepCopy()
+  let expr = parser.parseExpression()
+  var atom: Option[MAtom]
+
+  if !expr:
+    parser.tokenizer = copiedTok
+    atom = parser.parseAtom(&parser.tokenizer.nextExceptWhitespace())
+
+  case compound.kind
+  of TokenKind.Mul:
+    # <target> *= <expr>|<atom>
+    if *expr:
+      parser.error Other, "Compound assignment with expressions is not supported yet"
+    elif *atom:
+      return some compoundAssignment(
+        BinaryOperation.Mult,
+        target = target, compounder = &atom
+      )
+    else: unreachable
+
+  else: discard
+
+  assert off
+
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
@@ -1330,6 +1363,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
         return some increment(token.ident)
       of TokenKind.Decrement:
         return some decrement(token.ident)
+      of TokenKind.Mul:
+        return parser.parseCompoundAssignment(token.ident, &next)
       else:
         parser.error UnexpectedToken,
           "expected left parenthesis, increment, decrement or equal sign, got " &

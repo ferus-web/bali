@@ -1053,6 +1053,15 @@ proc genTryClause(runtime: Runtime, fn: Function, stmt: Statement) =
 
     runtime.generateBytecodeForScope(&stmt.tryCatchBody, allocateConstants = false)
 
+proc genCompoundAsgn(runtime: Runtime, fn: Function, stmt: Statement) =
+  debug "emitter: generate bytecode for compound assignment"
+  case stmt.compAsgnOp
+  of BinaryOperation.Mult:
+    let index = runtime.index(stmt.compAsgnTarget, defaultParams(fn))
+    let compounder = runtime.loadIRAtom(stmt.compAsgnCompounder)
+    runtime.ir.multInt(index, compounder)
+  else: unreachable
+
 proc generateBytecode(
     runtime: Runtime,
     fn: Function,
@@ -1119,6 +1128,8 @@ proc generateBytecode(
     runtime.genForLoop(fn = fn, stmt = stmt)
   of TryCatch:
     runtime.genTryClause(fn = fn, stmt = stmt)
+  of CompoundAssignment:
+    runtime.genCompoundAsgn(fn = fn, stmt = stmt)
   else:
     warn "emitter: unimplemented bytecode generation directive: " & $stmt.kind
 
