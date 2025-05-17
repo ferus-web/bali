@@ -872,10 +872,13 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       idx = (&op.arguments[0].getInt()).uint
       regIndex = if op.arguments.len > 2: 2 else: 1
       regId = (&op.arguments[regIndex].getInt())
+
+    msg "idx: " & $idx & ", regIndex: " & $regIndex & ", regId: " & $regId
     
     case regId
     of 0:
       # 0 - retval register
+      msg "read retval register"
       interpreter.addAtom(
         if *interpreter.registers.retVal:
           &interpreter.registers.retVal
@@ -885,11 +888,13 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       )
     of 1:
       # 1 - callargs register
+      msg "read callargs register"
       interpreter.addAtom(
         interpreter.registers.callArgs[&op.arguments[1].getInt()], idx
       )
     of 2:
       # 2 - error register
+      msg "read error register"
       interpreter.addAtom(
         if *interpreter.registers.error:
           &interpreter.registers.error
@@ -906,6 +911,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   of PassArgument:
     # append to callArgs register
     let idx = (&op.arguments[0].getInt()).uint
+    msg "passing to args register: " & $idx
     let value = &interpreter.get(idx)
 
     interpreter.registers.callArgs.add(value)
@@ -1096,12 +1102,14 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       let callable = &interpreter.get(uint(&getInt(value)))
 
       if callable.kind == BytecodeCallable:
+        msg "atom is bytecode segment"
         interpreter.call(&getBytecodeClause(callable), op)
       elif callable.kind == NativeCallable:
+        msg "atom is native segment"
         callable.fn()
+        inc interpreter.currIndex
       else:
         raise newException(ValueError, "INVK cannot deal with atom: " & $callable.kind)
-      inc interpreter.currIndex
     elif value.kind == String:
       msg "atom is string/ref to native function"
       interpreter.call(&getStr(value), op)

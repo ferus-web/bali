@@ -2,9 +2,8 @@
 
 import std/[options, logging, strutils, tables]
 import bali/grammar/[token, tokenizer, ast, errors, statement]
-import bali/internal/sugar
 import pkg/bali/runtime/vm/atom
-import pkg/[results, pretty, yaml]
+import pkg/[results, pretty, yaml, shakar]
 
 {.push warning[UnreachableCode]: off.}
 
@@ -27,7 +26,8 @@ type
     foundShebang: bool = false
 
 template error(parser: Parser, errorKind: ParseErrorKind, msg: string) =
-  debug "parser: got parsing error (" & $errorKind & "): " & msg
+  const inf = instantiationInfo()
+  warn "parser[" & $inf.line & ':' & $inf.column & "] parsing error (" & $errorKind & "): " & msg
   parser.errors &=
     ParseError(kind: errorKind, location: parser.tokenizer.location, message: msg)
 
@@ -983,6 +983,20 @@ proc parseThrow*(parser: Parser): Option[Statement] =
 proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
   info "parser: parsing re-assignment to identifier: " & ident
 
+  var expr: Option[Statement]
+
+  if not parser.tokenizer.eof:
+    let copiedTok = parser.tokenizer.deepCopy()
+    expr = parser.parseExpression()
+
+    if !expr:
+      parser.tokenizer = copiedTok
+    else:
+      expr.applyThis:
+        this.binStoreIn = some(ident)
+
+      return expr
+
   var
     atom: Option[MAtom]
     vIdent: Option[string]
@@ -1239,6 +1253,45 @@ proc parseTryClause*(parser: Parser): Option[Statement] =
 
   some(ensureMove(statement))
 
+proc parseCompoundAssignment*(parser: Parser, target: string, compound: Token): Option[Statement] =
+  if parser.tokenizer.eof:
+    parser.error Other, "expected equal-sign to start compound assignment, got EOF instead."
+
+  let expEquals = parser.tokenizer.next()
+  if expEquals.kind != TokenKind.EqualSign:
+    parser.error Other, "expected equal-sign to start compound assignment, got " & $expEquals.kind & " instead."
+  
+  let copiedTok = parser.tokenizer.deepCopy()
+  let expr = parser.parseExpression()
+  var atom: Option[MAtom]
+
+  if !expr:
+    parser.tokenizer = copiedTok
+    atom = parser.parseAtom(&parser.tokenizer.nextExceptWhitespace())
+
+  if *expr:
+    parser.error Other, "Compound assignment with expressions is not supported yet"
+  
+  var binOp: BinaryOperation
+  case compound.kind
+  of TokenKind.Mul:
+    # <target> *= <expr>|<atom>
+    binOp = BinaryOperation.Mult
+  of TokenKind.Add:
+    # <target> += <expr>|<atom>
+    binOp = BinaryOperation.Add
+  of TokenKind.Sub:
+    binOp = BinaryOperation.Sub
+  of TokenKind.Div:
+    binOp = BinaryOperation.Div
+  else:
+    parser.error UnexpectedToken, "expected multiplication, addition, subtraction or division as compound, got " & $compound.kind & " instead"
+
+  return some compoundAssignment(
+    binOp,
+    target = target, compounder = &atom
+  )
+
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected statement, got EOF instead."
@@ -1317,6 +1370,8 @@ proc parseStatement*(parser: Parser): Option[Statement] =
         return some increment(token.ident)
       of TokenKind.Decrement:
         return some decrement(token.ident)
+      of TokenKind.Mul, TokenKind.Add, TokenKind.Sub, TokenKind.Div:
+        return parser.parseCompoundAssignment(token.ident, &next)
       else:
         parser.error UnexpectedToken,
           "expected left parenthesis, increment, decrement or equal sign, got " &

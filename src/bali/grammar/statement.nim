@@ -32,6 +32,7 @@ type
     TernaryOp
     ForLoop
     TryCatch
+    CompoundAssignment
 
   FieldAccess* = ref object
     prev*, next*: FieldAccess
@@ -167,6 +168,10 @@ type
       tryStmtBody*: Scope
       tryCatchBody*: Option[Scope]
       tryErrorCaptureIdent*: Option[string]
+    of CompoundAssignment:
+      compAsgnOp*: BinaryOperation
+      compAsgnTarget*: string
+      compAsgnCompounder*: MAtom
 
 func hash*(access: FieldAccess): Hash {.inline.} =
   hash((access.identifier))
@@ -394,6 +399,18 @@ proc callFunction*(name: string, ident: string): FunctionCall =
 
 proc callFunction*(name: string, field: FieldAccess): FunctionCall =
   FunctionCall(function: name, field: some field)
+
+proc compoundAssignment*(
+  op: BinaryOperation,
+  target: string,
+  compounder: MAtom
+): Statement =
+  Statement(
+    kind: CompoundAssignment,
+    compAsgnTarget: target,
+    compAsgnCompounder: compounder,
+    compAsgnOp: op
+  )
 
 {.pop.}
 
