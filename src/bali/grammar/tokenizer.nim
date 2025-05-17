@@ -452,10 +452,8 @@ proc consumePlus*(tokenizer: Tokenizer): Token =
   of '+':
     tokenizer.advance()
     return Token(kind: TokenKind.Increment)
-  of strutils.Whitespace:
-    return Token(kind: TokenKind.Add)
   else:
-    return Token(kind: TokenKind.Invalid)
+    return Token(kind: TokenKind.Add)
 
 proc consumeAmpersand*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
