@@ -83,11 +83,6 @@ type
     ## adder: Integer - the index on the stack from which the integer is read and added to the value
     AddInt = 0xa
 
-    ## Add to a pre-existing cell on the stack, granted that it is a string as well.
-    ## Arguments:
-    ## value: Integer - the index on the stack to add the value to
-    ## adder: Integer - the index on the stack from which the string is read and appended to the end of the value
-    AddStr = 0xb
 
     ## Subtract from a pre-existing cell on the stack, granted that it is an integer as well.
     ## Arguments:
@@ -105,22 +100,6 @@ type
     ## `idx`: the index on which the list is located
     ## `value`: Integer/String/List - any accepted atom
     AddList = 0xe
-
-    ## Set a cap/limit on how many items can be added to a list.
-    ## If the list already has more items than the new cap, they are removed from the list
-    ## and cleaned up* by the garbage collector.
-    ## Arguments:
-    ## `idx`: Integer - the index on which the list is located
-    ## `cap`: Integer - the new list cap
-    SetCapList = 0xf
-
-    ## Get the last element of a list and remove it from the list.
-    ## If the list is empty, a `Null` atom will be provided
-    PopList = 0x10
-
-    ## Get the first element of a list and remove it from the list.
-    ## If the list is empty, a `Null` atom will be provided
-    PopListPrefix = 0x11
 
     ## Load an unsigned integer onto the stack
     LoadUint = 0x14
@@ -163,9 +142,6 @@ type
 
     ## Decrement an integer/unsigned integer atom by one. This just exists to avoid creating ints again and again to use for `LoadInt`.
     Decrement = 0x20
-
-    ## Mark a list as homogenous.
-    MarkHomogenous = 0x23
 
     ## Load a null atom onto the stack position provided.
     LoadNull = 0x24
@@ -247,15 +223,11 @@ const
     "RETURN": Return,
     "EQU": Equate,
     "ADDI": AddInt,
-    "ADDS": AddStr,
-    "POPL": PopList,
-    "POPLPFX": PopListPrefix,
     "ADDL": AddList,
     "LOADUI": LoadUint,
     "LOADB": LoadBool,
     "SUBI": SubInt,
     "SWAP": Swap,
-    "SCAPL": SetCapList,
     "JMPE": JumpOnError,
     "GTI": GreaterThanInt,
     "LTI": LesserThanInt,
@@ -266,7 +238,6 @@ const
     "CRASHINTERP": CrashInterpreter,
     "INC": Increment,
     "DEC": Decrement,
-    "MARKHOMO": MarkHomogenous,
     "LOADN": LoadNull,
     "RREG": ReadRegister,
     "PARG": PassArgument,

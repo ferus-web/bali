@@ -219,7 +219,7 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
   of Jump:
     op.arguments &=
       op.consume(Integer, "JUMP expects exactly one integer as an argument")
-  of AddInt, AddStr, SubInt, MultInt, DivInt, PowerInt, MultFloat, DivFloat, PowerFloat,
+  of AddInt, SubInt, MultInt, DivInt, PowerInt, MultFloat, DivFloat, PowerFloat,
       AddFloat, SubFloat:
     for x in 1 .. 2:
       op.arguments &=
@@ -247,18 +247,8 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
         )
   of Return:
     op.arguments &= op.consume(Integer, "RETURN expects an integer at position 1")
-  of SetCapList:
-    op.arguments &= op.consume(Integer, "SCAPL expects an integer at position 1")
-
-    op.arguments &= op.consume(Integer, "SCAPL expects an integer at position 2")
   of JumpOnError:
     op.arguments &= op.consume(Integer, "JMPE expects an integer at position 1")
-  of PopList, PopListPrefix:
-    for x in 1 .. 2:
-      op.arguments &=
-        op.consume(
-          Integer, OpCodeToString[op.opCode] & " expects an integer at position " & $x
-        )
   of LoadObject:
     op.arguments &= op.consume(Integer, "LOADO expects an integer at position 1")
   of LoadUndefined:
@@ -284,8 +274,6 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
       )
   of CrashInterpreter:
     discard
-  of MarkHomogenous:
-    op.arguments &= op.consume(Integer, "MARKHOMO expects an integer at position 1")
   of LoadNull:
     op.arguments &= op.consume(Integer, "LOADN expects an integer at position 1")
   of ReadRegister:
@@ -499,7 +487,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     msg "load int"
     interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
     inc interpreter.currIndex
-  of AddInt, AddStr:
+  of AddInt:
     msg "add int or str"
     interpreter.appendAtom(
       (&op.arguments[0].getInt()).uint, (&op.arguments[1].getInt()).uint
@@ -594,48 +582,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
 
     list.sequence.add((&source)[])
 
-    interpreter.stack[pos] = list
-    inc interpreter.currIndex
-  of PopList:
-    msg "pop list"
-    let
-      pos = (&op.arguments[0].getInt()).uint
-      curr = interpreter.get(pos)
-
-    if not *curr:
-      inc interpreter.currIndex
-      return
-
-    var list = &curr
-
-    if list.kind != Sequence or list.sequence.len < 1:
-      inc interpreter.currIndex
-      return
-
-    let atom = list.sequence.pop()
-    interpreter.addAtom(atom, (&op.arguments[1].getInt()).uint)
-    interpreter.stack[pos] = list
-    inc interpreter.currIndex
-  of PopListPrefix:
-    msg "pop list prefix"
-    let
-      pos = (&op.arguments[0].getInt()).uint
-      curr = interpreter.get(pos)
-
-    if not *curr:
-      inc interpreter.currIndex
-      return
-
-    var list = &curr
-
-    if list.kind != Sequence or list.sequence.len < 1:
-      inc interpreter.currIndex
-      return
-
-    let atom = list.sequence[0]
-    list.sequence.del(0)
-
-    interpreter.addAtom(atom, (&op.arguments[1].getInt()).uint)
     interpreter.stack[pos] = list
     inc interpreter.currIndex
   of LoadBool:
@@ -855,12 +801,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()).uint)
         # If an invalid atom is attempted to be decremented, set its value to NaN.
 
-    inc interpreter.currIndex
-  of MarkHomogenous:
-    let idx = (&op.arguments[0].getInt()).uint
-    var atom = &interpreter.get(idx)
-
-    interpreter.addAtom(atom, idx)
     inc interpreter.currIndex
   of LoadNull:
     let idx = (&op.arguments[0].getInt()).uint
