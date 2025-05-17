@@ -1269,21 +1269,28 @@ proc parseCompoundAssignment*(parser: Parser, target: string, compound: Token): 
     parser.tokenizer = copiedTok
     atom = parser.parseAtom(&parser.tokenizer.nextExceptWhitespace())
 
+  if *expr:
+    parser.error Other, "Compound assignment with expressions is not supported yet"
+  
+  var binOp: BinaryOperation
   case compound.kind
   of TokenKind.Mul:
     # <target> *= <expr>|<atom>
-    if *expr:
-      parser.error Other, "Compound assignment with expressions is not supported yet"
-    elif *atom:
-      return some compoundAssignment(
-        BinaryOperation.Mult,
-        target = target, compounder = &atom
-      )
-    else: unreachable
+    binOp = BinaryOperation.Mult
+  of TokenKind.Add:
+    # <target> += <expr>|<atom>
+    binOp = BinaryOperation.Add
+  of TokenKind.Sub:
+    binOp = BinaryOperation.Sub
+  of TokenKind.Div:
+    binOp = BinaryOperation.Div
+  else:
+    parser.error UnexpectedToken, "expected multiplication, addition, subtraction or division as compound, got " & $compound.kind & " instead"
 
-  else: discard
-
-  assert off
+  return some compoundAssignment(
+    binOp,
+    target = target, compounder = &atom
+  )
 
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
@@ -1363,7 +1370,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
         return some increment(token.ident)
       of TokenKind.Decrement:
         return some decrement(token.ident)
-      of TokenKind.Mul:
+      of TokenKind.Mul, TokenKind.Add, TokenKind.Sub, TokenKind.Div:
         return parser.parseCompoundAssignment(token.ident, &next)
       else:
         parser.error UnexpectedToken,
