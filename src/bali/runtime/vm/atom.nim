@@ -181,14 +181,6 @@ proc getIntOrUint*(atom: MAtom | JSValue): Option[uint] {.inline.} =
   elif atom.kind == UnsignedInt:
     return atom.getUint()
 
-proc getNumeric*(atom: MAtom | JSValue): Option[float] {.inline.} =
-  if atom.kind == Integer:
-    return some(float(&atom.getInt()))
-  elif atom.kind == UnsignedInt:
-    return some(float(&atom.getFloat()))
-  elif atom.kind == Float:
-    return some(&atom.getFloat())
-
 proc getBool*(atom: MAtom | JSValue): Option[bool] {.inline.} =
   if atom.kind == Boolean:
     return some atom.state
@@ -200,6 +192,14 @@ proc getIdent*(atom: MAtom | JSValue): Option[string] {.inline.} =
 proc getFloat*(atom: MAtom | JSValue): Option[float64] {.inline.} =
   if atom.kind == Float:
     return some atom.floatVal
+
+proc getNumeric*(atom: MAtom | JSValue): Option[float] {.inline.} =
+  if atom.kind == Integer:
+    return some(float(&atom.getInt()))
+  elif atom.kind == UnsignedInt:
+    return some(float(&atom.getFloat()))
+  elif atom.kind == Float:
+    return some(&atom.getFloat())
 
 proc getSequence*(atom: MAtom | JSValue): Option[seq[MAtom]] {.inline.} =
   if atom.kind == Sequence:

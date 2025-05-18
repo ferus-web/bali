@@ -219,7 +219,7 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
   of Jump:
     op.arguments &=
       op.consume(Integer, "JUMP expects exactly one integer as an argument")
-  of AddInt, SubInt, MultInt, DivInt, PowerInt, MultFloat, DivFloat, PowerFloat,
+  of Add, Mult, Div, Sub, AddInt, SubInt, MultInt, DivInt, PowerInt, MultFloat, DivFloat, PowerFloat,
       AddFloat, SubFloat:
     for x in 1 .. 2:
       op.arguments &=
@@ -239,12 +239,6 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
   of Swap:
     for x in 1 .. 2:
       op.arguments &= op.consume(Integer, "SWAP expects an integer at position " & $x)
-  of Add, Mult, Div, Sub:
-    for x in 1 .. 3:
-      op.arguments &=
-        op.consume(
-          Integer, OpCodeToString[op.opCode] & " expects an integer at position " & $x
-        )
   of Return:
     op.arguments &= op.consume(Integer, "RETURN expects an integer at position 1")
   of JumpOnError:
@@ -740,33 +734,12 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of Add:
     let
-      a = &interpreter.get((&op.arguments[0].getInt()).uint)
+      aPos = (&op.arguments[0].getInt()).uint
+      a = &interpreter.get(aPos)
       b = &interpreter.get((&op.arguments[1].getInt()).uint)
-      storeIn = (&op.arguments[2].getInt()).uint
 
-    if a.kind != Integer or b.kind != UnsignedInt:
-      interpreter.throw(wrongType(a.kind, Integer))
-
-    if b.kind != Integer or b.kind != UnsignedInt:
-      interpreter.throw(wrongType(a.kind, Integer))
-
-    # FIXME: properly handle this garbage
-    let
-      aI =
-        case a.kind
-        of Integer:
-          &a.getInt()
-        else:
-          (&a.getUint()).int
-
-      bI =
-        case b.kind
-        of Integer:
-          &b.getInt()
-        else:
-          (&b.getUint()).int
-
-    interpreter.addAtom(integer(aI + bI), storeIn)
+    interpreter.addAtom(floating(&a.getNumeric() + &b.getNumeric()), aPos)
+    inc interpreter.currIndex
   of CrashInterpreter:
     when defined(release):
       raise newException(
@@ -902,6 +875,35 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       return
 
     interpreter.addAtom(floating(a / b), pos)
+    inc interpreter.currIndex
+  of Div:
+    let
+      posA = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get(posA)).getNumeric()
+      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getNumeric()
+
+    if b == 0f:
+      interpreter.addAtom(floating(Inf), posA)
+      inc interpreter.currIndex
+      return
+
+    interpreter.addAtom(floating(a / b), posA)
+    inc interpreter.currIndex
+  of Mult:
+    let
+      posA = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get(posA)).getNumeric()
+      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getNumeric()
+
+    interpreter.addAtom(floating(a * b), posA)
+    inc interpreter.currIndex
+  of Sub:
+    let
+      posA = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get(posA)).getNumeric()
+      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getNumeric()
+
+    interpreter.addAtom(floating(a - b), posA)
     inc interpreter.currIndex
   of PowerInt:
     let
