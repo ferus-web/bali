@@ -321,6 +321,15 @@ proc addInt*(
     )
   )
 
+proc add*(
+  gen: IRGenerator, dest, source: uint
+): uint {.inline, discardable.} =
+  gen.addOp(
+    IROperation(
+      opCode: Add, arguments: @[stackUinteger dest, stackUinteger source]
+    )
+  )
+
 proc multInt*(
     gen: IRGenerator, destination, source: uint
 ): uint {.inline, discardable.} =
@@ -328,6 +337,33 @@ proc multInt*(
   gen.addOp(
     IROperation(
       opCode: MultInt, arguments: @[stackUinteger destination, stackUinteger source]
+    )
+  )
+
+proc mult*(
+  gen: IRGenerator, dest, source: uint
+): uint {.inline, discardable.} =
+  gen.addOp(
+    IROperation(
+      opCode: Mult, arguments: @[stackUinteger dest, stackUinteger source]
+    )
+  )
+
+proc divide*(
+  gen: IRGenerator, dest, source: uint
+): uint {.inline, discardable.} =
+  gen.addOp(
+    IROperation(
+      opCode: Div, arguments: @[stackUinteger dest, stackUinteger source]
+    )
+  )
+
+proc sub*(
+  gen: IRGenerator, dest, source: uint
+): uint {.inline, discardable.} =
+  gen.addOp(
+    IROperation(
+      opCode: Sub, arguments: @[stackUinteger dest, stackUinteger source]
     )
   )
 
