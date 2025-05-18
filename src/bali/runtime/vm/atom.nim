@@ -163,16 +163,6 @@ proc getCap*(atom: var MAtom): int {.inline.} =
 
   high(int)
 
-proc markHomogenous*(atom: var MAtom) {.inline.} =
-  if atom.kind == Sequence:
-    atom.lHomogenous = true
-  else:
-    raise newException(
-      ValueError,
-      "Attempt to mark a " & $atom.kind &
-        " as a homogenous data type. Only List(s) can be marked as such.",
-    )
-
 proc getStr*(atom: MAtom | JSValue): Option[string] {.inline.} =
   if atom.kind == String:
     return some(atom.str)
@@ -202,6 +192,14 @@ proc getIdent*(atom: MAtom | JSValue): Option[string] {.inline.} =
 proc getFloat*(atom: MAtom | JSValue): Option[float64] {.inline.} =
   if atom.kind == Float:
     return some atom.floatVal
+
+proc getNumeric*(atom: MAtom | JSValue): Option[float] {.inline.} =
+  if atom.kind == Integer:
+    return some(float(&atom.getInt()))
+  elif atom.kind == UnsignedInt:
+    return some(float(&atom.getFloat()))
+  elif atom.kind == Float:
+    return some(&atom.getFloat())
 
 proc getSequence*(atom: MAtom | JSValue): Option[seq[MAtom]] {.inline.} =
   if atom.kind == Sequence:

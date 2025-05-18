@@ -493,13 +493,13 @@ proc genBinaryOp(
 
   case stmt.op
   of BinaryOperation.Add:
-    runtime.ir.addInt(leftIdx, rightIdx)
+    runtime.ir.add(leftIdx, rightIdx)
   of BinaryOperation.Sub:
-    runtime.ir.subInt(leftIdx, rightIdx)
+    runtime.ir.sub(leftIdx, rightIdx)
   of BinaryOperation.Mult:
-    runtime.ir.multInt(leftIdx, rightIdx)
+    runtime.ir.mult(leftIdx, rightIdx)
   of BinaryOperation.Div:
-    runtime.ir.divInt(leftIdx, rightIdx)
+    runtime.ir.divide(leftIdx, rightIdx)
   of BinaryOperation.Equal, BinaryOperation.TrueEqual:
     # runtime.ir.equate(leftIdx, rightIdx)
     runtime.ir.passArgument(leftIdx)
@@ -1060,13 +1060,13 @@ proc genCompoundAsgn(runtime: Runtime, fn: Function, stmt: Statement) =
 
   case stmt.compAsgnOp
   of BinaryOperation.Mult:
-    runtime.ir.multInt(target, compounder)
+    runtime.ir.mult(target, compounder)
   of BinaryOperation.Div:
-    runtime.ir.divInt(target, compounder)
+    runtime.ir.divide(target, compounder)
   of BinaryOperation.Add:
-    runtime.ir.addInt(target, compounder)
+    runtime.ir.add(target, compounder)
   of BinaryOperation.Sub:
-    runtime.ir.subInt(target, compounder)
+    runtime.ir.sub(target, compounder)
   else: unreachable
 
 proc generateBytecode(

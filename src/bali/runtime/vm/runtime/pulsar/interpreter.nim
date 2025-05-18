@@ -219,7 +219,7 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
   of Jump:
     op.arguments &=
       op.consume(Integer, "JUMP expects exactly one integer as an argument")
-  of AddInt, AddStr, SubInt, MultInt, DivInt, PowerInt, MultFloat, DivFloat, PowerFloat,
+  of Add, Mult, Div, Sub, AddInt, SubInt, MultInt, DivInt, PowerInt, MultFloat, DivFloat, PowerFloat,
       AddFloat, SubFloat:
     for x in 1 .. 2:
       op.arguments &=
@@ -239,26 +239,10 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
   of Swap:
     for x in 1 .. 2:
       op.arguments &= op.consume(Integer, "SWAP expects an integer at position " & $x)
-  of Add, Mult, Div, Sub:
-    for x in 1 .. 3:
-      op.arguments &=
-        op.consume(
-          Integer, OpCodeToString[op.opCode] & " expects an integer at position " & $x
-        )
   of Return:
     op.arguments &= op.consume(Integer, "RETURN expects an integer at position 1")
-  of SetCapList:
-    op.arguments &= op.consume(Integer, "SCAPL expects an integer at position 1")
-
-    op.arguments &= op.consume(Integer, "SCAPL expects an integer at position 2")
   of JumpOnError:
     op.arguments &= op.consume(Integer, "JMPE expects an integer at position 1")
-  of PopList, PopListPrefix:
-    for x in 1 .. 2:
-      op.arguments &=
-        op.consume(
-          Integer, OpCodeToString[op.opCode] & " expects an integer at position " & $x
-        )
   of LoadObject:
     op.arguments &= op.consume(Integer, "LOADO expects an integer at position 1")
   of LoadUndefined:
@@ -284,8 +268,6 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
       )
   of CrashInterpreter:
     discard
-  of MarkHomogenous:
-    op.arguments &= op.consume(Integer, "MARKHOMO expects an integer at position 1")
   of LoadNull:
     op.arguments &= op.consume(Integer, "LOADN expects an integer at position 1")
   of ReadRegister:
@@ -499,7 +481,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     msg "load int"
     interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
     inc interpreter.currIndex
-  of AddInt, AddStr:
+  of AddInt:
     msg "add int or str"
     interpreter.appendAtom(
       (&op.arguments[0].getInt()).uint, (&op.arguments[1].getInt()).uint
@@ -594,48 +576,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
 
     list.sequence.add((&source)[])
 
-    interpreter.stack[pos] = list
-    inc interpreter.currIndex
-  of PopList:
-    msg "pop list"
-    let
-      pos = (&op.arguments[0].getInt()).uint
-      curr = interpreter.get(pos)
-
-    if not *curr:
-      inc interpreter.currIndex
-      return
-
-    var list = &curr
-
-    if list.kind != Sequence or list.sequence.len < 1:
-      inc interpreter.currIndex
-      return
-
-    let atom = list.sequence.pop()
-    interpreter.addAtom(atom, (&op.arguments[1].getInt()).uint)
-    interpreter.stack[pos] = list
-    inc interpreter.currIndex
-  of PopListPrefix:
-    msg "pop list prefix"
-    let
-      pos = (&op.arguments[0].getInt()).uint
-      curr = interpreter.get(pos)
-
-    if not *curr:
-      inc interpreter.currIndex
-      return
-
-    var list = &curr
-
-    if list.kind != Sequence or list.sequence.len < 1:
-      inc interpreter.currIndex
-      return
-
-    let atom = list.sequence[0]
-    list.sequence.del(0)
-
-    interpreter.addAtom(atom, (&op.arguments[1].getInt()).uint)
     interpreter.stack[pos] = list
     inc interpreter.currIndex
   of LoadBool:
@@ -794,33 +734,12 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of Add:
     let
-      a = &interpreter.get((&op.arguments[0].getInt()).uint)
+      aPos = (&op.arguments[0].getInt()).uint
+      a = &interpreter.get(aPos)
       b = &interpreter.get((&op.arguments[1].getInt()).uint)
-      storeIn = (&op.arguments[2].getInt()).uint
 
-    if a.kind != Integer or b.kind != UnsignedInt:
-      interpreter.throw(wrongType(a.kind, Integer))
-
-    if b.kind != Integer or b.kind != UnsignedInt:
-      interpreter.throw(wrongType(a.kind, Integer))
-
-    # FIXME: properly handle this garbage
-    let
-      aI =
-        case a.kind
-        of Integer:
-          &a.getInt()
-        else:
-          (&a.getUint()).int
-
-      bI =
-        case b.kind
-        of Integer:
-          &b.getInt()
-        else:
-          (&b.getUint()).int
-
-    interpreter.addAtom(integer(aI + bI), storeIn)
+    interpreter.addAtom(floating(&a.getNumeric() + &b.getNumeric()), aPos)
+    inc interpreter.currIndex
   of CrashInterpreter:
     when defined(release):
       raise newException(
@@ -855,12 +774,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()).uint)
         # If an invalid atom is attempted to be decremented, set its value to NaN.
 
-    inc interpreter.currIndex
-  of MarkHomogenous:
-    let idx = (&op.arguments[0].getInt()).uint
-    var atom = &interpreter.get(idx)
-
-    interpreter.addAtom(atom, idx)
     inc interpreter.currIndex
   of LoadNull:
     let idx = (&op.arguments[0].getInt()).uint
@@ -962,6 +875,35 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       return
 
     interpreter.addAtom(floating(a / b), pos)
+    inc interpreter.currIndex
+  of Div:
+    let
+      posA = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get(posA)).getNumeric()
+      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getNumeric()
+
+    if b == 0f:
+      interpreter.addAtom(floating(Inf), posA)
+      inc interpreter.currIndex
+      return
+
+    interpreter.addAtom(floating(a / b), posA)
+    inc interpreter.currIndex
+  of Mult:
+    let
+      posA = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get(posA)).getNumeric()
+      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getNumeric()
+
+    interpreter.addAtom(floating(a * b), posA)
+    inc interpreter.currIndex
+  of Sub:
+    let
+      posA = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get(posA)).getNumeric()
+      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getNumeric()
+
+    interpreter.addAtom(floating(a - b), posA)
     inc interpreter.currIndex
   of PowerInt:
     let
