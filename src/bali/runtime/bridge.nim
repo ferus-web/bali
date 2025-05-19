@@ -239,15 +239,15 @@ proc typeRegistrationFinalizer*(runtime: Runtime) =
     let index = runtime.index(typ.name, globalIndex())
     var jsObj = obj()
 
-    for name, fn in typ.members:
-      if not fn.isFn:
-        continue
-
-      capture name, fn:
-        jsObj[name] = nativeCallable(
-          proc() =
-            fn.fn()()
-        )
+    for name, value in typ.members:
+      if value.isFn:
+        capture name, value:
+          jsObj[name] = nativeCallable(
+            proc() =
+              value.fn()()
+          )
+      else:
+        jsObj[name] = value.atom()
 
     runtime.vm.addAtom(ensureMove(jsObj), index)
 
