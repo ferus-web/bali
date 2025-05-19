@@ -1066,6 +1066,7 @@ proc parseScope*(parser: Parser): seq[Statement] =
   parser.ast.scopes.setLen(parser.ast.currentScope + 1)
   parser.ast.scopes[parser.ast.currentScope] = Scope()
   var stmts: seq[Statement]
+  var metRCurly = false
 
   while not parser.tokenizer.eof:
     let
@@ -1075,6 +1076,7 @@ proc parseScope*(parser: Parser): seq[Statement] =
 
     if *c and (&c).kind == TokenKind.RCurly:
       debug "parser: met end of curly bracket block"
+      metRCurly = true
       break
     else:
       parser.tokenizer.pos = prevPos
@@ -1084,7 +1086,7 @@ proc parseScope*(parser: Parser): seq[Statement] =
 
     if not *stmt:
       debug "parser: can't find any more statements for scope; body parsing complete"
-      break
+      continue
 
     var statement = &stmt
     statement.line = parser.tokenizer.location.line
@@ -1093,6 +1095,9 @@ proc parseScope*(parser: Parser): seq[Statement] =
     stmts &= statement
 
   dec parser.ast.currentScope
+
+  if not metRCurly:
+    parser.error Other, "scope body must end with curly bracket"
 
   stmts
 
