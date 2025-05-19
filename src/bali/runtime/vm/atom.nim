@@ -221,7 +221,6 @@ proc newJSValue*(kind: MAtomKind): JSValue =
   ensureMove(mem)
 
 proc atomToJSValue*(atom: MAtom): JSValue =
-  assert off
   var value = newJSValue(atom.kind)
   case atom.kind
   of Null, Undefined, Ident: discard

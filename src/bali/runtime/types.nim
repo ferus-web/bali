@@ -189,8 +189,6 @@ proc markGlobal*(runtime: Runtime, ident: string, index: Option[uint] = none(uin
   var toRm: seq[int]
   for i, value in runtime.values:
     if value.kind == vkGlobal and value.identifier == ident:
-      if ident == "z":
-        assert off
       toRm &= i
 
   for rm in toRm:
