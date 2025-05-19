@@ -556,10 +556,17 @@ proc genBinaryOp(
       else:
         runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
     runtime.ir.overrideArgs(equalJmp, @[stackUinteger(equalBranch)])
-  of BinaryOperation.GreaterThan, BinaryOperation.LesserThan:
+  of BinaryOperation.GreaterThan:
     discard runtime.ir.addOp(
       IROperation(
         opcode: GreaterThanInt,
+        arguments: @[stackUinteger leftIdx, stackUinteger rightIdx],
+      ) # FIXME: mirage doesn't have a nicer IR function for this.
+    )
+  of BinaryOperation.LesserThan:
+    discard runtime.ir.addOp(
+      IROperation(
+        opcode: GreaterThanEqualInt,
         arguments: @[stackUinteger leftIdx, stackUinteger rightIdx],
       ) # FIXME: mirage doesn't have a nicer IR function for this.
     )
