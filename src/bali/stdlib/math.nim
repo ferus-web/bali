@@ -22,7 +22,9 @@ let Algorithm =
   of "pcg": PCG
   of "lehmer": Lehmer64
   of "splitmix": Splitmix64
-  else: Xoroshiro128
+  else:
+    assert(off, "Invalid RNG algorithm: " & rawAlgo)
+    Xoroshiro128
 
 type JSMath = object
   E*: float = math.E

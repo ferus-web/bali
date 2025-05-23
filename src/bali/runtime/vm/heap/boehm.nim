@@ -83,12 +83,16 @@ proc baliDealloc*(p: pointer) {.inline.} =
 
   inc gcStats.currFrame
   # debug "heap: event deferral frame: " & $gcStats.currFrame
-  if gcStats.currFrame >= BaliGCStatsTrackingPerFrame:
-    #[debug "heap: hit GC-stats tracking frame deferral limit: " &
-      $BaliGCStatsTrackingPerFrame &
-      "; performing collection and updating GC stats (set -d:BaliGCStatsTrackingPerFrame to change this threshold)" ]#
+
+  when not defined(baliPreciseGCPressureTracking):
+    if gcStats.currFrame >= BaliGCStatsTrackingPerFrame:
+      #[debug "heap: hit GC-stats tracking frame deferral limit: " &
+        $BaliGCStatsTrackingPerFrame &
+        "; performing collection and updating GC stats (set -d:BaliGCStatsTrackingPerFrame to change this threshold)" ]#
+      update gcStats
+      gcStats.currFrame = 0
+  else:
     update gcStats
-    gcStats.currFrame = 0
 
 proc baliAlloc*(size: SomeInteger): pointer {.inline.} =
   debug "heap: allocating GC'd chunk of size: " & $size & " bytes"
@@ -97,14 +101,17 @@ proc baliAlloc*(size: SomeInteger): pointer {.inline.} =
   # debug "heap: zeroing out chunk"
   zeroMem(pointr, size)
 
-  inc gcStats.currFrame
-  # debug "heap: event deferral frame: " & $gcStats.currFrame
-  if gcStats.currFrame >= BaliGCStatsTrackingPerFrame:
-    #[ debug "heap: hit GC-stats tracking frame deferral limit: " &
-      $BaliGCStatsTrackingPerFrame &
-      "; performing collection and updating GC stats (set -d:BaliGCStatsTrackingPerFrame to change this threshold)" ]#
-    boehmGcfullCollect()
+  when not defined(baliPreciseGCPressureTracking):
+    inc gcStats.currFrame
+    # debug "heap: event deferral frame: " & $gcStats.currFrame
+    if gcStats.currFrame >= BaliGCStatsTrackingPerFrame:
+      #[ debug "heap: hit GC-stats tracking frame deferral limit: " &
+        $BaliGCStatsTrackingPerFrame &
+        "; performing collection and updating GC stats (set -d:BaliGCStatsTrackingPerFrame to change this threshold)" ]#
+      boehmGcfullCollect()
+      update gcStats
+      gcStats.currFrame = 0
+  else:
     update gcStats
-    gcStats.currFrame = 0
 
   pointr
