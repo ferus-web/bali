@@ -84,5 +84,16 @@ proc generateStdIR*(runtime: Runtime) =
       # function performs the following steps when called:
 
       # 1. Let S be this value.
-      var setVal = &(&setAtom.tagged("internal")).getSequence(),
+      # 2. Perform ? RequireInternalSlot(S, [[SetData]])
+      runtime.RequireInternalSlot(setAtom, JSSet)
+
+      var setVal = &(&setAtom.tagged("internal")).getSequence()
+
+      # 3. Let count be 0.
+      # 4. For each element e of S.[[SetData]], do
+      # a. If e is not empty, set count to count + 1.
+      let count = setVal.len
+
+      # 5. Return 𝔽(count).
+      ret count
   )
