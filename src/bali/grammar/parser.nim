@@ -944,6 +944,13 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
 
       parser.ast.appendToCurrentScope(callAndStoreMut(resIdent, &call))
       args.pushIdent(resIdent)
+    of TokenKind.LBracket:
+      # array
+      let arr = parser.parseArray()
+      if !arr:
+        parser.error Other, "got malformed array while parsing arguments"
+
+      args.pushAtom(&arr)
     else:
       parser.error UnexpectedToken, $token.kind
 
