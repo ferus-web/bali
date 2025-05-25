@@ -1313,7 +1313,7 @@ proc generateInternalIR*(runtime: Runtime) =
         runtime.typeError("value is undefined")
 
       if atom.isNull():
-        runtime.typeError("value is stackNull")
+        runtime.typeError("value is null")
 
       if atom.kind != Object:
         debug "runtime: atom is not an object, returning undefined."
