@@ -62,7 +62,7 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
       codegen: CodegenOpts(
         elideLoops: not ctx.enabled("disable-loop-elision"),
         loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim"),
-        aggressivelyFreeRetvals: not ctx.enabled("dont-aggressively-free-retvals"),
+        aggressivelyFreeRetvals: ctx.enabled("aggressively-free-retvals"),
       ),
     ),
   )
@@ -104,7 +104,7 @@ proc allocRuntime*(ctx: Input, file: string): Runtime =
       codegen: CodegenOpts(
         elideLoops: not ctx.enabled("disable-loop-elision"),
         loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim"),
-        aggressivelyFreeRetvals: not ctx.enabled("dont-aggressively-free-retvals"),
+        aggressivelyFreeRetvals: not ctx.enabled("aggressively-free-retvals"),
       ),
     ),
     predefinedBytecode = readFile(file),
@@ -506,7 +506,7 @@ Options:
 Codegen Flags:
   --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
   --disable-loop-allocation-elim          Don't attempt to rewrite loops to avoid unnecessary atom allocations.
-  --dont-aggressively-free-retvals        Don't aggressively zero-out the return-value register. This can speed up execution at the cost of allowing OOMs to crash the engine and/or the                                           host system. Only use this flag if you're completely sure that your code won't "clog" the return-value register!
+  --aggressively-free-retvals             Aggressively zero-out the return-value register.
 """ %
     [name, Version]
   quit(0)
