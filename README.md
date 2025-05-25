@@ -2,9 +2,14 @@
 Bali (ˈbɑːli) is a work-in-progress JavaScript lexer, parser and interpreter written in Nim that aims to be as compliant as possible to the ECMAScript specifications. \
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
 
-I repeat,
+# Integrating Bali into your programs
+Bali is still an alpha-quality project, but here's how you can embed Bali into your Nim programs.
+With it, you can:
+- Use JavaScript as a configuration language for your programs
+- Write stuff for the JS ecosystem with Nim
+and much, much more. (It becomes more useful as it advances!)
 
-**Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.**
+For more information, check out the `examples/` directory as well as the [Bali Manual](https://github.com/ferus-web/bali/blob/master/docs/MANUAL.md).
 
 # Usage
 * Bali is integrated into the [Ferus web engine](https://github.com/ferus-web/ferus) and used as the JavaScript runtime's backend
