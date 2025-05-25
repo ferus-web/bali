@@ -1400,7 +1400,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
       case next.kind
       of TokenKind.Identifier:
         return some returnFunc(next.ident)
-      of TokenKind.Number, TokenKind.String:
+      of TokenKind.Number, TokenKind.String, TokenKind.True, TokenKind.False:
         return some returnFunc(&parser.parseAtom(next))
       of TokenKind.Whitespace:
         if next.whitespace.contains(strutils.Newlines):
