@@ -1226,13 +1226,6 @@ proc parseTryClause*(parser: Parser): Option[Statement] =
   var statement = Statement(kind: TryCatch)
 
   statement.tryStmtBody = Scope(stmts: parser.parseScope())
-  if parser.tokenizer.eof or
-      (
-        let tok = (&parser.tokenizer.nextExceptWhitespace()).kind
-        tok != TokenKind.RCurly
-      ):
-    parser.error UnexpectedToken,
-      "expected right facing curly bracket to close try-clause, got " & $tok
 
   let copied = parser.tokenizer.deepCopy()
 
