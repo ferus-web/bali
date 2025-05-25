@@ -1016,7 +1016,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     else:
       interpreter.currIndex += 2
   of LesserThanEqualInt:
+    msg "ltei"
     if op.arguments.len < 2:
+      msg "expected 2 args, ignoring"
       inc interpreter.currIndex
       return
 
@@ -1028,15 +1030,18 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       return
 
     let
-      aI = (&a).getInt()
-      bI = (&b).getInt()
+      aI = (&a).getNumeric()
+      bI = (&b).getNumeric()
 
     if not *aI or not *bI:
+      msg "either of the 2 vals don't exist (or both don't)"
       return
 
     if &aI <= &bI:
+      msg "a <= b; pc++"
       inc interpreter.currIndex
     else:
+      msg "a >= b; pc += 2"
       interpreter.currIndex += 2
   of Invoke:
     let value = op.arguments[0]
