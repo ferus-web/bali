@@ -12,7 +12,7 @@ import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/abstract/equating
 import bali/stdlib/prelude
-import pkg/[crunchy, pretty]
+import pkg/[crunchy]
 
 privateAccess(PulsarInterpreter)
 privateAccess(Runtime)
@@ -81,7 +81,6 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         runtime.markLocal(fn, &stmt.binStoreIn)
       else:
         debug "ir: ...internally"
-        print stmt
         runtime.markInternal(stmt, &stmt.binStoreIn)
 
     if stmt.binLeft.kind == AtomHolder:
@@ -152,6 +151,22 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         createImmutVal("retval", &stmt.retVal),
         internal = true,
         ownerStmt = some(stmt),
+      )
+    elif *stmt.retExpr:
+      runtime.generateBytecode(
+        fn,
+        createImmutVal("retval", stackUndefined()),
+        internal = true,
+        ownerStmt = some(stmt),
+      ) # load undefined atom
+
+      var expr = &stmt.retExpr
+      expr.binStoreIn = some("retval")
+      runtime.generateBytecode(
+        fn,
+        move(expr),
+        internal = true,
+        ownerStmt = some(stmt)
       )
     else:
       runtime.generateBytecode(
@@ -348,15 +363,16 @@ proc genCall(
       # Destroy the return value, if any. This helps conserve memory.
 
 proc genReturnFn(runtime: Runtime, fn: Function, stmt: Statement) =
-  assert not (*stmt.retVal and *stmt.retIdent),
-    "ReturnFn statement cannot have both return atom and return ident at once!"
-
   runtime.expand(fn, stmt)
 
-  if !stmt.retIdent:
+  if *stmt.retVal:
     runtime.ir.returnFn(runtime.index("retval", internalIndex(stmt)).int)
-  else:
+  elif *stmt.retExpr:
+    runtime.ir.returnFn(runtime.index("retval", internalIndex(&stmt.retExpr)).int)
+  elif *stmt.retIdent:
     runtime.ir.returnFn(runtime.index(&stmt.retIdent, defaultParams(fn)).int)
+  else:
+    unreachable
 
 proc genCallAndStoreResult(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.generateBytecode(fn, stmt.storeFn)
