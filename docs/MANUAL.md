@@ -31,6 +31,8 @@ This manual is largely inspired by Monoucha's manual. \
     - [Loop Allocation Elision](#loop-allocation-elision)
     - [Return-value register scrubber](#return-value-register-scrubber)
     - [Disabling optimizations](#disabling-optimizations)
+* [Using the Native Interface](#using-the-native-interface)
+    - [A small example](#a-small-example)
 
 # Introduction
 Bali is a JavaScript engine written from scratch in Nim for the [Ferus web engine](https://github.com/ferus-web/ferus). It is designed to be convenient to interface with whilst being fast and compliant. It provides you high-level abstractions as far as humanly possible.
@@ -342,7 +344,7 @@ while (true)
 This prevents unnecessary allocations. Yay.
 
 ### Return-Value Register Scrubber
-This optimization essentially allows the engine to emit the `ZRETV` instruction. This instruction clears the return-value register, which allows the garbage collector to quickly clear up the memory it might occupy. This makes some badly written code no longer result in an OOM. It, however, like most of Bali, is not battle tested and as such, might result in undefined behaviour. It is enabled by default.
+This optimization essentially allows the engine to emit the `ZRETV` instruction. This instruction clears the return-value register, which allows the garbage collector to quickly clear up the memory it might occupy. This makes some badly written code no longer result in an OOM. It, however, like most of Bali, is not battle tested and as such, might result in undefined behaviour. It is disabled by default.
 
 ### Disabling Optimizations
 If you don't want the bytecode generator to spend time optimizing code (you're 100% sure you've written very neat code that will always make your CPU happy or something) or the bytecode generator ends up performing optimization incorrectly (rare, but if it occurs, please file a bug report), then you can disable codegen optimizations.
@@ -351,7 +353,7 @@ If you don't want the bytecode generator to spend time optimizing code (you're 1
 Balde exposes the following three flags to control optimizations:
 * --disable-loop-elision
 * --disable-loop-allocation-elim
-* --dont-aggressively-free-retvals
+* --aggressively-free-retvals
 
 #### Disabling Optimizations in Nim code
 When instantiating the `Runtime`, you can pass an `InterpreterOpts` struct containing a `CodegenOpts` struct.
@@ -366,4 +368,57 @@ var runtime = newRuntime(
     )
   )
 )
+```
+
+# Using the Native Interface
+## A small example
+Bali exposes a pretty neat two-way interface for native code written in Nim to interact with JavaScript, and vice versa. \
+Here's a short example. Here's a brief summary of what it does:
+- The JavaScript code has a function called "shoutify" which takes in an argument and returns an all-upper-case version of it.
+- The Nim code has a function called "greet" which takes in an argument and prints "Hi there, <argument>" to stdout.
+- The JS code firstly calls the native greet function, passing "tray" as an argument. As expected, "Hi there, tray" gets printed to stdout.
+- After the execution is done, the Nim code tries finding a reference to the "shoutify" function in the global scope.
+- Then, it calls this function from Nim-land with the argument "tray".
+- The JS function turns this argument all into uppercase ("TRAY") and returns it.
+- Then, the Nim-land code gets it back and prints it out.
+```nim
+import pkg/bali/grammar/prelude
+import pkg/bali/runtime/prelude
+
+proc main =
+  let parser = newParser(
+    """
+let greeting = greet("tray") // Here, we're calling a native function written in Nim
+console.log(greeting)
+
+function shoutify(name)
+{
+  // Make a name seem like it's been SHOUTED OUT.
+  // This is called by native code.
+  var x = new String(name);
+  var y = x.toUpperCase() // Fun fact: `toUpperCase()` is native code. So here, we have native code calling interpreted code, which in turn calls more native code. :^)
+
+  return y
+}
+"""
+  )
+  let ast = parser.parse()
+  var runtime = newRuntime("interop.js", ast)
+
+  runtime.defineFn(
+    "greet",
+    proc() =
+      let arg = runtime.ToString(&runtime.argument(1))
+      ret str("Hi there, " & arg)
+    ,
+  )
+
+  runtime.run() # Execute what we have so far.
+  
+  let fn = runtime.get("shoutify") # Get the `shoutify` value reference in the global scope
+  if !fn:
+    return
+
+  let retval = runtime.call(&fn, str("tray")) # Call the `shoutify` function in bytecode. Pass it the arguments it expects.
+  echo "I AM SHOUTING YOUR NAME AT YOU, " & runtime.ToString(retval) # Take its return value and print it out.
 ```
