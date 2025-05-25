@@ -598,6 +598,13 @@ proc genBinaryOp(
     
     runtime.ir.overrideArgs(jmpAfterTrueBranch, @[stackUinteger(falseBranch + 1)])
     runtime.ir.overrideArgs(falseJump, @[stackUinteger(falseBranch + 1)]) ]#
+  of BinaryOperation.LesserOrEqual:
+    discard runtime.ir.addOp(
+      IROperation(
+        opcode: LesserThanEqualInt,
+        arguments: @[stackUinteger leftIdx, stackUinteger rightIdx],
+      )
+    )
   else:
     warn "emitter: unimplemented binary operation: " & $stmt.op
 
@@ -1010,7 +1017,7 @@ proc genForLoop(runtime: Runtime, fn: Function, stmt: Statement) =
     unreachable
     0'u
 
-  let conditionalJump = getCurrOpNum() + 1'u
+  let conditionalJump = getCurrOpNum()
 
   # Generate IR for conditional, if it exists.
   # TODO: Else, just equate `0` to `0`
