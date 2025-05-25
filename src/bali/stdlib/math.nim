@@ -14,14 +14,22 @@ const rawAlgo {.strdefine: "BaliRNGAlgorithm".} = "xoroshiro128"
 
 let Algorithm =
   case rawAlgo
-  of "xoroshiro128": Xoroshiro128
-  of "xoroshiro128pp": Xoroshiro128PlusPlus
-  of "xoroshiro128ss": Xoroshiro128StarStar
-  of "mersenne_twister": MersenneTwister
-  of "marsaglia": Marsaglia69069
-  of "pcg": PCG
-  of "lehmer": Lehmer64
-  of "splitmix": Splitmix64
+  of "xoroshiro128":
+    Xoroshiro128
+  of "xoroshiro128pp":
+    Xoroshiro128PlusPlus
+  of "xoroshiro128ss":
+    Xoroshiro128StarStar
+  of "mersenne_twister":
+    MersenneTwister
+  of "marsaglia":
+    Marsaglia69069
+  of "pcg":
+    PCG
+  of "lehmer":
+    Lehmer64
+  of "splitmix":
+    Splitmix64
   else:
     assert(off, "Invalid RNG algorithm: " & rawAlgo)
     Xoroshiro128

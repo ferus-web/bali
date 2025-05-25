@@ -27,7 +27,8 @@ type
 
 template error(parser: Parser, errorKind: ParseErrorKind, msg: string) =
   const inf = instantiationInfo()
-  warn "parser[" & $inf.line & ':' & $inf.column & "] parsing error (" & $errorKind & "): " & msg
+  warn "parser[" & $inf.line & ':' & $inf.column & "] parsing error (" & $errorKind &
+    "): " & msg
   parser.errors &=
     ParseError(kind: errorKind, location: parser.tokenizer.location, message: msg)
 
@@ -1258,14 +1259,19 @@ proc parseTryClause*(parser: Parser): Option[Statement] =
 
   some(ensureMove(statement))
 
-proc parseCompoundAssignment*(parser: Parser, target: string, compound: Token): Option[Statement] =
+proc parseCompoundAssignment*(
+    parser: Parser, target: string, compound: Token
+): Option[Statement] =
   if parser.tokenizer.eof:
-    parser.error Other, "expected equal-sign to start compound assignment, got EOF instead."
+    parser.error Other,
+      "expected equal-sign to start compound assignment, got EOF instead."
 
   let expEquals = parser.tokenizer.next()
   if expEquals.kind != TokenKind.EqualSign:
-    parser.error Other, "expected equal-sign to start compound assignment, got " & $expEquals.kind & " instead."
-  
+    parser.error Other,
+      "expected equal-sign to start compound assignment, got " & $expEquals.kind &
+        " instead."
+
   let copiedTok = parser.tokenizer.deepCopy()
   let expr = parser.parseExpression()
   var atom: Option[MAtom]
@@ -1276,7 +1282,7 @@ proc parseCompoundAssignment*(parser: Parser, target: string, compound: Token): 
 
   if *expr:
     parser.error Other, "Compound assignment with expressions is not supported yet"
-  
+
   var binOp: BinaryOperation
   case compound.kind
   of TokenKind.Mul:
@@ -1290,12 +1296,11 @@ proc parseCompoundAssignment*(parser: Parser, target: string, compound: Token): 
   of TokenKind.Div:
     binOp = BinaryOperation.Div
   else:
-    parser.error UnexpectedToken, "expected multiplication, addition, subtraction or division as compound, got " & $compound.kind & " instead"
+    parser.error UnexpectedToken,
+      "expected multiplication, addition, subtraction or division as compound, got " &
+        $compound.kind & " instead"
 
-  return some compoundAssignment(
-    binOp,
-    target = target, compounder = &atom
-  )
+  return some compoundAssignment(binOp, target = target, compounder = &atom)
 
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:

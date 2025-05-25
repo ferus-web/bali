@@ -4,7 +4,7 @@
 import std/os
 import pkg/bali/easy
 
-proc main =
+proc main() =
   if paramCount() < 1:
     quit("Usage: javascript_validator [file]")
 
@@ -20,4 +20,5 @@ proc main =
     echo "Aw, this is invalid JavaScript code."
     quit(1)
 
-when isMainModule: main()
+when isMainModule:
+  main()

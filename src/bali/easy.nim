@@ -3,8 +3,7 @@
 ## Use this to make Bali's already-simple API even simpler. Get all of Bali's uses while on easy-mode.
 ## It doesn't get easier than this. :^)
 import std/os
-import pkg/bali/grammar/[ast, parser],
-       pkg/bali/runtime/prelude
+import pkg/bali/grammar/[ast, parser], pkg/bali/runtime/prelude
 
 export prelude
 
@@ -15,10 +14,7 @@ proc createRuntimeForSource*(source: string): Runtime =
   var parser = newParser(source)
   let ast = parser.parse()
 
-  newRuntime(
-    "<eval>",
-    ast
-  )
+  newRuntime("<eval>", ast)
 
 proc createRuntimeForFile*(file: string): Runtime =
   ## Parse a JavaScript file's contents and
@@ -26,15 +22,15 @@ proc createRuntimeForFile*(file: string): Runtime =
   ##
   ## This function handles some cases for the file itself (like it not existing).
   if not fileExists(file):
-    raise newException(IOError, "Failed to open JavaScript source file `" & file & "`: File does not exist!")
+    raise newException(
+      IOError,
+      "Failed to open JavaScript source file `" & file & "`: File does not exist!",
+    )
 
   var parser = newParser(readFile(file))
   let ast = parser.parse()
 
-  newRuntime(
-    file,
-    ast
-  )
+  newRuntime(file, ast)
 
 proc isValidJS*(source: string): bool =
   ## Given a JavaScript source, parse it to check whether it is free

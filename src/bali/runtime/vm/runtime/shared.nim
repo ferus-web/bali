@@ -83,7 +83,6 @@ type
     ## adder: Integer - the index on the stack from which the integer is read and added to the value
     AddInt = 0xa
 
-
     ## Subtract from a pre-existing cell on the stack, granted that it is an integer as well.
     ## Arguments:
     ## value: Integer - the index on the stack to subtract from

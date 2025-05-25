@@ -51,7 +51,7 @@ proc find*(clause: Clause, id: uint): Option[Operation] =
   if clause.operations.len.uint <= id:
     vmd "find-op-in-clause", "id is beyond op len of " & $clause.operations.len.uint
     return
-  
+
   vmd "find-op-in-clause", "found op: " & $clause.operations[id].opcode
   some(clause.operations[id])
 
@@ -121,7 +121,7 @@ proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) =
   if id > uint(interpreter.stack.len - 1):
     # We need to allocate more slots.
     interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
-  
+
   interpreter.stack[id] = value
 
 proc hasBuiltin*(interpreter: PulsarInterpreter, name: string): bool =
@@ -220,8 +220,8 @@ proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation)
   of Jump:
     op.arguments &=
       op.consume(Integer, "JUMP expects exactly one integer as an argument")
-  of Add, Mult, Div, Sub, AddInt, SubInt, MultInt, DivInt, PowerInt, MultFloat, DivFloat, PowerFloat,
-      AddFloat, SubFloat:
+  of Add, Mult, Div, Sub, AddInt, SubInt, MultInt, DivInt, PowerInt, MultFloat,
+      DivFloat, PowerFloat, AddFloat, SubFloat:
     for x in 1 .. 2:
       op.arguments &=
         op.consume(
@@ -441,7 +441,9 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
   else:
     msg name & " is not a builtin, finding bytecode clause"
     let (index, clause) = (
-      proc(interp: PulsarInterpreter): tuple[index: int, clause: Option[Clause]] {.gcsafe.} =
+      proc(
+          interp: PulsarInterpreter
+      ): tuple[index: int, clause: Option[Clause]] {.gcsafe.} =
         for i, cls in interp.clauses:
           if cls.name == name:
             return (index: i, clause: some cls)
@@ -517,12 +519,12 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       boehmGCFullCollect()
 
     let pos = op.arguments[0].getInt()
-    
+
     if not *pos:
       msg "got jump but index is not given, ignoring"
       inc interpreter.currIndex
       return
-    
+
     msg "jump to " & $(&pos)
     interpreter.currIndex = (&pos).uint - 1'u
   of Return:
@@ -789,7 +791,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       regId = (&op.arguments[regIndex].getInt())
 
     msg "idx: " & $idx & ", regIndex: " & $regIndex & ", regId: " & $regId
-    
+
     case regId
     of 0:
       # 0 - retval register
@@ -1097,13 +1099,13 @@ proc run*(interpreter: var PulsarInterpreter) =
       if clause.rollback.clause == int.low:
         vmd "rollback", "clause == int.low; exec has finished"
         break
-      
+
       vmd "rollback", "rollback clause: " & $clause.rollback.clause
       vmd "rollback", "rollback pc: " & $clause.rollback.opIndex
       interpreter.currClause = clause.rollback.clause
       interpreter.currIndex = clause.rollback.opIndex
       continue
-    
+
     var operation = &op
     let index = interpreter.currIndex
     let clauseIndex = interpreter.currClause
@@ -1116,7 +1118,7 @@ proc run*(interpreter: var PulsarInterpreter) =
       operation.resolved = true
 
       vmd "decode", "resolved/decoded op"
-    
+
     vmd "execute", "exec phase beginning"
     interpreter.execute(operation)
     vmd "execute", "exec phase ended, saving op state"

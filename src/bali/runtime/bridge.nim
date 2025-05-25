@@ -115,9 +115,12 @@ proc getReturnValue*(runtime: Runtime): Option[JSValue] =
 
 proc get*(runtime: Runtime, identifier: string): Option[JSValue] =
   for value in runtime.values:
-    if value.kind != vkGlobal: continue
-    if value.identifier != identifier: continue
-    if value.index > runtime.vm.stack.len.uint: continue
+    if value.kind != vkGlobal:
+      continue
+    if value.identifier != identifier:
+      continue
+    if value.index > runtime.vm.stack.len.uint:
+      continue
 
     return some(runtime.vm.stack[value.index])
 
@@ -290,11 +293,10 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
 proc call*(runtime: Runtime, callable: JSValue, arguments: varargs[JSValue]): JSValue =
   if callable.kind != BytecodeCallable:
     raise newException(ValueError, "Cannot call value of type " & $callable.kind)
-  
+
   for arg in arguments:
-    runtime.vm.registers.callArgs &=
-      arg
-  
+    runtime.vm.registers.callArgs &= arg
+
   runtime.vm.call(&callable.getBytecodeClause(), default(Operation))
   runtime.vm.run()
 

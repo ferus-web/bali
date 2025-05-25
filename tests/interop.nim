@@ -30,7 +30,7 @@ function shoutify(name)
   )
 
   runtime.run()
-  
+
   let fn = runtime.get("shoutify")
   if !fn:
     return

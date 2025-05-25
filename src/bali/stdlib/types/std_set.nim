@@ -96,4 +96,5 @@ proc generateStdIR*(runtime: Runtime) =
 
       # 5. Return 𝔽(count).
       ret count
+    ,
   )

@@ -223,7 +223,8 @@ proc newJSValue*(kind: MAtomKind): JSValue =
 proc atomToJSValue*(atom: MAtom): JSValue =
   var value = newJSValue(atom.kind)
   case atom.kind
-  of Null, Undefined, Ident: discard
+  of Null, Undefined, Ident:
+    discard
   of String:
     value.str = atom.str
   of Integer:
@@ -238,7 +239,8 @@ proc atomToJSValue*(atom: MAtom): JSValue =
     value.state = atom.state
   of Object:
     value.objFields = atom.objFields
-    value.objValues = atom.objValues # TODO: this might be dangerous. perhaps we should run `atomToJSValue` on all the objvalues too.
+    value.objValues = atom.objValues
+      # TODO: this might be dangerous. perhaps we should run `atomToJSValue` on all the objvalues too.
   of Float:
     value.floatval = atom.floatVal
   of BigInteger:

@@ -283,7 +283,8 @@ proc breakStmt*(): Statement =
 proc returnFunc*(): Statement =
   Statement(kind: ReturnFn)
 
-proc returnFunc*(expr: Statement): Statement = Statement(kind: ReturnFn, retExpr: some(expr))
+proc returnFunc*(expr: Statement): Statement =
+  Statement(kind: ReturnFn, retExpr: some(expr))
 
 proc waste*(atom: MAtom): Statement =
   Statement(kind: Waste, wstAtom: atom.some())
@@ -404,15 +405,13 @@ proc callFunction*(name: string, field: FieldAccess): FunctionCall =
   FunctionCall(function: name, field: some field)
 
 proc compoundAssignment*(
-  op: BinaryOperation,
-  target: string,
-  compounder: MAtom
+    op: BinaryOperation, target: string, compounder: MAtom
 ): Statement =
   Statement(
     kind: CompoundAssignment,
     compAsgnTarget: target,
     compAsgnCompounder: compounder,
-    compAsgnOp: op
+    compAsgnOp: op,
   )
 
 {.pop.}

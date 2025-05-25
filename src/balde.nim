@@ -171,8 +171,8 @@ proc dumpStatisticsPretty(runtime: Runtime) =
   else:
     stdout.styledWriteLine(
       "* ", styleItalic, styleBright,
-      "Cannot show Nim's traced allocations/deallocations; compile Balde with ", resetStyle,
-      fgGreen, "--define:nimAllocStats", resetStyle, styleItalic,
+      "Cannot show Nim's traced allocations/deallocations; compile Balde with ",
+      resetStyle, fgGreen, "--define:nimAllocStats", resetStyle, styleItalic,
       " to see allocation/deallocation statistics.",
     )
 

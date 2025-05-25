@@ -162,12 +162,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
 
       var expr = &stmt.retExpr
       expr.binStoreIn = some("retval")
-      runtime.generateBytecode(
-        fn,
-        move(expr),
-        internal = true,
-        ownerStmt = some(stmt)
-      )
+      runtime.generateBytecode(fn, move(expr), internal = true, ownerStmt = some(stmt))
     else:
       runtime.generateBytecode(
         fn,
@@ -1097,7 +1092,8 @@ proc genCompoundAsgn(runtime: Runtime, fn: Function, stmt: Statement) =
     runtime.ir.add(target, compounder)
   of BinaryOperation.Sub:
     runtime.ir.sub(target, compounder)
-  else: unreachable
+  else:
+    unreachable
 
 proc generateBytecode(
     runtime: Runtime,
@@ -1509,7 +1505,8 @@ proc run*(runtime: Runtime, typeRegistrationCb: proc(runtime: Runtime) = nil) =
   for ident in ["undefined", "NaN", "true", "false", "null"]:
     runtime.markGlobal(ident)
 
-  if typeRegistrationCb != nil: typeRegistrationCb(runtime)
+  if typeRegistrationCb != nil:
+    typeRegistrationCb(runtime)
 
   runtime.generateBytecodeForScope(runtime.ast.scopes[0])
 

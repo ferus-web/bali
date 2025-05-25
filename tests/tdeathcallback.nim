@@ -1,13 +1,13 @@
-import pkg/bali/runtime/prelude,
-       pkg/bali/grammar/prelude,
-       pkg/bali/stdlib/errors,
-       pkg/pretty
+import
+  pkg/bali/runtime/prelude, pkg/bali/grammar/prelude, pkg/bali/stdlib/errors, pkg/pretty
 
-var parser = newParser("""
+var parser = newParser(
+  """
 function x() { console.log("hi") }
 
 x())
-""")
+"""
+)
 
 let ast = parser.parse()
 
