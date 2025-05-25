@@ -7,6 +7,15 @@ proc main() {.inline.} =
     """
 let greeting = greet("tray")
 console.log(greeting)
+
+function shoutify(name)
+{
+  // Make a name seem like it's been SHOUTED OUT.
+  var x = new String(name);
+  var y = x.toUpperCase()
+
+  return y
+}
 """
   )
   let ast = parser.parse()
@@ -21,6 +30,13 @@ console.log(greeting)
   )
 
   runtime.run()
+  
+  let fn = runtime.get("shoutify")
+  if !fn:
+    return
+
+  let retval = runtime.call(&fn, str("tray"))
+  echo "I AM SHOUTING YOUR NAME AT YOU, " & runtime.ToString(retval)
 
 when isMainModule:
   main()
