@@ -625,11 +625,12 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
 
     if not *a or not *b:
       msg "gti: a is empty=" & $(*a) & "; b is empty=" & $(*b)
+
       return
 
     let
-      aI = (&a).getInt()
-      bI = (&b).getInt()
+      aI = (&a).getNumeric()
+      bI = (&b).getNumeric()
 
     if not *aI or not *bI:
       msg "gti: aI is empty=" & $(*aI) & "; bI is empty=" & $(*bI)
