@@ -144,6 +144,7 @@ proc throw*(
 ) =
   if *interpreter.currJumpOnErr:
     interpreter.currIndex = &interpreter.currJumpOnErr - 2
+    interpreter.currJumpOnErr = none(uint)
     return
 
   var exception = deepCopy(exception)
