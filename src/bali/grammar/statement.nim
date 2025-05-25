@@ -107,6 +107,7 @@ type
     of ReturnFn:
       retVal*: Option[MAtom]
       retIdent*: Option[string]
+      retExpr*: Option[Statement]
     of CallAndStoreResult:
       mutable*: bool
       storeIdent*: string
@@ -281,6 +282,8 @@ proc breakStmt*(): Statement =
 
 proc returnFunc*(): Statement =
   Statement(kind: ReturnFn)
+
+proc returnFunc*(expr: Statement): Statement = Statement(kind: ReturnFn, retExpr: some(expr))
 
 proc waste*(atom: MAtom): Statement =
   Statement(kind: Waste, wstAtom: atom.some())

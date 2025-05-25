@@ -1396,6 +1396,11 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     while not parser.tokenizer.eof():
       let next = parser.tokenizer.next()
+      let copied = deepCopy(parser.tokenizer)
+      if (let expr = parser.parseExpression(); *expr):
+        return some returnFunc(&expr)
+      else:
+        parser.tokenizer = copied
 
       case next.kind
       of TokenKind.Identifier:
