@@ -624,6 +624,11 @@ proc genBinaryOp(
 
 proc genIfStmt(runtime: Runtime, fn: Function, stmt: Statement) =
   info "emitter: emitting IR for if statement"
+
+  if runtime.opts.codegen.deadCodeElimination and conditionalIsDead(stmt):
+    debug "emitter: dce tells us that the if statement is unreachable, preventing codegen for it"
+    return
+
   runtime.expand(fn, stmt)
 
   let
@@ -1002,9 +1007,9 @@ proc genTernaryOp(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.ir.copyAtom(addrOfFalseExpr, finalAddr)
 
 proc genForLoop(runtime: Runtime, fn: Function, stmt: Statement) =
-  if runtime.opts.codegen.deadCodeElimination and
-      forLoopIsDead(stmt):
+  if runtime.opts.codegen.deadCodeElimination and forLoopIsDead(stmt):
     # If the for-loop has no side effects, we can safely elide it.
+    debug "emitter: dce tells us that this for-loop has no side effects, preventing codegen"
     return
 
   # Generate bytecode for initializer, if it exists.

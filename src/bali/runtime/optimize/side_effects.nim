@@ -2,12 +2,11 @@
 ## 
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import std/options
-import pkg/bali/grammar/[statement],
-       pkg/shakar
+import pkg/bali/grammar/[statement], pkg/shakar
 
 proc hasSideEffects*(stmt: Statement): bool =
   case stmt.kind
-  of { CreateMutVal, CreateImmutVal, BinaryOp }:
+  of {CreateMutVal, CreateImmutVal, BinaryOp}:
     # We know that these won't cause any observable
     # side effects.
 
@@ -27,7 +26,7 @@ proc isScopeSideEffectFree*(scope: Scope): bool =
 # Side-effect free for-loops can be proven safe-to-eliminate via these two subroutines
 proc forLoopIteratorHasSideEffects*(iter, initializer: Statement): bool =
   var initIdent: string
-  
+
   # If the initializer creates a value, then we can proceed.
   # Else, we can assume that the loop does indeed have side effects.
   case initializer.kind
@@ -37,13 +36,14 @@ proc forLoopIteratorHasSideEffects*(iter, initializer: Statement): bool =
     initIdent = initializer.imIdentifier
   else:
     return true
-  
+
   return (
     case iter.kind
     of Increment: iter.incIdent != initIdent
     of Decrement: iter.decIdent != initIdent
     # TODO: add more cases here so that we can safely prove more cases as elidable
-    else: true
+    else:
+      true
   )
 
 proc forLoopHasObservableSideEffects*(loop: Statement): bool =
@@ -65,7 +65,7 @@ proc forLoopHasObservableSideEffects*(loop: Statement): bool =
       # is most likely accessing an outer variable. In this case, the loop
       # carries a side-effect.
       return true
-    
+
     # Check whether the iteration statement only mutates the initializer's variable.
     # If not, then this loop has a side effect.
     return forLoopIteratorHasSideEffects(&loop.forLoopIter, &loop.forLoopInitializer)
