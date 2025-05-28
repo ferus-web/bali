@@ -8,7 +8,9 @@ import bali/internal/sugar
 import
   bali/runtime/
     [normalize, types, atom_helpers, arguments, statement_utils, bridge, describe]
-import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
+import
+  bali/runtime/optimize/
+    [mutator_loops, redundant_loop_allocations, ast_liveness_analysis]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/abstract/equating
 import bali/stdlib/prelude
@@ -1000,7 +1002,12 @@ proc genTernaryOp(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.ir.copyAtom(addrOfFalseExpr, finalAddr)
 
 proc genForLoop(runtime: Runtime, fn: Function, stmt: Statement) =
-  # Generate IR for initializer, if it exists.
+  if runtime.opts.codegen.deadCodeElimination and
+      forLoopIsDead(stmt):
+    # If the for-loop has no side effects, we can safely elide it.
+    return
+
+  # Generate bytecode for initializer, if it exists.
   if *stmt.forLoopInitializer:
     runtime.generateBytecode(fn, &stmt.forLoopInitializer)
 

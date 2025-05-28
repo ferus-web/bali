@@ -38,7 +38,8 @@ type
   CodegenOpts* = object
     elideLoops*: bool = true
     loopAllocationEliminator*: bool = true
-    aggressivelyFreeRetvals*: bool = true
+    aggressivelyFreeRetvals*: bool = false
+    deadCodeElimination*: bool = true
 
   InterpreterOpts* = object
     test262*: bool = false
