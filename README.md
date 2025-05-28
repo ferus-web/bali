@@ -23,6 +23,8 @@ You can check how much Bali progresses/regresses by each day's run.
 # How fast is it?
 With some recent codegen optimizations, Bali is already pretty fast on cherry-picked benchmarks. Bali can perform some optimizations when it is generating code for the provided JavaScript source, granted that it can prove that there is an opportunity to optimize away things.
 
+It also has some rudimentary dead code elimination for some cases.
+
 # How "well written" is it?
 Bali is formatted using the [nph](https://github.com/arnetheduck/nph) code formatter and each commit is statically analyzed by [Nimalyzer](https://github.com/thindil/nimalyzer).
 

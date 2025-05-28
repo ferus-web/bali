@@ -63,6 +63,7 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
         elideLoops: not ctx.enabled("disable-loop-elision"),
         loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim"),
         aggressivelyFreeRetvals: ctx.enabled("aggressively-free-retvals"),
+        deadCodeElimination: not ctx.enabled("disable-dead-code-elim"),
       ),
     ),
   )
@@ -105,6 +106,7 @@ proc allocRuntime*(ctx: Input, file: string): Runtime =
         elideLoops: not ctx.enabled("disable-loop-elision"),
         loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim"),
         aggressivelyFreeRetvals: not ctx.enabled("aggressively-free-retvals"),
+        deadCodeElimination: not ctx.enabled("disable-dead-code-elim"),
       ),
     ),
     predefinedBytecode = readFile(file),
@@ -507,6 +509,7 @@ Codegen Flags:
   --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
   --disable-loop-allocation-elim          Don't attempt to rewrite loops to avoid unnecessary atom allocations.
   --aggressively-free-retvals             Aggressively zero-out the return-value register.
+  --disable-dead-code-elim                Disable dead code elimination during the codegen phase.
 """ %
     [name, Version]
   quit(0)
