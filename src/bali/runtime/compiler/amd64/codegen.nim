@@ -1,9 +1,11 @@
-import std/[logging, posix, hashes, tables, options]
+import std/[logging, posix, hashes, tables, options, streams]
 import pkg/bali/runtime/compiler/base
 import pkg/catnip/[x64assembler],
-       pkg/pretty
+       pkg/[shakar]
 import pkg/bali/runtime/vm/atom,
-       pkg/bali/runtime/vm/runtime/shared
+       pkg/bali/runtime/vm/runtime/shared,
+       pkg/bali/runtime/vm/runtime/pulsar/resolver,
+       pkg/bali/runtime/atom_helpers
 
 type
   AMD64Codegen* = object
@@ -26,23 +28,84 @@ proc allocateNativeSegment(cgen: var AMD64Codegen) =
   if (let code = mprotect(cgen.s.data, 0x10000, PROT_READ or PROT_WRITE or PROT_EXEC); code != 0):
     warn "jit/amd64: failed to mark buffer as executable: mprotect() returned: " & $code
 
+proc prepareAtomAddCall(cgen: var AMD64Codegen, index: int64) =
+  # Signature for addAtom is:
+  # proc(vm: var PulsarInterpreter, atom: JSValue, index: uint): void
+  cgen.s.mov(regRdi, cast[int64](cgen.vm)) # pass the pointer to the vm
+  cgen.s.mov(reg(regRsi), regRax) # The JSValue
+  cgen.s.mov(regRdx, index) # The index
+  cgen.s.call(cgen.callbacks.addAtom)
+
+proc setFieldValueImpl(atom: JSValue, name: string, value: JSValue) {.cdecl.} =
+  atom[name] = value
+
+proc dump*(cgen: var AMD64Codegen, file: string) =
+  var stream = newFileStream(file, fmWrite)
+  stream.writeData(cgen.s.data[0].addr, 0x10000)
+  stream.close()
+
 proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
   for op in clause.operations:
-    print op.opcode
+    var op = op # FIXME: stupid ugly hack
+    clause.resolve(op)
+    
     case op.opcode
     of LoadUndefined:
       cgen.s.sub(reg(regRsp), 8)
       cgen.s.call(undefined) # we have the output in rax now
       cgen.s.add(reg(regRsp), 8)
       
-      cgen.s.mov(reg(regRdi), cast[uint64](cgen.vm)) # pass the pointer to the vm
-      cgen.s.mov(reg(regRdi), regRax)
-      cgen.s.call(cgen.callbacks.addAtom)
+      cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
+    of LoadNull:
+      cgen.s.sub(reg(regRsp), 8)
+      cgen.s.call(null) # we have the output in rax now
+      cgen.s.add(reg(regRsp), 8)
+      
+      cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
+    of LoadFloat:
+      case op.arguments[1].kind
+      of String:
+        # it's NaN
+        cgen.s.mov(regRdi, 0x7FF0000000000001'i64)
+      of Float:
+        cgen.s.mov(regRdi, cast[int64](&op.arguments[1].getFloat()))
+      else:
+        unreachable
+
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(floating)
+      cgen.s.add(reg(regRsp), 8)
+
+      cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
+    of LoadBool:
+      cgen.s.mov(regRdi, int32(&op.arguments[1].getBool()))
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(boolean)
+      cgen.s.add(reg(regRsp), 8)
+
+      cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
+    of CreateField:
+      discard # TODO: implement
+    of LoadInt:
+      cgen.s.mov(regRdi, int64(&op.arguments[1].getInt()))
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(integer)
+      cgen.s.add(regRsp.reg, 8)
+
+      cgen.prepareAtomAddCall(int64(&op.arguments[1].getInt()))
+    of Add:
+      # TODO: I think we should remove UnsignedInt altogether.
+      # They're against the spec, and make this op awful to implement.
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(rawGetImpl)
+    of CopyAtom:
+      discard # TODO: implement
     else:
       error "jit/amd64: cannot compile op: " & $op.opcode
       error "jit/amd64: bailing out, this clause will be interpreted"
       return false
-
+  
+  cgen.s.ret()
   true
 
 proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
@@ -53,15 +116,21 @@ proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
 
   allocateNativeSegment(cgen)
   if emitNativeCode(cgen, clause):
+    cgen.dump("bali-jit-fail.bin")
     some(cast[JITSegment](cgen.s.data))
   else:
+    warn "jit/amd64: failed to emit native code for clause."
+    warn "jit/amd64: the partially emitted code will be dumped to `bali-jit-fail.bin`"
+    
+    cgen.dump("bali-jit-fail.bin")
     none(JITSegment)
 
-proc initAMD64Codegen*(callbacks: VMCallbacks): AMD64Codegen =
+proc initAMD64Codegen*(vm: pointer, callbacks: VMCallbacks): AMD64Codegen =
   info "jit/amd64: initializing"
 
   var cgen = AMD64Codegen(
     s: initAssemblerX64(nil),
+    vm: vm,
     callbacks: callbacks
   )
   cgen.pageSize = sysconf(SC_PAGESIZE)

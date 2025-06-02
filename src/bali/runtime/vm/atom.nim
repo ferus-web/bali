@@ -1,7 +1,7 @@
 ## MAtoms are a dynamic-ish type used by all of Mirage to pass around values from the emitter to the interpreter, 
 ## to the calling Nim code itself.
 
-import std/[strutils, tables, hashes, options]
+import std/[tables, hashes, options]
 import pkg/gmp
 import ./heap/boehm
 import ./utils
@@ -252,7 +252,7 @@ proc atomToJSValue*(atom: MAtom): JSValue =
 
   move(value)
 
-proc str*(s: string, inRuntime: bool = false): JSValue {.inline.} =
+proc str*(s: string, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(String)
   mem.str = s
 
@@ -263,7 +263,7 @@ func stackStr*(s: string): MAtom =
   ## This is used by the parser.
   MAtom(kind: String, str: s)
 
-proc ident*(ident: string): JSValue {.inline.} =
+proc ident*(ident: string): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Ident)
   mem.ident = ident
 
@@ -274,7 +274,7 @@ func stackIdent*(i: string): MAtom =
   ## This is used by the parser.
   MAtom(kind: Ident, ident: i)
 
-proc integer*(i: int, inRuntime: bool = false): JSValue =
+proc integer*(i: int, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Integer)
   mem.integer = i
 
@@ -285,7 +285,7 @@ func stackInteger*(i: int): MAtom =
   ## This is used by the parser.
   MAtom(kind: Integer, integer: i)
 
-proc uinteger*(u: uint, inRuntime: bool = false): JSValue =
+proc uinteger*(u: uint, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(UnsignedInt)
   mem.uinteger = u
 
@@ -296,13 +296,13 @@ func stackUinteger*(u: uint): MAtom =
   ## This is used by the parser.
   MAtom(kind: UnsignedInt, uinteger: u)
 
-proc boolean*(b: bool, inRuntime: bool = false): JSValue =
+proc boolean*(b: bool, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Boolean)
   mem.state = b
 
   ensureMove(mem)
 
-proc nativeCallable*(fn: proc()): JSValue =
+proc nativeCallable*(fn: proc()): JSValue {.inline, cdecl.} =
   var mem = newJSValue(NativeCallable)
   mem.fn = fn
 
@@ -311,7 +311,7 @@ proc nativeCallable*(fn: proc()): JSValue =
 func stackBoolean*(b: bool): MAtom =
   MAtom(kind: Boolean, state: b)
 
-proc bytecodeCallable*(clause: string, inRuntime: bool = false): JSValue =
+proc bytecodeCallable*(clause: string, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(BytecodeCallable)
   mem.clauseName = clause
 
@@ -326,7 +326,7 @@ proc getBytecodeClause*(atom: JSValue): Option[string] =
 
   none(string)
 
-proc floating*(value: float64, inRuntime: bool = false): JSValue =
+proc floating*(value: float64, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Float)
   mem.floatVal = value
 
@@ -335,25 +335,19 @@ proc floating*(value: float64, inRuntime: bool = false): JSValue =
 func stackFloating*(value: float64): MAtom =
   MAtom(kind: Float, floatVal: value)
 
-proc undefined*(): JSValue {.inline.} =
+proc undefined*(): JSValue {.inline, cdecl.} =
   newJSValue(Undefined)
 
 func stackUndefined*(): MAtom =
   MAtom(kind: Undefined)
 
-proc boolean*(s: string, inRuntime: bool = false): Option[JSValue] =
-  try:
-    return some(boolean(parseBool(s)))
-  except ValueError:
-    return none(JSValue)
-
-proc null*(inRuntime: bool = false): JSValue {.inline.} =
+proc null*(inRuntime: bool = false): JSValue {.inline, cdecl.} =
   newJSValue(Null)
 
 func stackNull*(): MAtom =
   MAtom(kind: Null)
 
-proc sequence*(s: seq[MAtom]): JSValue {.inline.} =
+proc sequence*(s: seq[MAtom]): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Sequence)
   mem.sequence = s
 
@@ -362,13 +356,13 @@ proc sequence*(s: seq[MAtom]): JSValue {.inline.} =
 func stackSequence*(s: seq[MAtom]): MAtom {.inline.} =
   MAtom(kind: Sequence, sequence: s)
 
-proc bigint*(value: SomeSignedInt | string): JSValue =
+proc bigint*(value: SomeSignedInt | string): JSValue {.inline, cdecl.} =
   var mem = newJSValue(BigInteger)
   mem.bigint = initBigInt(value)
 
   ensureMove(mem)
 
-proc obj*(): JSValue {.inline.} =
+proc obj*(): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Object)
   mem.objFields = initTable[string, int]()
   mem.objValues = newSeq[JSValue]()
