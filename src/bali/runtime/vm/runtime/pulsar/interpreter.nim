@@ -5,25 +5,20 @@ import std/[math, tables, options]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, utils, debugging]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
-import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
+import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv, types]
+import bali/runtime/compiler/base
+
+when hasJITSupport:
+  when defined(amd64):
+    import bali/runtime/compiler/amd64/codegen
+  else:
+    {.error: "Platform is marked as having JIT support but the VM is not introduced to the codegen module.".}
 
 const
   BaliVMInitialPreallocatedStackSize* {.intdefine.} = 16
   BaliVMPreallocatedStackSize* {.intdefine.} = 4
 
 type
-  Clause* = object
-    name*: string
-    operations*: seq[Operation]
-
-    rollback*: ClauseRollback
-
-  InvalidRegisterRead* = object of Defect
-
-  ClauseRollback* = object
-    clause*: int = int.low
-    opIndex*: uint = 1
-
   Registers* = object
     retVal*: Option[JSValue]
     callArgs*: seq[JSValue]
@@ -43,6 +38,9 @@ type
     trace: ExceptionTrace
 
     registers*: Registers
+    
+    when defined(amd64):
+      jit*: AMD64Codegen
 
 const SequenceBasedRegisters* = [some(1)]
 
@@ -1082,6 +1080,25 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
   raise newException(ValueError, "setEntryPoint(): cannot find clause \"" & name & "\"")
 
 proc run*(interpreter: var PulsarInterpreter) =
+  when hasJITSupport:
+    vmd "fetch", "new frame " & $interpreter.currIndex
+    let cls = interpreter.getClause()
+    vmd "fetch", "got clause"
+
+    if not *cls:
+      return
+
+    vmd "fetch", "has jit support, compiling clause"
+    let compiled = interpreter.jit.compile(&cls)
+
+    if not *compiled:
+      vmd "compile", "failed to compile clause, using interpreter"
+    else:
+      vmd "execute", "executing compiled clause"
+      (&compiled)()
+      vmd "execute", "executed JIT'd clause successfully, moving pc to end of clause"
+      return
+
   while not interpreter.halt:
     vmd "fetch", "new frame " & $interpreter.currIndex
     let cls = interpreter.getClause()
@@ -1125,6 +1142,12 @@ proc run*(interpreter: var PulsarInterpreter) =
     interpreter.clauses[clauseIndex].operations[index] = ensureMove(operation)
     vmd "execute", "saved op state"
 
+proc initJITForPlatform(): auto =
+  assert(hasJITSupport, "Platform does not have a JIT compiler implementation!")
+
+  when defined(amd64):
+    return initAMD64CodeGen()
+
 proc newPulsarInterpreter*(source: string): PulsarInterpreter =
   var interp = PulsarInterpreter(
     tokenizer: newTokenizer(source),
@@ -1134,6 +1157,10 @@ proc newPulsarInterpreter*(source: string): PulsarInterpreter =
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
       # Pre-allocate space for some value pointers
   )
+
+  when hasJITSupport:
+    interp.jit = initJITForPlatform()
+
   interp.registerBuiltin(
     "print",
     proc(op: Operation) =
