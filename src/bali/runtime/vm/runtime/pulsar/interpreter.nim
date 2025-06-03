@@ -104,6 +104,7 @@ proc analyze*(interpreter: var PulsarInterpreter) =
 
 {.push checks: on, inline.}
 proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) {.cdecl.} =
+  echo "ADD ATOM " & $id
   if id > uint(interpreter.stack.len - 1):
     # We need to allocate more slots.
     interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
@@ -960,6 +961,7 @@ proc run*(interpreter: var PulsarInterpreter) =
       vmd "compile", "failed to compile clause, using interpreter"
     else:
       vmd "execute", "executing compiled clause"
+      echo "entering JIT"
       (&compiled)()
       vmd "execute", "executed JIT'd clause successfully, moving pc to end of clause"
       return
@@ -1029,7 +1031,9 @@ proc newPulsarInterpreter*(source: string): PulsarInterpreter =
       initJITForPlatform(
         interp.addr,
         VMCallbacks(
-          addAtom: addAtom
+          addAtom: addAtom,
+          getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
+            let atom = vm.get(index)
         )
       )
 

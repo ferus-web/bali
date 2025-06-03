@@ -6,6 +6,7 @@ const
 type
   VMCallbacks* = object
     addAtom*: pointer
+    getAtom*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
 

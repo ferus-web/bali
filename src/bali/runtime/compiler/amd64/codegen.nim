@@ -31,10 +31,20 @@ proc allocateNativeSegment(cgen: var AMD64Codegen) =
 proc prepareAtomAddCall(cgen: var AMD64Codegen, index: int64) =
   # Signature for addAtom is:
   # proc(vm: var PulsarInterpreter, atom: JSValue, index: uint): void
+  cgen.s.sub(regRsp.reg, 8)
   cgen.s.mov(regRdi, cast[int64](cgen.vm)) # pass the pointer to the vm
   cgen.s.mov(reg(regRsi), regRax) # The JSValue
   cgen.s.mov(regRdx, index) # The index
   cgen.s.call(cgen.callbacks.addAtom)
+  cgen.s.add(regRsp.reg, 8)
+
+proc prepareAtomGetCall(cgen: var AMD64Codegen, index: int64) =
+  # proc rawGet(vm: PulsarInterpreter, index: uint): JSValue
+  cgen.s.sub(regRsp.reg, 8)
+  cgen.s.mov(regRdi, cast[int64](cgen.vm))
+  cgen.s.mov(regRdx, index)
+  cgen.s.call(cgen.callbacks.getAtom)
+  cgen.s.add(regRsp.reg, 8)
 
 proc setFieldValueImpl(atom: JSValue, name: string, value: JSValue) {.cdecl.} =
   atom[name] = value
@@ -96,8 +106,9 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
     of Add:
       # TODO: I think we should remove UnsignedInt altogether.
       # They're against the spec, and make this op awful to implement.
-      cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(rawGetImpl)
+      
+      prepareAtomGetCall(cgen, &op.arguments[0].getInt())
+      cgen.s.push(regRax.reg) # the first jsvalue is in rax, push it to the stack for now
     of CopyAtom:
       discard # TODO: implement
     else:
@@ -115,7 +126,10 @@ proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
     return some(cgen.cached[hashed])
 
   allocateNativeSegment(cgen)
+
   if emitNativeCode(cgen, clause):
+    cgen.dump("bali-jit-result.bin")
+    info "jit/amd64: compilation successful"
     some(cast[JITSegment](cgen.s.data))
   else:
     warn "jit/amd64: failed to emit native code for clause."
