@@ -3,7 +3,7 @@
 ##
 
 import ./shared, ../runtime/shared, ../atom
-import ../utils
+import pkg/shakar
 
 proc emitOperation*(gen: IRGenerator, op: IROperation): string {.inline.} =
   let opName = opToString(op.opCode)

@@ -2,9 +2,8 @@
 ## to the calling Nim code itself.
 
 import std/[tables, hashes, options]
-import pkg/gmp
+import pkg/[shakar, gmp]
 import ./heap/boehm
-import ./utils
 
 {.experimental: "strictDefs".}
 

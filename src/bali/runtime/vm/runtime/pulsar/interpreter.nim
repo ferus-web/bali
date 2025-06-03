@@ -1,13 +1,13 @@
 ## This file contains the "Pulsar" MIR interpreter. It's a redesign of the previous bytecode analyzer (keyword: analyzer, not interpreter)
 ## into a more modular and efficient form. You shouldn't import this directly, import `mirage/interpreter/prelude` instead.
 
-import std/[strutils, math, tables, options]
+import std/[math, tables, options]
 import bali/runtime/vm/heap/boehm
-import bali/runtime/vm/[atom, utils, debugging]
+import bali/runtime/vm/[atom, debugging]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv, types, resolver]
 import bali/runtime/compiler/base
-import pkg/pretty
+import pkg/[shakar]
 
 when hasJITSupport:
   when defined(amd64):
@@ -105,15 +105,11 @@ proc analyze*(interpreter: var PulsarInterpreter) =
 
 {.push checks: on, inline.}
 proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) {.cdecl.} =
-  echo "ADD ATOM " & $id
-  echo "value: 0x" & $toHex(cast[uint64](value))
   if id > uint(interpreter.stack.len - 1):
     # We need to allocate more slots.
     interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
   
-  echo "ADD"
   interpreter.stack[id] = value
-  echo "SUCCESS"
 
 proc hasBuiltin*(interpreter: PulsarInterpreter, name: string): bool =
   name in interpreter.builtins
@@ -961,11 +957,10 @@ proc run*(interpreter: var PulsarInterpreter) =
     vmd "fetch", "has jit support, compiling clause"
     let compiled = interpreter.jit.compile(&cls)
 
-    if not *compiled:
+    if !compiled:
       vmd "compile", "failed to compile clause, using interpreter"
     else:
       vmd "execute", "executing compiled clause"
-      echo "entering JIT"
       (&compiled)()
       vmd "execute", "executed JIT'd clause successfully, moving pc to end of clause"
       return
@@ -1037,9 +1032,7 @@ proc newPulsarInterpreter*(source: string): PulsarInterpreter =
         VMCallbacks(
           addAtom: addAtom,
           getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
-            echo "jit get atom " & $index
             let atom = vm.get(index)
-            print &atom
             return &atom
         )
       )

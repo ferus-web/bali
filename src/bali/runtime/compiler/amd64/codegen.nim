@@ -1,7 +1,7 @@
 import std/[logging, posix, hashes, tables, options, streams]
 import pkg/bali/runtime/compiler/base
 import pkg/catnip/[x64assembler],
-       pkg/[shakar, pretty]
+       pkg/[shakar]
 import pkg/bali/runtime/vm/atom,
        pkg/bali/runtime/vm/runtime/shared,
        pkg/bali/runtime/vm/runtime/pulsar/resolver,
@@ -50,10 +50,7 @@ proc setFieldValueImpl(atom: JSValue, name: string, value: JSValue) {.cdecl.} =
   atom[name] = value
 
 proc getRawFloat(atom: JSValue): float {.cdecl.} =
-  echo "getRawFloat"
-  let flt = &atom.getFloat()
-  echo "float: " & $flt
-  flt
+  &atom.getNumeric()
 
 proc dump*(cgen: var AMD64Codegen, file: string) =
   var stream = newFileStream(file, fmWrite)
@@ -64,7 +61,6 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
   for op in clause.operations:
     var op = op # FIXME: stupid ugly hack
     clause.resolve(op)
-    print op
     
     case op.opcode
     of LoadUndefined:
@@ -115,26 +111,22 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       # They're against the spec, and make this op awful to implement.
       
       prepareAtomGetCall(cgen, &op.arguments[0].getInt())
-      cgen.s.mov(regR9.reg, regRax) # TODO: perhaps use the stack for this? :P
-      
-      prepareAtomGetCall(cgen, &op.arguments[1].getInt())
-      cgen.s.mov(regR8.reg, regRax)
-      
-      # Now, we can get their floating reprs
+      cgen.s.mov(regRdi.reg, regRax)
+
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.mov(regRdi.reg, regR9)
       cgen.s.call(getRawFloat)
       cgen.s.add(regRsp.reg, 8)
-      
+
       # Move the first float to xmm1, making way for the second one
       cgen.s.movss(regXmm1.reg, regXmm0)
 
-      # Do the same stuff again for the second float
+      prepareAtomGetCall(cgen, &op.arguments[1].getInt())
+      cgen.s.mov(regRdi.reg, regRax)
+
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.mov(regRdi.reg, regR8)
       cgen.s.call(getRawFloat)
       cgen.s.add(regRsp.reg, 8)
-      
+
       # Add [1] and [2], then box [1]
       cgen.s.addsd(regXmm0, regXmm1.reg)
       cgen.s.sub(regRsp.reg, 8)
