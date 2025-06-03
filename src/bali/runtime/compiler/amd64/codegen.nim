@@ -116,7 +116,6 @@ proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
 
   allocateNativeSegment(cgen)
   if emitNativeCode(cgen, clause):
-    cgen.dump("bali-jit-fail.bin")
     some(cast[JITSegment](cgen.s.data))
   else:
     warn "jit/amd64: failed to emit native code for clause."
