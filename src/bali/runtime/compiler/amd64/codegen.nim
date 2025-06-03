@@ -1,7 +1,7 @@
 import std/[logging, posix, hashes, tables, options, streams]
 import pkg/bali/runtime/compiler/base
 import pkg/catnip/[x64assembler],
-       pkg/[shakar]
+       pkg/[shakar, pretty]
 import pkg/bali/runtime/vm/atom,
        pkg/bali/runtime/vm/runtime/shared,
        pkg/bali/runtime/vm/runtime/pulsar/resolver,
@@ -42,12 +42,18 @@ proc prepareAtomGetCall(cgen: var AMD64Codegen, index: int64) =
   # proc rawGet(vm: PulsarInterpreter, index: uint): JSValue
   cgen.s.sub(regRsp.reg, 8)
   cgen.s.mov(regRdi, cast[int64](cgen.vm))
-  cgen.s.mov(regRdx, index)
+  cgen.s.mov(regRsi, index)
   cgen.s.call(cgen.callbacks.getAtom)
   cgen.s.add(regRsp.reg, 8)
 
 proc setFieldValueImpl(atom: JSValue, name: string, value: JSValue) {.cdecl.} =
   atom[name] = value
+
+proc getRawFloat(atom: JSValue): float {.cdecl.} =
+  echo "getRawFloat"
+  let flt = &atom.getFloat()
+  echo "float: " & $flt
+  flt
 
 proc dump*(cgen: var AMD64Codegen, file: string) =
   var stream = newFileStream(file, fmWrite)
@@ -58,6 +64,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
   for op in clause.operations:
     var op = op # FIXME: stupid ugly hack
     clause.resolve(op)
+    print op
     
     case op.opcode
     of LoadUndefined:
@@ -102,13 +109,38 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.call(integer)
       cgen.s.add(regRsp.reg, 8)
 
-      cgen.prepareAtomAddCall(int64(&op.arguments[1].getInt()))
+      cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
     of Add:
       # TODO: I think we should remove UnsignedInt altogether.
       # They're against the spec, and make this op awful to implement.
       
       prepareAtomGetCall(cgen, &op.arguments[0].getInt())
-      cgen.s.push(regRax.reg) # the first jsvalue is in rax, push it to the stack for now
+      cgen.s.mov(regR9.reg, regRax) # TODO: perhaps use the stack for this? :P
+      
+      prepareAtomGetCall(cgen, &op.arguments[1].getInt())
+      cgen.s.mov(regR8.reg, regRax)
+      
+      # Now, we can get their floating reprs
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.mov(regRdi.reg, regR9)
+      cgen.s.call(getRawFloat)
+      cgen.s.add(regRsp.reg, 8)
+      
+      # Move the first float to xmm1, making way for the second one
+      cgen.s.movss(regXmm1.reg, regXmm0)
+
+      # Do the same stuff again for the second float
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.mov(regRdi.reg, regR8)
+      cgen.s.call(getRawFloat)
+      cgen.s.add(regRsp.reg, 8)
+      
+      # Add [1] and [2], then box [1]
+      cgen.s.addsd(regXmm0, regXmm1.reg)
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.movq(regRdi.reg, regXmm0)
+      cgen.s.call(floating)
+      cgen.s.add(regRsp.reg, 8)
     of CopyAtom:
       discard # TODO: implement
     else:
