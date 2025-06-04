@@ -1493,6 +1493,8 @@ proc run*(runtime: Runtime, typeRegistrationCb: proc(runtime: Runtime) = nil) =
   json.generateStdIR(runtime)
   encodeUri.generateStdIR(runtime)
 
+  runtime.vm[].useJit = runtime.opts.codegen.jitCompiler
+
   when not defined(baliTest262FyiDisableICULinkingCode):
     date.generateStdIR(runtime)
 

@@ -40,6 +40,7 @@ type
     loopAllocationEliminator*: bool = true
     aggressivelyFreeRetvals*: bool = false
     deadCodeElimination*: bool = true
+    jitCompiler*: bool = true
 
   InterpreterOpts* = object
     test262*: bool = false

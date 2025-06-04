@@ -42,6 +42,7 @@ type
     
     when defined(amd64):
       jit*: AMD64Codegen
+      useJit*: bool = true
 
 proc find*(clause: Clause, id: uint): Option[Operation] =
   vmd "find-op-in-clause", "target = " & $id & "; len = " & $clause.operations.len
@@ -947,23 +948,24 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 
 proc run*(interpreter: var PulsarInterpreter) =
   when hasJITSupport:
-    vmd "fetch", "new frame " & $interpreter.currIndex
-    let cls = interpreter.getClause()
-    vmd "fetch", "got clause"
+    if interpreter.useJit:
+      vmd "fetch", "new frame " & $interpreter.currIndex
+      let cls = interpreter.getClause()
+      vmd "fetch", "got clause"
 
-    if not *cls:
-      return
+      if not *cls:
+        return
 
-    vmd "fetch", "has jit support, compiling clause"
-    let compiled = interpreter.jit.compile(&cls)
+      vmd "fetch", "has jit support, compiling clause"
+      let compiled = interpreter.jit.compile(&cls)
 
-    if !compiled:
-      vmd "compile", "failed to compile clause, using interpreter"
-    else:
-      vmd "execute", "executing compiled clause"
-      (&compiled)()
-      vmd "execute", "executed JIT'd clause successfully, moving pc to end of clause"
-      return
+      if !compiled:
+        vmd "compile", "failed to compile clause, using interpreter"
+      else:
+        vmd "execute", "executing compiled clause"
+        (&compiled)()
+        vmd "execute", "executed JIT'd clause successfully, moving pc to end of clause"
+        return
 
   while not interpreter.halt:
     vmd "fetch", "new frame " & $interpreter.currIndex
