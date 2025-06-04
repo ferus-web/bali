@@ -156,6 +156,13 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.add(regRsp.reg, 8)
 
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
+    of LoadUint:
+      cgen.s.mov(regRdi, int64(&op.arguments[1].getInt()))
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(uinteger)
+      cgen.s.add(regRsp.reg, 8)
+
+      cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
     of Add:
       # TODO: I think we should remove UnsignedInt altogether.
       # They're against the spec, and make this op awful to implement.
