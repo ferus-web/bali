@@ -202,8 +202,15 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
     of ResetArgs:
       # TODO: same as above
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.mov(regrdi, cast[int64](cgen.vm))
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
       cgen.s.call(cgen.callbacks.resetArgs)
+      cgen.s.add(regRsp.reg, 8)
+    of PassArgument:
+      # TODO: sigh.. same as above
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.mov(regRsi, int64(&op.arguments[0].getInt()))
+      cgen.s.call(cgen.callbacks.passArgument)
       cgen.s.add(regRsp.reg, 8)
     else:
       error "jit/amd64: cannot compile op: " & $op.opcode

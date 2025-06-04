@@ -1041,6 +1041,9 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
             vm.stack[dest] = &vm.get(dest),
           resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
             vm.registers.callArgs.reset()
+          ,
+          passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
+            vm.registers.callArgs.add(&vm.get(index))
         )
       )
 
