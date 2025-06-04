@@ -7,6 +7,7 @@ type
   VMCallbacks* = object
     addAtom*: pointer
     getAtom*: pointer
+    copyAtom*: pointer # proc(vm: var PulsarInterpreter, source, dest: uint)
 
   JITSegment* = proc(): void {.cdecl.}
 

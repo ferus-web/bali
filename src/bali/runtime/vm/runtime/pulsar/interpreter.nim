@@ -1034,7 +1034,9 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
           addAtom: addAtom,
           getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
             let atom = vm.get(index)
-            return &atom
+            return &atom,
+          copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
+            vm.stack[dest] = &vm.get(dest)
         )
       )
 
