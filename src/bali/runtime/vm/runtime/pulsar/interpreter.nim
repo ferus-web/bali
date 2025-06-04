@@ -1036,7 +1036,9 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
             let atom = vm.get(index)
             return &atom,
           copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
-            vm.stack[dest] = &vm.get(dest)
+            vm.stack[dest] = &vm.get(dest),
+          resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
+            vm.registers.callArgs.reset()
         )
       )
 

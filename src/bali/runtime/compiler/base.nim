@@ -8,6 +8,7 @@ type
     addAtom*: pointer
     getAtom*: pointer
     copyAtom*: pointer # proc(vm: var PulsarInterpreter, source, dest: uint)
+    resetArgs*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
 

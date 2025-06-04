@@ -192,6 +192,12 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.mov(regRdx, int64(&op.arguments[1].getInt()))
       cgen.s.call(cgen.callbacks.copyAtom)
       cgen.s.add(regRsp.reg, 8)
+    of ResetArgs:
+      # TODO: same as above
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.mov(regrdi, cast[int64](cgen.vm))
+      cgen.s.call(cgen.callbacks.resetArgs)
+      cgen.s.add(regRsp.reg, 8)
     else:
       error "jit/amd64: cannot compile op: " & $op.opcode
       error "jit/amd64: bailing out, this clause will be interpreted"
