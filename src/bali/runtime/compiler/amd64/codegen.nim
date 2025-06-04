@@ -1,5 +1,6 @@
 import std/[logging, posix, hashes, tables, options, streams]
-import pkg/bali/runtime/compiler/base
+import pkg/bali/runtime/compiler/base,
+       pkg/bali/runtime/vm/heap/boehm
 import pkg/catnip/[x64assembler],
        pkg/[shakar]
 import pkg/bali/runtime/vm/atom,
@@ -8,11 +9,14 @@ import pkg/bali/runtime/vm/atom,
        pkg/bali/runtime/atom_helpers
 
 type
+  ConstantPool* = seq[cstring]
+
   AMD64Codegen* = object
     cached*: Table[Hash, JITSegment]
     s*: AssemblerX64
     callbacks*: VMCallbacks
     vm*: pointer
+    cpool*: ConstantPool
 
     pageSize: int64
 
@@ -46,8 +50,13 @@ proc prepareAtomGetCall(cgen: var AMD64Codegen, index: int64) =
   cgen.s.call(cgen.callbacks.getAtom)
   cgen.s.add(regRsp.reg, 8)
 
+  # The output will be in rax
+
 proc setFieldValueImpl(atom: JSValue, name: string, value: JSValue) {.cdecl.} =
   atom[name] = value
+
+proc createFieldRaw*(atom: JSValue, field: cstring) {.cdecl.} =
+  atom[$field] = undefined()
 
 proc getRawFloat(atom: JSValue): float {.cdecl.} =
   &atom.getNumeric()
@@ -56,6 +65,39 @@ proc dump*(cgen: var AMD64Codegen, file: string) =
   var stream = newFileStream(file, fmWrite)
   stream.writeData(cgen.s.data[0].addr, 0x10000)
   stream.close()
+
+proc allocRaw(size: int64): pointer {.cdecl.} =
+  baliAlloc(size)
+
+proc copyRaw(dest, source: pointer, size: uint) {.cdecl.} =
+  copyMem(dest, source, size)
+
+proc prepareGCAlloc(cgen: var AMD64Codegen, size: uint) =
+  cgen.s.mov(regRdi, size.int64)
+  cgen.s.sub(regRsp.reg, 8)
+  cgen.s.call(allocRaw)
+  cgen.s.add(regRsp.reg, 8)
+
+proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
+  prepareGCAlloc(cgen, str.len.uint)
+
+  # the GC allocated memory's pointer is in rax.
+  # we're going to copy stuff from our const pool into it
+
+  var cstr = cast[cstring](baliAlloc(str.len + 1))
+  for i, c in str: cstr[i] = c
+
+  cgen.cpool.add(cstr)
+  cgen.s.push(regRax.reg) # save the pointer in rax
+  cgen.s.mov(regRdi.reg, regRax)
+  cgen.s.mov(regRsi, cast[int64](cast[pointer](cstr[0].addr)))
+  cgen.s.mov(regRdx, int64(str.len))
+ 
+  cgen.s.sub(regRsp.reg, 16)
+  cgen.s.call(copyRaw)
+  cgen.s.add(regRsp.reg, 16)
+  
+  cgen.s.pop(regR8.reg) # get the pointer that was in rax which is likely gone now
 
 proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
   for op in clause.operations:
@@ -98,7 +140,15 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
 
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
     of CreateField:
-      discard # TODO: implement
+      prepareLoadString(cgen, &op.arguments[2].getStr()) # puts the string in r8
+
+      prepareAtomGetCall(cgen, &op.arguments[0].getInt()) # put the JSValue in rax
+      cgen.s.mov(regRdi.reg, regRax) # put the JSValue as the first arg
+      cgen.s.mov(regRsi.reg, regR8)
+
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(createFieldRaw) # it gets the JSValue just fine, but rsi is an empty cstring (it points to a totally different location???)
+      cgen.s.add(regRsp.reg, 8)
     of LoadInt:
       cgen.s.mov(regRdi, int64(&op.arguments[1].getInt()))
       cgen.s.sub(regRsp.reg, 8)

@@ -1015,8 +1015,9 @@ proc initJITForPlatform(vm: pointer, callbacks: VMCallbacks): auto =
   when defined(amd64):
     return initAMD64CodeGen(vm, callbacks)
 
-proc newPulsarInterpreter*(source: string): PulsarInterpreter =
-  var interp = PulsarInterpreter(
+proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
+  var interp = cast[ptr PulsarInterpreter](allocShared(sizeof(PulsarInterpreter)))
+  interp[] = PulsarInterpreter(
     tokenizer: newTokenizer(source),
     clauses: @[],
     builtins: initTable[string, proc(op: Operation)](),
@@ -1026,9 +1027,9 @@ proc newPulsarInterpreter*(source: string): PulsarInterpreter =
   )
 
   when hasJITSupport:
-    interp.jit =
+    interp[].jit =
       initJITForPlatform(
-        interp.addr,
+        interp,
         VMCallbacks(
           addAtom: addAtom,
           getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
@@ -1037,14 +1038,14 @@ proc newPulsarInterpreter*(source: string): PulsarInterpreter =
         )
       )
 
-  interp.registerBuiltin(
+  interp[].registerBuiltin(
     "print",
     proc(op: Operation) =
       for i, x in op.arguments:
         if i == 0:
           continue
 
-        let val = interp.get((&x.getInt()).uint)
+        let val = interp[].get((&x.getInt()).uint)
 
         if *val:
           echo (&val).crush("", quote = false)

@@ -84,7 +84,7 @@ type
   Runtime* = ref object
     ast*: AST
     ir*: IRGenerator
-    vm*: PulsarInterpreter
+    vm*: ptr PulsarInterpreter
     opts*: InterpreterOpts
 
     irHints*: IRHints
