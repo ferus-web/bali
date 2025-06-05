@@ -40,6 +40,7 @@ type
     loopAllocationEliminator*: bool = true
     aggressivelyFreeRetvals*: bool = false
     deadCodeElimination*: bool = true
+    jitCompiler*: bool = true
 
   InterpreterOpts* = object
     test262*: bool = false
@@ -84,7 +85,7 @@ type
   Runtime* = ref object
     ast*: AST
     ir*: IRGenerator
-    vm*: PulsarInterpreter
+    vm*: ptr PulsarInterpreter
     opts*: InterpreterOpts
 
     irHints*: IRHints

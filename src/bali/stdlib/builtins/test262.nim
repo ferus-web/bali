@@ -10,7 +10,7 @@ import bali/stdlib/errors_common
 import bali/internal/sugar
 
 proc test262Error*(runtime: Runtime, msg: string) =
-  runtime.vm.throw(jsException(msg))
+  runtime.vm[].throw(jsException(msg))
   logTracebackAndDie(runtime)
 
 type JSAssert* = object

@@ -36,13 +36,13 @@ proc jsException*(msg: string): JSException {.inline.} =
   exc
 
 proc logTracebackAndDie*(runtime: Runtime, exitCode: int = 1) =
-  let traceback = runtime.vm.generateTraceback()
+  let traceback = runtime.vm[].generateTraceback()
   if !traceback:
     return # The error was most likely handled. (Or there wasn't one in the first place)
 
   if not runtime.vm.trace.exception.message.contains(runtime.test262.negative.`type`):
     stdout.write(&traceback & '\n')
-    deathCallback(runtime.vm, exitCode)
+    deathCallback(runtime.vm[], exitCode)
   else:
     stderr.write &traceback & '\n'
-    deathCallback(runtime.vm, exitCode)
+    deathCallback(runtime.vm[], exitCode)

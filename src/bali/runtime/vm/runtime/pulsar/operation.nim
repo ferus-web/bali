@@ -1,9 +1,7 @@
-## A basic operation object used by the Pulsar interpreter.
-##
-
-import std/[options, tables]
+import std/[options, tables, strutils]
 import ../shared
-import ../../[atom, utils]
+import ../../[atom]
+import pkg/shakar
 
 const MirageOperationJitThreshold* {.intdefine.} = 8
   # FIXME: set this to something higher
@@ -72,10 +70,9 @@ proc consume*(
   of tkIdent:
     # if it is a boolean, return it as such
     # otherwise, return as a string
-    let asBool = boolean(raw.ident)
 
-    if *asBool:
-      return &asBool
+    if raw.ident == "true" or raw.ident == "false":
+      return boolean(parseBool(raw.ident))
 
     return str raw.ident
   of tkInteger:

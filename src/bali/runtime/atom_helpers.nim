@@ -36,6 +36,9 @@ proc `[]=`*(atom: JSValue, name: string, value: sink JSValue) =
   else:
     atom.objValues[atom.objFields[name]] = ensureMove(value)
 
+proc createField*(atom: JSValue, field: string) =
+  atom[field] = undefined()
+
 proc contains*(atom: JSValue, name: string): bool =
   atom.objFields.contains(name)
 
