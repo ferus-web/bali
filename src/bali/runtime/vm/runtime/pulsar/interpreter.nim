@@ -44,6 +44,8 @@ type
       jit*: AMD64Codegen
       useJit*: bool = true
 
+    trapped*: bool = false
+
 proc find*(clause: Clause, id: uint): Option[Operation] =
   vmd "find-op-in-clause", "target = " & $id & "; len = " & $clause.operations.len
   if clause.operations.len.uint <= id:
@@ -334,6 +336,32 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
 
   if gcStats.pressure > 0.9f:
     boehmGCFullCollect()
+
+proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) =
+  if value.kind == Integer:
+    let index = uint(&getInt(value))
+    msg "atom is integer/ref to atom: " & $index
+    let callable = &interpreter.get(index)
+
+    if callable.kind == BytecodeCallable:
+      msg "atom is bytecode segment"
+      interpreter.call(&getBytecodeClause(callable), default(Operation))
+    elif callable.kind == NativeCallable:
+      msg "atom is native segment"
+      callable.fn()
+      inc interpreter.currIndex
+    else:
+      raise newException(ValueError, "INVK cannot deal with atom: " & $callable.kind)
+  elif value.kind == String:
+    msg "atom is string/ref to native function"
+    interpreter.call(&getStr(value), default(Operation))
+  elif value.kind == NativeCallable:
+    # FIXME: this is stupid.
+    msg "atom is native segment"
+    value.fn()
+    inc interpreter.currIndex
+  else:
+    raise newException(ValueError, "INVK cannot deal with atom: " & $value.kind)
 
 proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   when not defined(mirageNoJit):
@@ -913,24 +941,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   of Invoke:
     let value = op.arguments[0]
 
-    if value.kind == Integer:
-      msg "atom is integer/ref to atom"
-      let callable = &interpreter.get(uint(&getInt(value)))
-
-      if callable.kind == BytecodeCallable:
-        msg "atom is bytecode segment"
-        interpreter.call(&getBytecodeClause(callable), op)
-      elif callable.kind == NativeCallable:
-        msg "atom is native segment"
-        callable.fn()
-        inc interpreter.currIndex
-      else:
-        raise newException(ValueError, "INVK cannot deal with atom: " & $callable.kind)
-    elif value.kind == String:
-      msg "atom is string/ref to native function"
-      interpreter.call(&getStr(value), op)
-    else:
-      raise newException(ValueError, "INVK cannot deal with atom: " & $value.kind)
+    interpreter.invoke(value)
   else:
     when defined(release):
       inc interpreter.currIndex
@@ -948,7 +959,7 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 
 proc run*(interpreter: var PulsarInterpreter) =
   when hasJITSupport:
-    if interpreter.useJit:
+    if interpreter.useJit and not interpreter.trapped:
       vmd "fetch", "new frame " & $interpreter.currIndex
       let cls = interpreter.getClause()
       vmd "fetch", "got clause"
@@ -981,8 +992,9 @@ proc run*(interpreter: var PulsarInterpreter) =
 
     if not *op:
       vmd "rollback", "no op to exec"
-      if clause.rollback.clause == int.low:
+      if clause.rollback.clause == int.low or interpreter.trapped:
         vmd "rollback", "clause == int.low; exec has finished"
+        interpreter.trapped = false
         break
 
       vmd "rollback", "rollback clause: " & $clause.rollback.clause
@@ -1044,6 +1056,14 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
           ,
           passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
             vm.registers.callArgs.add(&vm.get(index))
+          ,
+          callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
+            vm.trapped = true
+            vm.call($name, default(Operation))
+            vm.run()
+          ,
+          invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
+            vm.invoke(&vm.get(index.uint))
         )
       )
 

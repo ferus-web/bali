@@ -71,6 +71,9 @@ proc allocRaw(size: int64): pointer {.cdecl.} =
 proc copyRaw(dest, source: pointer, size: uint) {.cdecl.} =
   copyMem(dest, source, size)
 
+proc strRaw(value: cstring): JSValue {.cdecl.} =
+  str($value)
+
 proc prepareGCAlloc(cgen: var AMD64Codegen, size: uint) =
   cgen.s.mov(regRdi, size.int64)
   cgen.s.sub(regRsp.reg, 8)
@@ -218,10 +221,27 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       # FIXME: Can't we just reuse the same heap memory used in the prep-load-string call?
       cgen.s.sub(regRsp.reg, 8)
       cgen.s.mov(regRdi.reg, regR8)
-      cgen.s.call(str)
+      cgen.s.call(strRaw)
       cgen.s.add(regRsp.reg, 8)
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
+    of Call:
+      # TODO: check if the clause has been JIT'd too. If so,
+      # use the compiled version
+      
+      prepareLoadString(cgen, &op.arguments[0].getStr())
+
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.mov(regRsi.reg, regR8)
+      cgen.s.call(cgen.callbacks.callBytecodeClause)
+      cgen.s.add(regRsp.reg, 8)
+    of Invoke:
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.mov(regRsi, &op.arguments[0].getInt())
+      cgen.s.call(cgen.callbacks.invoke)
+      cgen.s.add(regRsp.reg, 8)
     else:
       error "jit/amd64: cannot compile op: " & $op.opcode
       error "jit/amd64: bailing out, this clause will be interpreted"

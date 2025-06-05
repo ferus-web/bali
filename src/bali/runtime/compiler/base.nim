@@ -10,6 +10,8 @@ type
     copyAtom*: pointer # proc(vm: var PulsarInterpreter, source, dest: uint)
     resetArgs*: pointer
     passArgument*: pointer
+    callBytecodeClause*: pointer
+    invoke*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
 
