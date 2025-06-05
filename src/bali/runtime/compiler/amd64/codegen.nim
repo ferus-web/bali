@@ -211,6 +211,17 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.mov(regRsi, int64(&op.arguments[0].getInt()))
       cgen.s.call(cgen.callbacks.passArgument)
       cgen.s.add(regRsp.reg, 8)
+    of LoadStr:
+      prepareLoadString(cgen, &op.arguments[1].getStr()) # puts the string in r8
+      
+      # Allocate the string on GC'd memory
+      # FIXME: Can't we just reuse the same heap memory used in the prep-load-string call?
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.mov(regRdi.reg, regR8)
+      cgen.s.call(str)
+      cgen.s.add(regRsp.reg, 8)
+
+      prepareAtomAddCall(cgen, &op.arguments[0].getInt())
     else:
       error "jit/amd64: cannot compile op: " & $op.opcode
       error "jit/amd64: bailing out, this clause will be interpreted"
