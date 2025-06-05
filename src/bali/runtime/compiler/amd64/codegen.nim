@@ -1,3 +1,5 @@
+## Baseline JIT for AMD64 SystemV systems
+
 import std/[logging, posix, hashes, tables, options, streams]
 import pkg/bali/runtime/compiler/base,
        pkg/bali/runtime/vm/heap/boehm
@@ -51,9 +53,6 @@ proc prepareAtomGetCall(cgen: var AMD64Codegen, index: int64) =
   cgen.s.add(regRsp.reg, 8)
 
   # The output will be in rax
-
-proc setFieldValueImpl(atom: JSValue, name: string, value: JSValue) {.cdecl.} =
-  atom[name] = value
 
 proc createFieldRaw*(atom: JSValue, field: cstring) {.cdecl.} =
   atom[$field] = undefined()
