@@ -107,11 +107,14 @@ proc analyze*(interpreter: var PulsarInterpreter) =
       continue
 
 {.push checks: on, inline.}
+import pretty
 proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) {.cdecl.} =
   if id > uint(interpreter.stack.len - 1):
     # We need to allocate more slots.
     interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
   
+  echo id
+  print value
   interpreter.stack[id] = value
 
 proc hasBuiltin*(interpreter: PulsarInterpreter, name: string): bool =

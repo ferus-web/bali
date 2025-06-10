@@ -186,22 +186,26 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.call(getRawFloat)
       cgen.s.add(regRsp.reg, 8)
 
-      # Move the first float to xmm1, making way for the second one
-      cgen.s.movsd(regXmm1.reg, regXmm0)
+      # Move the first float to the stack, making way for the second one
+      cgen.s.movq(regR9.reg, regXmm0)
+      cgen.s.push(regR9.reg)
 
       prepareAtomGetCall(cgen, &op.arguments[1].getInt())
       cgen.s.mov(regRdi.reg, regRax)
 
-      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.sub(regRsp.reg, 16)
       cgen.s.call(getRawFloat)
-      cgen.s.add(regRsp.reg, 8)
+      cgen.s.add(regRsp.reg, 16)
+
+      cgen.s.pop(regR9.reg)
+      cgen.s.movq(regXmm1, regR9.reg)
 
       # Add [1] and [2], then box [1]
       cgen.s.addsd(regXmm0, regXmm1.reg)
       cgen.s.sub(regRsp.reg, 8)
       cgen.s.call(allocFloat)
       cgen.s.add(regRsp.reg, 8)
-
+      
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
     of CopyAtom:
       # TODO: implement this in pure asm
