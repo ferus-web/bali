@@ -57,8 +57,18 @@ proc prepareAtomGetCall(cgen: var AMD64Codegen, index: int64) =
 proc createFieldRaw*(atom: JSValue, field: cstring) {.cdecl.} =
   atom[$field] = undefined()
 
-proc getRawFloat(atom: JSValue): float {.cdecl.} =
-  &atom.getNumeric()
+proc getRawFloat(atom: JSValue): float64 {.cdecl.} =
+  let x = &atom.getNumeric()
+  result = x
+  echo "jit gets float: " & $x
+
+proc allocFloat(v: float64): JSValue {.cdecl.} =
+  echo "jit allocates float: " & $v
+  floating v
+
+proc allocFloatEncoded(v: int64): JSValue {.cdecl.} =
+  echo "encoded jit float alloc"
+  allocFloat(cast[float64](v))
 
 proc dump*(cgen: var AMD64Codegen, file: string) =
   var stream = newFileStream(file, fmWrite)
@@ -130,7 +140,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
         unreachable
 
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(floating)
+      cgen.s.call(allocFloatEncoded)
       cgen.s.add(reg(regRsp), 8)
 
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
@@ -177,7 +187,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.add(regRsp.reg, 8)
 
       # Move the first float to xmm1, making way for the second one
-      cgen.s.movss(regXmm1.reg, regXmm0)
+      cgen.s.movsd(regXmm1.reg, regXmm0)
 
       prepareAtomGetCall(cgen, &op.arguments[1].getInt())
       cgen.s.mov(regRdi.reg, regRax)
@@ -189,9 +199,10 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       # Add [1] and [2], then box [1]
       cgen.s.addsd(regXmm0, regXmm1.reg)
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.movq(regRdi.reg, regXmm0)
-      cgen.s.call(floating)
+      cgen.s.call(allocFloat)
       cgen.s.add(regRsp.reg, 8)
+
+      prepareAtomAddCall(cgen, &op.arguments[0].getInt())
     of CopyAtom:
       # TODO: implement this in pure asm
       # it's a very simple op and we can probably gain a lot of performance by not unnecessarily calling this function

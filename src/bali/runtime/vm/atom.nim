@@ -188,11 +188,11 @@ proc getIdent*(atom: MAtom | JSValue): Option[string] {.inline.} =
   if atom.kind == Ident:
     return some atom.ident
 
-proc getFloat*(atom: MAtom | JSValue): Option[float64] {.inline.} =
+proc getFloat*(atom: MAtom | JSValue): Option[float64] {.cdecl.} =
   if atom.kind == Float:
     return some atom.floatVal
 
-proc getNumeric*(atom: MAtom | JSValue): Option[float] {.inline.} =
+proc getNumeric*(atom: MAtom | JSValue): Option[float64] {.inline.} =
   if atom.kind == Integer:
     return some(float(&atom.getInt()))
   elif atom.kind == UnsignedInt:
@@ -325,7 +325,7 @@ proc getBytecodeClause*(atom: JSValue): Option[string] =
 
   none(string)
 
-proc floating*(value: float64, inRuntime: bool = false): JSValue {.inline, cdecl.} =
+proc floating*(value: float64): JSValue {.cdecl.} =
   var mem = newJSValue(Float)
   mem.floatVal = value
 
@@ -334,6 +334,7 @@ proc floating*(value: float64, inRuntime: bool = false): JSValue {.inline, cdecl
   mem
 
 func stackFloating*(value: float64): MAtom =
+
   MAtom(kind: Float, floatVal: value)
 
 proc undefined*(): JSValue {.inline, cdecl.} =
