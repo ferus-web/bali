@@ -1,14 +1,13 @@
 ## Baseline JIT for AMD64 SystemV systems
 
 import std/[logging, posix, hashes, tables, options, streams]
-import pkg/bali/runtime/compiler/base,
-       pkg/bali/runtime/vm/heap/boehm
-import pkg/catnip/[x64assembler],
-       pkg/[shakar]
-import pkg/bali/runtime/vm/atom,
-       pkg/bali/runtime/vm/runtime/shared,
-       pkg/bali/runtime/vm/runtime/pulsar/resolver,
-       pkg/bali/runtime/atom_helpers
+import pkg/bali/runtime/compiler/base, pkg/bali/runtime/vm/heap/boehm
+import pkg/catnip/[x64assembler], pkg/[shakar]
+import
+  pkg/bali/runtime/vm/atom,
+  pkg/bali/runtime/vm/runtime/shared,
+  pkg/bali/runtime/vm/runtime/pulsar/resolver,
+  pkg/bali/runtime/atom_helpers
 
 type
   ConstantPool* = seq[cstring]
@@ -26,12 +25,19 @@ proc allocateNativeSegment(cgen: var AMD64Codegen) =
   debug "jit/amd64: allocating buffer for assembler"
 
   # TODO: Unhardcode this. Perhaps we can have something that takes in a clause and runs an upper bound estimate of how much memory its native repr will be in?
-  if (let code = posix_memalign(cgen.s.data.addr, cgen.pageSize.csize_t, 0x10000); code != 0):
-    warn "jit/amd64: failed to allocate buffer for assembler: posix_memalign() returned " & $code
+  if (
+    let code = posix_memalign(cgen.s.data.addr, cgen.pageSize.csize_t, 0x10000)
+    code != 0
+  ):
+    warn "jit/amd64: failed to allocate buffer for assembler: posix_memalign() returned " &
+      $code
     return
 
   debug "jit/amd64: allocated buffer successfully; making it executable"
-  if (let code = mprotect(cgen.s.data, 0x10000, PROT_READ or PROT_WRITE or PROT_EXEC); code != 0):
+  if (
+    let code = mprotect(cgen.s.data, 0x10000, PROT_READ or PROT_WRITE or PROT_EXEC)
+    code != 0
+  ):
     warn "jit/amd64: failed to mark buffer as executable: mprotect() returned: " & $code
 
 proc prepareAtomAddCall(cgen: var AMD64Codegen, index: int64) =
@@ -93,37 +99,38 @@ proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
   # we're going to copy stuff from our const pool into it
 
   var cstr = cast[cstring](baliAlloc(str.len + 1))
-  for i, c in str: cstr[i] = c
+  for i, c in str:
+    cstr[i] = c
 
   cgen.cpool.add(cstr)
   cgen.s.push(regRax.reg) # save the pointer in rax
   cgen.s.mov(regRdi.reg, regRax)
   cgen.s.mov(regRsi, cast[int64](cast[pointer](cstr[0].addr)))
   cgen.s.mov(regRdx, int64(str.len))
- 
+
   cgen.s.sub(regRsp.reg, 16)
   cgen.s.call(copyRaw)
   cgen.s.add(regRsp.reg, 16)
-  
+
   cgen.s.pop(regR8.reg) # get the pointer that was in rax which is likely gone now
 
 proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
   for op in clause.operations:
     var op = op # FIXME: stupid ugly hack
     clause.resolve(op)
-    
+
     case op.opcode
     of LoadUndefined:
       cgen.s.sub(reg(regRsp), 8)
       cgen.s.call(undefined) # we have the output in rax now
       cgen.s.add(reg(regRsp), 8)
-      
+
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
     of LoadNull:
       cgen.s.sub(reg(regRsp), 8)
       cgen.s.call(null) # we have the output in rax now
       cgen.s.add(reg(regRsp), 8)
-      
+
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
     of LoadFloat:
       case op.arguments[1].kind
@@ -155,7 +162,8 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.mov(regRsi.reg, regR8)
 
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(createFieldRaw) # it gets the JSValue just fine, but rsi is an empty cstring (it points to a totally different location???)
+      cgen.s.call(createFieldRaw)
+        # it gets the JSValue just fine, but rsi is an empty cstring (it points to a totally different location???)
       cgen.s.add(regRsp.reg, 8)
     of LoadInt:
       cgen.s.mov(regRdi, int64(&op.arguments[1].getInt()))
@@ -174,7 +182,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
     of Add:
       # TODO: I think we should remove UnsignedInt altogether.
       # They're against the spec, and make this op awful to implement.
-      
+
       prepareAtomGetCall(cgen, &op.arguments[0].getInt())
       cgen.s.mov(regRdi.reg, regRax)
 
@@ -201,7 +209,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.sub(regRsp.reg, 8)
       cgen.s.call(allocFloat)
       cgen.s.add(regRsp.reg, 8)
-   
+
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
     of CopyAtom:
       # TODO: implement this in pure asm
@@ -227,7 +235,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.add(regRsp.reg, 8)
     of LoadStr:
       prepareLoadString(cgen, &op.arguments[1].getStr()) # puts the string in r8
-      
+
       # Allocate the string on GC'd memory
       # FIXME: Can't we just reuse the same heap memory used in the prep-load-string call?
       cgen.s.sub(regRsp.reg, 8)
@@ -239,7 +247,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
     of Call:
       # TODO: check if the clause has been JIT'd too. If so,
       # use the compiled version
-      
+
       prepareLoadString(cgen, &op.arguments[0].getStr())
 
       cgen.s.sub(regRsp.reg, 8)
@@ -257,7 +265,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       error "jit/amd64: cannot compile op: " & $op.opcode
       error "jit/amd64: bailing out, this clause will be interpreted"
       return false
-  
+
   cgen.s.ret()
   true
 
@@ -276,18 +284,14 @@ proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
   else:
     warn "jit/amd64: failed to emit native code for clause."
     warn "jit/amd64: the partially emitted code will be dumped to `bali-jit-fail.bin`"
-    
+
     cgen.dump("bali-jit-fail.bin")
     none(JITSegment)
 
 proc initAMD64Codegen*(vm: pointer, callbacks: VMCallbacks): AMD64Codegen =
   info "jit/amd64: initializing"
 
-  var cgen = AMD64Codegen(
-    s: initAssemblerX64(nil),
-    vm: vm,
-    callbacks: callbacks
-  )
+  var cgen = AMD64Codegen(s: initAssemblerX64(nil), vm: vm, callbacks: callbacks)
   cgen.pageSize = sysconf(SC_PAGESIZE)
   debug "jit/amd64: page size is " & $cgen.pageSize
 

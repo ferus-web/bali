@@ -259,7 +259,7 @@ proc typeRegistrationFinalizer*(runtime: Runtime) =
           )
       else:
         jsObj[name] = value.atom()
-    
+
     runtime.vm[].addAtom(ensureMove(jsObj), index)
 
 proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =

@@ -310,7 +310,9 @@ proc nativeCallable*(fn: proc()): JSValue {.inline, cdecl.} =
 func stackBoolean*(b: bool): MAtom =
   MAtom(kind: Boolean, state: b)
 
-proc bytecodeCallable*(clause: string, inRuntime: bool = false): JSValue {.inline, cdecl.} =
+proc bytecodeCallable*(
+    clause: string, inRuntime: bool = false
+): JSValue {.inline, cdecl.} =
   var mem = newJSValue(BytecodeCallable)
   mem.clauseName = clause
 
@@ -332,7 +334,6 @@ proc floating*(value: float64): JSValue {.cdecl.} =
   mem
 
 func stackFloating*(value: float64): MAtom =
-
   MAtom(kind: Float, floatVal: value)
 
 proc undefined*(): JSValue {.inline, cdecl.} =

@@ -13,7 +13,10 @@ when hasJITSupport:
   when defined(amd64):
     import bali/runtime/compiler/amd64/codegen
   else:
-    {.error: "Platform is marked as having JIT support but the VM is not introduced to the codegen module.".}
+    {.
+      error:
+        "Platform is marked as having JIT support but the VM is not introduced to the codegen module."
+    .}
 
 const
   BaliVMInitialPreallocatedStackSize* {.intdefine.} = 16
@@ -39,7 +42,7 @@ type
     trace: ExceptionTrace
 
     registers*: Registers
-    
+
     when defined(amd64):
       jit*: AMD64Codegen
       useJit*: bool = true
@@ -111,7 +114,7 @@ proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) {.cd
   if id > uint(interpreter.stack.len - 1):
     # We need to allocate more slots.
     interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
-  
+
   interpreter.stack[id] = value
 
 proc hasBuiltin*(interpreter: PulsarInterpreter, name: string): bool =
@@ -447,7 +450,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.call(name, op)
   of LoadUint:
     msg "load uint"
-    interpreter.addAtom(uinteger((&op.arguments[1].getInt()).uint()), (&op.arguments[0].getInt()).uint)
+    interpreter.addAtom(
+      uinteger((&op.arguments[1].getInt()).uint()), (&op.arguments[0].getInt()).uint
+    )
     inc interpreter.currIndex
   of LoadList:
     msg "load list"
@@ -965,7 +970,7 @@ proc run*(interpreter: var PulsarInterpreter) =
 
     if not *cls:
       break
-    
+
     let clause = &cls
     let op = clause.find(interpreter.currIndex)
 
@@ -982,7 +987,7 @@ proc run*(interpreter: var PulsarInterpreter) =
       interpreter.currClause = clause.rollback.clause
       interpreter.currIndex = clause.rollback.opIndex
       continue
-    
+
     # If we can compile this clause, we might as well.
     if hasJITSupport and interpreter.useJit and not interpreter.trapped:
       # TODO: JIT'd functions should be able to call other JIT'd segments
@@ -994,7 +999,7 @@ proc run*(interpreter: var PulsarInterpreter) =
         (&compiled)()
         interpreter.currIndex = clause.operations.len.uint + 1'u
         continue
-    
+
     # Else, pass it through the "slow" interpreter.
     var operation = &op
     let index = interpreter.currIndex
@@ -1030,38 +1035,31 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
     builtins: initTable[string, proc(op: Operation)](),
     currIndex: 0'u,
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
-    trapped: false
-      # Pre-allocate space for some value pointers
+    trapped: false, # Pre-allocate space for some value pointers
   )
 
   when hasJITSupport:
-    interp[].jit =
-      initJITForPlatform(
-        interp,
-        VMCallbacks(
-          addAtom: addAtom,
-          getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
-            let atom = vm.get(index)
-            return &atom
-          ,
-          copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
-            vm.stack[dest] = &vm.get(source)
-          ,
-          resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
-            vm.registers.callArgs.reset()
-          ,
-          passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
-            vm.registers.callArgs.add(&vm.get(index))
-          ,
-          callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
-            vm.trapped = true
-            vm.call($name, default(Operation))
-            vm.run()
-          ,
-          invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
-            vm.invoke(&vm.get(index.uint))
-        )
-      )
+    interp[].jit = initJITForPlatform(
+      interp,
+      VMCallbacks(
+        addAtom: addAtom,
+        getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
+          let atom = vm.get(index)
+          return &atom,
+        copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
+          vm.stack[dest] = &vm.get(source),
+        resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
+          vm.registers.callArgs.reset(),
+        passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
+          vm.registers.callArgs.add(&vm.get(index)),
+        callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
+          vm.trapped = true
+          vm.call($name, default(Operation))
+          vm.run(),
+        invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
+          vm.invoke(&vm.get(index.uint)),
+      ),
+    )
 
   interp[].registerBuiltin(
     "print",
