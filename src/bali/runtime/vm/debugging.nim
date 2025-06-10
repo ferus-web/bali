@@ -6,12 +6,17 @@ template msg*(message: string) =
   when (not defined(release)) and defined(baliLogExecDbg):
     let
       pc = interpreter.currIndex
-      clause = interpreter.clauses[interpreter.currClause].name
-      op = interpreter.clauses[interpreter.currClause].operations[pc].opcode
+      clauseObj = interpreter.clauses[interpreter.currClause]
+      clause = clauseObj.name
 
     stdout.write(
-      "vm [pc=" & $pc & ", clause=" & $clause & ", op=" & $op & "] " & message & '\n'
-    )
+      "vm [pc=" & $pc & ", clause=" & $clause) 
+    
+    if clauseObj.operations.len.uint > pc:
+      let op = clauseObj.operations[pc].opcode
+      stdout.write(", op=" & $op)
+
+    stdout.write("] " & message & '\n')
 
 template vmd*(phase: string, message: string) =
   ## Non-execution related VM debug messages

@@ -86,7 +86,6 @@ proc copyRaw(dest, source: pointer, size: uint) {.cdecl.} =
   copyMem(dest, source, size)
 
 proc allocBytecodeCallable(str: cstring): JSValue {.cdecl.} =
-  echo "alloc bytecode callable " & $str
   bytecodeCallable($str)
 
 proc strRaw(value: cstring): JSValue {.cdecl.} =

@@ -962,6 +962,7 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 
   raise newException(ValueError, "setEntryPoint(): cannot find clause \"" & name & "\"")
 
+import pretty
 proc run*(interpreter: var PulsarInterpreter) =
   while not interpreter.halt:
     vmd "fetch", "new frame " & $interpreter.currIndex
@@ -976,12 +977,15 @@ proc run*(interpreter: var PulsarInterpreter) =
 
     if not *op:
       vmd "rollback", "no op to exec"
+      if interpreter.trapped: break
+
+      print clause
       if clause.rollback.clause == int.low or interpreter.trapped:
         vmd "rollback", "clause == int.low; exec has finished"
         interpreter.trapped = false
         break
 
-      vmd "rollback", "rollback clause: " & $clause.rollback.clause
+      vmd "rollback", "rollback clause: " & $interpreter.clauses[clause.rollback.clause].name
       vmd "rollback", "rollback pc: " & $clause.rollback.opIndex
       interpreter.currClause = clause.rollback.clause
       interpreter.currIndex = clause.rollback.opIndex
