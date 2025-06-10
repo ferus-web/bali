@@ -311,8 +311,8 @@ func stackBoolean*(b: bool): MAtom =
   MAtom(kind: Boolean, state: b)
 
 proc bytecodeCallable*(
-    clause: string, inRuntime: bool = false
-): JSValue {.inline, cdecl.} =
+    clause: string
+): JSValue {.cdecl.} =
   var mem = newJSValue(BytecodeCallable)
   mem.clauseName = clause
 

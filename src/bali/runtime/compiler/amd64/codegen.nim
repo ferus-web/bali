@@ -25,6 +25,8 @@ proc allocateNativeSegment(cgen: var AMD64Codegen) =
   debug "jit/amd64: allocating buffer for assembler"
 
   # TODO: Unhardcode this. Perhaps we can have something that takes in a clause and runs an upper bound estimate of how much memory its native repr will be in?
+  cgen.s = initAssemblerX64(nil)
+
   if (
     let code = posix_memalign(cgen.s.data.addr, cgen.pageSize.csize_t, 0x10000)
     code != 0
@@ -82,6 +84,10 @@ proc allocRaw(size: int64): pointer {.cdecl.} =
 
 proc copyRaw(dest, source: pointer, size: uint) {.cdecl.} =
   copyMem(dest, source, size)
+
+proc allocBytecodeCallable(str: cstring): JSValue {.cdecl.} =
+  echo "alloc bytecode callable " & $str
+  bytecodeCallable($str)
 
 proc strRaw(value: cstring): JSValue {.cdecl.} =
   str($value)
@@ -261,6 +267,15 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.mov(regRsi, &op.arguments[0].getInt())
       cgen.s.call(cgen.callbacks.invoke)
       cgen.s.add(regRsp.reg, 8)
+    of LoadBytecodeCallable:
+      prepareLoadString(cgen, &op.arguments[1].getStr())
+
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.mov(regRdi.reg, regR8)
+      cgen.s.call(allocBytecodeCallable)
+      cgen.s.add(regRsp.reg, 8)
+
+      cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
     else:
       error "jit/amd64: cannot compile op: " & $op.opcode
       error "jit/amd64: bailing out, this clause will be interpreted"
@@ -279,7 +294,7 @@ proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
 
   if emitNativeCode(cgen, clause):
     cgen.dump("bali-jit-result.bin")
-    info "jit/amd64: compilation successful"
+    info "jit/amd64: compilation successful for clause " & $clause.name
     some(cast[JITSegment](cgen.s.data))
   else:
     warn "jit/amd64: failed to emit native code for clause."
@@ -291,7 +306,7 @@ proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
 proc initAMD64Codegen*(vm: pointer, callbacks: VMCallbacks): AMD64Codegen =
   info "jit/amd64: initializing"
 
-  var cgen = AMD64Codegen(s: initAssemblerX64(nil), vm: vm, callbacks: callbacks)
+  var cgen = AMD64Codegen(vm: vm, callbacks: callbacks)
   cgen.pageSize = sysconf(SC_PAGESIZE)
   debug "jit/amd64: page size is " & $cgen.pageSize
 
