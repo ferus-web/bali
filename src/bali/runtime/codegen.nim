@@ -1295,8 +1295,8 @@ proc generateInternalIR*(runtime: Runtime) =
     proc(op: Operation) =
       inc runtime.statFieldAccesses
       let
-        index = &getUint(&runtime.argument(1))
-        storeAt = &getUint(&runtime.argument(2))
+        index = uint(&getNumeric(&runtime.argument(1)))
+        storeAt = uint(&getNumeric(&runtime.argument(2)))
 
         accesses = createFieldAccess(
           (
