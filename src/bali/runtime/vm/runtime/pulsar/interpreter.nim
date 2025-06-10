@@ -979,7 +979,6 @@ proc run*(interpreter: var PulsarInterpreter) =
       if clause.rollback.clause == int.low or interpreter.trapped:
         vmd "rollback", "clause == int.low; exec has finished"
         interpreter.trapped = false
-        interpreter.halt = true
         break
 
       vmd "rollback", "rollback clause: " & $clause.rollback.clause
@@ -989,7 +988,7 @@ proc run*(interpreter: var PulsarInterpreter) =
       continue
 
     # If we can compile this clause, we might as well.
-    if hasJITSupport and interpreter.useJit and not interpreter.trapped:
+    if interpreter.currIndex == 0 and hasJITSupport and interpreter.useJit and not interpreter.trapped:
       # TODO: JIT'd functions should be able to call other JIT'd segments
       vmd "fetch", "has jit support, compiling clause " & clause.name
       let compiled = interpreter.jit.compile(clause)
@@ -997,9 +996,9 @@ proc run*(interpreter: var PulsarInterpreter) =
       if *compiled:
         vmd "execute", "entering JIT'd segment"
         (&compiled)()
-        interpreter.currIndex = clause.operations.len.uint + 1'u
+        interpreter.currIndex = clause.operations.len.uint
         continue
-
+    
     # Else, pass it through the "slow" interpreter.
     var operation = &op
     let index = interpreter.currIndex
