@@ -329,8 +329,6 @@ proc floating*(value: float64): JSValue {.cdecl.} =
   var mem = newJSValue(Float)
   mem.floatVal = value
 
-  echo "floating: " & $value
-
   mem
 
 func stackFloating*(value: float64): MAtom =

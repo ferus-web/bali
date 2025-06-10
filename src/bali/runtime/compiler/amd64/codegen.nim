@@ -58,16 +58,12 @@ proc createFieldRaw*(atom: JSValue, field: cstring) {.cdecl.} =
   atom[$field] = undefined()
 
 proc getRawFloat(atom: JSValue): float64 {.cdecl.} =
-  let x = &atom.getNumeric()
-  result = x
-  echo "jit gets float: " & $x
+  &atom.getNumeric()
 
 proc allocFloat(v: float64): JSValue {.cdecl.} =
-  echo "jit allocates float: " & $v
   floating v
 
 proc allocFloatEncoded(v: int64): JSValue {.cdecl.} =
-  echo "encoded jit float alloc"
   allocFloat(cast[float64](v))
 
 proc dump*(cgen: var AMD64Codegen, file: string) =
@@ -205,7 +201,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.sub(regRsp.reg, 8)
       cgen.s.call(allocFloat)
       cgen.s.add(regRsp.reg, 8)
-      
+   
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
     of CopyAtom:
       # TODO: implement this in pure asm

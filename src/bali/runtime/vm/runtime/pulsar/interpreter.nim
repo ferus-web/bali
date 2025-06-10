@@ -958,26 +958,6 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
   raise newException(ValueError, "setEntryPoint(): cannot find clause \"" & name & "\"")
 
 proc run*(interpreter: var PulsarInterpreter) =
-  when hasJITSupport:
-    if interpreter.useJit and not interpreter.trapped:
-      vmd "fetch", "new frame " & $interpreter.currIndex
-      let cls = interpreter.getClause()
-      vmd "fetch", "got clause"
-
-      if not *cls:
-        return
-
-      vmd "fetch", "has jit support, compiling clause"
-      let compiled = interpreter.jit.compile(&cls)
-
-      if !compiled:
-        vmd "compile", "failed to compile clause, using interpreter"
-      else:
-        vmd "execute", "executing compiled clause"
-        (&compiled)()
-        vmd "execute", "executed JIT'd clause successfully, moving pc to end of clause"
-        return
-
   while not interpreter.halt:
     vmd "fetch", "new frame " & $interpreter.currIndex
     let cls = interpreter.getClause()
@@ -985,16 +965,16 @@ proc run*(interpreter: var PulsarInterpreter) =
 
     if not *cls:
       break
-
-    let
-      clause = &cls
-      op = clause.find(interpreter.currIndex)
+    
+    let clause = &cls
+    let op = clause.find(interpreter.currIndex)
 
     if not *op:
       vmd "rollback", "no op to exec"
       if clause.rollback.clause == int.low or interpreter.trapped:
         vmd "rollback", "clause == int.low; exec has finished"
         interpreter.trapped = false
+        interpreter.halt = true
         break
 
       vmd "rollback", "rollback clause: " & $clause.rollback.clause
@@ -1002,7 +982,20 @@ proc run*(interpreter: var PulsarInterpreter) =
       interpreter.currClause = clause.rollback.clause
       interpreter.currIndex = clause.rollback.opIndex
       continue
+    
+    # If we can compile this clause, we might as well.
+    if hasJITSupport and interpreter.useJit and not interpreter.trapped:
+      # TODO: JIT'd functions should be able to call other JIT'd segments
+      vmd "fetch", "has jit support, compiling clause " & clause.name
+      let compiled = interpreter.jit.compile(clause)
 
+      if *compiled:
+        vmd "execute", "entering JIT'd segment"
+        (&compiled)()
+        interpreter.currIndex = clause.operations.len.uint + 1'u
+        continue
+    
+    # Else, pass it through the "slow" interpreter.
     var operation = &op
     let index = interpreter.currIndex
     let clauseIndex = interpreter.currClause
@@ -1037,6 +1030,7 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
     builtins: initTable[string, proc(op: Operation)](),
     currIndex: 0'u,
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
+    trapped: false
       # Pre-allocate space for some value pointers
   )
 
