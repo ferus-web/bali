@@ -447,7 +447,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.call(name, op)
   of LoadUint:
     msg "load uint"
-    interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
+    interpreter.addAtom(uinteger((&op.arguments[1].getInt()).uint()), (&op.arguments[0].getInt()).uint)
     inc interpreter.currIndex
   of LoadList:
     msg "load list"
