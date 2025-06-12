@@ -334,7 +334,7 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
       interpreter.currClause = index
       interpreter.clauses[index] = newClause # store clause w/ rollback data to clauses
       interpreter.currIndex = 0
-      msg "new op to execute chosen"
+      msg "new op to execute chosen @ " & newClause.name & '/' & $interpreter.currIndex
       # set execution op index to 0 to start from the beginning
     else:
       raise newException(ValueError, "Reference to unknown clause: " & name)
@@ -978,8 +978,11 @@ proc run*(interpreter: var PulsarInterpreter) =
       break
 
     var clause = &cls
-    if clause.compiled:
-      break # FIXME: this is really, really stupid and an awful hack.
+    if clause.compiled and interpreter.trapped:
+      # FIXME: this is broken!!! :^(
+      #        i'm losing my mind and i have zero clue as to why
+      #        this is borked.
+      break
 
     vmd "fetch", "got clause " & clause.name
 
@@ -1017,6 +1020,8 @@ proc run*(interpreter: var PulsarInterpreter) =
           "exec'd JIT segment successfully, setting pc to end of clause/" &
             $interpreter.currIndex
         continue
+      else:
+        vmd "execute", "cannot compile segment: " & clause.name & ", falling back to VM"
 
     var operation = &op
     let index = interpreter.currIndex
