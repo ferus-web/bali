@@ -310,9 +310,7 @@ proc nativeCallable*(fn: proc()): JSValue {.inline, cdecl.} =
 func stackBoolean*(b: bool): MAtom =
   MAtom(kind: Boolean, state: b)
 
-proc bytecodeCallable*(
-    clause: string
-): JSValue {.cdecl.} =
+proc bytecodeCallable*(clause: string): JSValue {.cdecl.} =
   var mem = newJSValue(BytecodeCallable)
   mem.clauseName = clause
 

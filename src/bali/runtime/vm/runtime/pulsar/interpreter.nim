@@ -304,6 +304,8 @@ proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
 
 proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
   msg "calling function " & name
+  msg "trapped? " & $interpreter.trapped
+
   if interpreter.hasBuiltin(name):
     msg name & " is a builtin, calling it"
     interpreter.callBuiltin(name, op)
@@ -363,6 +365,11 @@ proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) =
     msg "atom is native segment"
     value.fn()
     inc interpreter.currIndex
+  elif value.kind == BytecodeCallable:
+    # FIXME: this is stupid too
+    interpreter.call(&getBytecodeClause(value), default(Operation))
+    assert not interpreter.halt
+    assert interpreter.trapped
   else:
     raise newException(ValueError, "INVK cannot deal with atom: " & $value.kind)
 
@@ -962,48 +969,55 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 
   raise newException(ValueError, "setEntryPoint(): cannot find clause \"" & name & "\"")
 
-import pretty
 proc run*(interpreter: var PulsarInterpreter) =
   while not interpreter.halt:
     vmd "fetch", "new frame " & $interpreter.currIndex
     let cls = interpreter.getClause()
-    vmd "fetch", "got clause"
 
     if not *cls:
       break
 
-    let clause = &cls
+    var clause = &cls
+    if clause.compiled:
+      break # FIXME: this is really, really stupid and an awful hack.
+
+    vmd "fetch", "got clause " & clause.name
+
     let op = clause.find(interpreter.currIndex)
 
     if not *op:
       vmd "rollback", "no op to exec"
-      if interpreter.trapped: break
 
-      print clause
-      if clause.rollback.clause == int.low or interpreter.trapped:
+      if clause.rollback.clause == int.low:
         vmd "rollback", "clause == int.low; exec has finished"
-        interpreter.trapped = false
         break
 
-      vmd "rollback", "rollback clause: " & $interpreter.clauses[clause.rollback.clause].name
+      vmd "rollback",
+        "rollback clause: " & $interpreter.clauses[clause.rollback.clause].name
       vmd "rollback", "rollback pc: " & $clause.rollback.opIndex
       interpreter.currClause = clause.rollback.clause
       interpreter.currIndex = clause.rollback.opIndex
       continue
 
     # If we can compile this clause, we might as well.
-    if interpreter.currIndex == 0 and hasJITSupport and interpreter.useJit and not interpreter.trapped:
+    if interpreter.currIndex == 0 and hasJITSupport and interpreter.useJit and
+        not interpreter.trapped:
       # TODO: JIT'd functions should be able to call other JIT'd segments
       vmd "fetch", "has jit support, compiling clause " & clause.name
       let compiled = interpreter.jit.compile(clause)
 
       if *compiled:
+        clause.compiled = true
+        interpreter.clauses[interpreter.currClause] = clause
+
         vmd "execute", "entering JIT'd segment"
         (&compiled)()
         interpreter.currIndex = clause.operations.len.uint
+        vmd "execute",
+          "exec'd JIT segment successfully, setting pc to end of clause/" &
+            $interpreter.currIndex
         continue
-    
-    # Else, pass it through the "slow" interpreter.
+
     var operation = &op
     let index = interpreter.currIndex
     let clauseIndex = interpreter.currClause
@@ -1060,7 +1074,9 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
           vm.call($name, default(Operation))
           vm.run(),
         invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
-          vm.invoke(&vm.get(index.uint)),
+          vm.trapped = true
+          vm.invoke(&vm.get(index.uint))
+          vm.run(),
       ),
     )
 

@@ -9,9 +9,8 @@ template msg*(message: string) =
       clauseObj = interpreter.clauses[interpreter.currClause]
       clause = clauseObj.name
 
-    stdout.write(
-      "vm [pc=" & $pc & ", clause=" & $clause) 
-    
+    stdout.write("vm [pc=" & $pc & ", clause=" & $clause)
+
     if clauseObj.operations.len.uint > pc:
       let op = clauseObj.operations[pc].opcode
       stdout.write(", op=" & $op)

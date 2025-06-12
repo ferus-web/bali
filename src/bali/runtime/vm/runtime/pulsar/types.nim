@@ -6,6 +6,7 @@ type
     operations*: seq[Operation]
 
     rollback*: ClauseRollback
+    compiled*: bool = false
 
   InvalidRegisterRead* = object of Defect
 
