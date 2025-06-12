@@ -10,6 +10,8 @@ nimalyzer.log
 balde
 *.out
 *.log
+*.bin
 
 outcomes/
 test262/
+

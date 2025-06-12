@@ -25,7 +25,7 @@ proc generateStdIr*(runtime: Runtime) =
     ,
   )
 
-  runtime.vm.registerBuiltin(
+  runtime.vm[].registerBuiltin(
     "BALI_THROWERROR",
     proc(op: Operation) =
       let atom =
@@ -43,6 +43,6 @@ proc generateStdIr*(runtime: Runtime) =
       runtime.vm.registers.error = some(ensureMove(error))
         # Set the error register to this.
 
-      runtime.vm.throw(jsException(runtime.ToString(atom)))
+      runtime.vm[].throw(jsException(runtime.ToString(atom)))
       runtime.logTracebackAndDie(),
   )

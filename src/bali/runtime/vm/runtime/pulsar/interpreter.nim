@@ -3,27 +3,26 @@
 
 import std/[math, tables, options]
 import bali/runtime/vm/heap/boehm
-import bali/runtime/vm/[atom, utils, debugging]
+import bali/runtime/vm/[atom, debugging]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
-import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv]
+import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv, types, resolver]
+import bali/runtime/compiler/base
+import pkg/[shakar]
+
+when hasJITSupport:
+  when defined(amd64):
+    import bali/runtime/compiler/amd64/codegen
+  else:
+    {.
+      error:
+        "Platform is marked as having JIT support but the VM is not introduced to the codegen module."
+    .}
 
 const
   BaliVMInitialPreallocatedStackSize* {.intdefine.} = 16
   BaliVMPreallocatedStackSize* {.intdefine.} = 4
 
 type
-  Clause* = object
-    name*: string
-    operations*: seq[Operation]
-
-    rollback*: ClauseRollback
-
-  InvalidRegisterRead* = object of Defect
-
-  ClauseRollback* = object
-    clause*: int = int.low
-    opIndex*: uint = 1
-
   Registers* = object
     retVal*: Option[JSValue]
     callArgs*: seq[JSValue]
@@ -44,7 +43,11 @@ type
 
     registers*: Registers
 
-const SequenceBasedRegisters* = [some(1)]
+    when defined(amd64):
+      jit*: AMD64Codegen
+      useJit*: bool = true
+
+    trapped*: bool = false
 
 proc find*(clause: Clause, id: uint): Option[Operation] =
   vmd "find-op-in-clause", "target = " & $id & "; len = " & $clause.operations.len
@@ -107,17 +110,7 @@ proc analyze*(interpreter: var PulsarInterpreter) =
       continue
 
 {.push checks: on, inline.}
-proc addAtom*(interpreter: var PulsarInterpreter, atom: MAtom, id: uint) =
-  ## Add a stack-allocated atom to the VM's memory.
-  ##
-  ## **NOTE**: This performs a copy of the atom so that it is guaranteed to never be destroyed prematurely.
-  if id > uint(interpreter.stack.len - 1):
-    # We need to allocate more slots.
-    interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
-
-  interpreter.stack[id] = atomToJSValue(atom)
-
-proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) =
+proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) {.cdecl.} =
   if id > uint(interpreter.stack.len - 1):
     # We need to allocate more slots.
     interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
@@ -191,129 +184,6 @@ proc throw*(
 
   interpreter.trace = newTrace
 
-proc resolve*(interpreter: PulsarInterpreter, clause: Clause, op: var Operation) =
-  case op.opCode
-  of LoadStr:
-    op.arguments &= op.consume(Integer, "LOADS expects an integer at position 1")
-
-    op.arguments &= op.consume(String, "LOADS expects a string at position 2")
-  of LoadInt, LoadUint:
-    for x in 1 .. 2:
-      op.arguments &=
-        op.consume(
-          Integer, OpCodeToString[op.opCode] & " expects an integer at position " & $x
-        )
-  of Equate:
-    for x, _ in op.rawArgs.deepCopy():
-      op.arguments &= op.consume(Integer, "EQU expects an integer at position " & $x)
-  of GreaterThanInt, LesserThanInt, GreaterThanEqualInt, LesserThanEqualInt:
-    for x in 1 .. 2:
-      op.arguments &=
-        op.consume(
-          Integer, OpCodeToString[op.opCode] & " expects an integer at position " & $x
-        )
-  of Call:
-    op.arguments &= op.consume(String, "CALL expects an ident/string at position 1")
-
-    for i, x in deepCopy(op.rawArgs):
-      op.arguments &= op.consume(Integer, "CALL expects an integer at position " & $i)
-  of Jump:
-    op.arguments &=
-      op.consume(Integer, "JUMP expects exactly one integer as an argument")
-  of Add, Mult, Div, Sub, AddInt, SubInt, MultInt, DivInt, PowerInt, MultFloat,
-      DivFloat, PowerFloat, AddFloat, SubFloat:
-    for x in 1 .. 2:
-      op.arguments &=
-        op.consume(
-          Integer, OpCodeToString[op.opCode] & " expects an integer at position " & $x
-        )
-  of LoadList:
-    op.arguments &= op.consume(Integer, "LOADL expects an integer at position 1")
-  of AddList:
-    op.arguments &= op.consume(Integer, "ADDL expects an integer at position 1")
-
-    op.arguments &= op.consume(Integer, "ADDL expects an integer at position 2")
-  of LoadBool:
-    op.arguments &= op.consume(Integer, "LOADB expects an integer at position 1")
-
-    op.arguments &= op.consume(Boolean, "LOADB expects a boolean at position 2")
-  of Swap:
-    for x in 1 .. 2:
-      op.arguments &= op.consume(Integer, "SWAP expects an integer at position " & $x)
-  of Return:
-    op.arguments &= op.consume(Integer, "RETURN expects an integer at position 1")
-  of JumpOnError:
-    op.arguments &= op.consume(Integer, "JMPE expects an integer at position 1")
-  of LoadObject:
-    op.arguments &= op.consume(Integer, "LOADO expects an integer at position 1")
-  of LoadUndefined:
-    op.arguments &= op.consume(Integer, "LOADUD expects an integer at position 1")
-  of CreateField:
-    for x in 1 .. 2:
-      op.arguments &= op.consume(Integer, "CFIELD expects an integer at position " & $x)
-
-    op.arguments &= op.consume(String, "CFIELD expects a string at position 3")
-  of FastWriteField:
-    for x in 1 .. 2:
-      op.arguments &= op.consume(
-        Integer, "FWFIELD expects an integer at position " & $x
-      )
-  of WriteField:
-    op.arguments &= op.consume(Integer, "WFIELD expects an integer at position 1")
-
-    op.arguments &= op.consume(String, "WFIELD expects a string at position 2")
-  of Increment, Decrement:
-    op.arguments &=
-      op.consume(
-        Integer, OpCodeToString[op.opCode] & " expects an integer at position 1"
-      )
-  of CrashInterpreter:
-    discard
-  of LoadNull:
-    op.arguments &= op.consume(Integer, "LOADN expects an integer at position 1")
-  of ReadRegister:
-    op.arguments &= op.consume(Integer, "RREG expects an integer at position 1")
-
-    op.arguments &= op.consume(Integer, "RREG expects an integer at position 2")
-
-    try:
-      op.arguments &=
-        op.consume(
-          Integer,
-          "RREG expects an integer at position 3 when accessing a sequence based register",
-        )
-    except ValueError as exc:
-      if op.arguments[1].getInt() in SequenceBasedRegisters:
-        raise exc
-  of PassArgument:
-    op.arguments &= op.consume(Integer, "PARG expects an integer at position 1")
-  of ResetArgs, ZeroRetval:
-    discard
-  of CopyAtom:
-    op.arguments &= op.consume(Integer, "COPY expects an integer at position 1")
-
-    op.arguments &= op.consume(Integer, "COPY expects an integer at position 2")
-  of MoveAtom:
-    op.arguments &= op.consume(Integer, "MOVE expects an integer at position 1")
-
-    op.arguments &= op.consume(Integer, "MOVE expects an integer at position 2")
-  of LoadFloat:
-    op.arguments &= op.consume(Integer, "LOADF expects an integer at position 1")
-
-    op.arguments &= op.consume(Float, "LOADF expects an integer at position 2")
-  of LoadBytecodeCallable:
-    op.arguments &= op.consume(Integer, "LOADBC expects an integer at position 1")
-    op.arguments &= op.consume(String, "LOADBC expects a string at position 2")
-  of ExecuteBytecodeCallable:
-    op.arguments &= op.consume(Integer, "EXEBC expects an integer at position 1")
-  of Invoke:
-    if op.rawArgs[0].kind == tkInteger:
-      # Bytecode callable
-      op.arguments &= op.consume(Integer, "INVK expects an integer at position 1")
-    elif op.rawArgs[0].kind in {tkIdent, tkQuotedString}:
-      # Clause/Builtin
-      op.arguments &= op.consume(String, "INVK expects an ident/string at position 1")
-
 proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
   var
     msg = "Traceback (most recent call last)"
@@ -355,7 +225,7 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
         break
     else:
       var operation = &op
-      interpreter.resolve(&clause, operation)
+      resolve(&clause, operation)
 
       msg &= "\n\tClause \"" & currTrace.exception.clause & "\", operation " & $(line)
 
@@ -434,6 +304,8 @@ proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
 
 proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
   msg "calling function " & name
+  msg "trapped? " & $interpreter.trapped
+
   if interpreter.hasBuiltin(name):
     msg name & " is a builtin, calling it"
     interpreter.callBuiltin(name, op)
@@ -462,13 +334,44 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
       interpreter.currClause = index
       interpreter.clauses[index] = newClause # store clause w/ rollback data to clauses
       interpreter.currIndex = 0
-      msg "new op to execute chosen"
+      msg "new op to execute chosen @ " & newClause.name & '/' & $interpreter.currIndex
       # set execution op index to 0 to start from the beginning
     else:
       raise newException(ValueError, "Reference to unknown clause: " & name)
 
   if gcStats.pressure > 0.9f:
     boehmGCFullCollect()
+
+proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) =
+  if value.kind == Integer:
+    let index = uint(&getInt(value))
+    msg "atom is integer/ref to atom: " & $index
+    let callable = &interpreter.get(index)
+
+    if callable.kind == BytecodeCallable:
+      msg "atom is bytecode segment"
+      interpreter.call(&getBytecodeClause(callable), default(Operation))
+    elif callable.kind == NativeCallable:
+      msg "atom is native segment"
+      callable.fn()
+      inc interpreter.currIndex
+    else:
+      raise newException(ValueError, "INVK cannot deal with atom: " & $callable.kind)
+  elif value.kind == String:
+    msg "atom is string/ref to native function"
+    interpreter.call(&getStr(value), default(Operation))
+  elif value.kind == NativeCallable:
+    # FIXME: this is stupid.
+    msg "atom is native segment"
+    value.fn()
+    inc interpreter.currIndex
+  elif value.kind == BytecodeCallable:
+    # FIXME: this is stupid too
+    interpreter.call(&getBytecodeClause(value), default(Operation))
+    assert not interpreter.halt
+    assert interpreter.trapped
+  else:
+    raise newException(ValueError, "INVK cannot deal with atom: " & $value.kind)
 
 proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   when not defined(mirageNoJit):
@@ -554,7 +457,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.call(name, op)
   of LoadUint:
     msg "load uint"
-    interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
+    interpreter.addAtom(
+      uinteger((&op.arguments[1].getInt()).uint()), (&op.arguments[0].getInt()).uint
+    )
     inc interpreter.currIndex
   of LoadList:
     msg "load list"
@@ -1048,24 +953,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   of Invoke:
     let value = op.arguments[0]
 
-    if value.kind == Integer:
-      msg "atom is integer/ref to atom"
-      let callable = &interpreter.get(uint(&getInt(value)))
-
-      if callable.kind == BytecodeCallable:
-        msg "atom is bytecode segment"
-        interpreter.call(&getBytecodeClause(callable), op)
-      elif callable.kind == NativeCallable:
-        msg "atom is native segment"
-        callable.fn()
-        inc interpreter.currIndex
-      else:
-        raise newException(ValueError, "INVK cannot deal with atom: " & $callable.kind)
-    elif value.kind == String:
-      msg "atom is string/ref to native function"
-      interpreter.call(&getStr(value), op)
-    else:
-      raise newException(ValueError, "INVK cannot deal with atom: " & $value.kind)
+    interpreter.invoke(value)
   else:
     when defined(release):
       inc interpreter.currIndex
@@ -1085,26 +973,55 @@ proc run*(interpreter: var PulsarInterpreter) =
   while not interpreter.halt:
     vmd "fetch", "new frame " & $interpreter.currIndex
     let cls = interpreter.getClause()
-    vmd "fetch", "got clause"
 
     if not *cls:
       break
 
-    let
-      clause = &cls
-      op = clause.find(interpreter.currIndex)
+    var clause = &cls
+    if clause.compiled and interpreter.trapped:
+      # FIXME: this is broken!!! :^(
+      #        i'm losing my mind and i have zero clue as to why
+      #        this is borked.
+      break
+
+    vmd "fetch", "got clause " & clause.name
+
+    let op = clause.find(interpreter.currIndex)
 
     if not *op:
       vmd "rollback", "no op to exec"
+
       if clause.rollback.clause == int.low:
         vmd "rollback", "clause == int.low; exec has finished"
         break
 
-      vmd "rollback", "rollback clause: " & $clause.rollback.clause
+      vmd "rollback",
+        "rollback clause: " & $interpreter.clauses[clause.rollback.clause].name
       vmd "rollback", "rollback pc: " & $clause.rollback.opIndex
       interpreter.currClause = clause.rollback.clause
       interpreter.currIndex = clause.rollback.opIndex
       continue
+
+    # If we can compile this clause, we might as well.
+    if interpreter.currIndex == 0 and hasJITSupport and interpreter.useJit and
+        not interpreter.trapped:
+      # TODO: JIT'd functions should be able to call other JIT'd segments
+      vmd "fetch", "has jit support, compiling clause " & clause.name
+      let compiled = interpreter.jit.compile(clause)
+
+      if *compiled:
+        clause.compiled = true
+        interpreter.clauses[interpreter.currClause] = clause
+
+        vmd "execute", "entering JIT'd segment"
+        (&compiled)()
+        interpreter.currIndex = clause.operations.len.uint
+        vmd "execute",
+          "exec'd JIT segment successfully, setting pc to end of clause/" &
+            $interpreter.currIndex
+        continue
+      else:
+        vmd "execute", "cannot compile segment: " & clause.name & ", falling back to VM"
 
     var operation = &op
     let index = interpreter.currIndex
@@ -1114,7 +1031,7 @@ proc run*(interpreter: var PulsarInterpreter) =
 
     if not operation.resolved:
       vmd "decode", "op is not resolved, resolving"
-      interpreter.resolve(clause, operation)
+      resolve(clause, operation)
       operation.resolved = true
 
       vmd "decode", "resolved/decoded op"
@@ -1125,23 +1042,57 @@ proc run*(interpreter: var PulsarInterpreter) =
     interpreter.clauses[clauseIndex].operations[index] = ensureMove(operation)
     vmd "execute", "saved op state"
 
-proc newPulsarInterpreter*(source: string): PulsarInterpreter =
-  var interp = PulsarInterpreter(
+proc initJITForPlatform(vm: pointer, callbacks: VMCallbacks): auto =
+  assert(vm != nil)
+  assert(hasJITSupport, "Platform does not have a JIT compiler implementation!")
+
+  when defined(amd64):
+    return initAMD64CodeGen(vm, callbacks)
+
+proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
+  var interp = cast[ptr PulsarInterpreter](allocShared(sizeof(PulsarInterpreter)))
+  interp[] = PulsarInterpreter(
     tokenizer: newTokenizer(source),
     clauses: @[],
     builtins: initTable[string, proc(op: Operation)](),
     currIndex: 0'u,
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
-      # Pre-allocate space for some value pointers
+    trapped: false, # Pre-allocate space for some value pointers
   )
-  interp.registerBuiltin(
+
+  when hasJITSupport:
+    interp[].jit = initJITForPlatform(
+      interp,
+      VMCallbacks(
+        addAtom: addAtom,
+        getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
+          let atom = vm.get(index)
+          return &atom,
+        copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
+          vm.stack[dest] = &vm.get(source),
+        resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
+          vm.registers.callArgs.reset(),
+        passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
+          vm.registers.callArgs.add(&vm.get(index)),
+        callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
+          vm.trapped = true
+          vm.call($name, default(Operation))
+          vm.run(),
+        invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
+          vm.trapped = true
+          vm.invoke(&vm.get(index.uint))
+          vm.run(),
+      ),
+    )
+
+  interp[].registerBuiltin(
     "print",
     proc(op: Operation) =
       for i, x in op.arguments:
         if i == 0:
           continue
 
-        let val = interp.get((&x.getInt()).uint)
+        let val = interp[].get((&x.getInt()).uint)
 
         if *val:
           echo (&val).crush("", quote = false)

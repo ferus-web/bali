@@ -3,8 +3,9 @@
 ##
 
 import bali/runtime/vm/runtime/shared
-import bali/runtime/vm/[atom, utils]
+import bali/runtime/vm/[atom]
 import bali/runtime/vm/ir/[emitter, shared]
+import pkg/shakar
 
 proc newModule*(gen: IRGenerator, name: string) {.inline.} =
   ## Create a new module/function/clause definition. 

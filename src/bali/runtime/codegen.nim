@@ -1290,13 +1290,13 @@ proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
 proc generateInternalIR*(runtime: Runtime) =
   ## Generate the internal functions needed by Bali to work properly.
   runtime.ir.newModule("BALI_RESOLVEFIELD")
-  runtime.vm.registerBuiltin(
+  runtime.vm[].registerBuiltin(
     "BALI_RESOLVEFIELD_INTERNAL",
     proc(op: Operation) =
       inc runtime.statFieldAccesses
       let
-        index = uint(&getInt(&runtime.argument(1)))
-        storeAt = uint(&getInt(&runtime.argument(2)))
+        index = &getUint(&runtime.argument(1))
+        storeAt = &getUint(&runtime.argument(2))
 
         accesses = createFieldAccess(
           (
@@ -1315,7 +1315,7 @@ proc generateInternalIR*(runtime: Runtime) =
       debug "hooks: BALI_RESOLVEFIELD_INTERNAL: index = " & $index & ", destination = " &
         $storeAt
 
-      let atom = &runtime.vm.get(index)
+      let atom = &runtime.vm[].get(index)
 
       if atom.isUndefined():
         runtime.typeError("value is undefined")
@@ -1325,15 +1325,15 @@ proc generateInternalIR*(runtime: Runtime) =
 
       if atom.kind != Object:
         debug "runtime: atom is not an object, returning undefined."
-        runtime.vm.addAtom(undefined(), storeAt)
+        runtime.vm[].addAtom(undefined(), storeAt)
         return
 
-      runtime.vm.addAtom(atom.findField(accesses), storeAt),
+      runtime.vm[].addAtom(atom.findField(accesses), storeAt),
   )
   runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")
 
   runtime.ir.newModule("BALI_TYPEOF")
-  runtime.vm.registerBuiltin(
+  runtime.vm[].registerBuiltin(
     "BALI_TYPEOF_INTERNAL",
     proc(op: Operation) =
       inc runtime.statTypeofCalls
@@ -1345,7 +1345,7 @@ proc generateInternalIR*(runtime: Runtime) =
   runtime.ir.call("BALI_TYPEOF_INTERNAL")
 
   runtime.ir.newModule("BALI_INDEX")
-  runtime.vm.registerBuiltin(
+  runtime.vm[].registerBuiltin(
     "BALI_INDEX_INTERNAL",
     proc(op: Operation) =
       let
@@ -1368,7 +1368,7 @@ proc generateInternalIR*(runtime: Runtime) =
   )
   runtime.ir.call("BALI_INDEX_INTERNAL")
 
-  runtime.vm.registerBuiltin(
+  runtime.vm[].registerBuiltin(
     "BALI_EQUATE_ATOMS",
     proc(op: Operation) =
       # This is supposed to work exactly how the EQU instruction works
@@ -1385,7 +1385,7 @@ proc generateInternalIR*(runtime: Runtime) =
     ,
   )
 
-  runtime.vm.registerBuiltin(
+  runtime.vm[].registerBuiltin(
     "BALI_EQUATE_ATOMS_STRICT",
     proc(op: Operation) =
       # This is supposed to work exactly how the EQU instruction works
@@ -1402,7 +1402,7 @@ proc generateInternalIR*(runtime: Runtime) =
     ,
   )
 
-  runtime.vm.registerBuiltin(
+  runtime.vm[].registerBuiltin(
     "BALI_WRITE_FIELD",
     proc(_: Operation) =
       let
@@ -1493,6 +1493,8 @@ proc run*(runtime: Runtime, typeRegistrationCb: proc(runtime: Runtime) = nil) =
   json.generateStdIR(runtime)
   encodeUri.generateStdIR(runtime)
 
+  runtime.vm[].useJit = runtime.opts.codegen.jitCompiler
+
   when not defined(baliTest262FyiDisableICULinkingCode):
     date.generateStdIR(runtime)
 
@@ -1543,10 +1545,10 @@ proc run*(runtime: Runtime, typeRegistrationCb: proc(runtime: Runtime) = nil) =
     quit(0)
 
   debug "interpreter: begin VM analyzer"
-  runtime.vm.analyze()
+  runtime.vm[].analyze()
 
   debug "interpreter: setting entry point to `outer`"
-  runtime.vm.setEntryPoint("outer")
+  runtime.vm[].setEntryPoint("outer")
 
   for error in runtime.ast.errors:
     runtime.syntaxError($error, if runtime.opts.test262: 0 else: 1)
@@ -1555,7 +1557,7 @@ proc run*(runtime: Runtime, typeRegistrationCb: proc(runtime: Runtime) = nil) =
     debug "runtime: `doNotEvaluate` is set to `true` in Test262 mode - skipping execution."
     quit(0)
   debug "interpreter: passing over execution to VM - here goes nothing!"
-  runtime.vm.run()
+  runtime.vm[].run()
 
 proc newRuntime*(
     file: string,

@@ -92,7 +92,7 @@ proc defineFn*(runtime: Runtime, name: string, fn: NativeFunction) =
   debug "runtime: exposing native function to runtime: " & name
   runtime.ir.newModule(normalizeIRName name)
   let builtinName = "BALI_" & toUpperAscii(normalizeIRName(name))
-  runtime.vm.registerBuiltin(
+  runtime.vm[].registerBuiltin(
     builtinName,
     proc(_: Operation) =
       fn(),
@@ -174,7 +174,7 @@ proc getMethod*(runtime: Runtime, v: JSValue, p: string): Option[proc()] =
       return some(
         proc() =
           runtime.vm.registers.callArgs.add(v)
-          runtime.vm.call(&getBytecodeClause(v[p]), default(Operation))
+          runtime.vm[].call(&getBytecodeClause(v[p]), default(Operation))
             # FIXME: I don't think giving a bogus operation will allow us to get proper tracebacks...
 
           # If the function returned nothing, just push undefined to that register.
@@ -260,7 +260,7 @@ proc typeRegistrationFinalizer*(runtime: Runtime) =
       else:
         jsObj[name] = value.atom()
 
-    runtime.vm.addAtom(ensureMove(jsObj), index)
+    runtime.vm[].addAtom(ensureMove(jsObj), index)
 
 proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   ## Register a type in the JavaScript engine instance with the name of the type (`name`) alongside its prototype (`prototype`).
@@ -281,7 +281,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   runtime.types[index] = ensureMove(jsType)
   let typIdx = runtime.types.len - 1
 
-  runtime.vm.registerBuiltin(
+  runtime.vm[].registerBuiltin(
     "BALI_CONSTRUCTOR_" & strutils.toUpperAscii(name),
     proc(_: Operation) =
       if runtime.types[typIdx].constructor == nil:
@@ -297,8 +297,8 @@ proc call*(runtime: Runtime, callable: JSValue, arguments: varargs[JSValue]): JS
   for arg in arguments:
     runtime.vm.registers.callArgs &= arg
 
-  runtime.vm.call(&callable.getBytecodeClause(), default(Operation))
-  runtime.vm.run()
+  runtime.vm[].call(&callable.getBytecodeClause(), default(Operation))
+  runtime.vm[].run()
 
   let retVal = runtime.getReturnValue()
   if !retVal:
