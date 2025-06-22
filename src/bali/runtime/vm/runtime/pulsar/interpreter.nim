@@ -388,9 +388,7 @@ proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: u
   of 1:
     # 1 - callargs register
     msg "read callargs register"
-    interpreter.addAtom(
-      interpreter.registers.callArgs[index], store
-    )
+    interpreter.addAtom(interpreter.registers.callArgs[index], store)
   of 2:
     # 2 - error register
     msg "read error register"
@@ -1091,12 +1089,12 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
           vm.trapped = true
           vm.invoke(str($index))
           vm.run(),
-        readVectorRegister: proc(vm: var PulsarInterpreter, store: uint, register: uint, index: uint) {.cdecl.} =
-          vm.readRegister(store, register, index)
-        ,
+        readVectorRegister: proc(
+            vm: var PulsarInterpreter, store: uint, register: uint, index: uint
+        ) {.cdecl.} =
+          vm.readRegister(store, register, index),
         zeroRetval: proc(vm: var PulsarInterpreter) {.cdecl.} =
-          vm.registers.retVal = none(JSValue)
-        ,
+          vm.registers.retVal = none(JSValue),
       ),
     )
 

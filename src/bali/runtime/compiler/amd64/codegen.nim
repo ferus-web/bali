@@ -264,7 +264,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       let target = op.arguments[0]
 
       var fun = cgen.callbacks.invoke
-      
+
       case target.kind
       of String:
         prepareLoadString(cgen, cstring(&target.getStr()))
