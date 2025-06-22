@@ -1094,6 +1094,9 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
         readVectorRegister: proc(vm: var PulsarInterpreter, store: uint, register: uint, index: uint) {.cdecl.} =
           vm.readRegister(store, register, index)
         ,
+        zeroRetval: proc(vm: var PulsarInterpreter) {.cdecl.} =
+          vm.registers.retVal = none(JSValue)
+        ,
       ),
     )
 

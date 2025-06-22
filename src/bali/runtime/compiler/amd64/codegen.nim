@@ -2,7 +2,7 @@
 
 import std/[logging, posix, hashes, tables, options, streams]
 import pkg/bali/runtime/compiler/base, pkg/bali/runtime/vm/heap/boehm
-import pkg/catnip/[x64assembler], pkg/[shakar, pretty]
+import pkg/catnip/[x64assembler], pkg/[shakar]
 import
   pkg/bali/runtime/vm/atom,
   pkg/bali/runtime/vm/runtime/shared,
@@ -287,7 +287,6 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
 
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
     of ReadRegister:
-      print op
       cgen.s.sub(regRsp.reg, 8)
       cgen.s.mov(regRdi, cast[int64](cgen.vm))
       cgen.s.mov(regRsi, cast[int64](&op.arguments[0].getInt()))
@@ -295,12 +294,15 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
 
       if op.arguments.len > 2:
         # We're reading a vector register (a register that dynamically grows)
-        echo cast[int64](&op.arguments[2].getInt())
         cgen.s.mov(regRcx, cast[int64](&op.arguments[2].getInt()))
         cgen.s.call(cgen.callbacks.readVectorRegister)
       else:
         # We're reading a scalar register.
         raise newException(Defect, "TODO: jit/amd64: Implement scalar register read")
+      cgen.s.add(regRsp.reg, 8)
+    of ZeroRetval:
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
       cgen.s.add(regRsp.reg, 8)
     else:
       error "jit/amd64: cannot compile op: " & $op.opcode

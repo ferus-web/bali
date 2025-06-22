@@ -13,6 +13,7 @@ type
     invoke*: pointer
     invokeStr*: pointer
     readVectorRegister*: pointer
+    zeroRetval*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
 
