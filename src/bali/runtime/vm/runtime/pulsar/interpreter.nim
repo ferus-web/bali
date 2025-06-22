@@ -373,6 +373,39 @@ proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) =
   else:
     raise newException(ValueError, "INVK cannot deal with atom: " & $value.kind)
 
+proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: uint) =
+  case register
+  of 0:
+    # 0 - retval register
+    msg "read retval register"
+    interpreter.addAtom(
+      if *interpreter.registers.retVal:
+        &interpreter.registers.retVal
+      else:
+        undefined(),
+      store,
+    )
+  of 1:
+    # 1 - callargs register
+    msg "read callargs register"
+    interpreter.addAtom(
+      interpreter.registers.callArgs[index], store
+    )
+  of 2:
+    # 2 - error register
+    msg "read error register"
+    interpreter.addAtom(
+      if *interpreter.registers.error:
+        &interpreter.registers.error
+      else:
+        undefined(),
+      store,
+    )
+  else:
+    raise newException(
+      InvalidRegisterRead, "Attempt to read from non-existant register " & $register
+    )
+
 proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   when not defined(mirageNoJit):
     inc op.called
@@ -692,43 +725,15 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   of ReadRegister:
     let
       idx = (&op.arguments[0].getInt()).uint
-      regIndex = if op.arguments.len > 2: 2 else: 1
-      regId = (&op.arguments[regIndex].getInt())
-
-    msg "idx: " & $idx & ", regIndex: " & $regIndex & ", regId: " & $regId
-
-    case regId
-    of 0:
-      # 0 - retval register
-      msg "read retval register"
-      interpreter.addAtom(
-        if *interpreter.registers.retVal:
-          &interpreter.registers.retVal
+      register = (&op.arguments[1].getInt()).uint
+      index =
+        if op.arguments.len > 2:
+          (&op.arguments[2].getInt()).uint
         else:
-          undefined(),
-        idx,
-      )
-    of 1:
-      # 1 - callargs register
-      msg "read callargs register"
-      interpreter.addAtom(
-        interpreter.registers.callArgs[&op.arguments[1].getInt()], idx
-      )
-    of 2:
-      # 2 - error register
-      msg "read error register"
-      interpreter.addAtom(
-        if *interpreter.registers.error:
-          &interpreter.registers.error
-        else:
-          undefined(),
-        idx,
-      )
-    else:
-      raise newException(
-        InvalidRegisterRead, "Attempt to read from non-existant register " & $regId
-      )
+          0'u
 
+    msg "idx: " & $idx & ", register: " & $register & ", index: " & $index
+    interpreter.readRegister(idx, register, index)
     inc interpreter.currIndex
   of PassArgument:
     # append to callArgs register
@@ -1085,7 +1090,10 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
         invokeStr: proc(vm: var PulsarInterpreter, index: cstring) {.cdecl.} =
           vm.trapped = true
           vm.invoke(str($index))
-          vm.run()
+          vm.run(),
+        readVectorRegister: proc(vm: var PulsarInterpreter, store: uint, register: uint, index: uint) {.cdecl.} =
+          vm.readRegister(store, register, index)
+        ,
       ),
     )
 

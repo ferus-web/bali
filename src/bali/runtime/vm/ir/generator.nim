@@ -146,7 +146,7 @@ proc readRegister*(
     IROperation(
       opCode: ReadRegister,
       arguments:
-        @[stackUinteger position, stackUinteger index, stackInteger int(register)],
+        @[stackUinteger position, stackInteger int(register), stackUinteger index],
     )
   )
 
