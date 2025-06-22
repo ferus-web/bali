@@ -11,6 +11,7 @@ type
     passArgument*: pointer
     callBytecodeClause*: pointer
     invoke*: pointer
+    invokeStr*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
 

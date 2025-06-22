@@ -1082,6 +1082,10 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
           vm.trapped = true
           vm.invoke(&vm.get(index.uint))
           vm.run(),
+        invokeStr: proc(vm: var PulsarInterpreter, index: cstring) {.cdecl.} =
+          vm.trapped = true
+          vm.invoke(str($index))
+          vm.run()
       ),
     )
 

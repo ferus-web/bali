@@ -2,7 +2,7 @@
 
 import std/[logging, posix, hashes, tables, options, streams]
 import pkg/bali/runtime/compiler/base, pkg/bali/runtime/vm/heap/boehm
-import pkg/catnip/[x64assembler], pkg/[shakar]
+import pkg/catnip/[x64assembler], pkg/[shakar, pretty]
 import
   pkg/bali/runtime/vm/atom,
   pkg/bali/runtime/vm/runtime/shared,
@@ -261,10 +261,21 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.call(cgen.callbacks.callBytecodeClause)
       cgen.s.add(regRsp.reg, 8)
     of Invoke:
+      let target = op.arguments[0]
+
+      var fun = cgen.callbacks.invoke
+      
+      case target.kind
+      of String:
+        prepareLoadString(cgen, cstring(&target.getStr()))
+        cgen.s.mov(regRsi.reg, regR8)
+        fun = cgen.callbacks.invokeStr
+      else:
+        cgen.s.mov(regRsi, &target.getInt())
+
       cgen.s.sub(regRsp.reg, 8)
       cgen.s.mov(regRdi, cast[int64](cgen.vm))
-      cgen.s.mov(regRsi, &op.arguments[0].getInt())
-      cgen.s.call(cgen.callbacks.invoke)
+      cgen.s.call(move(fun))
       cgen.s.add(regRsp.reg, 8)
     of LoadBytecodeCallable:
       prepareLoadString(cgen, &op.arguments[1].getStr())
