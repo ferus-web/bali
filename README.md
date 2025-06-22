@@ -32,25 +32,25 @@ It isn't indicative of the code quality, but I do put some extent into making th
 
 ## Iterating 999999999 times and incrementing an integer each loop
 Bali has some loop elision optimizations in place which can fully eliminate an expensive loop when it sees the opportunity. \
-Node is run without a JIT compiler just to be fair to Bali and QuickJS. QuickJS turns out to be the slowest whilst Bali
-outperforms both of them by a huge margin.
+QuickJS turns out to be the slowest whilst Bali outperforms it by a huge margin.
 
 **Try it for yourself**: [Source code](tests/data/iterate-for-no-reason-001.js)
-| Engine    | Time Taken    |
-| --------- | ------------- |
-| V8 (Node) | 0.521s        |
-| Bali      | 0.012s        |
-| QuickJS   | 27.064s       |
+| Engine                  | Time Taken                                                     |
+| ----------------------- | -------------------------------------------------------------- |
+| Bali (Interpreter)      | ~3.1ms (best case) - ~5.0ms (worst case)                       |
+| Bali (Baseline JIT)     | ~3.2ms (best case) - ~4.7ms (worst case)                       |   
+| QuickJS                 | ~20.5 **seconds** (best case) - ~24.7 **seconds** (worst case) |
 
 ## Finding a substring in a moderately large string
 Bali's string-find function (`String.prototype.indexOf`) is SIMD-accelerated, and as such, is pretty fast. It still gets beaten out by QuickJS, though.
+This is because QuickJS has some of the fastest bootup times you'll find in JavaScript engines.
 
 **Try it for yourself**: [Source code](tests/data/string-find-001.js)
-| Engine       | Time Taken    |
-| ------------ | ------------- |
-| SpiderMonkey | 0.057s        |
-| Bali         | 0.012s        |
-| QuickJS      | 0.003s        |
+| Engine                     | Time Taken                                   |
+| -------------------------- | -------------------------------------------- |
+| Bali (Interpreter)         | ~3.4ms (best case) - ~8.0ms (worst case)     |
+| Bali (Baseline JIT)        | ~3.5ms (best case) - ~11.0ms (worst case)    |
+| QuickJS                    | 813.9ns (best case) - ~1471.2ns (worst case) |
 
 # Contact Me
 You can join the [Ferus Discord Server](https://discord.gg/9MwfGn2Jkb) to discuss Bali and other components of the Ferus web engine.
