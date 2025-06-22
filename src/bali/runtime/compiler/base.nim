@@ -12,6 +12,7 @@ type
     callBytecodeClause*: pointer
     invoke*: pointer
     invokeStr*: pointer
+    readVectorRegister*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
 
