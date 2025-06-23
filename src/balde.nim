@@ -64,7 +64,7 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
         loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim"),
         aggressivelyFreeRetvals: ctx.enabled("aggressively-free-retvals"),
         deadCodeElimination: not ctx.enabled("disable-dead-code-elim"),
-        jitCompiler: ctx.enabled("use-jit", "Z") and not repl,
+        jitCompiler: not ctx.enabled("disable-jit", "Nz") and not repl,
       ),
     ),
   )
@@ -108,7 +108,7 @@ proc allocRuntime*(ctx: Input, file: string): Runtime =
         loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim"),
         aggressivelyFreeRetvals: not ctx.enabled("aggressively-free-retvals"),
         deadCodeElimination: not ctx.enabled("disable-dead-code-elim"),
-        jitCompiler: ctx.enabled("use-jit", "Z"),
+        jitCompiler: not ctx.enabled("disable-jit", "Nz"),
       ),
     ),
     predefinedBytecode = readFile(file),
