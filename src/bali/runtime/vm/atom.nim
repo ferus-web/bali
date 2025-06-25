@@ -196,10 +196,10 @@ proc getNumeric*(atom: MAtom | JSValue): Option[float64] {.inline.} =
   if atom.kind == Integer:
     return some(float(&atom.getInt()))
   elif atom.kind == UnsignedInt:
-    return some(float(&atom.getFloat()))
+    return some(float(&atom.getUint()))
   elif atom.kind == Float:
     return some(&atom.getFloat())
-
+  
 proc getSequence*(atom: MAtom | JSValue): Option[seq[MAtom]] {.inline.} =
   if atom.kind == Sequence:
     return some(atom.sequence)
