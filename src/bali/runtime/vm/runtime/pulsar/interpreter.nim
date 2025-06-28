@@ -1019,10 +1019,15 @@ proc run*(interpreter: var PulsarInterpreter) =
 
         vmd "execute", "entering JIT'd segment"
         (&compiled)()
-        interpreter.currIndex = clause.operations.len.uint
+        interpreter.currIndex = clause.rollback.opIndex
+        interpreter.currClause = clause.rollback.clause
         vmd "execute",
           "exec'd JIT segment successfully, setting pc to end of clause/" &
             $interpreter.currIndex
+
+        if interpreter.trapped:
+          break
+
         continue
       else:
         vmd "execute", "cannot compile segment: " & clause.name & ", falling back to VM"
