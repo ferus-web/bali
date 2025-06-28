@@ -260,7 +260,7 @@ proc typeRegistrationFinalizer*(runtime: Runtime) =
       else:
         jsObj[name] = value.atom()
 
-    runtime.vm[].addAtom(ensureMove(jsObj), index)
+    runtime.vm[].addAtom(ensureMove(jsObj), index.int)
 
 proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   ## Register a type in the JavaScript engine instance with the name of the type (`name`) alongside its prototype (`prototype`).

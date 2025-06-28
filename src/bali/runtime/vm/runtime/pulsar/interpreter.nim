@@ -1,11 +1,9 @@
-## This file contains the "Pulsar" MIR interpreter. It's a redesign of the previous bytecode analyzer (keyword: analyzer, not interpreter)
-## into a more modular and efficient form. You shouldn't import this directly, import `mirage/interpreter/prelude` instead.
-
 import std/[math, tables, options]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, debugging]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv, types, resolver]
+import bali/runtime/vm/ir/shared
 import bali/runtime/compiler/base
 import pkg/[shakar]
 
@@ -73,9 +71,9 @@ func getClause*(
     none(Clause)
 
 proc get*(
-    interpreter: PulsarInterpreter, id: uint, ignoreLocalityRules: bool = false
+    interpreter: PulsarInterpreter, id: int, ignoreLocalityRules: bool = false
 ): Option[JSValue] =
-  if id < uint(interpreter.stack.len):
+  if id < interpreter.stack.len:
     return some(interpreter.stack[id])
 
 proc getClause*(interpreter: PulsarInterpreter, name: string): Option[Clause] =
@@ -110,10 +108,10 @@ proc analyze*(interpreter: var PulsarInterpreter) =
       continue
 
 {.push checks: on, inline.}
-proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: uint) {.cdecl.} =
-  if id > uint(interpreter.stack.len - 1):
+proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: int) {.cdecl.} =
+  if id > interpreter.stack.len - 1:
     # We need to allocate more slots.
-    interpreter.stack.setLen(id.int + BaliVMPreallocatedStackSize)
+    interpreter.stack.setLen(id + BaliVMPreallocatedStackSize)
 
   interpreter.stack[id] = value
 
@@ -239,7 +237,7 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
 
   some(msg)
 
-proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: uint) =
+proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: int) =
   let
     a = interpreter.get(src)
     b = interpreter.get(dest)
@@ -283,24 +281,24 @@ proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: uint) =
   else:
     discard
 
-proc zeroOut*(interpreter: var PulsarInterpreter, index: uint) {.inline.} =
+proc zeroOut*(interpreter: var PulsarInterpreter, index: int) {.inline.} =
   ## Remove a stack index.
   boehmDealloc(interpreter.stack[index])
   interpreter.stack.del(index)
 
 proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
   var
-    atomA = interpreter.get(a.uint)
-    atomB = interpreter.get(b.uint)
+    atomA = interpreter.get(a)
+    atomB = interpreter.get(b)
 
   if not *atomA or not *atomB:
     return
 
-  interpreter.zeroOut(a.uint)
-  interpreter.zeroOut(b.uint)
+  interpreter.zeroOut(a)
+  interpreter.zeroOut(b)
 
-  interpreter.addAtom(&atomA, b.uint)
-  interpreter.addAtom(&atomB, a.uint)
+  interpreter.addAtom(&atomA, b)
+  interpreter.addAtom(&atomB, a)
 
 proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
   msg "calling function " & name
@@ -344,7 +342,7 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
 
 proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) =
   if value.kind == Integer:
-    let index = uint(&getInt(value))
+    let index = &getInt(value)
     msg "atom is integer/ref to atom: " & $index
     let callable = &interpreter.get(index)
 
@@ -373,7 +371,7 @@ proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) =
   else:
     raise newException(ValueError, "INVK cannot deal with atom: " & $value.kind)
 
-proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: uint) =
+proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: int) =
   case register
   of 0:
     # 0 - retval register
@@ -412,26 +410,26 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   case op.opCode
   of LoadStr:
     msg "load str"
-    interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
+    interpreter.addAtom(op.arguments[1], &op.arguments[0].getInt())
     inc interpreter.currIndex
   of LoadInt:
     msg "load int"
-    interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
+    interpreter.addAtom(op.arguments[1], &op.arguments[0].getInt())
     inc interpreter.currIndex
   of AddInt:
     msg "add int or str"
     interpreter.appendAtom(
-      (&op.arguments[0].getInt()).uint, (&op.arguments[1].getInt()).uint
+      (&op.arguments[0].getInt()), &op.arguments[1].getInt()
     )
     inc interpreter.currIndex
   of Equate:
     msg "equate"
     var
-      prev = interpreter.get(uint(&op.arguments[0].getInt()))
+      prev = interpreter.get(&op.arguments[0].getInt())
       accumulator = false
 
     for arg in op.arguments[1 ..< op.arguments.len]:
-      let value = interpreter.get(uint(&arg.getInt()))
+      let value = interpreter.get(&arg.getInt())
 
       if not *value:
         break
@@ -469,7 +467,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       inc interpreter.currIndex
       return
 
-    let idx = (&op.arguments[0].getInt()).uint
+    let idx = &op.arguments[0].getInt()
     msg "return; retval overwritten with index " & $idx
 
     # write the return value to the `retVal` register
@@ -489,19 +487,19 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   of LoadUint:
     msg "load uint"
     interpreter.addAtom(
-      uinteger((&op.arguments[1].getInt()).uint()), (&op.arguments[0].getInt()).uint
+      integer((&op.arguments[1].getInt())), &op.arguments[0].getInt()
     )
     inc interpreter.currIndex
   of LoadList:
     msg "load list"
-    interpreter.addAtom(sequence @[], (&op.arguments[0].getInt()).uint)
+    interpreter.addAtom(sequence @[], &op.arguments[0].getInt())
     inc interpreter.currIndex
   of AddList:
     msg "add list"
     let
-      pos = (&op.arguments[0].getInt()).uint
+      pos = (&op.arguments[0].getInt())
       curr = interpreter.get(pos)
-      source = interpreter.get((&op.arguments[1].getInt()).uint)
+      source = interpreter.get((&op.arguments[1].getInt()))
 
     if not *curr or not *source:
       inc interpreter.currIndex
@@ -519,7 +517,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of LoadBool:
     msg "load bool"
-    interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()).uint)
+    interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()))
     inc interpreter.currIndex
   of Swap:
     msg "swap"
@@ -535,8 +533,8 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       aIdx = &op.arguments[0].getInt()
       bIdx = &op.arguments[1].getInt()
 
-      a = interpreter.get(aIdx.uint)
-      b = interpreter.get(bIdx.uint)
+      a = interpreter.get(aIdx)
+      b = interpreter.get(bIdx)
 
     if not *a or not *b:
       inc interpreter.currIndex
@@ -546,7 +544,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       aI = (&a).getInt()
       aB = (&b).getInt()
 
-    interpreter.stack[aIdx.uint] = integer(&aI - &aB)
+    interpreter.stack[aIdx] = integer(&aI - &aB)
     inc interpreter.currIndex
   of JumpOnError:
     interpreter.currJumpOnErr = some(uint(&op.arguments[0].getInt()))
@@ -588,8 +586,8 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       return
 
     let
-      a = interpreter.get((&op.arguments[0].getInt()).uint)
-      b = interpreter.get((&op.arguments[1].getInt()).uint)
+      a = interpreter.get((&op.arguments[0].getInt()))
+      b = interpreter.get((&op.arguments[1].getInt()))
 
     if not *a or not *b:
       return
@@ -606,10 +604,10 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     else:
       interpreter.currIndex += 2
   of LoadObject:
-    interpreter.addAtom(obj(), (&op.arguments[0].getInt()).uint)
+    interpreter.addAtom(obj(), (&op.arguments[0].getInt()))
     inc interpreter.currIndex
   of CreateField:
-    let oatomIndex = ((&op.arguments[0].getInt()).uint)
+    let oatomIndex = ((&op.arguments[0].getInt()))
 
     let oatomId = interpreter.get(oatomIndex)
 
@@ -630,7 +628,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of FastWriteField:
     let
-      oatomIndex = (&op.arguments[0].getInt()).uint
+      oatomIndex = (&op.arguments[0].getInt())
       oatomId = interpreter.get(oatomIndex)
 
     if not *oatomId:
@@ -647,7 +645,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of WriteField:
     let
-      oatomIndex = (&op.arguments[0].getInt()).uint
+      oatomIndex = (&op.arguments[0].getInt())
       oatomId = interpreter.get(oatomIndex)
       fieldName = &op.arguments[1].getStr()
 
@@ -668,15 +666,15 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       fieldIndex = some(atom.objValues.len - 1)
 
     let toWrite = op.consume(Integer, "", enforce = false, some(op.rawArgs.len - 1))
-    atom.objValues[&fieldIndex] = &interpreter.get(uint(&toWrite.getInt()))
+    atom.objValues[&fieldIndex] = &interpreter.get(&toWrite.getInt())
 
     interpreter.addAtom(atom, oatomIndex)
     inc interpreter.currIndex
   of Add:
     let
-      aPos = (&op.arguments[0].getInt()).uint
+      aPos = (&op.arguments[0].getInt())
       a = &interpreter.get(aPos)
-      b = &interpreter.get((&op.arguments[1].getInt()).uint)
+      b = &interpreter.get((&op.arguments[1].getInt()))
 
     interpreter.addAtom(floating(&a.getNumeric() + &b.getNumeric()), aPos)
     inc interpreter.currIndex
@@ -686,56 +684,56 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
         CatchableError, "Encountered `CRASHINTERP` during execution; abort!"
       )
   of Increment:
-    let atom = &interpreter.get((&op.arguments[0].getInt()).uint)
+    let atom = &interpreter.get((&op.arguments[0].getInt()))
 
     case atom.kind
     of Integer:
-      interpreter.addAtom(integer(&atom.getInt() + 1), (&op.arguments[0].getInt()).uint)
+      interpreter.addAtom(integer(&atom.getInt() + 1), (&op.arguments[0].getInt()))
     of UnsignedInt:
       interpreter.addAtom(
-        uinteger(&atom.getUint() + 1), (&op.arguments[0].getInt()).uint
+        integer(&atom.getUint() + 1), (&op.arguments[0].getInt())
       )
     else:
-      interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()).uint)
+      interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()))
         # If an invalid atom is attempted to be incremented, set its value to NaN.
 
     inc interpreter.currIndex
   of Decrement:
-    let atom = &interpreter.get((&op.arguments[0].getInt()).uint)
+    let atom = &interpreter.get((&op.arguments[0].getInt()))
 
     case atom.kind
     of Integer:
-      interpreter.addAtom(integer(&atom.getInt() - 1), (&op.arguments[0].getInt()).uint)
+      interpreter.addAtom(integer(&atom.getInt() - 1), (&op.arguments[0].getInt()))
     of UnsignedInt:
       interpreter.addAtom(
-        uinteger(&atom.getUint() - 1), (&op.arguments[0].getInt()).uint
+        integer(&atom.getUint() - 1), (&op.arguments[0].getInt())
       )
     else:
-      interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()).uint)
+      interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()))
         # If an invalid atom is attempted to be decremented, set its value to NaN.
 
     inc interpreter.currIndex
   of LoadNull:
-    let idx = (&op.arguments[0].getInt()).uint
+    let idx = (&op.arguments[0].getInt())
 
     interpreter.addAtom(null(), idx)
     inc interpreter.currIndex
   of ReadRegister:
     let
-      idx = (&op.arguments[0].getInt()).uint
-      register = (&op.arguments[1].getInt()).uint
+      idx = (&op.arguments[0].getInt())
+      register = (&op.arguments[1].getInt())
       index =
         if op.arguments.len > 2:
-          (&op.arguments[2].getInt()).uint
+          (&op.arguments[2].getInt())
         else:
-          0'u
+          0
 
     msg "idx: " & $idx & ", register: " & $register & ", index: " & $index
     interpreter.readRegister(idx, register, index)
     inc interpreter.currIndex
   of PassArgument:
     # append to callArgs register
-    let idx = (&op.arguments[0].getInt()).uint
+    let idx = (&op.arguments[0].getInt())
     msg "passing to args register: " & $idx
     let value = &interpreter.get(idx)
 
@@ -746,15 +744,15 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of CopyAtom:
     let
-      src = (&op.arguments[0].getInt()).uint
-      dest = (&op.arguments[1].getInt()).uint
+      src = (&op.arguments[0].getInt())
+      dest = (&op.arguments[1].getInt())
 
     interpreter.stack[dest] = &interpreter.get(src)
     inc interpreter.currIndex
   of MoveAtom:
     let
-      src = (&op.arguments[0].getInt()).uint
-      dest = (&op.arguments[1].getInt()).uint
+      src = (&op.arguments[0].getInt())
+      dest = (&op.arguments[1].getInt())
 
     interpreter.stack[dest] = &interpreter.get(src)
     baliDealloc(interpreter.stack[src])
@@ -762,24 +760,24 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of LoadFloat:
     let
-      pos = (&op.arguments[0].getInt()).uint
+      pos = (&op.arguments[0].getInt())
       value = op.arguments[1]
 
     interpreter.addAtom(value, pos)
     inc interpreter.currIndex
   of MultInt:
     let
-      a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getInt()
-      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getInt()
-      pos = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get((&op.arguments[0].getInt()))).getInt()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getInt()
+      pos = (&op.arguments[0].getInt())
 
     interpreter.addAtom(integer(a * b), pos)
     inc interpreter.currIndex
   of DivInt:
     let
-      a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getInt()
-      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getInt()
-      pos = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get((&op.arguments[0].getInt()))).getInt()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getInt()
+      pos = (&op.arguments[0].getInt())
 
     if b == 0:
       interpreter.addAtom(floating(Inf), pos)
@@ -790,9 +788,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of Div:
     let
-      posA = uint(&op.arguments[0].getInt())
+      posA = (&op.arguments[0].getInt())
       a = &(&interpreter.get(posA)).getNumeric()
-      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getNumeric()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
     if b == 0f:
       interpreter.addAtom(floating(Inf), posA)
@@ -803,50 +801,50 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of Mult:
     let
-      posA = uint(&op.arguments[0].getInt())
+      posA = (&op.arguments[0].getInt())
       a = &(&interpreter.get(posA)).getNumeric()
-      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getNumeric()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
     interpreter.addAtom(floating(a * b), posA)
     inc interpreter.currIndex
   of Sub:
     let
-      posA = uint(&op.arguments[0].getInt())
+      posA = (&op.arguments[0].getInt())
       a = &(&interpreter.get(posA)).getNumeric()
-      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getNumeric()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
     interpreter.addAtom(floating(a - b), posA)
     inc interpreter.currIndex
   of PowerInt:
     let
-      a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getInt()
-      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getInt()
-      pos = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get((&op.arguments[0].getInt()))).getInt()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getInt()
+      pos = (&op.arguments[0].getInt())
 
     interpreter.addAtom(integer(a ^ b), pos)
     inc interpreter.currIndex
   of SubFloat:
     let
-      a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getFloat()
-      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat()
-      pos = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get((&op.arguments[0].getInt()))).getFloat()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getFloat()
+      pos = (&op.arguments[0].getInt())
 
     interpreter.addAtom(floating(a - b), pos)
     inc interpreter.currIndex
   of AddFloat:
     let
-      a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getFloat()
-      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat()
-      pos = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get((&op.arguments[0].getInt()))).getFloat()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getFloat()
+      pos = (&op.arguments[0].getInt())
 
     interpreter.addAtom(floating(a + b), pos)
     inc interpreter.currIndex
   of DivFloat:
     msg "div float"
     let
-      a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getFloat()
-      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat()
-      pos = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get((&op.arguments[0].getInt()))).getFloat()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getFloat()
+      pos = (&op.arguments[0].getInt())
 
     if b == 0f:
       interpreter.addAtom(floating(Inf), pos)
@@ -858,9 +856,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   of MultFloat:
     msg "mult float"
     let
-      a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getFloat()
-      b = &(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat()
-      pos = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get((&op.arguments[0].getInt()))).getFloat()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getFloat()
+      pos = (&op.arguments[0].getInt())
 
     if b == 0:
       interpreter.addAtom(floating(Inf), pos)
@@ -872,9 +870,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   of PowerFloat:
     msg "exp float"
     let
-      a = &(&interpreter.get(uint(&op.arguments[0].getInt()))).getFloat()
-      b = int(&(&interpreter.get(uint(&op.arguments[1].getInt()))).getFloat())
-      pos = uint(&op.arguments[0].getInt())
+      a = &(&interpreter.get((&op.arguments[0].getInt()))).getFloat()
+      b = int(&(&interpreter.get((&op.arguments[1].getInt()))).getFloat())
+      pos = (&op.arguments[0].getInt())
 
     interpreter.addAtom(floating(a ^ b), pos)
     inc interpreter.currIndex
@@ -885,7 +883,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   of LoadBytecodeCallable:
     msg "load bytecode segment"
     let
-      index = uint(&op.arguments[0].getInt())
+      index = (&op.arguments[0].getInt())
       clause = &op.arguments[1].getStr()
 
     msg "index is " & $index
@@ -895,12 +893,12 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of ExecuteBytecodeCallable:
     msg "exec bytecode segment"
-    let callable = &getBytecodeClause(&interpreter.get(uint(&op.arguments[0].getInt())))
+    let callable = &getBytecodeClause(&interpreter.get((&op.arguments[0].getInt())))
 
     interpreter.call(callable, op)
   of LoadUndefined:
     msg "load undefined"
-    interpreter.addAtom(undefined(), uint(&op.arguments[0].getInt()))
+    interpreter.addAtom(undefined(), (&op.arguments[0].getInt()))
     inc interpreter.currIndex
   of GreaterThanEqualInt:
     if op.arguments.len < 2:
@@ -908,8 +906,8 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       return
 
     let
-      a = interpreter.get((&op.arguments[0].getInt()).uint)
-      b = interpreter.get((&op.arguments[1].getInt()).uint)
+      a = interpreter.get((&op.arguments[0].getInt()))
+      b = interpreter.get((&op.arguments[1].getInt()))
 
     if not *a or not *b:
       return
@@ -934,8 +932,9 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       return
 
     let
-      a = interpreter.get((&op.arguments[0].getInt()).uint)
-      b = interpreter.get((&op.arguments[1].getInt()).uint)
+      a = interpreter.get((&op.arguments[0].getInt()))
+
+      b = interpreter.get((&op.arguments[1].getInt()))
 
     if not *a or not *b:
       return
@@ -1058,6 +1057,45 @@ proc initJITForPlatform(vm: pointer, callbacks: VMCallbacks): auto =
   when defined(amd64):
     return initAMD64CodeGen(vm, callbacks)
 
+proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
+  when hasJITSupport:
+    interp[].jit = initJITForPlatform(
+      interp,
+      VMCallbacks(
+        addAtom: addAtom,
+        getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
+          let atom = vm.get(index.int)
+          return &atom,
+        copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
+          vm.stack[dest] = &vm.get(source.int),
+        resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
+          vm.registers.callArgs.reset(),
+        passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
+          vm.registers.callArgs.add(&vm.get(index.int)),
+        callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
+          vm.trapped = true
+          vm.call($name, default(Operation))
+          vm.run(),
+        invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
+          vm.trapped = true
+          vm.invoke(&vm.get(index))
+          vm.run(),
+        invokeStr: proc(vm: var PulsarInterpreter, index: cstring) {.cdecl.} =
+          vm.trapped = true
+          vm.invoke(str($index))
+          vm.run(),
+        readVectorRegister: proc(
+            vm: var PulsarInterpreter, store: uint, register: uint, index: uint
+        ) {.cdecl.} =
+          vm.readRegister(store.int, register.int, index.int),
+        zeroRetval: proc(vm: var PulsarInterpreter) {.cdecl.} =
+          vm.registers.retVal = none(JSValue)
+        ,
+        readScalarRegister: proc(vm: var PulsarInterpreter, store, register: uint) {.cdecl.} =
+          vm.readRegister(store.int, register.int, 0)
+      ),
+    )
+
 proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
   var interp = cast[ptr PulsarInterpreter](allocShared(sizeof(PulsarInterpreter)))
   interp[] = PulsarInterpreter(
@@ -1068,41 +1106,8 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
     trapped: false, # Pre-allocate space for some value pointers
   )
-
-  when hasJITSupport:
-    interp[].jit = initJITForPlatform(
-      interp,
-      VMCallbacks(
-        addAtom: addAtom,
-        getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
-          let atom = vm.get(index)
-          return &atom,
-        copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
-          vm.stack[dest] = &vm.get(source),
-        resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
-          vm.registers.callArgs.reset(),
-        passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
-          vm.registers.callArgs.add(&vm.get(index)),
-        callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
-          vm.trapped = true
-          vm.call($name, default(Operation))
-          vm.run(),
-        invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
-          vm.trapped = true
-          vm.invoke(&vm.get(index.uint))
-          vm.run(),
-        invokeStr: proc(vm: var PulsarInterpreter, index: cstring) {.cdecl.} =
-          vm.trapped = true
-          vm.invoke(str($index))
-          vm.run(),
-        readVectorRegister: proc(
-            vm: var PulsarInterpreter, store: uint, register: uint, index: uint
-        ) {.cdecl.} =
-          vm.readRegister(store, register, index),
-        zeroRetval: proc(vm: var PulsarInterpreter) {.cdecl.} =
-          vm.registers.retVal = none(JSValue),
-      ),
-    )
+  
+  interp.tryInitializeJIT()
 
   interp[].registerBuiltin(
     "print",
@@ -1111,12 +1116,40 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
         if i == 0:
           continue
 
-        let val = interp[].get((&x.getInt()).uint)
+        let val = interp[].get((&x.getInt()))
 
         if *val:
           echo (&val).crush("", quote = false)
     ,
   )
+
+  interp
+
+proc feed*(interp: var PulsarInterpreter, modules: seq[CodeModule]) =
+  for module in modules:
+    var clause: Clause
+    clause.name = module.name
+    
+    for i, op in module.operations:
+      var operation = Operation(index: i.uint64 + 1'u64, opcode: op.opcode, resolved: true, arguments: newSeqOfCap[JSValue](op.arguments.len))
+      for arg in op.arguments:
+        operation.arguments &= atomToJSValue(arg)
+
+      clause.operations &= move(operation)
+
+    interp.clauses &= move(clause)
+
+proc newPulsarInterpreter*(clauses: seq[CodeModule]): ptr PulsarInterpreter =
+  var interp = cast[ptr PulsarInterpreter](allocShared(sizeof(PulsarInterpreter)))
+  interp[] = PulsarInterpreter(
+    clauses: @[],
+    builtins: initTable[string, proc(op: Operation)](),
+    currIndex: 0'u,
+    stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
+    trapped: false, # Pre-allocate space for some value pointers
+  )
+  interp[].feed(clauses)
+  interp.tryInitializeJIT()
 
   interp
 

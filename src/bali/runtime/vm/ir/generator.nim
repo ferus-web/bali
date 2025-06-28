@@ -150,19 +150,19 @@ proc readRegister*(
     )
   )
 
-proc loadUint*[P: SomeUnsignedInt](
-    gen: IRGenerator, position, value: P
+proc loadUint*[P: SomeInteger](
+  gen: IRGenerator, position: uint, value: P
 ): uint {.inline, discardable.} =
   gen.addOp(
     IROperation(
-      opCode: LoadUint, arguments: @[stackUinteger position, stackUinteger value]
+      opCode: LoadUint, arguments: @[stackUinteger position.uint, stackUinteger value.uint]
     )
   )
 
 proc loadUint*(
-    gen: IRGenerator, position: uint, value: MAtom
+    gen: IRGenerator, position: uint | int, value: MAtom
 ): uint {.inline, discardable.} =
-  gen.addOp(IROperation(opCode: LoadUint, arguments: @[stackUinteger position, value]))
+  gen.addOp(IROperation(opCode: LoadUint, arguments: @[stackUinteger position.uint, value]))
 
 proc returnFn*(gen: IRGenerator, position: int = -1): uint {.inline, discardable.} =
   ## Halt the execution of this clause, and optionally return an atom. The returned atom can be retrieved by reading the `CallArgument` register.

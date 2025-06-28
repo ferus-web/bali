@@ -11,12 +11,10 @@ import jsony
 proc convertJsonNodeToAtom*(node: JsonNode): JSValue =
   if node.kind == JInt:
     let value = node.getInt()
-    if value > -1:
-      return uinteger(value.uint(), inRuntime = true)
-    else:
-      return integer(value, inRuntime = true)
+
+    return integer(value)
   elif node.kind == JString:
-    return str(node.getStr(), inRuntime = true)
+    return str(node.getStr())
   elif node.kind == JNull:
     return null(true)
   elif node.kind == JBool:

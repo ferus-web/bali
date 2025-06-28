@@ -145,15 +145,11 @@ proc getInt*(atom: MAtom | JSValue): Option[int] {.inline.} =
   if atom.kind == Integer:
     return some(atom.integer)
 
-proc getUint*(atom: MAtom | JSValue): Option[uint] {.inline.} =
-  if atom.kind == UnsignedInt:
-    return some atom.uinteger
+proc getUint*(atom: MAtom | JSValue): Option[int] {.inline.} =
+  getInt(atom)
 
-proc getIntOrUint*(atom: MAtom | JSValue): Option[uint] {.inline.} =
-  if atom.kind == Integer:
-    return some(uint(&atom.getInt()))
-  elif atom.kind == UnsignedInt:
-    return atom.getUint()
+proc getIntOrUint*(atom: MAtom | JSValue): Option[int] {.inline.} =
+  getInt(atom)
 
 proc getBool*(atom: MAtom | JSValue): Option[bool] {.inline.} =
   if atom.kind == Boolean:
@@ -195,10 +191,16 @@ proc newJSValue*(kind: MAtomKind): JSValue =
   ensureMove(mem)
 
 proc atomToJSValue*(atom: MAtom): JSValue =
-  var value = newJSValue(atom.kind)
+  let kind =
+    if atom.kind != Ident: atom.kind
+    else: String
+
+  var value = newJSValue(kind)
   case atom.kind
-  of Null, Undefined, Ident:
+  of Null, Undefined:
     discard
+  of Ident:
+    value.str = atom.ident
   of String:
     value.str = atom.str
   of Integer:
@@ -257,16 +259,15 @@ func stackInteger*(i: int): MAtom =
   ## This is used by the parser.
   MAtom(kind: Integer, integer: i)
 
-proc uinteger*(u: uint, inRuntime: bool = false): JSValue {.inline, cdecl.} =
-  var mem = newJSValue(UnsignedInt)
-  mem.uinteger = u
-
-  ensureMove(mem)
+proc uinteger*(i: uint): JSValue {.inline, cdecl.} =
+  {.deprecated: "UnsignedInts will be removed soon. Use `integer` instead. This function now behaves like it.".}
+  integer(i.int)
 
 func stackUinteger*(u: uint): MAtom =
   ## Allocate a UnsignedInt atom on the stack.
   ## This is used by the parser.
-  MAtom(kind: UnsignedInt, uinteger: u)
+  {.deprecated: "UnsignedInts will be removed soon. Use `stackInteger` instead. This function now behaves like it.".}
+  MAtom(kind: Integer, integer: u.int)
 
 proc boolean*(b: bool, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Boolean)

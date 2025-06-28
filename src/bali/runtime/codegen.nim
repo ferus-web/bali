@@ -2,7 +2,7 @@
 
 import std/[options, hashes, logging, strutils, tables, importutils]
 import bali/runtime/vm/ir/generator
-import bali/runtime/vm/runtime/[tokenizer, prelude]
+import bali/runtime/vm/runtime/[prelude]
 import bali/grammar/prelude
 import bali/internal/sugar
 import
@@ -1289,9 +1289,8 @@ proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
 
 proc generateInternalIR*(runtime: Runtime) =
   ## Generate the internal functions needed by Bali to work properly.
-  runtime.ir.newModule("BALI_RESOLVEFIELD")
   runtime.vm[].registerBuiltin(
-    "BALI_RESOLVEFIELD_INTERNAL",
+    "BALI_RESOLVEFIELD",
     proc(op: Operation) =
       inc runtime.statFieldAccesses
       let
@@ -1330,11 +1329,9 @@ proc generateInternalIR*(runtime: Runtime) =
 
       runtime.vm[].addAtom(atom.findField(accesses), storeAt),
   )
-  runtime.ir.call("BALI_RESOLVEFIELD_INTERNAL")
 
-  runtime.ir.newModule("BALI_TYPEOF")
   runtime.vm[].registerBuiltin(
-    "BALI_TYPEOF_INTERNAL",
+    "BALI_TYPEOF",
     proc(op: Operation) =
       inc runtime.statTypeofCalls
       let atom = runtime.argument(1)
@@ -1342,11 +1339,9 @@ proc generateInternalIR*(runtime: Runtime) =
       ret runtime.computeTypeof(&atom)
     ,
   )
-  runtime.ir.call("BALI_TYPEOF_INTERNAL")
 
-  runtime.ir.newModule("BALI_INDEX")
   runtime.vm[].registerBuiltin(
-    "BALI_INDEX_INTERNAL",
+    "BALI_INDEX",
     proc(op: Operation) =
       let
         atom = runtime.argument(1)
@@ -1366,7 +1361,6 @@ proc generateInternalIR*(runtime: Runtime) =
       ret vec[idx].addr # TODO: add indexing for tables/object fields
     ,
   )
-  runtime.ir.call("BALI_INDEX_INTERNAL")
 
   runtime.vm[].registerBuiltin(
     "BALI_EQUATE_ATOMS",
@@ -1526,26 +1520,26 @@ proc run*(runtime: Runtime, typeRegistrationCb: proc(runtime: Runtime) = nil) =
 
   constants.generateStdIR(runtime)
 
-  let source =
+  #[ let source =
     if runtime.predefinedBytecode.len < 1:
       runtime.ir.emit()
     else:
-      runtime.predefinedBytecode
+      runtime.predefinedBytecode ]#
 
   privateAccess(PulsarInterpreter) # modern problems require modern solutions
-  runtime.vm.tokenizer = tokenizer.newTokenizer(source)
+  runtime.vm[].feed(runtime.ir.modules)
   runtime.typeRegistrationFinalizer()
 
   debug "interpreter: the following bytecode will now be executed"
 
-  if not runtime.opts.dumpBytecode:
+  #[ if not runtime.opts.dumpBytecode:
     debug source
   else:
     echo source
-    quit(0)
+    quit(0) ]#
 
-  debug "interpreter: begin VM analyzer"
-  runtime.vm[].analyze()
+  # debug "interpreter: begin VM analyzer"
+  # runtime.vm[].analyze()
 
   debug "interpreter: setting entry point to `outer`"
   runtime.vm[].setEntryPoint("outer")
