@@ -34,8 +34,6 @@ proc ToNumber*(runtime: Runtime, value: JSValue): float =
   case value.kind
   of Integer:
     return float(&value.getInt()) # 1. If argument is a Number, return argument.
-  of UnsignedInt:
-    return float(&value.getUint())
   of Object:
     # 8. Let primValue be ? ToPrimitive(argument, NUMBER).
     let primValue = runtime.ToPrimitive(value, some(Float))

@@ -109,7 +109,7 @@ let aAge = wrap(age)
 let aLikes = wrap(likes)
 
 assert aName.kind == String
-assert aAge.kind == UnsignedInt
+assert aAge.kind == Integer
 assert aLikes.kind == Sequence
 
 assert aName.isSome and aName.getStr().get() == name

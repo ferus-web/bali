@@ -10,16 +10,13 @@ import
   bali/internal/sugar
 
 proc wrap*(
-    runtime: Runtime, val: SomeSignedInt | SomeUnsignedInt | string | float | bool
+    runtime: Runtime, val: SomeInteger | string | float | bool
 ): JSValue =
-  when val is SomeSignedInt:
+  when val is SomeInteger:
     return integer(val.int)
 
   when val is bool:
     return boolean(val)
-
-  when val is SomeUnsignedInt:
-    return uinteger(val.uint)
 
   when val is string:
     return runtime.newJSString(val)

@@ -43,8 +43,6 @@ type JSON = object
 proc atomToJsonNode*(atom: JSValue | MAtom): JsonNode =
   if atom.kind == Integer:
     return newJInt(&atom.getInt())
-  elif atom.kind == UnsignedInt:
-    return newJInt(int(&atom.getUint()))
   elif atom.kind == Float:
     return newJFloat(&atom.getFloat())
   elif atom.kind == String:

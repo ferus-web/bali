@@ -689,10 +689,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     case atom.kind
     of Integer:
       interpreter.addAtom(integer(&atom.getInt() + 1), (&op.arguments[0].getInt()))
-    of UnsignedInt:
-      interpreter.addAtom(
-        integer(&atom.getUint() + 1), (&op.arguments[0].getInt())
-      )
     else:
       interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()))
         # If an invalid atom is attempted to be incremented, set its value to NaN.
@@ -704,10 +700,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     case atom.kind
     of Integer:
       interpreter.addAtom(integer(&atom.getInt() - 1), (&op.arguments[0].getInt()))
-    of UnsignedInt:
-      interpreter.addAtom(
-        integer(&atom.getUint() - 1), (&op.arguments[0].getInt())
-      )
     else:
       interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()))
         # If an invalid atom is attempted to be decremented, set its value to NaN.

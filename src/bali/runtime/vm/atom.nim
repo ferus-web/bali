@@ -14,14 +14,13 @@ type
     Integer = 2
     Sequence = 3
     Ident = 4
-    UnsignedInt = 5
-    Boolean = 6
-    Object = 7
-    Float = 8
-    BigInteger = 9
-    BytecodeCallable = 10
-    NativeCallable = 11
-    Undefined = 12
+    Boolean = 5
+    Object = 6
+    Float = 7
+    BigInteger = 8
+    BytecodeCallable = 9
+    NativeCallable = 10
+    Undefined = 11
 
   AtomOverflowError* = object of CatchableError
   SequenceError* = object of CatchableError
@@ -41,8 +40,6 @@ type
       integer*: int
     of Sequence:
       sequence*: seq[MAtom]
-    of UnsignedInt:
-      uinteger*: uint
     of Boolean:
       state*: bool
     of Object:
@@ -81,8 +78,6 @@ proc hash*(atom: MAtom): Hash =
     h = h !& atom.objValues.hash()
   of Sequence:
     h = h !& atom.sequence.hash()
-  of UnsignedInt:
-    h = h !& atom.uinteger.hash()
   of Boolean:
     h = h !& atom.state.hash()
   of Float:
@@ -106,8 +101,6 @@ proc crush*(
       result &= atom.str
   of Integer:
     result &= $atom.integer
-  of UnsignedInt:
-    result &= $atom.uinteger
   of Ident:
     result &= atom.ident
   of Boolean:
@@ -166,8 +159,6 @@ proc getFloat*(atom: MAtom | JSValue): Option[float64] {.cdecl.} =
 proc getNumeric*(atom: MAtom | JSValue): Option[float64] {.inline.} =
   if atom.kind == Integer:
     return some(float(&atom.getInt()))
-  elif atom.kind == UnsignedInt:
-    return some(float(&atom.getUint()))
   elif atom.kind == Float:
     return some(&atom.getFloat())
   
@@ -207,8 +198,6 @@ proc atomToJSValue*(atom: MAtom): JSValue =
     value.integer = atom.integer
   of Sequence:
     value.sequence = atom.sequence
-  of UnsignedInt:
-    value.uinteger = atom.uinteger
   of Boolean:
     value.state = atom.state
   of Object:

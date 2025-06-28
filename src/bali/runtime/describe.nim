@@ -44,8 +44,6 @@ proc generateDescribeFnCode*(runtime: Runtime) =
         stdout.write "Unboxed string (atom String)\n"
       of Integer:
         stdout.write "Unboxed number (atom Int32)\n"
-      of UnsignedInt:
-        stdout.write "Unboxed number (atom UInt32)\n"
       of Float:
         stdout.write "Unboxed number (atom Float64)\n"
       else:

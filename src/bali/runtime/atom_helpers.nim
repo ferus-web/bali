@@ -15,7 +15,7 @@ func isNull*(atom: JSValue): bool =
   atom.kind == Null
 
 func isNumber*(atom: JSValue): bool =
-  atom.kind == UnsignedInt or atom.kind == Integer or atom.kind == Float
+  atom.kind == Integer or atom.kind == Float
 
 func isBigInt*(atom: JSValue): bool =
   atom.kind == BigInteger

@@ -418,8 +418,6 @@ proc genReassignVal(runtime: Runtime, fn: Function, stmt: Statement) =
     case stmt.reAtom.kind
     of Integer:
       runtime.ir.loadInt(index, stmt.reAtom)
-    of UnsignedInt:
-      runtime.ir.loadUint(index, &stmt.reAtom.getUint())
     of String:
       discard runtime.ir.loadStr(index, stmt.reAtom)
     of Float:
@@ -1264,7 +1262,7 @@ proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
   case atom.kind
   of String:
     return "string"
-  of Integer, Float, UnsignedInt:
+  of Integer, Float:
     return "number"
   of Null, Sequence:
     return "object"

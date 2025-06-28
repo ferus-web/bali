@@ -45,8 +45,6 @@ proc conditionalIsDead*(cond: Statement): bool =
       return &leftAtom.getBool() != &rightAtom.getBool()
     of Integer:
       return &leftAtom.getInt() != &rightAtom.getInt()
-    of UnsignedInt:
-      return &leftAtom.getUint() != &rightAtom.getUint()
     of Float:
       return &leftAtom.getFloat() != &rightAtom.getFloat()
     else:
@@ -58,8 +56,6 @@ proc conditionalIsDead*(cond: Statement): bool =
       return &leftAtom.getBool() == &rightAtom.getBool()
     of Integer:
       return &leftAtom.getInt() == &rightAtom.getInt()
-    of UnsignedInt:
-      return &leftAtom.getUint() == &rightAtom.getUint()
     of Float:
       return &leftAtom.getFloat() == &rightAtom.getFloat()
     else:

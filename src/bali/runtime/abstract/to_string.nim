@@ -52,11 +52,6 @@ proc ToString*(runtime: Runtime, value: JSValue): string =
     return
       $(&value.getFloat())
         # 7. If argument is a Number, return Number::toString(argument, 10).
-  of UnsignedInt:
-    debug "runtime: toString(): atom is a number (uint)."
-    return
-      $(&value.getUint())
-        # 7. If argument is a Number, return Number::toString(argument, 10).
   of Sequence:
     debug "runtime: toString(): atom is an object (sequence)."
     var buffer = "["

@@ -239,9 +239,6 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   of Integer:
     runtime.ir.loadInt(runtime.addrIdx, atom)
     return runtime.addrIdx
-  of UnsignedInt:
-    runtime.ir.loadUint(runtime.addrIdx, atom)
-    return runtime.addrIdx
   of String:
     runtime.ir.loadStr(runtime.addrIdx, atom)
     runtime.ir.passArgument(runtime.addrIdx)

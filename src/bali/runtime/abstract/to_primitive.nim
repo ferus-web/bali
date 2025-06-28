@@ -67,7 +67,7 @@ proc ToPrimitive*(
         else:
           # iii. Else,
           # 1. Assert: preferredType is number.
-          if &preferredType in [Integer, UnsignedInt, Float]:
+          if &preferredType in [Integer, Float]:
             # 2. Let hint be "number".
             PrimitiveHint.Number
           else:
