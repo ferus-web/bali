@@ -14,6 +14,7 @@ type
     invokeStr*: pointer
     readVectorRegister*: pointer
     zeroRetval*: pointer
+    readScalarRegister*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
 

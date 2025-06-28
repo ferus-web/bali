@@ -122,7 +122,9 @@ proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
 proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
   for op in clause.operations:
     var op = op # FIXME: stupid ugly hack
-    clause.resolve(op)
+
+    if not op.resolved:
+      clause.resolve(op)
 
     case op.opcode
     of LoadUndefined:
@@ -252,7 +254,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
     of Call:
       # TODO: check if the clause has been JIT'd too. If so,
       # use the compiled version
-
+      
       prepareLoadString(cgen, &op.arguments[0].getStr())
 
       cgen.s.sub(regRsp.reg, 8)
@@ -298,7 +300,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
         cgen.s.call(cgen.callbacks.readVectorRegister)
       else:
         # We're reading a scalar register.
-        raise newException(Defect, "TODO: jit/amd64: Implement scalar register read")
+        cgen.s.call(cgen.callbacks.readScalarRegister)
       cgen.s.add(regRsp.reg, 8)
     of ZeroRetval:
       cgen.s.sub(regRsp.reg, 8)
