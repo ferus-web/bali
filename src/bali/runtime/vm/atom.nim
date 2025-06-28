@@ -41,8 +41,6 @@ type
       integer*: int
     of Sequence:
       sequence*: seq[MAtom]
-      lCap*: Option[int]
-      lHomogenous*: bool = false
     of UnsignedInt:
       uinteger*: uint
     of Boolean:
@@ -83,8 +81,6 @@ proc hash*(atom: MAtom): Hash =
     h = h !& atom.objValues.hash()
   of Sequence:
     h = h !& atom.sequence.hash()
-    h = h !& atom.lCap.hash()
-    h = h !& atom.lHomogenous.hash()
   of UnsignedInt:
     h = h !& atom.uinteger.hash()
   of Boolean:
@@ -140,27 +136,6 @@ proc crush*(
     return "Native Callable"
   of Undefined:
     return "Undefined"
-
-proc setCap*(atom: var MAtom, cap: int) {.inline.} =
-  case atom.kind
-  of Sequence:
-    atom.lCap = some(cap)
-  else:
-    raise newException(
-      ValueError, "Attempt to set cap on a non-container atom: " & $atom.kind
-    )
-
-proc getCap*(atom: var MAtom): int {.inline.} =
-  case atom.kind
-  of Sequence:
-    if *atom.lCap:
-      return &atom.lCap
-  else:
-    raise newException(
-      ValueError, "Attempt to get the cap of a non-container atom: " & $atom.kind
-    )
-
-  high(int)
 
 proc getStr*(atom: MAtom | JSValue): Option[string] {.inline.} =
   if atom.kind == String:
@@ -230,8 +205,6 @@ proc atomToJSValue*(atom: MAtom): JSValue =
     value.integer = atom.integer
   of Sequence:
     value.sequence = atom.sequence
-    value.lCap = atom.lCap
-    value.lHomogenous = atom.lHomogenous
   of UnsignedInt:
     value.uinteger = atom.uinteger
   of Boolean:
