@@ -383,6 +383,7 @@ proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: i
         undefined(),
       store,
     )
+    interpreter.registers.retVal = none(JSValue)
   of 1:
     # 1 - callargs register
     msg "read callargs register"
@@ -467,17 +468,16 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       inc interpreter.currIndex
       return
 
-    let idx = &op.arguments[0].getInt()
-    msg "return; retval overwritten with index " & $idx
+    let idx = &getInt(op.arguments[0])
 
     # write the return value to the `retVal` register
     interpreter.registers.retVal = interpreter.get(idx)
 
     # revert back to where we left off in the previous clause (or exit if this was the final clause - that's handled by the logic in `run`)
-
+    
     msg "rolling back to clause " & $((&clause).rollback.clause)
     interpreter.currClause = (&clause).rollback.clause
-
+    
     msg "rolling back to index " & $((&clause).rollback.opIndex)
     interpreter.currIndex = (&clause).rollback.opIndex
   of Call:
