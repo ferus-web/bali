@@ -1,5 +1,5 @@
-function domaths(x) {
-  return x
+function domaths(y) {
+  return y + 5
 }
 
 let x = domaths(32)

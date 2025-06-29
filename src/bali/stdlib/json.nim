@@ -40,7 +40,7 @@ proc convertJsonNodeToAtom*(node: JsonNode): JSValue =
 
 type JSON = object
 
-proc atomToJsonNode*(atom: JSValue | MAtom): JsonNode =
+proc atomToJsonNode*(atom: JSValue): JsonNode =
   if atom.kind == Integer:
     return newJInt(&atom.getInt())
   elif atom.kind == Float:
@@ -50,8 +50,8 @@ proc atomToJsonNode*(atom: JSValue | MAtom): JsonNode =
   elif atom.kind == Sequence:
     var arr = newJArray()
 
-    for item in atom.sequence:
-      arr &= item.atomToJsonNode()
+    for i, _ in atom.sequence:
+      arr &= atom.sequence[i].addr.atomToJsonNode()
 
     return arr
   elif atom.kind == Object:
