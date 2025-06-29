@@ -134,9 +134,13 @@ proc getStr*(atom: MAtom | JSValue): Option[string] {.inline.} =
   if atom.kind == String:
     return some(atom.str)
 
+  none(string)
+
 proc getInt*(atom: MAtom | JSValue): Option[int] {.inline.} =
   if atom.kind == Integer:
     return some(atom.integer)
+
+  none(int)
 
 proc getUint*(atom: MAtom | JSValue): Option[int] {.inline.} =
   getInt(atom)
