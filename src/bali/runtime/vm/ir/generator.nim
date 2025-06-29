@@ -128,13 +128,13 @@ proc loadNull*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   gen.addOp(IROperation(opCode: LoadNull, arguments: @[stackUinteger position]))
 
 proc readRegister*(
-    gen: IRGenerator, position: uint, register: Register
+    gen: IRGenerator, position: int | uint, register: Register
 ): uint {.inline, discardable.} =
-  ## Read a register (what the interpreter uses to hold data that is shared across clauses).
+  ## Read a scalar register.
   gen.addOp(
     IROperation(
       opCode: ReadRegister,
-      arguments: @[stackUinteger position, stackInteger int(register)],
+      arguments: @[stackInteger position.int, stackInteger int(register)],
     )
   )
 
