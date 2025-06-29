@@ -165,7 +165,7 @@ proc getNumeric*(atom: MAtom | JSValue): Option[float64] {.inline.} =
     return some(float(&atom.getInt()))
   elif atom.kind == Float:
     return some(&atom.getFloat())
-  
+
 proc getSequence*(atom: MAtom | JSValue): Option[seq[MAtom]] {.inline.} =
   if atom.kind == Sequence:
     return some(atom.sequence)
@@ -186,9 +186,7 @@ proc newJSValue*(kind: MAtomKind): JSValue =
   ensureMove(mem)
 
 proc atomToJSValue*(atom: MAtom): JSValue =
-  let kind =
-    if atom.kind != Ident: atom.kind
-    else: String
+  let kind = if atom.kind != Ident: atom.kind else: String
 
   var value = newJSValue(kind)
   case atom.kind
@@ -253,13 +251,19 @@ func stackInteger*(i: int): MAtom =
   MAtom(kind: Integer, integer: i)
 
 proc uinteger*(i: uint): JSValue {.inline, cdecl.} =
-  {.deprecated: "UnsignedInts will be removed soon. Use `integer` instead. This function now behaves like it.".}
+  {.
+    deprecated:
+      "UnsignedInts will be removed soon. Use `integer` instead. This function now behaves like it."
+  .}
   integer(i.int)
 
 func stackUinteger*(u: uint): MAtom =
   ## Allocate a UnsignedInt atom on the stack.
   ## This is used by the parser.
-  {.deprecated: "UnsignedInts will be removed soon. Use `stackInteger` instead. This function now behaves like it.".}
+  {.
+    deprecated:
+      "UnsignedInts will be removed soon. Use `stackInteger` instead. This function now behaves like it."
+  .}
   MAtom(kind: Integer, integer: u.int)
 
 proc boolean*(b: bool, inRuntime: bool = false): JSValue {.inline, cdecl.} =

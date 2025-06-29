@@ -9,9 +9,7 @@ import
   bali/runtime/types,
   bali/internal/sugar
 
-proc wrap*(
-    runtime: Runtime, val: SomeInteger | string | float | bool
-): JSValue =
+proc wrap*(runtime: Runtime, val: SomeInteger | string | float | bool): JSValue =
   when val is SomeInteger:
     return integer(val.int)
 

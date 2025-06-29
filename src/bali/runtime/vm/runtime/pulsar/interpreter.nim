@@ -419,9 +419,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     inc interpreter.currIndex
   of AddInt:
     msg "add int or str"
-    interpreter.appendAtom(
-      (&op.arguments[0].getInt()), &op.arguments[1].getInt()
-    )
+    interpreter.appendAtom((&op.arguments[0].getInt()), &op.arguments[1].getInt())
     inc interpreter.currIndex
   of Equate:
     msg "equate"
@@ -474,10 +472,10 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.registers.retVal = interpreter.get(idx)
 
     # revert back to where we left off in the previous clause (or exit if this was the final clause - that's handled by the logic in `run`)
-    
+
     msg "rolling back to clause " & $((&clause).rollback.clause)
     interpreter.currClause = (&clause).rollback.clause
-    
+
     msg "rolling back to index " & $((&clause).rollback.opIndex)
     interpreter.currIndex = (&clause).rollback.opIndex
   of Call:
@@ -486,9 +484,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.call(name, op)
   of LoadUint:
     msg "load uint"
-    interpreter.addAtom(
-      integer((&op.arguments[1].getInt())), &op.arguments[0].getInt()
-    )
+    interpreter.addAtom(integer((&op.arguments[1].getInt())), &op.arguments[0].getInt())
     inc interpreter.currIndex
   of LoadList:
     msg "load list"
@@ -1081,10 +1077,11 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
         ) {.cdecl.} =
           vm.readRegister(store.int, register.int, index.int),
         zeroRetval: proc(vm: var PulsarInterpreter) {.cdecl.} =
-          vm.registers.retVal = none(JSValue)
-        ,
-        readScalarRegister: proc(vm: var PulsarInterpreter, store, register: uint) {.cdecl.} =
-          vm.readRegister(store.int, register.int, 0)
+          vm.registers.retVal = none(JSValue),
+        readScalarRegister: proc(
+            vm: var PulsarInterpreter, store, register: uint
+        ) {.cdecl.} =
+          vm.readRegister(store.int, register.int, 0),
       ),
     )
 
@@ -1098,7 +1095,7 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
     trapped: false, # Pre-allocate space for some value pointers
   )
-  
+
   interp.tryInitializeJIT()
 
   interp[].registerBuiltin(
@@ -1121,9 +1118,14 @@ proc feed*(interp: var PulsarInterpreter, modules: seq[CodeModule]) =
   for module in modules:
     var clause: Clause
     clause.name = module.name
-    
+
     for i, op in module.operations:
-      var operation = Operation(index: i.uint64 + 1'u64, opcode: op.opcode, resolved: true, arguments: newSeqOfCap[JSValue](op.arguments.len))
+      var operation = Operation(
+        index: i.uint64 + 1'u64,
+        opcode: op.opcode,
+        resolved: true,
+        arguments: newSeqOfCap[JSValue](op.arguments.len),
+      )
       for arg in op.arguments:
         operation.arguments &= atomToJSValue(arg)
 

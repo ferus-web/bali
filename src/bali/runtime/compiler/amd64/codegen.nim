@@ -251,7 +251,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
     of Call:
       # TODO: check if the clause has been JIT'd too. If so,
       # use the compiled version
-      
+
       prepareLoadString(cgen, &op.arguments[0].getStr())
 
       cgen.s.sub(regRsp.reg, 8)

@@ -257,7 +257,7 @@ proc genCreateImmutVal(
 ) =
   debug "emitter: generate IR for creating immutable value with identifier: " &
     stmt.imIdentifier
-  
+
   let idx = runtime.loadIRAtom(deepCopy(stmt.imAtom))
 
   if not internal:
@@ -1517,7 +1517,7 @@ proc run*(runtime: Runtime, typeRegistrationCb: proc(runtime: Runtime) = nil) =
   runtime.generateBytecodeForScope(runtime.ast.scopes[0])
 
   constants.generateStdIR(runtime)
-  
+
   if runtime.opts.dumpBytecode:
     echo runtime.ir.emit()
     quit(0)
