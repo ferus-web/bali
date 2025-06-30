@@ -46,7 +46,7 @@ proc loadInt*[V: SomeInteger](
 
   gen.addOp(
     IROperation(
-      opCode: LoadInt, arguments: @[stackUinteger position, stackInteger value]
+      opCode: LoadInt, arguments: @[stackInteger(position), stackInteger value]
     )
   )
 
@@ -65,7 +65,7 @@ proc loadInt*(
       ValueError, "Attempt to load " & $value.kind & " as an stackInteger."
     )
 
-  gen.addOp(IROperation(opCode: LoadInt, arguments: @[stackUinteger position, value]))
+  gen.addOp(IROperation(opCode: LoadInt, arguments: @[stackInteger position, value]))
 
 proc loadList*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Load a list (vector, stackSequence, whatever you like to call it) into memory.
@@ -76,7 +76,7 @@ proc loadList*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## **See also:**
   ## * `appendList proc<#appendList, IRGenerator, uint, uint>`
   ## * `setCap proc<#setCap, IRGenerator, uint, int>`
-  gen.addOp(IROperation(opCode: LoadList, arguments: @[stackUinteger position]))
+  gen.addOp(IROperation(opCode: LoadList, arguments: @[stackInteger position]))
 
 proc appendList*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
   ## Append an atom that has already been loaded into memory onto a list.
@@ -84,7 +84,7 @@ proc appendList*(gen: IRGenerator, dest, source: uint): uint {.inline, discardab
   ## * the list is marked as homogenous and the atom you are attempting to load does not belong to the inferred type.
   ## * the list has a cap and appending this element will cause an overflow.
   gen.addOp(
-    IROperation(opCode: AddList, arguments: @[stackUinteger dest, stackUinteger source])
+    IROperation(opCode: AddList, arguments: @[stackInteger dest, stackInteger source])
   )
 
 proc jump*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
@@ -94,7 +94,7 @@ proc jump*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ##
   ## **See also:**
   ## * `call proc<#call, IRGenerator, string, seq[MAtom]>`
-  gen.addOp(IROperation(opCode: Jump, arguments: @[stackUinteger position]))
+  gen.addOp(IROperation(opCode: Jump, arguments: @[stackInteger position]))
 
 proc loadStr*(
     gen: IRGenerator, position: uint, value: string | MAtom
@@ -109,7 +109,7 @@ proc loadStr*(
         opCode: LoadStr,
         arguments:
           @[
-            stackUinteger position,
+            stackInteger position,
             when value is string:
               stackStr value
             else:
@@ -121,11 +121,11 @@ proc loadStr*(
     if value.kind != String:
       raise newException(ValueError, "Attempt to load " & $value.kind & " as a string.")
 
-    gen.addOp(IROperation(opCode: LoadStr, arguments: @[stackUinteger position, value]))
+    gen.addOp(IROperation(opCode: LoadStr, arguments: @[stackInteger position, value]))
 
 proc loadNull*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Load a NULL atom into memory.
-  gen.addOp(IROperation(opCode: LoadNull, arguments: @[stackUinteger position]))
+  gen.addOp(IROperation(opCode: LoadNull, arguments: @[stackInteger position]))
 
 proc readRegister*(
     gen: IRGenerator, position: int | uint, register: Register
@@ -146,7 +146,7 @@ proc readRegister*(
     IROperation(
       opCode: ReadRegister,
       arguments:
-        @[stackUinteger position, stackInteger int(register), stackUinteger index],
+        @[stackInteger position, stackInteger int(register), stackInteger index],
     )
   )
 
@@ -156,7 +156,7 @@ proc loadUint*[P: SomeInteger](
   gen.addOp(
     IROperation(
       opCode: LoadUint,
-      arguments: @[stackUinteger position.uint, stackUinteger value.uint],
+      arguments: @[stackInteger position.uint, stackInteger value.uint],
     )
   )
 
@@ -164,7 +164,7 @@ proc loadUint*(
     gen: IRGenerator, position: uint | int, value: MAtom
 ): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: LoadUint, arguments: @[stackUinteger position.uint, value])
+    IROperation(opCode: LoadUint, arguments: @[stackInteger position.uint, value])
   )
 
 proc returnFn*(gen: IRGenerator, position: int = -1): uint {.inline, discardable.} =
@@ -182,12 +182,12 @@ proc loadBool*(
   when value is bool:
     gen.addOp(
       IROperation(
-        opCode: LoadBool, arguments: @[stackUinteger position, stackBoolean value]
+        opCode: LoadBool, arguments: @[stackInteger position, stackBoolean value]
       )
     )
   else:
     gen.addOp(
-      IROperation(opCode: LoadBool, arguments: @[stackUinteger position, value])
+      IROperation(opCode: LoadBool, arguments: @[stackInteger position, value])
     )
 
 proc call*(
@@ -209,11 +209,11 @@ proc loadObject*(gen: IRGenerator, position: uint): uint {.inline, discardable.}
   ## * `createField proc<#createField, IRGenerator, uint, int, string>`
   ## * `writeField proc<#writeField, IRGenerator, uint, int, MAtom>`
   ## * `writeField proc<#writeField, IRGenerator, uint, string, MAtom>`
-  gen.addOp(IROperation(opCode: LoadObject, arguments: @[stackUinteger position]))
+  gen.addOp(IROperation(opCode: LoadObject, arguments: @[stackInteger position]))
 
 proc loadUndefined*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Load `undefined` into memory.
-  gen.addOp(IROperation(opCode: LoadUndefined, arguments: @[stackUinteger position]))
+  gen.addOp(IROperation(opCode: LoadUndefined, arguments: @[stackInteger position]))
 
 proc createField*(
     gen: IRGenerator, position: uint, index: int, name: string
@@ -227,7 +227,7 @@ proc createField*(
   gen.addOp(
     IROperation(
       opCode: CreateField,
-      arguments: @[stackUinteger position, stackInteger index, stackStr name],
+      arguments: @[stackInteger position, stackInteger index, stackStr name],
     )
   )
 
@@ -241,7 +241,7 @@ proc writeField*(
   gen.addOp(
     IROperation(
       opCode: WriteField,
-      arguments: @[stackUinteger position, stackStr name, stackUinteger value],
+      arguments: @[stackInteger position, stackStr name, stackInteger value],
     )
   )
 
@@ -254,42 +254,42 @@ proc writeField*(
   gen.addOp(
     IROperation(
       opCode: FastWriteField,
-      arguments: @[stackUinteger position, stackInteger index, stackUinteger value],
+      arguments: @[stackInteger position, stackInteger index, stackInteger value],
     )
   )
 
 proc incrementInt*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Increment an stackInteger at the specified position by one.
-  gen.addOp(IROperation(opCode: Increment, arguments: @[stackUinteger position]))
+  gen.addOp(IROperation(opCode: Increment, arguments: @[stackInteger position]))
 
 proc decrementInt*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Decrement an stackInteger at the specified position by one.
-  gen.addOp(IROperation(opCode: Decrement, arguments: @[stackUinteger position]))
+  gen.addOp(IROperation(opCode: Decrement, arguments: @[stackInteger position]))
 
 proc addFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   ## Add two floats together
   gen.addOp(
-    IROperation(opCode: AddFloat, arguments: @[stackUinteger a, stackUinteger b])
+    IROperation(opCode: AddFloat, arguments: @[stackInteger a, stackInteger b])
   )
 
 proc subFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: SubFloat, arguments: @[stackUinteger a, stackUinteger b])
+    IROperation(opCode: SubFloat, arguments: @[stackInteger a, stackInteger b])
   )
 
 proc multFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: MultFloat, arguments: @[stackUinteger a, stackUinteger b])
+    IROperation(opCode: MultFloat, arguments: @[stackInteger a, stackInteger b])
   )
 
 proc divFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: DivFloat, arguments: @[stackUinteger a, stackUinteger b])
+    IROperation(opCode: DivFloat, arguments: @[stackInteger a, stackInteger b])
   )
 
 proc powerFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: PowerFloat, arguments: @[stackUinteger a, stackUinteger b])
+    IROperation(opCode: PowerFloat, arguments: @[stackInteger a, stackInteger b])
   )
 
 proc zeroRetval*(gen: IRGenerator): uint {.inline, discardable.} =
@@ -313,7 +313,7 @@ proc overrideArgs*(
 proc equate*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   ## Equate two atoms together.
   ## If they match, the operation directly below this conditional is executed. Otherwise, the operation two operations down this conditional is executed.
-  gen.addOp(IROperation(opCode: Equate, arguments: @[stackUinteger a, stackUinteger b]))
+  gen.addOp(IROperation(opCode: Equate, arguments: @[stackInteger a, stackInteger b]))
 
 proc addInt*(
     gen: IRGenerator, destination, source: uint
@@ -321,13 +321,13 @@ proc addInt*(
   ## Add two stackIntegers together.
   gen.addOp(
     IROperation(
-      opCode: AddInt, arguments: @[stackUinteger destination, stackUinteger source]
+      opCode: AddInt, arguments: @[stackInteger destination, stackInteger source]
     )
   )
 
 proc add*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: Add, arguments: @[stackUinteger dest, stackUinteger source])
+    IROperation(opCode: Add, arguments: @[stackInteger dest, stackInteger source])
   )
 
 proc multInt*(
@@ -336,23 +336,23 @@ proc multInt*(
   ## Multiply two stackIntegers together.
   gen.addOp(
     IROperation(
-      opCode: MultInt, arguments: @[stackUinteger destination, stackUinteger source]
+      opCode: MultInt, arguments: @[stackInteger destination, stackInteger source]
     )
   )
 
 proc mult*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: Mult, arguments: @[stackUinteger dest, stackUinteger source])
+    IROperation(opCode: Mult, arguments: @[stackInteger dest, stackInteger source])
   )
 
 proc divide*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: Div, arguments: @[stackUinteger dest, stackUinteger source])
+    IROperation(opCode: Div, arguments: @[stackInteger dest, stackInteger source])
   )
 
 proc sub*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
   gen.addOp(
-    IROperation(opCode: Sub, arguments: @[stackUinteger dest, stackUinteger source])
+    IROperation(opCode: Sub, arguments: @[stackInteger dest, stackInteger source])
   )
 
 proc divInt*(
@@ -361,7 +361,7 @@ proc divInt*(
   ## Divide two stackIntegers together.
   gen.addOp(
     IROperation(
-      opCode: DivInt, arguments: @[stackUinteger destination, stackUinteger source]
+      opCode: DivInt, arguments: @[stackInteger destination, stackInteger source]
     )
   )
 
@@ -371,7 +371,7 @@ proc powerInt*(
   ## Exponentiate an stackInteger
   gen.addOp(
     IROperation(
-      opCode: PowerInt, arguments: @[stackUinteger destination, stackUinteger source]
+      opCode: PowerInt, arguments: @[stackInteger destination, stackInteger source]
     )
   )
 
@@ -381,13 +381,13 @@ proc subInt*(
   ## Subtract an stackInteger from another.
   gen.addOp(
     IROperation(
-      opCode: SubInt, arguments: @[stackUinteger destination, stackUinteger source]
+      opCode: SubInt, arguments: @[stackInteger destination, stackInteger source]
     )
   )
 
 proc passArgument*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =
   ## Adds an atom index to the call arguments register.
-  gen.addOp(IROperation(opCode: PassArgument, arguments: @[stackUinteger position]))
+  gen.addOp(IROperation(opCode: PassArgument, arguments: @[stackInteger position]))
 
 proc loadFloat*(
     gen: IRGenerator, position: uint, value: float | MAtom
@@ -399,7 +399,7 @@ proc loadFloat*(
   when value is float:
     gen.addOp(
       IROperation(
-        opCode: LoadFloat, arguments: @[stackUinteger position, floating value]
+        opCode: LoadFloat, arguments: @[stackInteger position, floating value]
       )
     )
   else:
@@ -407,7 +407,7 @@ proc loadFloat*(
       raise newException(ValueError, "Attempt to load " & $value.kind & " as float.")
 
     gen.addOp(
-      IROperation(opCode: LoadFloat, arguments: @[stackUinteger position, value])
+      IROperation(opCode: LoadFloat, arguments: @[stackInteger position, value])
     )
 
 proc moveAtom*(gen: IRGenerator, source, dest: uint): uint {.inline, discardable.} =
@@ -415,7 +415,7 @@ proc moveAtom*(gen: IRGenerator, source, dest: uint): uint {.inline, discardable
   ## the destination index occupies what was previously the content stored at the source index.
   gen.addOp(
     IROperation(
-      opCode: MoveAtom, arguments: @[stackUinteger source, stackUinteger dest]
+      opCode: MoveAtom, arguments: @[stackInteger source, stackInteger dest]
     )
   )
 
@@ -423,7 +423,7 @@ proc copyAtom*(gen: IRGenerator, source, dest: uint): uint {.inline, discardable
   ## Copy an atom from one index to another.
   gen.addOp(
     IROperation(
-      opCode: CopyAtom, arguments: @[stackUinteger source, stackUinteger dest]
+      opCode: CopyAtom, arguments: @[stackInteger source, stackInteger dest]
     )
   )
 

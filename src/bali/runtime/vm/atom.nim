@@ -145,9 +145,6 @@ proc getInt*(atom: MAtom | JSValue): Option[int] {.inline.} =
 proc getUint*(atom: MAtom | JSValue): Option[int] {.inline.} =
   getInt(atom)
 
-proc getIntOrUint*(atom: MAtom | JSValue): Option[int] {.inline.} =
-  getInt(atom)
-
 proc getBool*(atom: MAtom | JSValue): Option[bool] {.inline.} =
   if atom.kind == Boolean:
     return some atom.state
@@ -239,32 +236,16 @@ func stackIdent*(i: string): MAtom =
   ## This is used by the parser.
   MAtom(kind: Ident, ident: i)
 
-proc integer*(i: int, inRuntime: bool = false): JSValue {.inline, cdecl.} =
+proc integer*(i: uint | int, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Integer)
-  mem.integer = i
+  mem.integer = int(i)
 
   ensureMove(mem)
 
-func stackInteger*(i: int): MAtom =
+func stackInteger*(i: int | uint): MAtom =
   ## Allocate a Integer atom on the stack.
   ## This is used by the parser.
-  MAtom(kind: Integer, integer: i)
-
-proc uinteger*(i: uint): JSValue {.inline, cdecl.} =
-  {.
-    deprecated:
-      "UnsignedInts will be removed soon. Use `integer` instead. This function now behaves like it."
-  .}
-  integer(i.int)
-
-func stackUinteger*(u: uint): MAtom =
-  ## Allocate a UnsignedInt atom on the stack.
-  ## This is used by the parser.
-  {.
-    deprecated:
-      "UnsignedInts will be removed soon. Use `stackInteger` instead. This function now behaves like it."
-  .}
-  MAtom(kind: Integer, integer: u.int)
+  MAtom(kind: Integer, integer: int(i))
 
 proc boolean*(b: bool, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Boolean)

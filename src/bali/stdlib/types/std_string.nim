@@ -36,7 +36,7 @@ proc generateStdIr*(runtime: Runtime) =
 
     var atom = runtime.createObjFromType(JSString)
     atom["@internal"] = str(strVal)
-    atom["length"] = newUtf16View(strVal).codeunitLen().uinteger()
+    atom["length"] = integer(newUtf16View(strVal).codeunitLen().int)
     ret atom
 
   runtime.defineConstructor("String", stringConstructor)

@@ -70,7 +70,6 @@ Do _**NOT**_, under any circumstances, call any of Bali's JavaScript heap manage
 
 The following functions are guaranteed to allocate on the JavaScript heap:
 - `str()`
-- `uinteger()`
 - `integer()`
 - `floating()`
 - `sequence()`
@@ -81,7 +80,6 @@ The following functions are guaranteed to allocate on the JavaScript heap:
 
 The following functions are their stack-affine, safe-to-use counterparts:
 - `stackStr()`
-- `stackUinteger()`
 - `stackInteger()`
 - `stackFloating()`
 - `stackSequence()`

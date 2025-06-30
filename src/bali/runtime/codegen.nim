@@ -336,7 +336,7 @@ proc genCall(
 
     # then, invoke it.
     discard
-      runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackUinteger fn]))
+      runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackInteger fn]))
   else:
     debug "interpreter: generate IR for calling traditional function: " & nam &
       (if stmt.mangle: " (mangled)" else: newString 0)
@@ -349,7 +349,7 @@ proc genCall(
       discard runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackStr nam]))
     else:
       discard runtime.ir.addOp(
-        IROperation(opcode: Invoke, arguments: @[stackUinteger indexed])
+        IROperation(opcode: Invoke, arguments: @[stackInteger indexed])
       )
 
   runtime.ir.resetArgs()
@@ -422,7 +422,7 @@ proc genReassignVal(runtime: Runtime, fn: Function, stmt: Statement) =
       discard runtime.ir.loadStr(index, stmt.reAtom)
     of Float:
       discard runtime.ir.addOp(
-        IROperation(opcode: LoadFloat, arguments: @[stackUinteger index, stmt.reAtom])
+        IROperation(opcode: LoadFloat, arguments: @[stackInteger index, stmt.reAtom])
       ) # FIXME: mirage: loadFloat isn't implemented
     else:
       unreachable
@@ -436,7 +436,7 @@ proc genReassignVal(runtime: Runtime, fn: Function, stmt: Statement) =
     # prepare for internal call
     runtime.ir.passArgument(
       runtime.loadIRAtom(
-        stackUinteger(runtime.index(accesses.identifier, defaultParams(fn)))
+        stackInteger(runtime.index(accesses.identifier, defaultParams(fn)))
       )
     ) # 1: Atom index that needs its field to be overwritten
 
@@ -532,7 +532,7 @@ proc genBinaryOp(
         runtime.ir.loadBool(leftIdx, true)
       else:
         runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), true)
-    runtime.ir.overrideArgs(equalJmp, @[stackUinteger(equalBranch)])
+    runtime.ir.overrideArgs(equalJmp, @[stackInteger(equalBranch)])
     runtime.ir.jump(equalBranch + 3)
 
     # left != right branch
@@ -541,7 +541,7 @@ proc genBinaryOp(
         runtime.ir.loadBool(leftIdx, false)
       else:
         runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
-    runtime.ir.overrideArgs(unequalJmp, @[stackUinteger(unequalBranch)])
+    runtime.ir.overrideArgs(unequalJmp, @[stackInteger(unequalBranch)])
   of BinaryOperation.NotEqual:
     runtime.ir.passArgument(leftIdx)
     runtime.ir.passArgument(rightIdx)
@@ -557,7 +557,7 @@ proc genBinaryOp(
         runtime.ir.loadBool(leftIdx, true)
       else:
         runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), true)
-    runtime.ir.overrideArgs(unequalJmp, @[stackUinteger(unequalBranch)])
+    runtime.ir.overrideArgs(unequalJmp, @[stackInteger(unequalBranch)])
     runtime.ir.jump(unequalBranch + 3)
 
     # left == right branch: false
@@ -566,38 +566,26 @@ proc genBinaryOp(
         runtime.ir.loadBool(leftIdx, false)
       else:
         runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
-    runtime.ir.overrideArgs(equalJmp, @[stackUinteger(equalBranch)])
+    runtime.ir.overrideArgs(equalJmp, @[stackInteger(equalBranch)])
   of BinaryOperation.GreaterThan:
     discard runtime.ir.addOp(
       IROperation(
         opcode: GreaterThanInt,
-        arguments: @[stackUinteger leftIdx, stackUinteger rightIdx],
+        arguments: @[stackInteger leftIdx, stackInteger rightIdx],
       ) # FIXME: mirage doesn't have a nicer IR function for this.
     )
   of BinaryOperation.LesserThan:
     discard runtime.ir.addOp(
       IROperation(
         opcode: GreaterThanEqualInt,
-        arguments: @[stackUinteger leftIdx, stackUinteger rightIdx],
+        arguments: @[stackInteger leftIdx, stackInteger rightIdx],
       ) # FIXME: mirage doesn't have a nicer IR function for this.
     )
-
-    #[ let
-      trueJump = runtime.ir.placeholder(Jump) - 1
-      falseJump = runtime.ir.placeholder(Jump) - 1
-    
-    runtime.ir.overrideArgs(trueJump, @[stackUinteger runtime.ir.loadBool(leftIdx, true)])
-    let jmpAfterTrueBranch = runtime.ir.placeholder(Jump) - 1
-
-    let falseBranch = runtime.ir.loadBool(leftIdx, false) - 1
-    
-    runtime.ir.overrideArgs(jmpAfterTrueBranch, @[stackUinteger(falseBranch + 1)])
-    runtime.ir.overrideArgs(falseJump, @[stackUinteger(falseBranch + 1)]) ]#
   of BinaryOperation.LesserOrEqual:
     discard runtime.ir.addOp(
       IROperation(
         opcode: LesserThanEqualInt,
-        arguments: @[stackUinteger leftIdx, stackUinteger rightIdx],
+        arguments: @[stackInteger leftIdx, stackInteger rightIdx],
       )
     )
   else:
@@ -667,27 +655,27 @@ proc genIfStmt(runtime: Runtime, fn: Function, stmt: Statement) =
   of BinaryOperation.GreaterThan:
     discard runtime.ir.addOp(
       IROperation(
-        opcode: GreaterThanInt, arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
+        opcode: GreaterThanInt, arguments: @[stackInteger lhsIdx, stackInteger rhsIdx]
       ) # FIXME: mirage doesn't have a nicer IR function for this.
     )
   of BinaryOperation.LesserThan:
     discard runtime.ir.addOp(
       IROperation(
-        opcode: LesserThanInt, arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
+        opcode: LesserThanInt, arguments: @[stackInteger lhsIdx, stackInteger rhsIdx]
       )
     )
   of BinaryOperation.GreaterOrEqual:
     discard runtime.ir.addOp(
       IROperation(
         opcode: GreaterThanEqualInt,
-        arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx],
+        arguments: @[stackInteger lhsIdx, stackInteger rhsIdx],
       )
     )
   of BinaryOperation.LesserOrEqual:
     discard runtime.ir.addOp(
       IROperation(
         opcode: LesserThanEqualInt,
-        arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx],
+        arguments: @[stackInteger lhsIdx, stackInteger rhsIdx],
       )
     )
   else:
@@ -714,17 +702,17 @@ proc genIfStmt(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.generateBytecodeForScope(stmt.branchFalse, allocateConstants = false)
     # generate branch two
   let endOfBranchTwo = getCurrOpNum().uint
-  runtime.ir.overrideArgs(skipBranchTwoJmp, @[stackUinteger(endOfBranchTwo)])
+  runtime.ir.overrideArgs(skipBranchTwoJmp, @[stackInteger(endOfBranchTwo)])
 
   case stmt.conditionExpr.op
   of BinaryOperation.Equal, BinaryOperation.GreaterThan, BinaryOperation.TrueEqual,
       BinaryOperation.GreaterOrEqual, BinaryOperation.LesserThan,
       BinaryOperation.LesserOrEqual:
-    runtime.ir.overrideArgs(falseJump, @[stackUinteger(endOfBranchOne)])
-    runtime.ir.overrideArgs(trueJump, @[stackUinteger(falseJump + 2)])
+    runtime.ir.overrideArgs(falseJump, @[stackInteger(endOfBranchOne)])
+    runtime.ir.overrideArgs(trueJump, @[stackInteger(falseJump + 2)])
   of BinaryOperation.NotEqual:
-    runtime.ir.overrideArgs(trueJump, @[stackUinteger(getCurrOpNum().uint)])
-    runtime.ir.overrideArgs(falseJump, @[stackUinteger(falseJump + 2)])
+    runtime.ir.overrideArgs(trueJump, @[stackInteger(getCurrOpNum().uint)])
+    runtime.ir.overrideArgs(falseJump, @[stackInteger(falseJump + 2)])
   else:
     unreachable
 
@@ -828,7 +816,7 @@ proc genWhileStmt(runtime: Runtime, fn: Function, stmt: Statement) =
   of GreaterThan, LesserThan:
     discard runtime.ir.addOp(
       IROperation(
-        opcode: GreaterThanInt, arguments: @[stackUinteger lhsIdx, stackUinteger rhsIdx]
+        opcode: GreaterThanInt, arguments: @[stackInteger lhsIdx, stackInteger rhsIdx]
       ) # FIXME: mirage doesn't have a nicer IR function for this.
     )
   else:
@@ -859,19 +847,19 @@ proc genWhileStmt(runtime: Runtime, fn: Function, stmt: Statement) =
 
   if runtime.irHints.breaksGeneratedAt.len > 0:
     for brk in runtime.irHints.breaksGeneratedAt:
-      runtime.ir.overrideArgs(brk, @[stackUinteger(jmpPastBody.uint)])
+      runtime.ir.overrideArgs(brk, @[stackInteger(jmpPastBody.uint)])
   else:
-    runtime.ir.overrideArgs(dummyJump, @[stackUinteger(jmpPastBody.uint)])
+    runtime.ir.overrideArgs(dummyJump, @[stackInteger(jmpPastBody.uint)])
 
   runtime.irHints.breaksGeneratedAt.reset()
 
   case stmt.whConditionExpr.op
   of BinaryOperation.Equal, BinaryOperation.TrueEqual, BinaryOperation.GreaterThan:
-    runtime.ir.overrideArgs(trueJump, @[stackUinteger(jmpIntoBody.uint)])
-    runtime.ir.overrideArgs(escapeJump, @[stackUinteger(jmpPastBody.uint)])
+    runtime.ir.overrideArgs(trueJump, @[stackInteger(jmpIntoBody.uint)])
+    runtime.ir.overrideArgs(escapeJump, @[stackInteger(jmpPastBody.uint)])
   of BinaryOperation.NotEqual, BinaryOperation.LesserThan:
-    runtime.ir.overrideArgs(trueJump, @[stackUinteger(jmpPastBody.uint)])
-    runtime.ir.overrideArgs(escapeJump, @[stackUinteger(jmpIntoBody.uint)])
+    runtime.ir.overrideArgs(trueJump, @[stackInteger(jmpPastBody.uint)])
+    runtime.ir.overrideArgs(escapeJump, @[stackInteger(jmpIntoBody.uint)])
   else:
     unreachable
 
@@ -1038,7 +1026,7 @@ proc genForLoop(runtime: Runtime, fn: Function, stmt: Statement) =
   # Now, generate the jumps for either going into the loop body or outside it.
   # If conditional is true, jump into the body
   # else, jump outside
-  let jmpIntoBody = stackUinteger(getCurrOpNum() + 2'u)
+  let jmpIntoBody = stackInteger(getCurrOpNum() + 2'u)
 
   let jump1 = runtime.ir.placeholder(Jump) - 1
   let jump2 = runtime.ir.placeholder(Jump) - 1
@@ -1049,7 +1037,7 @@ proc genForLoop(runtime: Runtime, fn: Function, stmt: Statement) =
   if *stmt.forLoopIter:
     runtime.generateBytecode(fn, &stmt.forLoopIter)
 
-  let jmpOutsideBody = stackUinteger(getCurrOpNum() + 1'u)
+  let jmpOutsideBody = stackInteger(getCurrOpNum() + 1'u)
 
   if not inverted:
     runtime.ir.overrideArgs(jump1, @[jmpIntoBody])
@@ -1222,7 +1210,7 @@ proc generateBytecodeForScope(
       discard runtime.ir.addOp(
         IROperation(
           opcode: LoadBytecodeCallable,
-          arguments: @[stackUinteger(fnIndex), stackStr(clause)],
+          arguments: @[stackInteger(fnIndex), stackStr(clause)],
         )
       )
 

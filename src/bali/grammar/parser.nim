@@ -643,7 +643,7 @@ proc parseDeclaration*(
           break
     of TokenKind.Number:
       if *tok.intVal:
-        atom = some(stackUinteger uint32(&tok.intVal))
+        atom = some(stackInteger(&tok.intVal))
       else:
         atom = some(stackFloating(tok.floatVal))
     of TokenKind.Whitespace:

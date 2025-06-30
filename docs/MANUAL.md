@@ -134,7 +134,7 @@ type Person* = object
 
 runtime.registerType(prototype = Person, name = "Person")
 runtime.setProperty(Person, "name", str("John Doe"))
-runtime.setProperty(Person, "age", uinteger(24'u))
+runtime.setProperty(Person, "age", integer(24'u))
 runtime.setProperty(Person, "likes", sequence(@[
   str("Skating"),
   str("Tennis"),
