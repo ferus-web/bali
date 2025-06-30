@@ -47,6 +47,11 @@ type
 
     trapped*: bool = false
 
+proc `=destroy`*(vm: PulsarInterpreter) =
+  # FIXME: Why is this called for no reason?
+  # I think we're somehow confusing ORC.
+  discard
+
 proc find*(clause: Clause, id: uint): Option[Operation] =
   vmd "find-op-in-clause", "target = " & $id & "; len = " & $clause.operations.len
   if clause.operations.len.uint <= id:
