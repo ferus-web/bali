@@ -192,11 +192,7 @@ proc newJSValue*(kind: MAtomKind): JSValue =
   ensureMove(mem)
 
 proc atomToJSValue*(atom: MAtom): JSValue =
-  let kind =
-    if atom.kind != Ident:
-      atom.kind
-    else:
-      String
+  let kind = if atom.kind != Ident: atom.kind else: String
 
   var value = newJSValue(kind)
   case atom.kind

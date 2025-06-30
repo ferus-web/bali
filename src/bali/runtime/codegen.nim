@@ -335,8 +335,7 @@ proc genCall(
     fillArguments()
 
     # then, invoke it.
-    discard
-      runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackInteger fn]))
+    discard runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackInteger fn]))
   else:
     debug "interpreter: generate IR for calling traditional function: " & nam &
       (if stmt.mangle: " (mangled)" else: newString 0)

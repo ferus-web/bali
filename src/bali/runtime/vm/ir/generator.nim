@@ -186,9 +186,7 @@ proc loadBool*(
       )
     )
   else:
-    gen.addOp(
-      IROperation(opCode: LoadBool, arguments: @[stackInteger position, value])
-    )
+    gen.addOp(IROperation(opCode: LoadBool, arguments: @[stackInteger position, value]))
 
 proc call*(
     gen: IRGenerator, function: string, arguments: seq[MAtom] = @[]
@@ -268,14 +266,10 @@ proc decrementInt*(gen: IRGenerator, position: uint): uint {.inline, discardable
 
 proc addFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   ## Add two floats together
-  gen.addOp(
-    IROperation(opCode: AddFloat, arguments: @[stackInteger a, stackInteger b])
-  )
+  gen.addOp(IROperation(opCode: AddFloat, arguments: @[stackInteger a, stackInteger b]))
 
 proc subFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  gen.addOp(
-    IROperation(opCode: SubFloat, arguments: @[stackInteger a, stackInteger b])
-  )
+  gen.addOp(IROperation(opCode: SubFloat, arguments: @[stackInteger a, stackInteger b]))
 
 proc multFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   gen.addOp(
@@ -283,9 +277,7 @@ proc multFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   )
 
 proc divFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  gen.addOp(
-    IROperation(opCode: DivFloat, arguments: @[stackInteger a, stackInteger b])
-  )
+  gen.addOp(IROperation(opCode: DivFloat, arguments: @[stackInteger a, stackInteger b]))
 
 proc powerFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   gen.addOp(
@@ -414,17 +406,13 @@ proc moveAtom*(gen: IRGenerator, source, dest: uint): uint {.inline, discardable
   ## Move an atom from one index to another. The source index is replaced with a NULL `MAtom` and 
   ## the destination index occupies what was previously the content stored at the source index.
   gen.addOp(
-    IROperation(
-      opCode: MoveAtom, arguments: @[stackInteger source, stackInteger dest]
-    )
+    IROperation(opCode: MoveAtom, arguments: @[stackInteger source, stackInteger dest])
   )
 
 proc copyAtom*(gen: IRGenerator, source, dest: uint): uint {.inline, discardable.} =
   ## Copy an atom from one index to another.
   gen.addOp(
-    IROperation(
-      opCode: CopyAtom, arguments: @[stackInteger source, stackInteger dest]
-    )
+    IROperation(opCode: CopyAtom, arguments: @[stackInteger source, stackInteger dest])
   )
 
 proc resetArgs*(gen: IRGenerator): uint {.inline, discardable.} =
