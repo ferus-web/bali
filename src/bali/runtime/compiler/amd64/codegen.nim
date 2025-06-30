@@ -91,6 +91,12 @@ proc allocBytecodeCallable(str: cstring): JSValue {.cdecl.} =
 proc strRaw(value: cstring): JSValue {.cdecl.} =
   str($value)
 
+proc allocInt(i: int): JSValue {.cdecl.} =
+  integer(i)
+
+proc allocUint(i: uint): JSValue {.cdecl.} =
+  integer(i)
+
 proc prepareGCAlloc(cgen: var AMD64Codegen, size: uint) =
   cgen.s.mov(regRdi, size.int64)
   cgen.s.sub(regRsp.reg, 8)
@@ -175,14 +181,14 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
     of LoadInt:
       cgen.s.mov(regRdi, int64(&op.arguments[1].getInt()))
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(integer)
+      cgen.s.call(allocInt)
       cgen.s.add(regRsp.reg, 8)
 
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
     of LoadUint:
       cgen.s.mov(regRdi, int64(&op.arguments[1].getInt()))
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(integer)
+      cgen.s.call(allocUInt)
       cgen.s.add(regRsp.reg, 8)
 
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))

@@ -249,16 +249,27 @@ func stackIdent*(i: string): MAtom =
   ## This is used by the parser.
   MAtom(kind: Ident, ident: i)
 
-proc integer*(i: uint | int, inRuntime: bool = false): JSValue {.inline, cdecl.} =
+proc integer*(value: int, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Integer)
-  mem.integer = int(i)
+  mem.integer = value
 
   ensureMove(mem)
 
-func stackInteger*(i: int | uint): MAtom =
+proc integer*(value: uint, inRuntime: bool = false): JSValue {.inline, cdecl.} =
+  var mem = newJSValue(Integer)
+  mem.integer = int(value)
+
+  ensureMove(mem)
+
+func stackInteger*(value: int): MAtom =
   ## Allocate a Integer atom on the stack.
   ## This is used by the parser.
-  MAtom(kind: Integer, integer: int(i))
+  MAtom(kind: Integer, integer: value)
+
+func stackInteger*(value: uint): MAtom =
+  ## Allocate a Integer atom on the stack.
+  ## This is used by the parser.
+  MAtom(kind: Integer, integer: int(value))
 
 proc boolean*(b: bool, inRuntime: bool = false): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Boolean)
