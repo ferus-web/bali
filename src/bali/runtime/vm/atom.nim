@@ -142,20 +142,23 @@ proc getInt*(atom: MAtom | JSValue): Option[int] {.inline.} =
 
   none(int)
 
-proc getUint*(atom: MAtom | JSValue): Option[int] {.inline.} =
-  getInt(atom)
-
 proc getBool*(atom: MAtom | JSValue): Option[bool] {.inline.} =
   if atom.kind == Boolean:
     return some atom.state
+
+  none(bool)
 
 proc getIdent*(atom: MAtom | JSValue): Option[string] {.inline.} =
   if atom.kind == Ident:
     return some atom.ident
 
+  none(string)
+
 proc getFloat*(atom: MAtom | JSValue): Option[float64] {.cdecl.} =
   if atom.kind == Float:
     return some atom.floatVal
+
+  none(float64)
 
 proc getNumeric*(atom: MAtom | JSValue): Option[float64] {.inline.} =
   if atom.kind == Integer:
@@ -163,13 +166,19 @@ proc getNumeric*(atom: MAtom | JSValue): Option[float64] {.inline.} =
   elif atom.kind == Float:
     return some(&atom.getFloat())
 
+  none(float64)
+
 proc getSequence*(atom: MAtom | JSValue): Option[seq[MAtom]] {.inline.} =
   if atom.kind == Sequence:
     return some(atom.sequence)
 
+  none(seq[MAtom])
+
 proc getNativeCallable*(atom: MAtom | JSValue): Option[proc()] {.inline.} =
   if atom.kind == NativeCallable:
     return some(atom.fn)
+
+  none(proc())
 
 proc newJSValue*(kind: MAtomKind): JSValue =
   ## Allocate a new `JSValue` using Bali's garbage collector.
@@ -183,7 +192,11 @@ proc newJSValue*(kind: MAtomKind): JSValue =
   ensureMove(mem)
 
 proc atomToJSValue*(atom: MAtom): JSValue =
-  let kind = if atom.kind != Ident: atom.kind else: String
+  let kind =
+    if atom.kind != Ident:
+      atom.kind
+    else:
+      String
 
   var value = newJSValue(kind)
   case atom.kind

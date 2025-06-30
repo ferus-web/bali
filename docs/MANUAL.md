@@ -113,7 +113,7 @@ assert aAge.kind == Integer
 assert aLikes.kind == Sequence
 
 assert aName.isSome and aName.getStr().get() == name
-assert aAge.isSome and aAge.getUint().get() == age
+assert aAge.isSome and aAge.getInt().get() == age
 ```
 **NOTE**: When you call `wrap()`, Bali allocates the object's on the heap, which is normally controlled by the Boehm GC! Do not free the pointer unless you're 100% sure it's no longer needed. Due to how Bali is designed, deallocating a `JSValue` can cause a ripple effect where other parts of the code holding onto the pointer won't notice it, and will subsequently perform a user-after-free! Henceforth, leave deallocations to the GC, because it's smarter than you. \
 Here, we just turned Nim types into atoms, which can be of any type, only dictated by their `kind` field. We can also turn the first two atoms back into their original representation. \
