@@ -162,6 +162,8 @@ proc throw*(
   if *clause:
     let
       rollback = (&clause).rollback
+
+    let
       prevClause = interpreter.getClause(rollback.clause.int.some)
 
     var bubblingException = deepCopy(exception)
@@ -1123,6 +1125,7 @@ proc feed*(interp: var PulsarInterpreter, modules: seq[CodeModule]) =
   for module in modules:
     var clause: Clause
     clause.name = module.name
+    clause.rollback.clause = int.low
 
     for i, op in module.operations:
       var operation = Operation(
