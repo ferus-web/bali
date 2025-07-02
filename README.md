@@ -150,5 +150,6 @@ runtime.run()
 - [X] For-loops
 - [X] Try-catch clauses
 - [X] Compound assignments
+- [X] x86-64 JIT compiler
 - [ ] Modules
 - [ ] Async

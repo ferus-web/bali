@@ -160,11 +160,9 @@ proc throw*(
   interpreter.errors.add(exception)
 
   if *clause:
-    let
-      rollback = (&clause).rollback
+    let rollback = (&clause).rollback
 
-    let
-      prevClause = interpreter.getClause(rollback.clause.int.some)
+    let prevClause = interpreter.getClause(rollback.clause.int.some)
 
     var bubblingException = deepCopy(exception)
     bubblingException.operation = rollback.opIndex
@@ -1089,6 +1087,25 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
             vm: var PulsarInterpreter, store, register: uint
         ) {.cdecl.} =
           vm.readRegister(store.int, register.int, 0),
+        writeField: proc(
+            vm: var PulsarInterpreter, position: int, source: int, field: cstring
+        ) {.cdecl.} =
+          let field = $field
+          var atom = vm.stack[position]
+          let alreadyExists = field in atom.objFields
+          let index =
+            if alreadyExists:
+              atom.objFields[field]
+            else:
+              atom.objValues.len
+
+          if alreadyExists:
+            atom.objValues[index] = &vm.get(source)
+          else:
+            atom.objValues &= &vm.get(source)
+            atom.objFields[field] = index
+
+          vm.stack[position] = atom,
       ),
     )
 

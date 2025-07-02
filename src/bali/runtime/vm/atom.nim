@@ -25,7 +25,7 @@ type
   AtomOverflowError* = object of CatchableError
   SequenceError* = object of CatchableError
 
-  AtomMode* {.pure.} = enum
+  AtomMode* {.pure, size: sizeof(uint8).} = enum
     Default = 0
     ReadOnly = 1
     WriteOnly = 2
@@ -339,3 +339,6 @@ proc obj*(): JSValue {.inline, cdecl.} =
   mem.objValues = newSeq[JSValue]()
 
   ensureMove(mem)
+
+proc stackObj*(): MAtom {.inline, cdecl.} =
+  MAtom(kind: Object)

@@ -15,6 +15,7 @@ type
     readVectorRegister*: pointer
     zeroRetval*: pointer
     readScalarRegister*: pointer
+    writeField*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
 

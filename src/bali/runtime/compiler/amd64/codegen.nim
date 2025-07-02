@@ -309,6 +309,16 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.sub(regRsp.reg, 8)
       cgen.s.mov(regRdi, cast[int64](cgen.vm))
       cgen.s.add(regRsp.reg, 8)
+    of WriteField:
+      prepareLoadString(cgen, &op.arguments[1].getStr())
+
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.mov(regRsi, &op.arguments[0].getInt())
+      cgen.s.mov(regRdx, &op.arguments[2].getInt())
+      cgen.s.mov(regRcx.reg, regR8)
+      cgen.s.call(cgen.callbacks.writeField)
+      cgen.s.add(regRsp.reg, 8)
     else:
       error "jit/amd64: cannot compile op: " & $op.opcode
       error "jit/amd64: bailing out, this clause will be interpreted"
