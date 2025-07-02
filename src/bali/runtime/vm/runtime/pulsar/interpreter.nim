@@ -4,6 +4,7 @@ import bali/runtime/vm/[atom, debugging]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
 import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv, types, resolver]
 import bali/runtime/vm/ir/shared
+import bali/runtime/normalize
 import bali/runtime/compiler/base
 import pkg/[shakar]
 
@@ -320,7 +321,7 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
           interp: PulsarInterpreter
       ): tuple[index: int, clause: Option[Clause]] {.gcsafe.} =
         for i, cls in interp.clauses:
-          if cls.name == name:
+          if cls.name == name or cls.name == normalizeIRName(name): # FIXME: Ugly, no good, terrible hack.
             return (index: i, clause: some cls)
     )(interpreter)
 
