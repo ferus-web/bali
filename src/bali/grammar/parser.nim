@@ -250,7 +250,6 @@ proc parseExpression*(
     else:
       parser.tokenizer.pos = copied
   
-  print term
   if ignoreTerms:
     return some term
 

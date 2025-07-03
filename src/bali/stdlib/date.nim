@@ -94,7 +94,7 @@ proc getTimeZoneString*(time: float): string =
 
 proc toDateString*(tv: float): string =
   # 1. If tv is NaN, return "Invalid Date".
-  if tv == NaN:
+  if tv.isNaN:
     return "Invalid Date"
 
   # FIXME: non-compliant!
@@ -179,7 +179,7 @@ proc generateStdIR*(runtime: Runtime) =
       let time = runtime.ToNumber(&dateObject.tagged("epoch"))
 
       # 4. If t is NaN, return NaN.
-      if time == NaN:
+      if time.isNaN:
         ret NaN
 
       # 5. Return YearFromTime(LocalTime(t)) - 1900𝔽.
@@ -205,7 +205,7 @@ proc generateStdIR*(runtime: Runtime) =
       let time = runtime.ToNumber(&dateObject.tagged("epoch"))
 
       # 4. If t is NaN, return NaN.
-      if time == NaN:
+      if time.isNaN:
         ret NaN
 
       # 5. Return YearFromTime(LocalTime(t)).
@@ -249,7 +249,7 @@ proc generateStdIR*(runtime: Runtime) =
       let time = runtime.ToNumber(&dateObject.tagged("epoch"))
 
       # 4. If t is NaN, return NaN.
-      if time == NaN:
+      if time.isNaN:
         ret NaN
 
       # 5. Return WeekDay(LocalTime(t)).
@@ -273,7 +273,7 @@ proc generateStdIR*(runtime: Runtime) =
       let time = runtime.ToNumber(&dateObject.tagged("epoch"))
 
       # 4. If t is NaN, return NaN.
-      if time == NaN:
+      if time.isNaN:
         ret NaN
 
       # 5. Return DateFromTime(LocalTime(t)).

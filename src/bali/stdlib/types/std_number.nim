@@ -1,6 +1,6 @@
 ## Number type
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
-import std/[fenv, logging]
+import std/[math, fenv, logging]
 import bali/runtime/[arguments, bridge, atom_helpers, wrapping, types]
 import bali/runtime/abstract/[to_number, to_string]
 import bali/stdlib/builtins/parse_int
@@ -108,7 +108,7 @@ proc generateStdIR*(runtime: Runtime) =
         # 1. If number is not a Number, return false.
         ret false
 
-      if runtime.ToNumber(number) == NaN:
+      if runtime.ToNumber(number).isNaN:
         # 2. If number is NaN, return true.
         ret true
 
