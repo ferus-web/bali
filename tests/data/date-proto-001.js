@@ -6,3 +6,6 @@ assert.sameValue(x.getYear(), 70) // Is it the year of our lord, 197- ahem, 70? 
 assert.sameValue(x.getDay(), 4) // It was a Thursday, which is the 4th day here because we're weirdos
 assert.sameValue(x.getFullYear(), 1970) // Oh hey, the year of our lord, 1970
 assert.sameValue(x.getDate(), 1)
+
+let y = new Date(Infinity)
+assert.sameValue(new String(y), "Invalid Date")
