@@ -21,6 +21,9 @@ proc generateStdIr*(runtime: Runtime) =
   let nan = runtime.index("NaN", params)
   runtime.ir.loadFloat(nan, stackFloating(NaN))
 
+  let inf = runtime.index("Infinity", params)
+  runtime.ir.loadFloat(inf, stackFloating(Inf))
+
   let vTrue = runtime.index("true", params)
   runtime.ir.loadBool(vTrue, true)
 

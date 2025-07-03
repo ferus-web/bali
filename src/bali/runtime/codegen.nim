@@ -1494,7 +1494,7 @@ proc run*(runtime: Runtime, typeRegistrationCb: proc(runtime: Runtime) = nil) =
           quit(0)
     )
 
-  for ident in ["undefined", "NaN", "true", "false", "null"]:
+  for ident in ["undefined", "NaN", "true", "false", "null", "Infinity"]:
     runtime.markGlobal(ident)
 
   if typeRegistrationCb != nil:

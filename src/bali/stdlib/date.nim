@@ -94,7 +94,7 @@ proc getTimeZoneString*(time: float): string =
 
 proc toDateString*(tv: float): string =
   # 1. If tv is NaN, return "Invalid Date".
-  if tv.isNaN:
+  if tv.isNaN or tv == Inf or tv == -Inf:
     return "Invalid Date"
 
   # FIXME: non-compliant!
