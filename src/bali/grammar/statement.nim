@@ -203,7 +203,13 @@ proc hash*(stmt: Statement): Hash {.inline.} =
   of NewFunction:
     hash = hash !& hash((stmt.fnName))
   of BinaryOp:
-    hash = hash !& hash((stmt.op, stmt.binLeft, stmt.binRight, stmt.binStoreIn))
+    hash = hash !& hash((stmt.op, stmt.binStoreIn))
+
+    if stmt.binLeft != nil:
+      hash = hash !& hash(stmt.binLeft)
+    
+    if stmt.binRight != nil:
+      hash = hash !& hash(stmt.binRight)
   of IfStmt:
     hash = hash !& hash((stmt.conditionExpr))
   of AccessField:
