@@ -321,7 +321,8 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
           interp: PulsarInterpreter
       ): tuple[index: int, clause: Option[Clause]] {.gcsafe.} =
         for i, cls in interp.clauses:
-          if cls.name == name or cls.name == normalizeIRName(name): # FIXME: Ugly, no good, terrible hack.
+          if cls.name == name or cls.name == normalizeIRName(name):
+            # FIXME: Ugly, no good, terrible hack.
             return (index: i, clause: some cls)
     )(interpreter)
 
