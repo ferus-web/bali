@@ -75,8 +75,18 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
 
 proc parseAtom*(parser: Parser, token: Token): Option[MAtom]
 
+func tokenToArithBinOp*(token: TokenKind): BinaryOperation {.raises: [ValueError].} =
+  case token
+  of TokenKind.Add: BinaryOperation.Add
+  of TokenKind.Sub: BinaryOperation.Sub
+  of TokenKind.Div: BinaryOperation.Div
+  of TokenKind.Mul: BinaryOperation.Mult
+  else:
+    raise newException(ValueError, "Invalid token for arithmetic operation: " & $token)
+
 proc parseExpression*(
-    parser: Parser, storeIn: Option[string] = none(string)
+    parser: Parser, storeIn: Option[string] = none(string),
+    ignoreTerms: bool = false
 ): Option[Statement] =
   info "parser: parsing arithmetic/binary expression"
   var term = Statement(kind: BinaryOp, binStoreIn: storeIn)
@@ -218,6 +228,31 @@ proc parseExpression*(
     debug "FIXME: parser: this is probably not the right thing to do!"
     term.op = BinaryOperation.Equal
     term.binRight = atomHolder(boolean(true)) # TODO: is this the right thing to do in this case? ]#
+
+  if not parser.tokenizer.eof:
+    # Look ahead for any remaining bits
+    let copied = parser.tokenizer.pos
+    let tok = parser.tokenizer.nextExceptWhitespace()
+    
+    # TODO: Handle parentheses too
+    if *tok and (&tok).kind in {
+      TokenKind.Add,
+      TokenKind.Sub,
+      TokenKind.Div,
+      TokenKind.Mul
+    }:
+      print tok
+      let expr = parser.parseExpression(ignoreTerms = true)
+      if !expr:
+        parser.error Other, "expected valid expression after " & $(&tok).kind
+
+      term.binRight = Statement(kind: BinaryOp, op: tokenToArithBinOp((&tok).kind), binLeft: term.binRight, binRight: &expr)
+    else:
+      parser.tokenizer.pos = copied
+  
+  print term
+  if ignoreTerms:
+    return some term
 
   if term.binLeft != nil and term.binRight != nil:
     return some term
