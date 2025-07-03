@@ -1,4 +1,4 @@
-import std/[logging, options]
+import std/[math, logging, options]
 import bali/runtime/vm/runtime/prelude
 import bali/internal/sugar
 import bali/runtime/[types, bridge]
@@ -48,10 +48,15 @@ proc ToString*(runtime: Runtime, value: JSValue): string =
     debug "runtime: toString(): atom is a bigint"
     return $value.bigint
   of Float:
+    # 7. If argument is a Number, return Number::toString(argument, 10).
+
     debug "runtime: toString(): atom is a number (float)."
-    return
-      $(&value.getFloat())
-        # 7. If argument is a Number, return Number::toString(argument, 10).
+    let value = &getFloat(value)
+    
+    if value.isNaN:
+      return "NaN"
+
+    return $value
   of Sequence:
     debug "runtime: toString(): atom is an object (sequence)."
     var buffer = "["
