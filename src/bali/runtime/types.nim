@@ -81,6 +81,10 @@ type
 
     numAllocations*, numDeallocations*: uint
       ## How many allocations/deallocations happened during execution?
+  
+  Lifecycle* {.pure.} = enum
+    ShortLived
+    LongTerm
 
   Runtime* = ref object
     ast*: AST
@@ -101,6 +105,8 @@ type
 
     types*: seq[JSType]
     predefinedBytecode*: string
+
+    lifecycle*: Lifecycle
 
 {.push warning[UnreachableCode]: off.}
 proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =

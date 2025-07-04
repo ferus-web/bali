@@ -2,7 +2,7 @@
 
 import std/[logging, posix, hashes, tables, options, streams]
 import pkg/bali/runtime/compiler/base, pkg/bali/runtime/vm/heap/boehm
-import pkg/catnip/[x64assembler], pkg/[shakar]
+import pkg/catnip/[x64assembler], pkg/[shakar, pretty]
 import
   pkg/bali/runtime/vm/atom,
   pkg/bali/runtime/vm/runtime/shared,
@@ -18,6 +18,11 @@ type
     callbacks*: VMCallbacks
     vm*: pointer
     cpool*: ConstantPool
+    
+    ## This vector maps bytecode indices
+    ## to native offsets in executable memory.
+    bcToNativeOffsetMap*: seq[BackwardsLabel]
+    patchJmpOffsets*: Table[int, int]
 
     pageSize: int64
 
@@ -125,12 +130,22 @@ proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
 
   cgen.s.pop(regR8.reg) # get the pointer that was in rax which is likely gone now
 
+proc patchJumpPoints*(cgen: var AMD64Codegen) =
+  for index, offset in cgen.patchJmpOffsets:
+    print index
+    print offset
+    print cgen.bcToNativeOffsetMap[index]
+    cgen.s.offset = offset
+    cgen.s.jmp(cgen.bcToNativeOffsetMap[index])
+
 proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
-  for op in clause.operations:
+  for i, op in clause.operations:
     var op = op # FIXME: stupid ugly hack
 
     if not op.resolved:
       clause.resolve(op)
+    
+    cgen.bcToNativeOffsetMap &= cgen.s.label()
 
     case op.opcode
     of LoadUndefined:
@@ -368,7 +383,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.add(regRsp.reg, 16)
 
       cgen.s.pop(regR9.reg)
-      cgen.s.movq(regXmm1, regR9.reg)
+      cgen.s.movq(regXmm0, regR9.reg)
 
       # Divide [1] and [2], then box [1]
       cgen.s.ddivsd(regXmm0, regXmm1.reg)
@@ -406,12 +421,68 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.add(regRsp.reg, 8)
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
+    of GreaterThanInt:
+      # Now this one's a bit complex.
+      # This is the VM's behaviour:
+      # If a > b, jump 1 op ahead.
+      # Else, jump 2 ops ahead.
+      #
+      # Now, we need to keep track of what offsets we need to jump to,
+      # since 1 VM op can generate multiple ops in x86-64 asm.
+      # One wrong mistake, and it all blows up.
+
+      # We need to patch this later
+      echo "greater than int"
+      print i
+      cgen.s.jmp(cast[BackwardsLabel](0x0))
+      cgen.patchJmpOffsets[i] = cgen.s.offset
+    of Jump:
+      echo "jmp"
+      print i
+      cgen.s.jmp(cast[BackwardsLabel](0x0))
+      cgen.patchJmpOffsets[&op.arguments[0].getInt()] = cgen.s.offset
+    of Increment:
+      prepareAtomGetCall(cgen, &op.arguments[0].getInt())
+      cgen.s.mov(regRdi.reg, regRax)
+
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(getRawFloat)
+      cgen.s.add(regRsp.reg, 8)
+      
+      cgen.s.mov(regR9, 0x3FF0000000000000) # FIXME: This is wasteful. Surely there's a less awful way to do this.
+      cgen.s.movq(regXmm1, regR9.reg)
+
+      cgen.s.addsd(regXmm0, regXmm1.reg)
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(allocFloat)
+      cgen.s.add(regRsp.reg, 8)
+
+      prepareAtomAddCall(cgen, &op.arguments[0].getInt())
+    of Decrement:
+      prepareAtomGetCall(cgen, &op.arguments[0].getInt())
+      cgen.s.mov(regRdi.reg, regRax)
+
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(getRawFloat)
+      cgen.s.add(regRsp.reg, 8)
+      
+      cgen.s.mov(regR9, 0x3FF0000000000000) # FIXME: This is wasteful. Surely there's a less awful way to do this.
+      cgen.s.movq(regXmm1, regR9.reg)
+
+      cgen.s.subsd(regXmm0, regXmm1.reg)
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(allocFloat)
+      cgen.s.add(regRsp.reg, 8)
+
+      prepareAtomAddCall(cgen, &op.arguments[0].getInt())
     else:
       error "jit/amd64: cannot compile op: " & $op.opcode
       error "jit/amd64: bailing out, this clause will be interpreted"
       return false
-
+  
   cgen.s.ret()
+  patchJumpPoints(cgen)
+
   true
 
 proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
@@ -421,6 +492,7 @@ proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
     return some(cgen.cached[hashed])
 
   allocateNativeSegment(cgen)
+  cgen.bcToNativeOffsetMap = newSeqOfCap[BackwardsLabel](128)
 
   if emitNativeCode(cgen, clause):
     cgen.dump("bali-jit-result.bin")
