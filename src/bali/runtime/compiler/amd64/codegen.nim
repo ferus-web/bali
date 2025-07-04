@@ -383,6 +383,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.add(regRsp.reg, 16)
 
       cgen.s.pop(regR9.reg)
+      cgen.s.movsd(regXmm1, regXmm0.reg)
       cgen.s.movq(regXmm0, regR9.reg)
 
       # Divide [1] and [2], then box [1]
