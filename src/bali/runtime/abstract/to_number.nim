@@ -78,10 +78,7 @@ proc isFiniteNumber*(runtime: Runtime, number: JSValue): bool {.inline.} =
 
   let value = runtime.ToNumber(number)
 
-  if value.int32 < int32.high:
-    return true
-
-  return value != NaN and value != Inf
+  return not value.isNaN and value != Inf
 
 proc isIntegralNumber*(runtime: Runtime, number: JSValue): bool {.inline.} =
   if not number.isNumber:
