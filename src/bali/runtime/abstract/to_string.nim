@@ -56,6 +56,12 @@ proc ToString*(runtime: Runtime, value: JSValue): string =
     if value.isNaN:
       return "NaN"
 
+    if value == Inf:
+      return "Infinity"
+
+    if value == -Inf:
+      return "-Infinity"
+
     return $value
   of Sequence:
     debug "runtime: toString(): atom is an object (sequence)."
