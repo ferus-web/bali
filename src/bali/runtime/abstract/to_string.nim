@@ -52,7 +52,7 @@ proc ToString*(runtime: Runtime, value: JSValue): string =
 
     debug "runtime: toString(): atom is a number (float)."
     let value = &getFloat(value)
-    
+
     if value.isNaN:
       return "NaN"
 

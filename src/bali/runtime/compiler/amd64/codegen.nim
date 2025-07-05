@@ -18,7 +18,7 @@ type
     callbacks*: VMCallbacks
     vm*: pointer
     cpool*: ConstantPool
-    
+
     ## This vector maps bytecode indices
     ## to native offsets in executable memory.
     bcToNativeOffsetMap*: seq[BackwardsLabel]
@@ -143,7 +143,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
 
     if not op.resolved:
       clause.resolve(op)
-    
+
     cgen.bcToNativeOffsetMap &= cgen.s.label()
 
     case op.opcode
@@ -444,8 +444,9 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.sub(regRsp.reg, 8)
       cgen.s.call(getRawFloat)
       cgen.s.add(regRsp.reg, 8)
-      
-      cgen.s.mov(regR9, 0x3FF0000000000000) # FIXME: This is wasteful. Surely there's a less awful way to do this.
+
+      cgen.s.mov(regR9, 0x3FF0000000000000)
+        # FIXME: This is wasteful. Surely there's a less awful way to do this.
       cgen.s.movq(regXmm1, regR9.reg)
 
       cgen.s.addsd(regXmm0, regXmm1.reg)
@@ -461,8 +462,9 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.sub(regRsp.reg, 8)
       cgen.s.call(getRawFloat)
       cgen.s.add(regRsp.reg, 8)
-      
-      cgen.s.mov(regR9, 0x3FF0000000000000) # FIXME: This is wasteful. Surely there's a less awful way to do this.
+
+      cgen.s.mov(regR9, 0x3FF0000000000000)
+        # FIXME: This is wasteful. Surely there's a less awful way to do this.
       cgen.s.movq(regXmm1, regR9.reg)
 
       cgen.s.subsd(regXmm0, regXmm1.reg)
@@ -475,7 +477,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       error "jit/amd64: cannot compile op: " & $op.opcode
       error "jit/amd64: bailing out, this clause will be interpreted"
       return false
-  
+
   cgen.s.ret()
 
   true

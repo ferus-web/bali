@@ -77,16 +77,19 @@ proc parseAtom*(parser: Parser, token: Token): Option[MAtom]
 
 func tokenToArithBinOp*(token: TokenKind): BinaryOperation {.raises: [ValueError].} =
   case token
-  of TokenKind.Add: BinaryOperation.Add
-  of TokenKind.Sub: BinaryOperation.Sub
-  of TokenKind.Div: BinaryOperation.Div
-  of TokenKind.Mul: BinaryOperation.Mult
+  of TokenKind.Add:
+    BinaryOperation.Add
+  of TokenKind.Sub:
+    BinaryOperation.Sub
+  of TokenKind.Div:
+    BinaryOperation.Div
+  of TokenKind.Mul:
+    BinaryOperation.Mult
   else:
     raise newException(ValueError, "Invalid token for arithmetic operation: " & $token)
 
 proc parseExpression*(
-    parser: Parser, storeIn: Option[string] = none(string),
-    ignoreTerms: bool = false
+    parser: Parser, storeIn: Option[string] = none(string), ignoreTerms: bool = false
 ): Option[Statement] =
   info "parser: parsing arithmetic/binary expression"
   var term = Statement(kind: BinaryOp, binStoreIn: storeIn)
@@ -233,23 +236,24 @@ proc parseExpression*(
     # Look ahead for any remaining bits
     let copied = parser.tokenizer.pos
     let tok = parser.tokenizer.nextExceptWhitespace()
-    
+
     # TODO: Handle parentheses too
-    if *tok and (&tok).kind in {
-      TokenKind.Add,
-      TokenKind.Sub,
-      TokenKind.Div,
-      TokenKind.Mul
-    }:
+    if *tok and
+        (&tok).kind in {TokenKind.Add, TokenKind.Sub, TokenKind.Div, TokenKind.Mul}:
       print tok
       let expr = parser.parseExpression(ignoreTerms = true)
       if !expr:
         parser.error Other, "expected valid expression after " & $(&tok).kind
 
-      term.binRight = Statement(kind: BinaryOp, op: tokenToArithBinOp((&tok).kind), binLeft: term.binRight, binRight: &expr)
+      term.binRight = Statement(
+        kind: BinaryOp,
+        op: tokenToArithBinOp((&tok).kind),
+        binLeft: term.binRight,
+        binRight: &expr,
+      )
     else:
       parser.tokenizer.pos = copied
-  
+
   if ignoreTerms:
     return some term
 
@@ -868,12 +872,13 @@ proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
   case token.kind
   of TokenKind.Number:
     debug "parser: parseAtom: token is Number"
-    if *token.intVal:
+    #[ if *token.intVal:
       debug "parser: parseAtom: token contains integer value"
       return some stackInteger(&token.intVal)
     else:
       debug "parser: parseAtom: token contains floating-point value"
-      return some stackFloating(token.floatVal)
+      return some stackFloating(token.floatVal) ]#
+    return some stackFloating(token.floatVal)
   of TokenKind.String:
     if (let err = token.getError(); *err):
       parser.error Other, &err

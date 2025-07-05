@@ -81,7 +81,7 @@ type
 
     numAllocations*, numDeallocations*: uint
       ## How many allocations/deallocations happened during execution?
-  
+
   Lifecycle* {.pure.} = enum
     ShortLived
     LongTerm

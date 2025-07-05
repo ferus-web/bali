@@ -207,7 +207,7 @@ proc hash*(stmt: Statement): Hash {.inline.} =
 
     if stmt.binLeft != nil:
       hash = hash !& hash(stmt.binLeft)
-    
+
     if stmt.binRight != nil:
       hash = hash !& hash(stmt.binRight)
   of IfStmt:
