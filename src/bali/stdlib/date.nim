@@ -130,7 +130,7 @@ proc generateStdIR*(runtime: Runtime) =
         of String:
           dateValue = runtime.parseDateString(&value.getStr())
         else:
-          dateValue = runtime.ToNumber(value)
+          dateValue = timeClip(runtime.ToNumber(value))
 
       var date = runtime.createObjFromType(JSDate)
       date.tag("epoch", floating(dateValue))

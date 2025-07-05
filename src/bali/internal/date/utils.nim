@@ -26,7 +26,12 @@ func getHourFromTime*(t: float): int {.inline.} =
   ## when called
 
   # 1. Return 𝔽(floor(ℝ(t / msPerHour)) modulo HoursPerDay).
-  int(floor(t / msPerHour) mod HoursPerDay)
+  let value = int(floor(t / msPerHour) mod HoursPerDay)
+
+  if value < 0:
+    return 0
+
+  value
 
 func getDayFromYear*(y: int32): float =
   # 1. Let ry be ℝ(y).
@@ -106,10 +111,16 @@ func getMinuteFromTime*(t: float): uint8 {.inline.} =
   if t == Inf:
     return 0'u8
 
+  if t < 1:
+    return 0'u8
+
   uint8(floor(t / msPerMinute) mod MinutesPerHour)
 
 func getSecondFromTime*(t: float): uint8 {.inline.} =
   if t == Inf:
+    return 0'u8
+
+  if t < 1:
     return 0'u8
 
   uint8(floor(t / msPerSecond) mod SecondsPerMinute)
@@ -204,3 +215,19 @@ func getDateFromTime*(t: float): uint8 {.inline.} =
     return uint8(dayWithinYear - 333 - inLeapYear)
   else:
     unreachable
+
+proc timeClip*(time: float): float =
+  ## 21.4.1.31 TimeClip ( time )
+  ## The abstract operation TimeClip takes argument time (a Number) and returns a Number. It calculates a number
+  ## of milliseconds.
+
+  # 1. If time is not finite, return NaN.
+  if time == Inf:
+    return NaN
+
+  # 2. If abs(ℝ(time)) > 8.64 × 10^15, return NaN.
+  if abs(time) > 8.64 * pow(10'f64, 15'f64):
+    return NaN
+
+  # 3. Return 𝔽(! ToIntegerOrInfinity(time)).
+  return time
