@@ -2,7 +2,7 @@
 
 import std/[logging, posix, hashes, tables, options, streams]
 import pkg/bali/runtime/compiler/base, pkg/bali/runtime/vm/heap/boehm
-import pkg/catnip/[x64assembler], pkg/[shakar, pretty]
+import pkg/catnip/[x64assembler], pkg/[shakar]
 import
   pkg/bali/runtime/vm/atom,
   pkg/bali/runtime/vm/runtime/shared,
@@ -131,11 +131,10 @@ proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
   cgen.s.pop(regR8.reg) # get the pointer that was in rax which is likely gone now
 
 proc patchJumpPoints*(cgen: var AMD64Codegen) =
+  warn "TODO: Implement jump-point patching"
+  unreachable
+
   for index, offset in cgen.patchJmpOffsets:
-    print index
-    print offset
-    print cgen.bcToNativeOffsetMap[index]
-    cgen.s.offset = offset
     cgen.s.jmp(cgen.bcToNativeOffsetMap[index])
 
 proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
@@ -433,13 +432,9 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       # One wrong mistake, and it all blows up.
 
       # We need to patch this later
-      echo "greater than int"
-      print i
       cgen.s.jmp(cast[BackwardsLabel](0x0))
       cgen.patchJmpOffsets[i] = cgen.s.offset
     of Jump:
-      echo "jmp"
-      print i
       cgen.s.jmp(cast[BackwardsLabel](0x0))
       cgen.patchJmpOffsets[&op.arguments[0].getInt()] = cgen.s.offset
     of Increment:
@@ -482,7 +477,6 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       return false
   
   cgen.s.ret()
-  patchJumpPoints(cgen)
 
   true
 
