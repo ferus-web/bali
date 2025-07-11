@@ -257,7 +257,7 @@ func `%`(
     return newJString &t.ident
 
 proc execFile(ctx: Input, file: string) {.inline.} =
-  profileThis "execFile() sanity checks":
+  profileThis "execFile() sanity checks":D
     if not fileExists(file):
       die "file not found:", file
 
@@ -516,6 +516,7 @@ Codegen Flags:
   --disable-loop-allocation-elim          Don't attempt to rewrite loops to avoid unnecessary atom allocations.
   --aggressively-free-retvals             Aggressively zero-out the return-value register.
   --disable-dead-code-elim                Disable dead code elimination during the codegen phase.
+  --disable-jit                           Disable the baseline JIT compiler.
 """ %
     [name, Version]
   quit(0)
