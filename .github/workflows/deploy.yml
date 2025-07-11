@@ -25,4 +25,6 @@ jobs:
 
       - name: Build and deploy
         run: |
+          cp README.md docs/index.md
+          sed -i 's/\\//g' docs/index.md
           mkdocs gh-deploy --force --config-file mkdocs.yml
