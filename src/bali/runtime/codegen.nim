@@ -1078,7 +1078,12 @@ proc genTryClause(runtime: Runtime, fn: Function, stmt: Statement) =
 proc genCompoundAsgn(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate bytecode for compound assignment"
   let target = runtime.index(stmt.compAsgnTarget, defaultParams(fn))
-  let compounder = runtime.loadIRAtom(stmt.compAsgnCompounder)
+  let compounder =
+    if *stmt.compAsgnCompounder:
+      runtime.loadIRAtom(&stmt.compAsgnCompounder)
+    elif *stmt.compAsgnCompounderIdent:
+      runtime.index(&stmt.compAsgnCompounderIdent, defaultParams(fn))
+    else: unreachable; 0'u
 
   case stmt.compAsgnOp
   of BinaryOperation.Mult:
