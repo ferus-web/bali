@@ -474,8 +474,8 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
     else:
-      error "jit/amd64: cannot compile op: " & $op.opcode
-      error "jit/amd64: bailing out, this clause will be interpreted"
+      debug "jit/amd64: cannot compile op: " & $op.opcode
+      debug "jit/amd64: bailing out, this clause will be interpreted"
       return false
 
   cgen.s.ret()
@@ -496,8 +496,8 @@ proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
     info "jit/amd64: compilation successful for clause " & $clause.name
     some(cast[JITSegment](cgen.s.data))
   else:
-    warn "jit/amd64: failed to emit native code for clause."
-    warn "jit/amd64: the partially emitted code will be dumped to `bali-jit-fail.bin`"
+    debug "jit/amd64: failed to emit native code for clause."
+    debug "jit/amd64: the partially emitted code will be dumped to `bali-jit-fail.bin`"
 
     cgen.dump("bali-jit-fail.bin")
     none(JITSegment)
