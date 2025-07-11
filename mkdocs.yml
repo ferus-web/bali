@@ -1,0 +1,15 @@
+site_name: The Bali JavaScript Engine
+docs_dir: docs/
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+
+repo_name: ferus-web/bali
+repo_url: https://github.com/ferus-web/bali
+copyright: Copyright &copy; 2024 - 2025 Trayambak Rai
+
+nav:
+  - Getting started with Bali: MANUAL.md
+  - Code Style: CODE_STYLE.md

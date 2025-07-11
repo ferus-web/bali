@@ -26,24 +26,9 @@ jobs:
           set -o pipefail
           nimble analyze | sed -E 's/\x1B\[[0-9;]*[mK]//g' | tee nimalyzer.log
 
-      - name: Create GitHub Issue on Failure
+      - name: Upload failure logs
         if: ${{ failure() }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "# Static Analysis Failed!" > body.md
-          echo "Ello there, a commit has managed to trigger the static analyzer." >> body.md
-          echo "**Commit**: ${{github.sha}}" >> body.md
-          echo "" >> body.md
-          echo "# Nimalyzer Output" >> body.md
-          echo '```' >> body.md
-          cat nimalyzer.log >> body.md
-          echo '```' >> body.md
-
-          ISSUE_URL=$(gh issue create --title "Commit ${{github.sha}}" \
-                          --body-file body.md \
-                          --label "static analysis")
-          
-          ISSUE_NUMBER=$(echo "$ISSUE_URL" | grep -oE '[0-9]+$')
-
-          gh issue close $ISSUE_NUMBER
+        uses: actions/upload-artifact@v3
+        with:
+          name: static-analyzer
+          path: nimalyzer.log

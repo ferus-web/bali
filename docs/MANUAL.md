@@ -1,8 +1,8 @@
 # Bali Manual
 **Author**: Trayambak Rai (xtrayambak at disroot dot org)
-**Version Series Targetted**: 0.7.x \
-This manual is largely inspired by Monoucha's manual. \
-**WARNING**: Bali is only tested with the default memory management strategy (ORC). It uses ORC extensively and as such, it will probably not compile with other strategies. \
+**Version Series Targetted**: 0.7.x
+This manual is largely inspired by Monoucha's manual.
+**WARNING**: Bali is only tested with the default memory management strategy (ORC). It uses ORC extensively and as such, it will probably not compile with other strategies.
 **WARNING**: If you embed Bali in your program, you must compile it with the C++ backend as Bali relies on some C++ libraries.
 
 **This manual is largely under construction. Report problems if you can.**
@@ -11,12 +11,12 @@ This manual is largely inspired by Monoucha's manual. \
 * [Introduction](#introduction)
     - [Terms to learn](#terms-to-learn)
         - [Atom](#atom)
-    - [Drooling Baby's first scripts](#drooling-babys-first-scripts)
-    - [Baby's first scripts](#babys-first-scripts)
+    - [Drooling Baby's First Scripts](#drooling-babys-first-scripts)
+    - [Baby's First Scripts](#babys-first-scripts)
 * [Creating new types](#creating-new-types)
-    - [Wrapping primitives](#wrapping-primitives)
-    - [Wrapping our type](#wrapping-our-type)
-    - [Modifying our type's prototype](#modifying-our-prototype)
+    - [Wrapping Primitives](#wrapping-primitives)
+    - [Wrapping our Type](#wrapping-our-type)
+    - [Modifying our Type's Prototype](#modifying-our-prototype)
 * [Supported ECMAScript APIs](#supported-ecmascript-apis)
     - [The Math type](#the-math-type)
     - [The JSON type](#the-json-type) 
@@ -90,7 +90,7 @@ Now, we'll learn how to write a Nim program that can load and evaluate JavaScrip
 - The `grammar` module, which as the name suggests, is responsible for lexing and parsing the JavaScript source code into an abstract syntax tree
 - The `runtime` module, which takes in the AST and converts it into bytecode that targets the [Mirage/Pulsar](https://github.com/ferus-web/mirage) interpreter.
 
-However, all of the complexities are neatly abstracted away, so you needn't worry about all of that. The API is deceptively simple. \
+However, all of the complexities are neatly abstracted away, so you needn't worry about all of that. The API is deceptively simple.
 Here's the minimal example.
 ```nim
 import bali/grammar/prelude
@@ -145,15 +145,15 @@ assert aLikes.kind == Sequence
 assert aName.isSome and aName.getStr().get() == name
 assert aAge.isSome and aAge.getInt().get() == age
 ```
-**NOTE**: When you call `wrap()`, Bali allocates the object's on the heap, which is normally controlled by the Boehm GC! Do not free the pointer unless you're 100% sure it's no longer needed. Due to how Bali is designed, deallocating a `JSValue` can cause a ripple effect where other parts of the code holding onto the pointer won't notice it, and will subsequently perform a user-after-free! Henceforth, leave deallocations to the GC, because it's smarter than you. \
-Here, we just turned Nim types into atoms, which can be of any type, only dictated by their `kind` field. We can also turn the first two atoms back into their original representation. \
-Unfortunately, it isn't as simple for the sequence, which can be dynamically typed with heterogenous types at this point. \
+**NOTE**: When you call `wrap()`, Bali allocates the object's on the heap, which is normally controlled by the Boehm GC! Do not free the pointer unless you're 100% sure it's no longer needed. Due to how Bali is designed, deallocating a `JSValue` can cause a ripple effect where other parts of the code holding onto the pointer won't notice it, and will subsequently perform a user-after-free! Henceforth, leave deallocations to the GC, because it's smarter than you.
+Here, we just turned Nim types into atoms, which can be of any type, only dictated by their `kind` field. We can also turn the first two atoms back into their original representation.
+Unfortunately, it isn't as simple for the sequence, which can be dynamically typed with heterogenous types at this point.
 The `getXXX` functions return `Option[requested type]` as they need to safely provide a way to tell if an atom can be of the requested primitive type. 
 
 ### Hold up, this isn't how JavaScript engines work!
 Yep, they use coercion. You _could_ implement coercion like this using the exception system, but Bali already handles some of the coercion functions that ECMAScript expects. They'll be covered later.
 
-## Wrapping our type
+## Wrapping our Type
 Assuming you already have the runtime set up via `newRuntime()`, you can define types before `run()` is called.
 
 ```nim
@@ -171,7 +171,7 @@ runtime.setProperty(Person, "likes", sequence(@[
   str("Programming")
 ]))
 ```
-Here, we're exposing our `Person` type to the JavaScript environment by specifying what fields it has, and also setting those fields. \
+Here, we're exposing our `Person` type to the JavaScript environment by specifying what fields it has, and also setting those fields.
 Now, you can easily just run this in your JS code:
 ```js
 console.log(Person.name) // Log: John Doe
@@ -179,9 +179,9 @@ console.log(Person.age) // Log: 24
 console.log(Person.likes) // Log: [Skating, Tennis, Programming]
 ```
 
-## Modifying our prototype
-Now, what if you wanted to add a function that can be called by every instance of your type? \
-In order to do that, you need to modify its **prototype**. Assume that we want multiple instances of the previously defined `Person` class to be possible. \
+## Modifying our Prototype
+Now, what if you wanted to add a function that can be called by every instance of your type?
+In order to do that, you need to modify its **prototype**. Assume that we want multiple instances of the previously defined `Person` class to be possible.
 We need to define a constructor for it.
 
 ```nim
@@ -197,7 +197,7 @@ runtime.defineConstructor(
       ret person
 )
 ```
-Now, we can call `new Person("John Doe", 24)` in JavaScript land and get an instance of the `Person` class! \
+Now, we can call `new Person("John Doe", 24)` in JavaScript land and get an instance of the `Person` class!
 Let us assume you want a `greet` function for all `Person`(s) that returns "<name> greets you back.". We can implement it like this.
 ```nim
 runtime.definePrototypeFn(
@@ -237,6 +237,7 @@ This function uses the global RNG instance created via [librng](https://github.c
 
 #### Using another RNG algorithm
 You can pass the following values as arguments for `--define:BaliRNGAlgorithm`:
+
 - `xoroshiro128`: Xoroshiro128
 - `xoroshiro128pp`: Xoroshiro128++
 - `xoroshiro128ss`: Xoroshiro128**
@@ -252,7 +253,7 @@ All of them vary in terms of quality, footprint and speed. Bali defaults to `xor
 All of the functions apart from `Math.hypot` have been implemented.
 
 ## The JSON type
-The `JSON` type has been implemented using the [jsony](https://github.com/treeform/jsony) parser. It contains a routine to turn Nim's `JsonNode` structs into `JSValue`(s) on the fly. \
+The `JSON` type has been implemented using the [jsony](https://github.com/treeform/jsony) parser. It contains a routine to turn Nim's `JsonNode` structs into `JSValue`(s) on the fly.
 It is not very spec-compliant yet, and just exists for my convenience.
 
 ### Supported Routines
@@ -343,7 +344,7 @@ $ balde path/to/your/file.js
 Balde supports a few flags for easier debugging.
 
 ### `--dump-ast`
-This flag lets the runtime evaluate the AST for any errors, but does not allow for its execution. Instead, it prints out the AST instead. \
+This flag lets the runtime evaluate the AST for any errors, but does not allow for its execution. Instead, it prints out the AST instead.
 This allows for semantic errors to be thrown out. If you want an immediate AST dump, use `--dump-no-eval`.
 ```command
 $ balde path/to/your/file.js --dump-ast
@@ -358,7 +359,7 @@ $ balde path/to/your/file.js --dump-no-eval
 ```
 
 ### `--verbose`
-This flag allows all debug logs to be shown, which can be used to diagnose bugs in the engine's multiple phases (tokenization, parsing, bytecode generation and runtime). \
+This flag allows all debug logs to be shown, which can be used to diagnose bugs in the engine's multiple phases (tokenization, parsing, bytecode generation and runtime).
 Beware that this gets very spammy.
 ```command
 $ balde path/to/your/file.js --verbose
@@ -372,11 +373,11 @@ $ balde path/to/your/file.js --dump-tokens
 ```
 
 ## Using the REPL
-**WARNING**: The REPL is still a very unstable feature. It is known to have several bugs. \
+**WARNING**: The REPL is still a very unstable feature. It is known to have several bugs.
 To run the REPL, simply run Balde with no arguments.
 
 ## Experiments
-Experiments are unstable Bali features that are locked behind an interpreter flag. In order to use them, you need to use the `--enable-experiments` flag. \
+Experiments are unstable Bali features that are locked behind an interpreter flag. In order to use them, you need to use the `--enable-experiments` flag.
 `--enable-experiments` expects a syntax like this:
 ```
 --enable-experiments:<experiment1>;<experiment2>
@@ -406,7 +407,7 @@ while (i < 999999)
 }
 ```
 
-Bali can successfully prove that the while-loop only exists to modify the loop's state controller (`i`) in a particular way (increment it in this case) \
+Bali can successfully prove that the while-loop only exists to modify the loop's state controller (`i`) in a particular way (increment it in this case)
 Bali now knows that there is not a need to:
 * Waste storage space by generating code for a loop
 * Waste CPU cycles by iterating 999999 times
@@ -427,7 +428,7 @@ while (i < 999999)
 ```
 Now, it realizes that it has to actually generate the loop. Loop elision makes Bali _really_ fast against other JavaScript engines for very specifically cherry picked benchmarks, but serves next to no real-world usage. Yet.
 
-### Loop Allocation Elimination
+### Loop Allocation Elision
 Say, we have some code like this (this actually happens in a lot of places):
 ```js
 while (true)
@@ -436,7 +437,7 @@ while (true)
   console.log(x)
 }
 ```
-AFAIK, other JavaScript engines like V8 and SpiderMonkey have an internal string interning "cache" to prevent allocating the same string again and again. \
+AFAIK, other JavaScript engines like V8 and SpiderMonkey have an internal string interning "cache" to prevent allocating the same string again and again.
 Bali takes a different approach, because why not?
 
 Before a loop is about to be generated, Bali runs an optimization pass over the body to check if any allocations can be moved outside the loop's body.
@@ -483,7 +484,7 @@ var runtime = newRuntime(
 
 # Using the Native Interface
 ## A small example
-Bali exposes a pretty neat two-way interface for native code written in Nim to interact with JavaScript, and vice versa. \
+Bali exposes a pretty neat two-way interface for native code written in Nim to interact with JavaScript, and vice versa.
 Here's a short example. Here's a brief summary of what it does:
 - The JavaScript code has a function called "shoutify" which takes in an argument and returns an all-upper-case version of it.
 - The Nim code has a function called "greet" which takes in an argument and prints "Hi there, <argument>" to stdout.
