@@ -28,7 +28,7 @@ jobs:
 
       - name: Upload failure logs
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: static-analyzer
+          name: static-analyzer-${{ matrix.runs-on }}
           path: nimalyzer.log
