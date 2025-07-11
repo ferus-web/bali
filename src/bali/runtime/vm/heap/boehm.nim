@@ -94,9 +94,13 @@ proc baliDealloc*(p: pointer) {.inline.} =
   else:
     update gcStats
 
+var totalAlloc*: int
+
 proc baliAlloc*(size: SomeInteger): pointer {.cdecl.} =
   debug "heap: allocating GC'd chunk of size: " & $size & " bytes"
   var pointr = boehmAlloc(size)
+
+  totalAlloc += size
 
   # debug "heap: zeroing out chunk"
   zeroMem(pointr, size)

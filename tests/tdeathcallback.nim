@@ -5,7 +5,7 @@ var parser = newParser(
   """
 function x() { console.log("hi") }
 
-x())
+x()
 """
 )
 

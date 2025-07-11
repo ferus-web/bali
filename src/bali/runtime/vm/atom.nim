@@ -223,11 +223,27 @@ proc atomToJSValue*(atom: MAtom): JSValue =
 
   move(value)
 
-proc str*(s: string, inRuntime: bool = false): JSValue {.inline, cdecl.} =
+const internStrings = defined(baliExperimentalStringInterning)
+when internStrings: 
+  var interned {.global.}: Table[string, pointer]
+  var constantEmptyStr = newJSValue(String)
+  constantEmptyStr.str = newStringUninit(1)
+
+proc str*(s: string): JSValue {.inline, cdecl.} =
+  when internStrings:
+    if s.len < 1:
+      return constantEmptyStr
+
+    if s in interned:
+      return cast[JSValue](interned[s])
+
   var mem = newJSValue(String)
   mem.str = s
 
-  ensureMove(mem)
+  when internStrings:
+    interned[s] = mem
+
+  mem
 
 func stackStr*(s: string): MAtom =
   ## Allocate a String atom on the stack.
