@@ -1,5 +1,4 @@
 ## JavaScript console API standard interface
-## This uses a delegate system similar to that of V8's.
 
 import std/[options, logging, tables]
 import bali/runtime/vm/runtime/prelude
