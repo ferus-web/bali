@@ -1314,10 +1314,20 @@ proc parseCompoundAssignment*(
   let copiedTok = parser.tokenizer.deepCopy()
   let expr = parser.parseExpression()
   var atom: Option[MAtom]
+  var identifier: Option[string]
 
   if !expr:
     parser.tokenizer = copiedTok
-    atom = parser.parseAtom(&parser.tokenizer.nextExceptWhitespace())
+
+    let next = &parser.tokenizer.nextExceptWhitespace()
+
+    case next.kind
+    of TokenKind.Identifier:
+      identifier = some(next.ident)
+    else:
+      # FIXME: Make this a more concrete
+      # set of TokenKind(s) instead of just an else.
+      atom = parser.parseAtom(next)
 
   if *expr:
     parser.error Other, "Compound assignment with expressions is not supported yet"
@@ -1338,8 +1348,13 @@ proc parseCompoundAssignment*(
     parser.error UnexpectedToken,
       "expected multiplication, addition, subtraction or division as compound, got " &
         $compound.kind & " instead"
-
-  return some compoundAssignment(binOp, target = target, compounder = &atom)
+  
+  if *atom:
+    return some compoundAssignment(binOp, target = target, compounder = &atom)
+  elif *identifier:
+    return some compoundAssignment(binOp, target = target, compounder = &identifier)
+  else:
+    parser.error Other, "expected expression, literal or identifier after compound assignment"
 
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:

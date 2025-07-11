@@ -172,7 +172,8 @@ type
     of CompoundAssignment:
       compAsgnOp*: BinaryOperation
       compAsgnTarget*: string
-      compAsgnCompounder*: MAtom
+      compAsgnCompounder*: Option[MAtom]
+      compAsgnCompounderIdent*: Option[string]
 
 func hash*(access: FieldAccess): Hash {.inline.} =
   hash((access.identifier))
@@ -416,8 +417,18 @@ proc compoundAssignment*(
   Statement(
     kind: CompoundAssignment,
     compAsgnTarget: target,
-    compAsgnCompounder: compounder,
+    compAsgnCompounder: some(compounder),
     compAsgnOp: op,
+  )
+
+proc compoundAssignment*(
+  op: BinaryOperation, target: string, compounder: string
+): Statement =
+  Statement(
+    kind: CompoundAssignment,
+    compAsgnTarget: target,
+    compAsgnCompounderIdent: some(compounder),
+    compAsgnOp: op
   )
 
 {.pop.}
