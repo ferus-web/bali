@@ -257,7 +257,7 @@ func `%`(
     return newJString &t.ident
 
 proc execFile(ctx: Input, file: string) {.inline.} =
-  profileThis "execFile() sanity checks":D
+  profileThis "execFile() sanity checks":
     if not fileExists(file):
       die "file not found:", file
 
