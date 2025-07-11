@@ -1,8 +1,12 @@
 # Bali Manual
 **Author**: Trayambak Rai (xtrayambak at disroot dot org)
+
 **Version Series Targetted**: 0.7.x
+
 This manual is largely inspired by Monoucha's manual.
+
 **WARNING**: Bali is only tested with the default memory management strategy (ORC). It uses ORC extensively and as such, it will probably not compile with other strategies.
+
 **WARNING**: If you embed Bali in your program, you must compile it with the C++ backend as Bali relies on some C++ libraries.
 
 **This manual is largely under construction. Report problems if you can.**
