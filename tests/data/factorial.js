@@ -1,12 +1,16 @@
-function fac(n, acc) {
-	console.log("n:", n)
-	console.log("acc:", acc)
-	if (n == 0) {
-		return acc;
+function iterative_fac(n)
+{
+	let sum = 1;
+	for (var i = 1; i <= n; i++)
+	{
+		sum *= i
 	}
 
-	let value = fac(n - 1, n * acc)
-	return value
+	return sum;
 }
 
-console.log(fac(5, 1))
+for (var i = 0; i <= 256; i++)
+{
+	let y = iterative_fac(i) // FIXME: Putting this in there prints: "fac of <num> = undefined"
+	console.log("fac of", i, "=", y)
+}

@@ -5,7 +5,7 @@ import bali/runtime/vm/ir/generator
 import bali/runtime/vm/runtime/prelude
 import bali/grammar/prelude
 import bali/internal/sugar
-import bali/runtime/[atom_obj_variant, atom_helpers]
+import bali/runtime/[atom_obj_variant, atom_helpers, normalize]
 
 type
   NativeFunction* = proc()
@@ -284,7 +284,7 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   else:
     unreachable
 
-proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
+proc index*(runtime: Runtime, ident: string, params: IndexParams, demangle: bool = false): uint =
   for value in runtime.values:
     for prio in params.priorities:
       if value.kind == vkGlobal and value.identifier == ident:
@@ -293,16 +293,20 @@ proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
       if value.kind != prio:
         continue
 
+      let identMatch =
+        if demangle: value.identifier.normalizeIRName == ident
+        else: value.identifier == ident
+
       let cond =
         case value.kind
         of vkGlobal:
-          value.identifier == ident
+          identMatch
         of vkLocal:
           assert *params.fn
-          value.identifier == ident and value.ownerFunc == hash(&params.fn)
+          identMatch and value.ownerFunc == hash(&params.fn)
         of vkInternal:
           assert *params.stmt
-          value.identifier == ident and value.ownerStmt == hash(&params.stmt)
+          identMatch and value.ownerStmt == hash(&params.stmt)
 
       if cond:
         return value.index
@@ -310,4 +314,3 @@ proc index*(runtime: Runtime, ident: string, params: IndexParams): uint =
   debug "runtime: cannot find identifier \"" & ident &
     "\" in index search, returning pointer to undefined()"
   runtime.index("undefined", params)
-  # raise newException(ValueError, "No such ident: " & ident)

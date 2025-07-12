@@ -722,7 +722,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
           (&op.arguments[2].getInt())
         else:
           0
-
+    
     msg "idx: " & $idx & ", register: " & $register & ", index: " & $index
     interpreter.readRegister(idx, register, index)
     inc interpreter.currIndex
