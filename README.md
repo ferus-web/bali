@@ -9,7 +9,7 @@ With it, you can:
 - Write stuff for the JS ecosystem with Nim
 and much, much more. (It becomes more useful as it advances!)
 
-For more information, check out the `examples/` directory as well as the [Bali Manual](https://github.com/ferus-web/bali/blob/master/docs/MANUAL.md).
+For more information, check out the `examples/` directory as well as the [Bali Manual](https://ferus-web.github.io/bali/MANUAL/).
 
 # Usage
 * Bali is integrated into the [Ferus web engine](https://github.com/ferus-web/ferus) and used as the JavaScript runtime's backend
