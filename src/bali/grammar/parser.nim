@@ -240,7 +240,6 @@ proc parseExpression*(
     # TODO: Handle parentheses too
     if *tok and
         (&tok).kind in {TokenKind.Add, TokenKind.Sub, TokenKind.Div, TokenKind.Mul}:
-      print tok
       let expr = parser.parseExpression(ignoreTerms = true)
       if !expr:
         parser.error Other, "expected valid expression after " & $(&tok).kind
