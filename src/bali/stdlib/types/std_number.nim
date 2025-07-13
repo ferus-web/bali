@@ -128,6 +128,18 @@ proc generateStdIR*(runtime: Runtime) =
   # 21.1.2.10 Number.NaN
   # The value of Number.NaN is NaN.
   runtime.setProperty(JSNumber, "NaN", floating(NaN))
+  
+  # 21.1.2.6 Number.MAX_SAFE_INTEGER
+  # The value of Number.MAX_SAFE_INTEGER is 9007199254740991𝔽 (𝔽(253 - 1)).
+  runtime.setProperty(JSNumber, "MAX_SAFE_INTEGER", floating(9007199254740991'f64))
+
+  # 21.1.2.14 Number.POSITIVE_INFINITY
+  # The value of Number.POSITIVE_INFINITY is +∞𝔽.
+  runtime.setProperty(JSNumber, "POSITIVE_INFINITY", floating(Inf))
+
+  # 21.1.2.11 Number.NEGATIVE_INFINITY
+  # The value of Number.NEGATIVE_INFINITY is -∞∞𝔽.
+  runtime.setProperty(JSNumber, "NEGATIVE_INFINITY", floating(-Inf))
 
   # 21.1.2.1 Number.EPSILON
   # The value of Number.EPSILON is the Number value for the magnitude of the difference between 1
