@@ -92,6 +92,7 @@ proc copyRaw(dest, source: pointer, size: uint) {.cdecl.} =
   copyMem(dest, source, size)
 
 proc allocBytecodeCallable(str: cstring): JSValue {.cdecl.} =
+  assert str.len != 6
   bytecodeCallable($str)
 
 proc strRaw(value: cstring): JSValue {.cdecl.} =
@@ -118,12 +119,14 @@ proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
   var cstr = cast[cstring](baliAlloc(str.len + 1))
   for i, c in str:
     cstr[i] = c
+  
+  cstr[str.len] = '\0'
 
   cgen.cpool.add(cstr)
   cgen.s.push(regRax.reg) # save the pointer in rax
   cgen.s.mov(regRdi.reg, regRax)
   cgen.s.mov(regRsi, cast[int64](cast[pointer](cstr[0].addr)))
-  cgen.s.mov(regRdx, int64(str.len))
+  cgen.s.mov(regRdx, int64(str.len + 1))
 
   cgen.s.sub(regRsp.reg, 16)
   cgen.s.call(copyRaw)

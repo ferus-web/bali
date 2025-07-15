@@ -53,9 +53,7 @@ proc unmark*(space: seq[JSValue], regs: Registers) =
 # Methods exposed to the engine.
 # (Marked as cdecl because the JIT can call them)
 proc baliAlloc*(size: int): pointer {.cdecl.} =
-  echo "alloc: " & $size & " bytes"
   BaseAllocator.alloc(uint(size))
 
 proc baliDealloc*(p: pointer) {.cdecl.} =
-  echo "free"
   BaseAllocator.free(p)
