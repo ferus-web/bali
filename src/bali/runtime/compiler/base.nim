@@ -1,5 +1,3 @@
-import pkg/bali/runtime/vm/runtime/pulsar/types
-
 const hasJITSupport* = defined(amd64) and defined(unix)
 
 type
@@ -18,5 +16,3 @@ type
     writeField*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
-
-export Clause

@@ -11,7 +11,7 @@ import
 import
   bali/runtime/optimize/
     [mutator_loops, redundant_loop_allocations, ast_liveness_analysis]
-import bali/runtime/vm/heap/boehm
+# import bali/runtime/vm/heap/prelude
 import bali/runtime/abstract/equating
 import bali/stdlib/prelude
 import pkg/[crunchy]
@@ -1555,9 +1555,6 @@ proc newRuntime*(
   ## The AST must be valid.
   ## You can check the options exposed to you in `InterpreterOpts` by checking its documentation.
   # initializeGC(getStackPtr(), 4) # Initialize the M&S garbage collector
-
-  boehmGCinit()
-  boehmGC_enable()
 
   Runtime(
     ast: ast,

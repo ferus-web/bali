@@ -3,60 +3,12 @@
 
 import std/[tables, hashes, options]
 import pkg/[shakar, gmp]
-import ./heap/boehm
+import bali/runtime/vm/heap/prelude,
+       bali/runtime/atom_type
+
+export atom_type
 
 {.experimental: "strictDefs".}
-
-type
-  MAtomKind* {.size: sizeof(uint8).} = enum
-    Null = 0
-    String = 1
-    Integer = 2
-    Sequence = 3
-    Ident = 4
-    Boolean = 5
-    Object = 6
-    Float = 7
-    BigInteger = 8
-    BytecodeCallable = 9
-    NativeCallable = 10
-    Undefined = 11
-
-  AtomOverflowError* = object of CatchableError
-  SequenceError* = object of CatchableError
-
-  AtomMode* {.pure, size: sizeof(uint8).} = enum
-    Default = 0
-    ReadOnly = 1
-    WriteOnly = 2
-
-  MAtom* = object
-    case kind*: MAtomKind
-    of String:
-      str*: string
-    of Ident:
-      ident*: string
-    of Integer:
-      integer*: int
-    of Sequence:
-      sequence*: seq[MAtom]
-    of Boolean:
-      state*: bool
-    of Object:
-      objFields*: Table[string, int]
-      objValues*: seq[JSValue]
-    of Undefined: discard
-    of Float:
-      floatVal*: float64
-    of BigInteger:
-      bigint*: BigInt
-    of BytecodeCallable:
-      clauseName*: string
-    of NativeCallable:
-      fn*: proc()
-    of Null: discard
-
-  JSValue* = ptr MAtom
 
 proc hash*(atom: MAtom): Hash =
   var h: Hash = 0
@@ -183,8 +135,11 @@ proc getNativeCallable*(atom: MAtom | JSValue): Option[proc()] {.inline.} =
 proc newJSValue*(kind: MAtomKind): JSValue =
   ## Allocate a new `JSValue` using Bali's garbage collector.
   ## A `JSValue` is a pointer to an atom.
+  
+  var buff = baliAlloc(sizeof MAtom)
+  zeroMem(buff, sizeof(MAtom))
 
-  var mem = cast[ptr MAtom](baliAlloc(sizeof(MAtom)))
+  var mem = cast[ptr MAtom](buff)
 
   {.cast(uncheckedAssign).}:
     mem[].kind = kind

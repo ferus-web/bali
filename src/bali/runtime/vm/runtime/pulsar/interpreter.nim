@@ -1,8 +1,8 @@
 import std/[math, tables, options]
-import bali/runtime/vm/heap/boehm
+import bali/runtime/vm/heap/prelude
 import bali/runtime/vm/[atom, debugging]
 import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
-import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv, types, resolver]
+import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv, types, resolver, registers]
 import bali/runtime/vm/ir/shared
 import bali/runtime/normalize
 import bali/runtime/compiler/base
@@ -22,23 +22,18 @@ const
   BaliVMPreallocatedStackSize* {.intdefine.} = 4
 
 type
-  Registers* = object
-    retVal*: Option[JSValue]
-    callArgs*: seq[JSValue]
-    error*: Option[JSValue]
-
   PulsarInterpreter* = object
-    tokenizer: Tokenizer
-    currClause: int
+    tokenizer*: Tokenizer
+    currClause*: int
     currIndex*: uint = 0
-    clauses: seq[Clause]
+    clauses*: seq[Clause]
     currJumpOnErr: Option[uint]
 
     stack*: seq[JSValue]
     builtins*: Table[string, proc(op: Operation)]
     errors*: seq[RuntimeException]
     halt*: bool = false
-    trace: ExceptionTrace
+    trace*: ExceptionTrace
 
     registers*: Registers
 
@@ -47,6 +42,8 @@ type
       useJit*: bool = true
 
     trapped*: bool = false
+
+export types
 
 proc `=destroy`*(vm: PulsarInterpreter) =
   # FIXME: Why is this called for no reason?
@@ -289,7 +286,7 @@ proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: int) =
 
 proc zeroOut*(interpreter: var PulsarInterpreter, index: int) {.inline.} =
   ## Remove a stack index.
-  boehmDealloc(interpreter.stack[index])
+  # boehmDealloc(interpreter.stack[index])
   interpreter.stack.del(index)
 
 proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
@@ -344,8 +341,8 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
     else:
       raise newException(ValueError, "Reference to unknown clause: " & name)
 
-  if gcStats.pressure > 0.9f:
-    boehmGCFullCollect()
+  # if gcStats.pressure > 0.9f:
+  #   boehmGCFullCollect()
 
 proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) =
   if value.kind == Integer:
@@ -450,11 +447,11 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     else:
       interpreter.currIndex += 2
   of Jump:
-    if gcStats.pressure > 0.9f:
+    # if gcStats.pressure > 0.9f:
       # Assuming we're in a while-loop, perhaps perform a collection
       # the GC pressure is high so it's best we try to conserve memory
       # until this memory intensive loop ends
-      boehmGCFullCollect()
+      # boehmGCFullCollect()
 
     let pos = op.arguments[0].getInt()
 

@@ -1,6 +1,6 @@
 import std/[options, tables, strutils]
-import ../shared
-import ../../[atom]
+import pkg/bali/runtime/vm/runtime/shared
+import pkg/bali/runtime/vm/[atom]
 import pkg/shakar
 
 const MirageOperationJitThreshold* {.intdefine.} = 8

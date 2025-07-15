@@ -11,7 +11,6 @@ import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/prelude
 import bali/private/argparser
-import bali/runtime/vm/heap/[prelude, boehm]
 import pkg/[colored_logger, jsony, pretty, noise, fuzzy]
 
 const Version {.strdefine: "NimblePkgVersion".} = "<version not defined>"
@@ -240,7 +239,7 @@ proc dumpStatisticsPretty(runtime: Runtime) =
     resetStyle,
     ": ",
     styleBright,
-    $boehmGetHeapSize(),
+    "not available",
     resetStyle,
   )
 
@@ -527,7 +526,6 @@ proc main() {.inline.} =
   let input = parseInput()
   if input.enabled("version", "V"):
     echo "Bali: " & Version
-    echo "Boehm-Demers-Weiser GC: " & $boehmVersion()
     echo "Bali is developed by the Ferus Project. All of the source code is licensed under the GNU General Public License 3."
     quit(0)
 
@@ -543,8 +541,6 @@ proc main() {.inline.} =
 
     baldeRepl(input)
     quit(0)
-
-  initializeGC(GCKind.Boehm, input.enabled("incremental"))
 
   if input.command.len > 0:
     if not input.enabled("evaluate-bytecode", "B"):

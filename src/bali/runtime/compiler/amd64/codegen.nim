@@ -1,7 +1,8 @@
 ## Baseline JIT for AMD64 SystemV systems
 
 import std/[logging, posix, hashes, tables, options, streams]
-import pkg/bali/runtime/compiler/base, pkg/bali/runtime/vm/heap/boehm
+import pkg/bali/runtime/compiler/base, pkg/bali/runtime/vm/heap/prelude,
+       pkg/bali/runtime/vm/runtime/pulsar/types
 import pkg/catnip/[x64assembler], pkg/[shakar]
 import
   pkg/bali/runtime/vm/atom,
@@ -105,7 +106,7 @@ proc allocUint(i: uint): JSValue {.cdecl.} =
 proc prepareGCAlloc(cgen: var AMD64Codegen, size: uint) =
   cgen.s.mov(regRdi, size.int64)
   cgen.s.sub(regRsp.reg, 8)
-  cgen.s.call(allocRaw)
+  cgen.s.call(baliAlloc)
   cgen.s.add(regRsp.reg, 8)
 
 proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
