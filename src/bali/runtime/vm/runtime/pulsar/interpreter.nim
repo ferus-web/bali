@@ -972,6 +972,8 @@ proc run*(interpreter: var PulsarInterpreter) =
     if not *cls:
       break
 
+    baliCollect(interpreter.stack, interpreter.registers)
+
     var clause = &cls
     if clause.compiled and interpreter.trapped:
       # FIXME: this is broken!!! :^(
