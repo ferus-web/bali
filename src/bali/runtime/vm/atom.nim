@@ -224,7 +224,7 @@ proc atomToJSValue*(atom: MAtom): JSValue =
   move(value)
 
 const internStrings = defined(baliExperimentalStringInterning)
-when internStrings: 
+when internStrings:
   var interned {.global.}: Table[string, pointer]
   var constantEmptyStr = newJSValue(String)
   constantEmptyStr.str = newStringUninit(1)

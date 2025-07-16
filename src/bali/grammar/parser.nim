@@ -1347,13 +1347,14 @@ proc parseCompoundAssignment*(
     parser.error UnexpectedToken,
       "expected multiplication, addition, subtraction or division as compound, got " &
         $compound.kind & " instead"
-  
+
   if *atom:
     return some compoundAssignment(binOp, target = target, compounder = &atom)
   elif *identifier:
     return some compoundAssignment(binOp, target = target, compounder = &identifier)
   else:
-    parser.error Other, "expected expression, literal or identifier after compound assignment"
+    parser.error Other,
+      "expected expression, literal or identifier after compound assignment"
 
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:

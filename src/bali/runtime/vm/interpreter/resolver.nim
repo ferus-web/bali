@@ -1,7 +1,7 @@
 import std/[options, tables]
 import
-  pkg/bali/runtime/vm/runtime/pulsar/[types, operation],
-  pkg/bali/runtime/vm/runtime/shared,
+  pkg/bali/runtime/vm/interpreter/[types, operation],
+  pkg/bali/runtime/vm/shared,
   pkg/bali/runtime/vm/atom
 
 const SequenceBasedRegisters* = [some(1)]

@@ -4,9 +4,8 @@ import std/[logging, posix, hashes, tables, options, streams]
 import pkg/bali/runtime/compiler/base, pkg/bali/runtime/vm/heap/boehm
 import pkg/catnip/[x64assembler], pkg/[shakar]
 import
-  pkg/bali/runtime/vm/atom,
-  pkg/bali/runtime/vm/runtime/shared,
-  pkg/bali/runtime/vm/runtime/pulsar/resolver,
+  pkg/bali/runtime/vm/[atom, shared],
+  pkg/bali/runtime/vm/interpreter/resolver,
   pkg/bali/runtime/atom_helpers
 
 type

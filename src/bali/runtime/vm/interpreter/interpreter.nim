@@ -1,8 +1,8 @@
 import std/[math, tables, options]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, debugging]
-import bali/runtime/vm/runtime/[shared, tokenizer, exceptions]
-import bali/runtime/vm/runtime/pulsar/[operation, bytecodeopsetconv, types, resolver]
+import bali/runtime/vm/[shared, tokenizer, exceptions]
+import bali/runtime/vm/interpreter/[operation, bytecodeopsetconv, types, resolver]
 import bali/runtime/vm/ir/shared
 import bali/runtime/normalize
 import bali/runtime/compiler/base
@@ -722,7 +722,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
           (&op.arguments[2].getInt())
         else:
           0
-    
+
     msg "idx: " & $idx & ", register: " & $register & ", index: " & $index
     interpreter.readRegister(idx, register, index)
     inc interpreter.currIndex

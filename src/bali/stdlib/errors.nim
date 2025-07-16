@@ -1,6 +1,6 @@
 ## Implementation of `throw` in MIR bytecode
 
-import bali/runtime/vm/runtime/prelude
+import pkg/bali/runtime/vm/prelude
 import bali/grammar/errors
 import bali/runtime/types
 import bali/stdlib/errors_common

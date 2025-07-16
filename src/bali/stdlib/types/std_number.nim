@@ -128,7 +128,7 @@ proc generateStdIR*(runtime: Runtime) =
   # 21.1.2.10 Number.NaN
   # The value of Number.NaN is NaN.
   runtime.setProperty(JSNumber, "NaN", floating(NaN))
-  
+
   # 21.1.2.6 Number.MAX_SAFE_INTEGER
   # The value of Number.MAX_SAFE_INTEGER is 9007199254740991𝔽 (𝔽(253 - 1)).
   runtime.setProperty(JSNumber, "MAX_SAFE_INTEGER", floating(9007199254740991'f64))

@@ -2,8 +2,7 @@
 
 import std/[logging]
 import bali/runtime/vm/ir/generator
-import bali/runtime/vm/atom
-import bali/runtime/vm/runtime/[prelude]
+import bali/runtime/vm/[atom, prelude]
 import bali/runtime/types
 
 proc generateStdIr*(runtime: Runtime) =

@@ -1,5 +1,5 @@
 import std/[logging, math, options]
-import bali/runtime/vm/runtime/prelude
+import bali/runtime/vm/prelude
 import bali/internal/sugar
 import bali/runtime/[atom_helpers, types]
 import bali/runtime/abstract/to_primitive

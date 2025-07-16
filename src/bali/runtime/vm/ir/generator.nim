@@ -2,7 +2,7 @@
 ## which can then be used by the MIR emitter to generate MIR.
 ##
 
-import bali/runtime/vm/runtime/shared
+import bali/runtime/vm/shared
 import bali/runtime/vm/[atom]
 import bali/runtime/vm/ir/[emitter, shared]
 import pkg/shakar

@@ -3,7 +3,7 @@
 ##
 
 import std/[options, logging]
-import bali/runtime/vm/runtime/prelude
+import bali/runtime/vm/prelude
 import bali/runtime/[arguments, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors

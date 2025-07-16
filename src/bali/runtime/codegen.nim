@@ -2,7 +2,7 @@
 
 import std/[options, hashes, logging, strutils, tables, importutils]
 import bali/runtime/vm/ir/generator
-import bali/runtime/vm/runtime/[prelude]
+import bali/runtime/vm/prelude
 import bali/grammar/prelude
 import bali/internal/sugar
 import
@@ -1081,7 +1081,9 @@ proc genCompoundAsgn(runtime: Runtime, fn: Function, stmt: Statement) =
       runtime.loadIRAtom(&stmt.compAsgnCompounder)
     elif *stmt.compAsgnCompounderIdent:
       runtime.index(&stmt.compAsgnCompounderIdent, defaultParams(fn))
-    else: unreachable; 0'u
+    else:
+      unreachable
+      0'u
 
   case stmt.compAsgnOp
   of BinaryOperation.Mult:

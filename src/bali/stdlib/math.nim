@@ -1,7 +1,7 @@
 ## Implementation of the Web Math API
 
 import std/[importutils, tables, math, options, logging]
-import bali/runtime/vm/runtime/prelude
+import bali/runtime/vm/prelude
 import bali/runtime/[arguments, types, bridge]
 import bali/runtime/abstract/[to_number]
 import bali/stdlib/errors

@@ -422,13 +422,13 @@ proc compoundAssignment*(
   )
 
 proc compoundAssignment*(
-  op: BinaryOperation, target: string, compounder: string
+    op: BinaryOperation, target: string, compounder: string
 ): Statement =
   Statement(
     kind: CompoundAssignment,
     compAsgnTarget: target,
     compAsgnCompounderIdent: some(compounder),
-    compAsgnOp: op
+    compAsgnOp: op,
   )
 
 {.pop.}

@@ -1,4 +1,4 @@
-import pkg/bali/runtime/vm/runtime/pulsar/types
+import pkg/bali/runtime/vm/interpreter/types
 
 const hasJITSupport* = defined(amd64) and defined(unix)
 

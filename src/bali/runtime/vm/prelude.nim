@@ -1,7 +1,6 @@
-## Prelude file
+import
+  pkg/bali/runtime/vm/interpreter/interpreter,
+  pkg/bali/runtime/vm/exceptions,
+  pkg/bali/runtime/vm/atom
 
-import ./mirage/runtime/pulsar/[interpreter, operation]
-import ./mirage/version
-import ./bali/runtime/vm/atom
-
-export atom, interpreter, operation, version
+export interpreter, atom, exceptions

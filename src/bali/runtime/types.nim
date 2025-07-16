@@ -2,7 +2,7 @@
 
 import std/[options, hashes, logging, tables, sugar]
 import bali/runtime/vm/ir/generator
-import bali/runtime/vm/runtime/prelude
+import bali/runtime/vm/prelude
 import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/[atom_obj_variant, atom_helpers, normalize]
@@ -284,7 +284,9 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   else:
     unreachable
 
-proc index*(runtime: Runtime, ident: string, params: IndexParams, demangle: bool = false): uint =
+proc index*(
+    runtime: Runtime, ident: string, params: IndexParams, demangle: bool = false
+): uint =
   for value in runtime.values:
     for prio in params.priorities:
       if value.kind == vkGlobal and value.identifier == ident:
@@ -294,8 +296,10 @@ proc index*(runtime: Runtime, ident: string, params: IndexParams, demangle: bool
         continue
 
       let identMatch =
-        if demangle: value.identifier.normalizeIRName == ident
-        else: value.identifier == ident
+        if demangle:
+          value.identifier.normalizeIRName == ident
+        else:
+          value.identifier == ident
 
       let cond =
         case value.kind

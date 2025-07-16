@@ -2,7 +2,7 @@
 ##
 
 import std/[strutils, math, options, logging]
-import bali/runtime/vm/runtime/prelude
+import bali/runtime/vm/prelude
 import bali/runtime/[arguments, types, bridge]
 import bali/internal/[sugar, trim_string]
 

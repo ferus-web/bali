@@ -2,7 +2,7 @@ import std/[options]
 import bali/runtime/[types, bridge]
 import bali/internal/sugar
 import bali/stdlib/errors, bali/stdlib/types/std_string_type
-import bali/runtime/vm/runtime/prelude
+import bali/runtime/vm/prelude
 
 type PrimitiveHint* {.pure.} = enum
   Default

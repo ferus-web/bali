@@ -1,6 +1,6 @@
 import std/[logging, options, strutils]
 import bali/runtime/vm/atom
-import bali/runtime/vm/runtime/pulsar/interpreter
+import bali/runtime/vm/interpreter/interpreter
 import bali/runtime/[types]
 import bali/stdlib/errors
 

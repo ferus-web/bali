@@ -1,4 +1,4 @@
-import pkg/bali/runtime/vm/runtime/pulsar/operation
+import pkg/bali/runtime/vm/interpreter/operation
 
 type
   Clause* = object

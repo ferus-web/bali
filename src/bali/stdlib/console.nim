@@ -1,7 +1,7 @@
 ## JavaScript console API standard interface
 
 import std/[options, logging, tables]
-import bali/runtime/vm/runtime/prelude
+import bali/runtime/vm/prelude
 import bali/runtime/[arguments, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/internal/sugar

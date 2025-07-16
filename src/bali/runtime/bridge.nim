@@ -1,7 +1,7 @@
 ## A neat JavaScript <-> Nim bridge.
 
 import std/[logging, tables, options, strutils, hashes, importutils, sugar]
-import bali/runtime/vm/runtime/prelude
+import bali/runtime/vm/prelude
 import bali/runtime/vm/ir/generator
 import bali/runtime/[atom_obj_variant, wrapping, atom_helpers, types, normalize]
 import bali/stdlib/errors

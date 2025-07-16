@@ -3,7 +3,7 @@
 ## Authors:
 ## Trayambak Rai (xtrayambak at disroot dot org)
 import std/[logging, options]
-import bali/runtime/vm/runtime/prelude
+import bali/runtime/vm/prelude
 import bali/stdlib/errors_common
 import bali/runtime/[atom_helpers, arguments, types, bridge, wrapping]
 import bali/runtime/abstract/to_string
