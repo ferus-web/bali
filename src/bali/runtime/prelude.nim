@@ -1,5 +1,5 @@
-import bali/runtime/vm/atom
-import ./[codegen, atom_helpers, arguments, wrapping, bridge]
-import ./abstract/coercion
+import pkg/bali/runtime/vm/atom
+import pkg/bali/runtime/[atom_helpers, arguments, wrapping, bridge, common, types]
+import pkg/bali/runtime/abstract/coercion
 
-export atom, codegen, atom_helpers, arguments, coercion, bridge, wrapping
+export atom, common, atom_helpers, arguments, coercion, bridge, wrapping, types

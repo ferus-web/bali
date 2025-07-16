@@ -38,7 +38,7 @@ type
     builtins*: Table[string, proc(op: Operation)]
     errors*: seq[RuntimeException]
     halt*: bool = false
-    trace: ExceptionTrace
+    trace*: ExceptionTrace
 
     registers*: Registers
 

@@ -1,6 +1,6 @@
 ## A neat JavaScript <-> Nim bridge.
 
-import std/[logging, tables, options, strutils, hashes, importutils, sugar]
+import std/[logging, tables, options, strutils, hashes, importutils]
 import bali/runtime/vm/prelude
 import bali/runtime/vm/ir/generator
 import bali/runtime/[atom_obj_variant, wrapping, atom_helpers, types, normalize]
@@ -243,24 +243,6 @@ template ret*[T](value: T) =
 func argumentCount*(runtime: Runtime): int {.inline.} =
   ## Get the number of atoms in the `CallArgs` register
   runtime.vm.registers.callArgs.len
-
-proc typeRegistrationFinalizer*(runtime: Runtime) =
-  ## Called by the engine when it needs to register all types' function properties.
-  for typ in runtime.types:
-    let index = runtime.index(typ.name, globalIndex())
-    var jsObj = obj()
-
-    for name, value in typ.members:
-      if value.isFn:
-        capture name, value:
-          jsObj[name] = nativeCallable(
-            proc() =
-              value.fn()()
-          )
-      else:
-        jsObj[name] = value.atom()
-
-    runtime.vm[].addAtom(ensureMove(jsObj), index.int)
 
 proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   ## Register a type in the JavaScript engine instance with the name of the type (`name`) alongside its prototype (`prototype`).
