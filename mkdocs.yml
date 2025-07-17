@@ -16,3 +16,4 @@ use_directory_urls: true
 nav:
   - Getting started with Bali: MANUAL.md
   - Code Style: CODE_STYLE.md
+  - Architectural Notes: ARCHITECTURE.md 
