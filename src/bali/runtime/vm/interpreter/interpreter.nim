@@ -424,10 +424,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
     msg "load int"
     interpreter.addAtom(op.arguments[1], &op.arguments[0].getInt())
     inc interpreter.currIndex
-  of AddInt:
-    msg "add int or str"
-    interpreter.appendAtom((&op.arguments[0].getInt()), &op.arguments[1].getInt())
-    inc interpreter.currIndex
   of Equate:
     msg "equate"
     var
@@ -529,25 +525,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       b = &op.arguments[1].getInt()
 
     interpreter.swap(a, b)
-    inc interpreter.currIndex
-  of SubInt:
-    msg "subint"
-    let
-      aIdx = &op.arguments[0].getInt()
-      bIdx = &op.arguments[1].getInt()
-
-      a = interpreter.get(aIdx)
-      b = interpreter.get(bIdx)
-
-    if not *a or not *b:
-      inc interpreter.currIndex
-      return
-
-    let
-      aI = (&a).getInt()
-      aB = (&b).getInt()
-
-    interpreter.stack[aIdx] = integer(&aI - &aB)
     inc interpreter.currIndex
   of JumpOnError:
     interpreter.currJumpOnErr = some(uint(&op.arguments[0].getInt()))
@@ -760,27 +737,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
 
     interpreter.addAtom(value, pos)
     inc interpreter.currIndex
-  of MultInt:
-    let
-      a = &(&interpreter.get((&op.arguments[0].getInt()))).getInt()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getInt()
-      pos = (&op.arguments[0].getInt())
-
-    interpreter.addAtom(integer(a * b), pos)
-    inc interpreter.currIndex
-  of DivInt:
-    let
-      a = &(&interpreter.get((&op.arguments[0].getInt()))).getInt()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getInt()
-      pos = (&op.arguments[0].getInt())
-
-    if b == 0:
-      interpreter.addAtom(floating(Inf), pos)
-      inc interpreter.currIndex
-      return
-
-    interpreter.addAtom(floating(a / b), pos)
-    inc interpreter.currIndex
   of Div:
     let
       posA = (&op.arguments[0].getInt())
@@ -793,14 +749,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       return
 
     interpreter.addAtom(floating(a / b), posA)
-    inc interpreter.currIndex
-  of Mult:
-    let
-      posA = (&op.arguments[0].getInt())
-      a = &(&interpreter.get(posA)).getNumeric()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
-
-    interpreter.addAtom(floating(a * b), posA)
     inc interpreter.currIndex
   of Sub:
     let
@@ -817,50 +765,6 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       pos = (&op.arguments[0].getInt())
 
     interpreter.addAtom(integer(a ^ b), pos)
-    inc interpreter.currIndex
-  of SubFloat:
-    let
-      a = &(&interpreter.get((&op.arguments[0].getInt()))).getFloat()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getFloat()
-      pos = (&op.arguments[0].getInt())
-
-    interpreter.addAtom(floating(a - b), pos)
-    inc interpreter.currIndex
-  of AddFloat:
-    let
-      a = &(&interpreter.get((&op.arguments[0].getInt()))).getFloat()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getFloat()
-      pos = (&op.arguments[0].getInt())
-
-    interpreter.addAtom(floating(a + b), pos)
-    inc interpreter.currIndex
-  of DivFloat:
-    msg "div float"
-    let
-      a = &(&interpreter.get((&op.arguments[0].getInt()))).getFloat()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getFloat()
-      pos = (&op.arguments[0].getInt())
-
-    if b == 0f:
-      interpreter.addAtom(floating(Inf), pos)
-      inc interpreter.currIndex
-      return
-
-    interpreter.addAtom(floating(a / b), pos)
-    inc interpreter.currIndex
-  of MultFloat:
-    msg "mult float"
-    let
-      a = &(&interpreter.get((&op.arguments[0].getInt()))).getFloat()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getFloat()
-      pos = (&op.arguments[0].getInt())
-
-    if b == 0:
-      interpreter.addAtom(floating(Inf), pos)
-      inc interpreter.currIndex
-      return
-
-    interpreter.addAtom(floating(a * b), pos)
     inc interpreter.currIndex
   of PowerFloat:
     msg "exp float"

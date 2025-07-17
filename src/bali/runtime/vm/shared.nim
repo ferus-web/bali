@@ -77,18 +77,6 @@ type
     ## value: Integer - a return value, can be NULL
     Return = 0x9
 
-    ## Add to a pre-existing cell on the stack, granted that it is an integer as well.
-    ## Arguments:
-    ## value: Integer - the index on the stack to add the value to
-    ## adder: Integer - the index on the stack from which the integer is read and added to the value
-    AddInt = 0xa
-
-    ## Subtract from a pre-existing cell on the stack, granted that it is an integer as well.
-    ## Arguments:
-    ## value: Integer - the index on the stack to subtract from
-    ## subber: Integer - the index on the stack from which the subtraction value is read and subtracted from `value`
-    SubInt = 0xc
-
     ## Load a list
     ## Arguments:
     ## `idx`: the index on which the list is loaded
@@ -164,29 +152,11 @@ type
     ## Load a float onto a position
     LoadFloat = 0x2b
 
-    ## Multiply two integers
-    MultInt = 0x2c
-
-    ## Divide two integers
-    DivInt = 0x2d
-
     ## Exponentiate an integer
     PowerInt = 0x2e
 
-    ## Multiply two floats
-    MultFloat = 0x2f
-
-    ## Divide two floats
-    DivFloat = 0x30
-
     ## Exponentiate a float
     PowerFloat = 0x31
-
-    ## Add two floats
-    AddFloat = 0x32
-
-    ## Subtract two floats
-    SubFloat = 0x33
 
     ## Zero-out the retval register
     ## Useful for immediately clearing memory if the return value is to be discarded
@@ -225,11 +195,9 @@ const
     "DIV": Div,
     "SUB": Sub,
     "EQU": Equate,
-    "ADDI": AddInt,
     "ADDL": AddList,
     "LDUI": LoadUint,
     "LDB": LoadBool,
-    "SUBI": SubInt,
     "SWAP": Swap,
     "JMPE": JumpOnError,
     "GTI": GreaterThanInt,
@@ -248,14 +216,8 @@ const
     "COPY": CopyAtom,
     "MOV": MoveAtom,
     "LDF": LoadFloat,
-    "MULI": MultInt,
-    "DIVI": DivInt,
     "POWI": PowerInt,
-    "MULF": MultFloat,
-    "DIVF": DivFloat,
     "POWF": PowerFloat,
-    "ADDF": AddFloat,
-    "SUBF": SubFloat,
     "ZRETV": ZeroRetval,
     "LDBC": LoadBytecodeCallable,
     "EXEBC": ExecuteBytecodeCallable,

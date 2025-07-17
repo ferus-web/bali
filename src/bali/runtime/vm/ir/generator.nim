@@ -264,21 +264,6 @@ proc decrementInt*(gen: IRGenerator, position: uint): uint {.inline, discardable
   ## Decrement an stackInteger at the specified position by one.
   gen.addOp(IROperation(opCode: Decrement, arguments: @[stackInteger position]))
 
-proc addFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  ## Add two floats together
-  gen.addOp(IROperation(opCode: AddFloat, arguments: @[stackInteger a, stackInteger b]))
-
-proc subFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  gen.addOp(IROperation(opCode: SubFloat, arguments: @[stackInteger a, stackInteger b]))
-
-proc multFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  gen.addOp(
-    IROperation(opCode: MultFloat, arguments: @[stackInteger a, stackInteger b])
-  )
-
-proc divFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  gen.addOp(IROperation(opCode: DivFloat, arguments: @[stackInteger a, stackInteger b]))
-
 proc powerFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   gen.addOp(
     IROperation(opCode: PowerFloat, arguments: @[stackInteger a, stackInteger b])
@@ -307,29 +292,9 @@ proc equate*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   ## If they match, the operation directly below this conditional is executed. Otherwise, the operation two operations down this conditional is executed.
   gen.addOp(IROperation(opCode: Equate, arguments: @[stackInteger a, stackInteger b]))
 
-proc addInt*(
-    gen: IRGenerator, destination, source: uint
-): uint {.inline, discardable.} =
-  ## Add two stackIntegers together.
-  gen.addOp(
-    IROperation(
-      opCode: AddInt, arguments: @[stackInteger destination, stackInteger source]
-    )
-  )
-
 proc add*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
   gen.addOp(
     IROperation(opCode: Add, arguments: @[stackInteger dest, stackInteger source])
-  )
-
-proc multInt*(
-    gen: IRGenerator, destination, source: uint
-): uint {.inline, discardable.} =
-  ## Multiply two stackIntegers together.
-  gen.addOp(
-    IROperation(
-      opCode: MultInt, arguments: @[stackInteger destination, stackInteger source]
-    )
   )
 
 proc mult*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
@@ -347,16 +312,6 @@ proc sub*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
     IROperation(opCode: Sub, arguments: @[stackInteger dest, stackInteger source])
   )
 
-proc divInt*(
-    gen: IRGenerator, destination, source: uint
-): uint {.inline, discardable.} =
-  ## Divide two stackIntegers together.
-  gen.addOp(
-    IROperation(
-      opCode: DivInt, arguments: @[stackInteger destination, stackInteger source]
-    )
-  )
-
 proc powerInt*(
     gen: IRGenerator, destination, source: uint
 ): uint {.inline, discardable.} =
@@ -364,16 +319,6 @@ proc powerInt*(
   gen.addOp(
     IROperation(
       opCode: PowerInt, arguments: @[stackInteger destination, stackInteger source]
-    )
-  )
-
-proc subInt*(
-    gen: IRGenerator, destination, source: uint
-): uint {.inline, discardable.} =
-  ## Subtract an stackInteger from another.
-  gen.addOp(
-    IROperation(
-      opCode: SubInt, arguments: @[stackInteger destination, stackInteger source]
     )
   )
 
