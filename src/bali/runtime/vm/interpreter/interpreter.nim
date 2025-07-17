@@ -758,6 +758,14 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
 
     interpreter.addAtom(floating(a - b), posA)
     inc interpreter.currIndex
+  of Mult:
+    let
+      posA = (&op.arguments[0].getInt())
+      a = &(&interpreter.get(posA)).getNumeric()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
+
+    interpreter.addAtom(floating(a * b), posA)
+    inc interpreter.currIndex
   of PowerInt:
     let
       a = &(&interpreter.get((&op.arguments[0].getInt()))).getInt()
