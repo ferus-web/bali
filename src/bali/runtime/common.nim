@@ -2,12 +2,13 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai
 import std/[strutils, logging, tables, sugar]
-import pkg/bali/runtime/[atom_helpers, atom_obj_variant, types],
-       pkg/bali/runtime/niche/lowering,
-       pkg/bali/runtime/vm/prelude,
-       pkg/bali/runtime/vm/ir/generator,
-       pkg/bali/runtime/vm/heap/boehm,
-       pkg/bali/runtime/vm/atom
+import
+  pkg/bali/runtime/[atom_helpers, atom_obj_variant, types],
+  pkg/bali/runtime/niche/lowering,
+  pkg/bali/runtime/vm/prelude,
+  pkg/bali/runtime/vm/ir/generator,
+  pkg/bali/runtime/vm/heap/boehm,
+  pkg/bali/runtime/vm/atom
 import pkg/bali/stdlib/prelude
 import pkg/bali/grammar/prelude
 
@@ -134,4 +135,3 @@ proc newRuntime*(
     opts: opts,
     predefinedBytecode: predefinedBytecode,
   )
-

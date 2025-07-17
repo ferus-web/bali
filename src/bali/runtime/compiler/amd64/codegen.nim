@@ -6,7 +6,7 @@ import pkg/catnip/[x64assembler], pkg/[shakar]
 import
   pkg/bali/runtime/vm/[atom, shared],
   pkg/bali/runtime/vm/interpreter/resolver,
-  pkg/bali/runtime/atom_helpers
+  pkg/bali/runtime/compiler/amd64/native_forwarding
 
 type
   ConstantPool* = seq[cstring]
@@ -66,40 +66,10 @@ proc prepareAtomGetCall(cgen: var AMD64Codegen, index: int64) =
 
   # The output will be in rax
 
-proc createFieldRaw*(atom: JSValue, field: cstring) {.cdecl.} =
-  atom[$field] = undefined()
-
-proc getRawFloat(atom: JSValue): float64 {.cdecl.} =
-  &atom.getNumeric()
-
-proc allocFloat(v: float64): JSValue {.cdecl.} =
-  floating v
-
-proc allocFloatEncoded(v: int64): JSValue {.cdecl.} =
-  allocFloat(cast[float64](v))
-
 proc dump*(cgen: var AMD64Codegen, file: string) =
   var stream = newFileStream(file, fmWrite)
   stream.writeData(cgen.s.data[0].addr, 0x10000)
   stream.close()
-
-proc allocRaw(size: int64): pointer {.cdecl.} =
-  baliAlloc(size)
-
-proc copyRaw(dest, source: pointer, size: uint) {.cdecl.} =
-  copyMem(dest, source, size)
-
-proc allocBytecodeCallable(str: cstring): JSValue {.cdecl.} =
-  bytecodeCallable($str)
-
-proc strRaw(value: cstring): JSValue {.cdecl.} =
-  str($value)
-
-proc allocInt(i: int): JSValue {.cdecl.} =
-  integer(i)
-
-proc allocUint(i: uint): JSValue {.cdecl.} =
-  integer(i)
 
 proc prepareGCAlloc(cgen: var AMD64Codegen, size: uint) =
   cgen.s.mov(regRdi, size.int64)
@@ -491,14 +461,11 @@ proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
   cgen.bcToNativeOffsetMap = newSeqOfCap[BackwardsLabel](128)
 
   if emitNativeCode(cgen, clause):
-    cgen.dump("bali-jit-result.bin")
     info "jit/amd64: compilation successful for clause " & $clause.name
     some(cast[JITSegment](cgen.s.data))
   else:
     debug "jit/amd64: failed to emit native code for clause."
-    debug "jit/amd64: the partially emitted code will be dumped to `bali-jit-fail.bin`"
 
-    cgen.dump("bali-jit-fail.bin")
     none(JITSegment)
 
 proc initAMD64Codegen*(vm: pointer, callbacks: VMCallbacks): AMD64Codegen =
