@@ -264,11 +264,6 @@ proc decrementInt*(gen: IRGenerator, position: uint): uint {.inline, discardable
   ## Decrement an stackInteger at the specified position by one.
   gen.addOp(IROperation(opCode: Decrement, arguments: @[stackInteger position]))
 
-proc powerFloat*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
-  gen.addOp(
-    IROperation(opCode: PowerFloat, arguments: @[stackInteger a, stackInteger b])
-  )
-
 proc zeroRetval*(gen: IRGenerator): uint {.inline, discardable.} =
   gen.addOp(IROperation(opCode: ZeroRetval))
 
@@ -310,16 +305,6 @@ proc divide*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.}
 proc sub*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
   gen.addOp(
     IROperation(opCode: Sub, arguments: @[stackInteger dest, stackInteger source])
-  )
-
-proc powerInt*(
-    gen: IRGenerator, destination, source: uint
-): uint {.inline, discardable.} =
-  ## Exponentiate an stackInteger
-  gen.addOp(
-    IROperation(
-      opCode: PowerInt, arguments: @[stackInteger destination, stackInteger source]
-    )
   )
 
 proc passArgument*(gen: IRGenerator, position: uint): uint {.inline, discardable.} =

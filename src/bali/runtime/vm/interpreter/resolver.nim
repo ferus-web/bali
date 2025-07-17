@@ -35,7 +35,7 @@ proc resolve*(clause: Clause, op: var Operation) =
   of Jump:
     op.arguments &=
       op.consume(Integer, "JUMP expects exactly one integer as an argument")
-  of Add, Mult, Div, Sub, PowerInt, PowerFloat:
+  of Add, Mult, Div, Sub, Power:
     for x in 1 .. 2:
       op.arguments &=
         op.consume(

@@ -766,22 +766,13 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
 
     interpreter.addAtom(floating(a * b), posA)
     inc interpreter.currIndex
-  of PowerInt:
+  of Power:
     let
-      a = &(&interpreter.get((&op.arguments[0].getInt()))).getInt()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getInt()
-      pos = (&op.arguments[0].getInt())
+      posA = (&op.arguments[0].getInt())
+      a = &(&interpreter.get(posA)).getNumeric()
+      b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
-    interpreter.addAtom(integer(a ^ b), pos)
-    inc interpreter.currIndex
-  of PowerFloat:
-    msg "exp float"
-    let
-      a = &(&interpreter.get((&op.arguments[0].getInt()))).getFloat()
-      b = int(&(&interpreter.get((&op.arguments[1].getInt()))).getFloat())
-      pos = (&op.arguments[0].getInt())
-
-    interpreter.addAtom(floating(a ^ b), pos)
+    interpreter.addAtom(floating(a ^ b), posA)
     inc interpreter.currIndex
   of ZeroRetval:
     msg "zero retval"

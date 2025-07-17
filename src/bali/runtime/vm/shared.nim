@@ -152,12 +152,6 @@ type
     ## Load a float onto a position
     LoadFloat = 0x2b
 
-    ## Exponentiate an integer
-    PowerInt = 0x2e
-
-    ## Exponentiate a float
-    PowerFloat = 0x31
-
     ## Zero-out the retval register
     ## Useful for immediately clearing memory if the return value is to be discarded
     ## This opcode is ignored if the retval register is already empty
@@ -181,6 +175,8 @@ type
 
     ## Generic opcode to invoke either a bytecode callable (reference to clause), clause or builtin.
     Invoke = 0x3a
+
+    Power = 0x3b
 
 const
   OpCodeToTable* = {
@@ -216,8 +212,6 @@ const
     "COPY": CopyAtom,
     "MOV": MoveAtom,
     "LDF": LoadFloat,
-    "POWI": PowerInt,
-    "POWF": PowerFloat,
     "ZRETV": ZeroRetval,
     "LDBC": LoadBytecodeCallable,
     "EXEBC": ExecuteBytecodeCallable,
@@ -225,6 +219,7 @@ const
     "GTEI": GreaterThanEqualInt,
     "LTEI": LesserThanEqualInt,
     "INVK": Invoke,
+    "POW": Power
   }.toTable
 
   OpCodeToString* = static:
