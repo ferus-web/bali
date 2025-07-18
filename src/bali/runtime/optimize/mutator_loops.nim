@@ -12,6 +12,7 @@
 ##   var i = 9999
 
 import std/[logging]
+import pkg/shakar
 import bali/runtime/vm/atom
 import bali/grammar/prelude
 import bali/runtime/[statement_utils, types]
@@ -36,9 +37,8 @@ proc optimizeAwayStateMutatorLoop*(
         return false # FIXME: also implement this optimization for identifiers
 
       if stmt.whConditionExpr.op == BinaryOperation.LesserThan:
-        debug "mutator_loops: op is less-than, optimizing away loop into the value of RHS (" &
-          rightTrav.atom.crush() & ')'
-        let idx = runtime.loadIRAtom(rightTrav.atom)
+        debug "mutator_loops: op is less-than, optimizing away loop into the value of RHS + 1"
+        let idx = runtime.loadIRAtom(stackFloating(&rightTrav.atom.getFloat() + 1f))
         runtime.markLocal(fn, leftTrav.ident)
         return true
 
@@ -52,7 +52,7 @@ proc optimizeAwayStateMutatorLoop*(
       if stmt.whConditionExpr.op == BinaryOperation.LesserThan:
         debug "mutator_loops: op is less-than, optimizing away loop into the value of LHS (" &
           leftTrav.atom.crush() & ')'
-        let idx = runtime.loadIRAtom(leftTrav.atom)
+        let idx = runtime.loadIRAtom(stackFloating(&leftTrav.atom.getFloat() + 1f))
         runtime.markLocal(fn, rightTrav.ident)
         return true
 
