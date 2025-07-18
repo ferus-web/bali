@@ -809,10 +809,16 @@ proc genWhileStmt(runtime: Runtime, fn: Function, stmt: Statement) =
       else:
         "BALI_EQUATE_ATOMS_STRICT"
     )
-  of GreaterThan, LesserThan:
+  of GreaterThan:
     discard runtime.ir.addOp(
       IROperation(
         opcode: GreaterThanInt, arguments: @[stackInteger lhsIdx, stackInteger rhsIdx]
+      ) # FIXME: mirage doesn't have a nicer IR function for this.
+    )
+  of LesserThan:
+    discard runtime.ir.addOp(
+      IROperation(
+        opcode: LesserThanInt, arguments: @[stackInteger lhsIdx, stackInteger rhsIdx]
       ) # FIXME: mirage doesn't have a nicer IR function for this.
     )
   else:
@@ -850,10 +856,10 @@ proc genWhileStmt(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.irHints.breaksGeneratedAt.reset()
 
   case stmt.whConditionExpr.op
-  of BinaryOperation.Equal, BinaryOperation.TrueEqual, BinaryOperation.GreaterThan:
+  of BinaryOperation.Equal, BinaryOperation.TrueEqual, BinaryOperation.GreaterThan, BinaryOperation.LesserThan:
     runtime.ir.overrideArgs(trueJump, @[stackInteger(jmpIntoBody.uint)])
     runtime.ir.overrideArgs(escapeJump, @[stackInteger(jmpPastBody.uint)])
-  of BinaryOperation.NotEqual, BinaryOperation.LesserThan:
+  of BinaryOperation.NotEqual:
     runtime.ir.overrideArgs(trueJump, @[stackInteger(jmpPastBody.uint)])
     runtime.ir.overrideArgs(escapeJump, @[stackInteger(jmpIntoBody.uint)])
   else:

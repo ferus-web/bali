@@ -573,8 +573,8 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
       return
 
     let
-      aI = (&a).getInt()
-      bI = (&b).getInt()
+      aI = (&a).getNumeric()
+      bI = (&b).getNumeric()
 
     if not *aI or not *bI:
       return
