@@ -102,8 +102,9 @@ proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
 proc patchJumpPoints*(cgen: var AMD64Codegen) =
   warn "TODO: Implement jump-point patching"
   unreachable
-
+  
   for index, offset in cgen.patchJmpOffsets:
+    cgen.s.offset = offset
     cgen.s.jmp(cgen.bcToNativeOffsetMap[index])
 
 proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
@@ -390,7 +391,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       cgen.s.add(regRsp.reg, 8)
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
-    of GreaterThanInt:
+    #[ of GreaterThanInt:
       # Now this one's a bit complex.
       # This is the VM's behaviour:
       # If a > b, jump 1 op ahead.
@@ -399,13 +400,34 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       # Now, we need to keep track of what offsets we need to jump to,
       # since 1 VM op can generate multiple ops in x86-64 asm.
       # One wrong mistake, and it all blows up.
+      prepareAtomGetCall(cgen, &op.arguments[0].getInt())
+      cgen.s.mov(regRdi.reg, regRax)
+
+      cgen.s.sub(regRsp.reg, 8)
+      cgen.s.call(getRawFloat)
+      cgen.s.add(regRsp.reg, 8)
+
+      cgen.s.movq(regR9.reg, regXmm0)
+      cgen.s.push(regR9.reg)
+
+      prepareAtomGetCall(cgen, &op.arguments[1].getInt())
+      cgen.s.mov(regRdi.reg, regRax)
+
+      cgen.s.sub(regRsp.reg, 16)
+      cgen.s.call(getRawFloat)
+      cgen.s.add(regRsp.reg, 16)
+      
+      cgen.s.movsd(regXmm1.reg, regXmm0)
+      cgen.s.pop(regR9.reg)
+      cgen.s.movq(regXmm0, regR9.reg)
 
       # We need to patch this later
-      cgen.s.jmp(cast[BackwardsLabel](0x0))
+      cgen.s.ucomisd(regXmm0, regXmm1.reg)
       cgen.patchJmpOffsets[i] = cgen.s.offset
-    of Jump:
       cgen.s.jmp(cast[BackwardsLabel](0x0))
+    of Jump:
       cgen.patchJmpOffsets[&op.arguments[0].getInt()] = cgen.s.offset
+      cgen.s.jmp(cast[BackwardsLabel](0x0)) ]#
     of Increment:
       prepareAtomGetCall(cgen, &op.arguments[0].getInt())
       cgen.s.mov(regRdi.reg, regRax)
@@ -448,6 +470,7 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
       return false
 
   cgen.s.ret()
+  # patchJumpPoints(cgen)
 
   true
 
