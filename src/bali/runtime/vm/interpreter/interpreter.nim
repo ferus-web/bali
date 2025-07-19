@@ -230,6 +230,7 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
     else:
       var operation = &op
       resolve(&clause, operation)
+      operation.consumed = true
 
       msg &= "\n\tClause \"" & currTrace.exception.clause & "\", operation " & $(line)
 

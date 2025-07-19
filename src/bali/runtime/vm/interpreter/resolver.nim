@@ -7,10 +7,12 @@ import
 const SequenceBasedRegisters* = [some(1)]
 
 proc resolve*(clause: Clause, op: var Operation) =
+  if op.resolved:
+    return
+
   case op.opCode
   of LoadStr:
     op.arguments &= op.consume(Integer, "LOADS expects an integer at position 1")
-
     op.arguments &= op.consume(String, "LOADS expects a string at position 2")
   of LoadInt, LoadUint:
     for x in 1 .. 2:
