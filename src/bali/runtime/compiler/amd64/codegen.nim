@@ -8,6 +8,8 @@ import
   pkg/bali/runtime/vm/interpreter/resolver,
   pkg/bali/runtime/compiler/amd64/native_forwarding
 
+proc free(p: pointer): void {.importc, header: "<stdlib.h>".}
+
 type
   ConstantPool* = seq[cstring]
 
@@ -24,6 +26,12 @@ type
     patchJmpOffsets*: Table[int, int]
 
     pageSize: int64
+
+proc `=destroy`*(cgen: AMD64Codegen) =
+  for cnst in cgen.cpool:
+    dealloc(cast[pointer](cnst))
+
+  free(cgen.s.data)
 
 proc allocateNativeSegment(cgen: var AMD64Codegen) =
   debug "jit/amd64: allocating buffer for assembler"
@@ -83,7 +91,7 @@ proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
   # the GC allocated memory's pointer is in rax.
   # we're going to copy stuff from our const pool into it
 
-  var cstr = cast[cstring](baliAlloc(str.len + 1))
+  var cstr = cast[cstring](alloc(str.len + 1))
   for i, c in str:
     cstr[i] = c
 
