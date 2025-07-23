@@ -307,9 +307,12 @@ proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
   interpreter.addAtom(&atomA, b)
   interpreter.addAtom(&atomB, a)
 
+import pretty
 proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
   msg "calling function " & name
   msg "trapped? " & $interpreter.trapped
+  print interpreter.stack
+  echo name
 
   if interpreter.hasBuiltin(name):
     msg name & " is a builtin, calling it"

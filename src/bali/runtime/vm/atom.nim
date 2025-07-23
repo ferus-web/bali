@@ -33,7 +33,7 @@ type
   MAtom* = object
     case kind*: MAtomKind
     of String:
-      str*: string
+      str*: cstring
     of Ident:
       ident*: string
     of Integer:
@@ -96,9 +96,9 @@ proc crush*(
   case atom.kind
   of String:
     if quote:
-      result &= '"' & atom.str & '"'
+      result &= '"' & $atom.str & '"'
     else:
-      result &= atom.str
+      result &= $atom.str
   of Integer:
     result &= $atom.integer
   of Ident:
@@ -132,7 +132,7 @@ proc crush*(
 
 proc getStr*(atom: MAtom | JSValue): Option[string] {.inline.} =
   if atom.kind == String:
-    return some(atom.str)
+    return some($atom.str)
 
   none(string)
 
@@ -194,14 +194,21 @@ proc newJSValue*(kind: MAtomKind): JSValue =
 proc atomToJSValue*(atom: MAtom): JSValue =
   let kind = if atom.kind != Ident: atom.kind else: String
 
+  template AllocateRoomAndCopy(v: string | cstring) =
+    value.str = cast[cstring](baliAlloc(v.len + 1))
+    value.str[v.len] = '\0'
+    
+    if v.len > 0:
+      copyMem(value.str, v[0].addr, v.len)
+
   var value = newJSValue(kind)
   case atom.kind
   of Null, Undefined:
     discard
   of Ident:
-    value.str = atom.ident
+    AllocateRoomAndCopy(atom.ident)
   of String:
-    value.str = atom.str
+    AllocateRoomAndCopy(atom.str)
   of Integer:
     value.integer = atom.integer
   of Sequence:
@@ -227,9 +234,11 @@ const internStrings = defined(baliExperimentalStringInterning)
 when internStrings:
   var interned {.global.}: Table[string, pointer]
   var constantEmptyStr = newJSValue(String)
-  constantEmptyStr.str = newStringUninit(1)
+  constantEmptyStr.str = cast[cstring](2)
+  constantEmptyStr.str[1] = '\0'
 
 proc str*(s: string): JSValue {.inline, cdecl.} =
+  echo "str(size: " & $s.len & ')'
   when internStrings:
     if s.len < 1:
       return constantEmptyStr
@@ -238,7 +247,11 @@ proc str*(s: string): JSValue {.inline, cdecl.} =
       return cast[JSValue](interned[s])
 
   var mem = newJSValue(String)
-  mem.str = s
+  mem.str = cast[cstring](baliAlloc(s.len + 1))
+  mem.str[s.len] = '\0'
+  
+  if s.len > 0:
+    copyMem(mem.str, s[0].addr, s.len)
 
   when internStrings:
     interned[s] = mem
@@ -248,7 +261,7 @@ proc str*(s: string): JSValue {.inline, cdecl.} =
 func stackStr*(s: string): MAtom =
   ## Allocate a String atom on the stack.
   ## This is used by the parser.
-  MAtom(kind: String, str: s)
+  MAtom(kind: String, str: cstring(s))
 
 proc ident*(ident: string): JSValue {.inline, cdecl.} =
   var mem = newJSValue(Ident)
