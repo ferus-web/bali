@@ -352,8 +352,9 @@ proc genCall(
 
   runtime.ir.resetArgs()
     # Reset the call arguments register to prevent this call's arguments from leaking into future calls
-
-  runtime.ir.zeroRetval()
+  
+  if !ownerStmt:
+    runtime.ir.zeroRetval()
 
 proc genReturnFn(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.expand(fn, stmt)
@@ -368,7 +369,7 @@ proc genReturnFn(runtime: Runtime, fn: Function, stmt: Statement) =
     unreachable
 
 proc genCallAndStoreResult(runtime: Runtime, fn: Function, stmt: Statement) =
-  runtime.generateBytecode(fn, stmt.storeFn)
+  runtime.generateBytecode(fn, stmt.storeFn, ownerStmt = some(stmt))
   runtime.markLocal(fn, stmt.storeIdent)
 
   let index = runtime.index(stmt.storeIdent, defaultParams(fn))
@@ -1114,7 +1115,7 @@ proc generateBytecode(
 ) =
   ## Given a statement `stmt` and its encompassing functional scope `fn` (which can be a plain scope as well),
   ## generate the bytecode for that statement.
-  ## **NOTE**: This function can be _HIGHLY_ recursive in nature and has side effects.
+  ## **NOTE**: This function can be _HIGHLY_ recursive in nature and has side effects*
   case stmt.kind
   of CreateImmutVal:
     runtime.genCreateImmutVal(
