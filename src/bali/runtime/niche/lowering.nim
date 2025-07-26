@@ -352,7 +352,7 @@ proc genCall(
 
   runtime.ir.resetArgs()
     # Reset the call arguments register to prevent this call's arguments from leaking into future calls
-  
+
   if !ownerStmt:
     runtime.ir.zeroRetval()
 
@@ -857,7 +857,8 @@ proc genWhileStmt(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.irHints.breaksGeneratedAt.reset()
 
   case stmt.whConditionExpr.op
-  of BinaryOperation.Equal, BinaryOperation.TrueEqual, BinaryOperation.GreaterThan, BinaryOperation.LesserThan:
+  of BinaryOperation.Equal, BinaryOperation.TrueEqual, BinaryOperation.GreaterThan,
+      BinaryOperation.LesserThan:
     runtime.ir.overrideArgs(trueJump, @[stackInteger(jmpIntoBody.uint)])
     runtime.ir.overrideArgs(escapeJump, @[stackInteger(jmpPastBody.uint)])
   of BinaryOperation.NotEqual:

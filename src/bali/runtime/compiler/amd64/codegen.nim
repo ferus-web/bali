@@ -14,7 +14,7 @@ type
   ConstantPool* = seq[cstring]
 
   AMD64Codegen* = object
-    cached*: Table[Hash, JITSegment]
+    cached*: Table[string, JITSegment]
     s*: AssemblerX64
     callbacks*: VMCallbacks
     vm*: pointer
@@ -110,7 +110,7 @@ proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
 proc patchJumpPoints*(cgen: var AMD64Codegen) =
   warn "TODO: Implement jump-point patching"
   unreachable
-  
+
   for index, offset in cgen.patchJmpOffsets:
     cgen.s.offset = offset
     cgen.s.jmp(cgen.bcToNativeOffsetMap[index])
@@ -483,17 +483,19 @@ proc emitNativeCode*(cgen: var AMD64Codegen, clause: Clause): bool =
   true
 
 proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
-  let hashed = clause.hash()
-  if cgen.cached.contains(hashed):
+  if cgen.cached.contains(clause.name):
     debug "jit/amd64: found cached version of JIT'd clause"
-    return some(cgen.cached[hashed])
+    return some(cgen.cached[clause.name])
 
   allocateNativeSegment(cgen)
   cgen.bcToNativeOffsetMap = newSeqOfCap[BackwardsLabel](128)
 
   if emitNativeCode(cgen, clause):
     info "jit/amd64: compilation successful for clause " & $clause.name
-    some(cast[JITSegment](cgen.s.data))
+    let fn = cast[JITSegment](cgen.s.data)
+    cgen.cached[clause.name] = fn
+
+    some(fn)
   else:
     debug "jit/amd64: failed to emit native code for clause."
 

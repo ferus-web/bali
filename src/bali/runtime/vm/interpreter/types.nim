@@ -1,3 +1,4 @@
+import std/options
 import pkg/bali/runtime/vm/interpreter/operation
 
 type
@@ -7,6 +8,15 @@ type
 
     rollback*: ClauseRollback
     compiled*: bool = false
+
+    profIterationsSpent*: uint64 ## The number of ops spent executing this clause
+    cachedJudgement*: Option[CompilationJudgement]
+
+  CompilationJudgement* {.pure, size: sizeof(uint8).} = enum
+    DontCompile ## This function is not worth compiling.
+    Ineligible
+      ## This function has caused the JIT to bail out before - do not attempt to compile it. It'll just waste time.
+    Eligible ## This function might be worth compiling.
 
   InvalidRegisterRead* = object of Defect
 

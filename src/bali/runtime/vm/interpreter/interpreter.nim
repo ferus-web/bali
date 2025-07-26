@@ -47,6 +47,7 @@ type
       useJit*: bool = true
 
     trapped*: bool = false
+    profTotalFrames: uint64
 
 proc `=destroy`*(vm: PulsarInterpreter) =
   # FIXME: Why is this called for no reason?
@@ -871,8 +872,45 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 
   raise newException(ValueError, "setEntryPoint(): cannot find clause \"" & name & "\"")
 
+proc getCompilationJudgement*(
+    interpreter: PulsarInterpreter, clause: Clause
+): CompilationJudgement =
+  if interpreter.profTotalFrames < 20_000:
+    # TODO: Make this a configurable value. Don't make it variable during
+    # the runtime for deterministicness' sake.
+    return CompilationJudgement.DontCompile
+
+  if clause.name == "outer":
+    # We don't care much about the outer function.
+    # It's generally not _THAT_ hot.
+    return CompilationJudgement.DontCompile
+
+  assert interpreter.profTotalFrames != 0
+  let dispatchRatio =
+    float(clause.profIterationsSpent.int / interpreter.profTotalFrames.int) * 100f
+
+  # TODO: Add a `jitd` template? It should log JIT debug messages if the JIT is available and debugging is enabled
+  vmd "profiler",
+    "dispatch ratio (" & clause.name & "): " & $dispatchRatio & "% (total frames: " &
+      $interpreter.profTotalFrames & "; dominated: " & $clause.profIterationsSpent & ')'
+
+  if dispatchRatio > 20f:
+    return CompilationJudgement.Eligible
+
+proc shouldCompile*(interpreter: PulsarInterpreter, clause: var Clause): bool =
+  if *clause.cachedJudgement and
+      &clause.cachedJudgement == CompilationJudgement.Ineligible:
+    return false
+
+  let judgement = interpreter.getCompilationJudgement(clause)
+  clause.cachedJudgement = some(judgement)
+
+  # TODO: implement more heuristics
+  judgement == CompilationJudgement.Eligible
+
 proc run*(interpreter: var PulsarInterpreter) =
   while not interpreter.halt:
+    inc interpreter.profTotalFrames
     vmd "fetch", "new frame " & $interpreter.currIndex
     let cls = interpreter.getClause()
 
@@ -904,31 +942,34 @@ proc run*(interpreter: var PulsarInterpreter) =
       interpreter.currIndex = clause.rollback.opIndex
       continue
 
-    # If we can compile this clause, we might as well.
+    # If this clause is considered hot, consider compiling it.
     if interpreter.currIndex == 0 and hasJITSupport and interpreter.useJit and
         not interpreter.trapped:
-      # TODO: JIT'd functions should be able to call other JIT'd segments
-      vmd "fetch", "has jit support, compiling clause " & clause.name
-      let compiled = interpreter.jit.compile(clause)
+      if interpreter.shouldCompile(clause):
+        # TODO: JIT'd functions should be able to call other JIT'd segments
+        vmd "fetch", "has jit support, compiling clause " & clause.name
+        let compiled = interpreter.jit.compile(clause)
 
-      if *compiled:
-        clause.compiled = true
-        interpreter.clauses[interpreter.currClause] = clause
+        if *compiled:
+          clause.compiled = true
+          interpreter.clauses[interpreter.currClause] = clause
 
-        vmd "execute", "entering JIT'd segment"
-        (&compiled)()
-        interpreter.currIndex = clause.rollback.opIndex
-        interpreter.currClause = clause.rollback.clause
-        vmd "execute",
-          "exec'd JIT segment successfully, setting pc to end of clause/" &
-            $interpreter.currIndex
+          vmd "execute", "entering JIT'd segment"
+          (&compiled)()
+          interpreter.currIndex = clause.rollback.opIndex
+          interpreter.currClause = clause.rollback.clause
+          vmd "execute",
+            "exec'd JIT segment successfully, setting pc to end of clause/" &
+              $interpreter.currIndex
 
-        if interpreter.trapped:
-          break
+          if interpreter.trapped:
+            break
 
-        continue
-      else:
-        vmd "execute", "cannot compile segment: " & clause.name & ", falling back to VM"
+          continue
+        else:
+          vmd "execute",
+            "cannot compile segment: " & clause.name & ", falling back to VM"
+          clause.cachedJudgement = some(CompilationJudgement.Ineligible)
 
     var operation = &op
     let index = interpreter.currIndex
@@ -946,7 +987,9 @@ proc run*(interpreter: var PulsarInterpreter) =
     vmd "execute", "exec phase beginning"
     interpreter.execute(operation)
     vmd "execute", "exec phase ended, saving op state"
-    interpreter.clauses[clauseIndex].operations[index] = ensureMove(operation)
+    clause.operations[index] = ensureMove(operation)
+    inc clause.profIterationsSpent
+    interpreter.clauses[clauseIndex] = move(clause)
     vmd "execute", "saved op state"
 
 proc initJITForPlatform(vm: pointer, callbacks: VMCallbacks): auto =

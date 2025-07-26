@@ -175,7 +175,6 @@ type
 
     ## Generic opcode to invoke either a bytecode callable (reference to clause), clause or builtin.
     Invoke = 0x3a
-
     Power = 0x3b
 
 const
@@ -219,7 +218,7 @@ const
     "GTEI": GreaterThanEqualInt,
     "LTEI": LesserThanEqualInt,
     "INVK": Invoke,
-    "POW": Power
+    "POW": Power,
   }.toTable
 
   OpCodeToString* = static:
