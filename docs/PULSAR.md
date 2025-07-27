@@ -9,6 +9,8 @@ Since that version, Bali instead converts the bytecode structures directly into 
 
 The bytecode format originally started off its life as part of the [Mirage project](https://github.com/ferus-web/mirage). However, ever since the VM was moved into the source tree from Mirage, the two formats have diverged radically and are no longer compatible with one another, despite looking fairly similar. Bali does, though, carry a lot of legacy baggage from this as Mirage was supposed to be as agnostic as possible, while Bali's VM is strictly focused on JavaScript. More on this will be more obvious to you soon.
 
+After 0.7.5, Pulsar uses a dispatch table instead of the massive switch case used earlier.
+
 ## From codegen to execution
 Let's take a very simple JavaScript program:
 ```js

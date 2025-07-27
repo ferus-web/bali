@@ -2,14 +2,13 @@
 ## Wraps around the Mirage atom
 ## Author(s):
 ## Trayambak Rai (xtrayambak at disroot dot org)
-import std/[logging, tables, strutils, hashes, unicode]
+import std/[tables, strutils, hashes, unicode]
 import bali/runtime/[arguments, bridge, wrapping, atom_helpers, types]
 import bali/runtime/abstract/[coercible, to_number, to_string]
 import bali/stdlib/errors, bali/stdlib/types/std_string_type
 import bali/internal/[trim_string, sugar]
 import bali/runtime/vm/atom
 import pkg/[kaleidoscope/search, ferrite/utf16view]
-import pretty
 
 const
   ## At what point should Bali start SIMD-accelerating string related operations?
@@ -48,7 +47,6 @@ proc generateStdIr*(runtime: Runtime) =
     "toString",
     proc(str: JSValue) =
       let value = &str.tagged("internal")
-      debug "String.toString(): returning value: " & &getStr(value)
 
       ret value
     ,

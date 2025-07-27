@@ -292,6 +292,7 @@ This is perhaps the most complete implemented-by-Bali ECMAScript type here. It u
 - `String.prototype.repeat()`
 - `String.fromCharCode()`
 - `String.prototype.codePointAt()`
+- `String.prototype.substring()`
 
 ## The Date type
 This is yet another well-implemented-by-Bali ECMAScript type. It uses a mixture of [LibICU](https://unicode-org.github.io/icu/userguide/icu/) and internal math-based logic, mostly translated from Ladybird's LibJS.
