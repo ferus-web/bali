@@ -708,9 +708,8 @@ proc opWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
 
 proc opCrashInterpreter(interpreter: var PulsarInterpreter, op: var Operation) =
   when defined(release):
-    raise newException(
-      CatchableError, "Encountered `CRASHINTERP` during execution; abort!"
-    )
+    raise
+      newException(CatchableError, "Encountered `CRASHINTERP` during execution; abort!")
 
 proc opInc(interpreter: var PulsarInterpreter, op: var Operation) =
   let atom = &interpreter.get((&op.arguments[0].getInt()))
@@ -889,51 +888,18 @@ proc opPower(interpreter: var PulsarInterpreter, op: var Operation) =
 
   interpreter.addAtom(floating(a ^ b), posA)
   inc interpreter.currIndex
+
 {.pop.}
 
-const
-  OpDispatchTable = [
-    opCall,
-    opLoadInt,
-    opLoadStr,
-    opJump,
-    opAdd,
-    opMult,
-    opDiv,
-    opSub,
-    opEquate,
-    opReturn,
-    opLoadList,
-    opAddList,
-    opLoadUint,
-    opLoadBool,
-    opSwap,
-    opJumpOnError,
-    opGreaterThanInt,
-    opLesserThanInt,
-    opLoadObject,
-    opCreateField,
-    opFastWriteField,
-    opWriteField,
-    opCrashInterpreter,
-    opInc,
-    opDec,
-    opLoadNull,
-    opReadReg,
-    opPassArg,
-    opResetArgs,
-    opCopyAtom,
-    opMoveAtom,
-    opLoadFloat,
-    opZeroRetval,
-    opLoadBytecodeCallable,
-    opExecuteBytecodeCallable,
-    opLoadUndefined,
-    opGreaterThanEqualInt,
-    opLesserThanEqualInt,
-    opInvoke,
-    opPower
-  ]
+const OpDispatchTable = [
+  opCall, opLoadInt, opLoadStr, opJump, opAdd, opMult, opDiv, opSub, opEquate, opReturn,
+  opLoadList, opAddList, opLoadUint, opLoadBool, opSwap, opJumpOnError,
+  opGreaterThanInt, opLesserThanInt, opLoadObject, opCreateField, opFastWriteField,
+  opWriteField, opCrashInterpreter, opInc, opDec, opLoadNull, opReadReg, opPassArg,
+  opResetArgs, opCopyAtom, opMoveAtom, opLoadFloat, opZeroRetval,
+  opLoadBytecodeCallable, opExecuteBytecodeCallable, opLoadUndefined,
+  opGreaterThanEqualInt, opLesserThanEqualInt, opInvoke, opPower,
+]
 
 proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
   OpDispatchTable[cast[uint8](op.opcode)](interpreter, op)
@@ -953,7 +919,7 @@ proc getCompilationJudgement*(
     # TODO: Make this a configurable value. Don't make it variable during
     # the runtime for deterministicness' sake.
     return CompilationJudgement.DontCompile
-  
+
   assert interpreter.profTotalFrames != 0
   let dispatchRatio =
     float(clause.profIterationsSpent.int / interpreter.profTotalFrames.int) * 100f
@@ -962,7 +928,7 @@ proc getCompilationJudgement*(
   vmd "profiler",
     "dispatch ratio (" & clause.name & "): " & $dispatchRatio & "% (total frames: " &
       $interpreter.profTotalFrames & "; dominated: " & $clause.profIterationsSpent & ')'
-  
+
   if dispatchRatio > 20f:
     return CompilationJudgement.Eligible
 
