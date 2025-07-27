@@ -949,16 +949,11 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 proc getCompilationJudgement*(
     interpreter: PulsarInterpreter, clause: Clause
 ): CompilationJudgement =
-  if interpreter.profTotalFrames < 100_000:
+  if interpreter.profTotalFrames < 50_000:
     # TODO: Make this a configurable value. Don't make it variable during
     # the runtime for deterministicness' sake.
     return CompilationJudgement.DontCompile
   
-  if clause.name == "outer":
-    # We don't care much about the outer function.
-    # It's generally not _THAT_ hot.
-    return CompilationJudgement.DontCompile
-
   assert interpreter.profTotalFrames != 0
   let dispatchRatio =
     float(clause.profIterationsSpent.int / interpreter.profTotalFrames.int) * 100f
@@ -967,7 +962,7 @@ proc getCompilationJudgement*(
   vmd "profiler",
     "dispatch ratio (" & clause.name & "): " & $dispatchRatio & "% (total frames: " &
       $interpreter.profTotalFrames & "; dominated: " & $clause.profIterationsSpent & ')'
-
+  
   if dispatchRatio > 20f:
     return CompilationJudgement.Eligible
 
