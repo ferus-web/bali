@@ -9,6 +9,7 @@ import bali/stdlib/errors, bali/stdlib/types/std_string_type
 import bali/internal/[trim_string, sugar]
 import bali/runtime/vm/atom
 import pkg/[kaleidoscope/search, ferrite/utf16view]
+import pretty
 
 const
   ## At what point should Bali start SIMD-accelerating string related operations?
@@ -257,10 +258,10 @@ proc generateStdIr*(runtime: Runtime) =
     ,
   )
 
-  #[ runtime.definePrototypeFn(
+  runtime.definePrototypeFn(
     JSString,
     "substring",
-    proc(value: MAtom) =
+    proc(value: JSValue) =
       # 22.1.3.25 String.prototype.substring ( start, end )
 
       # If either argument is NaN or negative, it is replaced with zero; if either argument is strictly greater than the length
@@ -271,16 +272,39 @@ proc generateStdIr*(runtime: Runtime) =
         obj = runtime.RequireObjectCoercible(&value.tagged("internal"))
         
         # 2. Let S be ? ToString(O).
-        str = newUtf16View(runtime.ToString(obj))
+        strVal = runtime.ToString(obj)
+        str = newUtf16View(strVal)
         
         # 3. Let len be the length of S.
-        stringLength = str.codeunitLen
+        stringLength = int(str.codeunitLen - 1)
 
-      if start == NaN:
-        start = 0f
+        # 4. Let intStart be ? ToIntegerOrInfinity(start).
+        start =
+          runtime.ToNumber(&runtime.argument(1)).int()
+        
+        # 5. If end is undefined, let intEnd be len; else let intEnd be ? ToIntegerOrInfinity(end).
+        ending =
+          if runtime.argumentCount() < 2:
+            stringLength
+          else:
+            runtime.ToNumber(&runtime.argument(2)).int()
+        
+        # 6. Let finalStart be the result of clamping intStart between 0 and len.
+        finalStart =
+          clamp(start, 0, stringLength)
+        
+        # 7. Let finalEnd be the result of clamping intEnd between 0 and len.
+        finalEnd =
+          clamp(ending, 0, stringLength)
+        
+        # 8. Let from be min(finalStart, finalEnd).
+        fromVal =
+          min(finalStart, finalEnd)
+        
+        # 9. Let to be max(finalStart, finalEnd)
+        toVal =
+          max(finalStart, finalEnd)
 
-      if last == NaN:
-        last = 0f
-
-      if start > 
-  ) ]#
+      # 10. Return the substring of S from from to to.
+      ret runtime.newJSString(strVal[fromVal .. toVal])
+  )
