@@ -35,147 +35,147 @@ type
     of tkEnd:
       endClause*: string
 
-  Ops* = enum
+  Ops* {.size: sizeof(uint8).} = enum
     ## Call a function.
     ## Arguments:
     ## `name`: Ident -  name of the function or builtin
     ## `...`: Integers - stack indexes as arguments
-    Call = 0x00
+    Call
 
     ## Load an integer onto the stack
     ## Arguments:
     ## `idx`: Integer - stack index
     ## `value`: Integer - int value
-    LoadInt = 0x1
+    LoadInt
 
     ## Load a string onto the stack
     ## Arguments:
     ## `idx`: Integer - stack index
     ## `value`: string - str value
-    LoadStr = 0x2
+    LoadStr
 
     ## Jump to an operation in the current clause
     ## Arguments:
     ## `idx`: Integer - operation ID
-    Jump = 0x3
+    Jump
 
     ## Generic functions for dynamic values where the emitter did not know what types are going to be operated upon.
     ## These are slower than their "targetted-type" counterparts as they need to check for exceptions.
-    Add = 0x4
-    Mult = 0x5
-    Div = 0x6
-    Sub = 0x7
+    Add
+    Mult
+    Div
+    Sub
 
     ## Executes the line after this instruction if the condition is true, otherwise the line after that line.
     ## Wherever the line is, execution continues from there on.
     ## Arguments:
     ## `...`: Integer - indexes on the stack
-    Equate = 0x8
+    Equate
 
     ## Do not execute any more lines after this, signifying an end to a clause.
     ## Arguments:
     ## value: Integer - a return value, can be NULL
-    Return = 0x9
+    Return
 
     ## Load a list
     ## Arguments:
     ## `idx`: the index on which the list is loaded
-    LoadList = 0xd
+    LoadList
 
     ## Add an atom to a list
     ## Arguments:
     ## `idx`: the index on which the list is located
     ## `value`: Integer/String/List - any accepted atom
-    AddList = 0xe
+    AddList
 
     ## Load an unsigned integer onto the stack
-    LoadUint = 0x14
+    LoadUint
 
     ## Load a boolean onto the stack
-    LoadBool = 0x15
+    LoadBool
 
     ## Swap two indices that hold atoms on the stack
-    Swap = 0x16
+    Swap
 
     ## Jump to an operation in the clause if an error occurs whilst executing a line of code.
-    JumpOnError = 0x17
+    JumpOnError
 
     ## Same as EQU, but compares if `a` is greater than `b`
-    GreaterThanInt = 0x18
+    GreaterThanInt
 
     ## Same as EQU, but compares if `a` is lesser than `b`
-    LesserThanInt = 0x19
+    LesserThanInt
 
     ## Load an object onto the stack
-    LoadObject = 0x1a
+    LoadObject
 
     ## Create a field in an object
-    CreateField = 0x1b
+    CreateField
 
     ## Write an atom into the field of an object without its name, just by its index.
     ## This is faster than finding the field via its name.
-    FastWriteField = 0x1c
+    FastWriteField
 
     ## Write an atom into the field of an object without its name, just by its index.
     ## This is slower than just providing the index.
-    WriteField = 0x1d
+    WriteField
 
     ## Crash the interpreter. That's it.
     ## This opcode gets ignored in release mode.
-    CrashInterpreter = 0x1e
+    CrashInterpreter
 
     ## Increment an integer/unsigned integer atom by one. This just exists to avoid creating ints again and again to use for `LoadInt`
-    Increment = 0x1f
+    Increment
 
     ## Decrement an integer/unsigned integer atom by one. This just exists to avoid creating ints again and again to use for `LoadInt`.
-    Decrement = 0x20
+    Decrement
 
     ## Load a null atom onto the stack position provided.
-    LoadNull = 0x24
+    LoadNull
 
     ## Read a builtin interpreter register and store its value (if there is any) to a specified location. If the register is empty, overwrite the
     ## location to a NULL atom
-    ReadRegister = 0x26
+    ReadRegister
 
     ## Add an atom to the call arguments register.
-    PassArgument = 0x27
+    PassArgument
 
     ## Reset the call arguments register.
-    ResetArgs = 0x28
+    ResetArgs
 
     ## Copy an atom to another position.
-    CopyAtom = 0x29
+    CopyAtom
 
     ## Move an atom to another position, replacing the source with a NULL atom.
-    MoveAtom = 0x2a
+    MoveAtom
 
     ## Load a float onto a position
-    LoadFloat = 0x2b
+    LoadFloat
 
     ## Zero-out the retval register
     ## Useful for immediately clearing memory if the return value is to be discarded
     ## This opcode is ignored if the retval register is already empty
-    ZeroRetval = 0x34
+    ZeroRetval
 
     ## Load a bytecode callable into memory
     ## This just holds a reference to a clause
-    LoadBytecodeCallable = 0x35
+    LoadBytecodeCallable
 
     ## Execute a bytecode callable
-    ExecuteBytecodeCallable = 0x36
+    ExecuteBytecodeCallable
 
     ## Load undefined
-    LoadUndefined = 0x37
+    LoadUndefined
 
     ## Greater-or-equal
-    GreaterThanEqualInt = 0x38
+    GreaterThanEqualInt
 
     ## Lesser-or-equal
-    LesserThanEqualInt = 0x39
+    LesserThanEqualInt
 
     ## Generic opcode to invoke either a bytecode callable (reference to clause), clause or builtin.
-    Invoke = 0x3a
-    Power = 0x3b
+    Invoke
+    Power
 
 const
   OpCodeToTable* = {

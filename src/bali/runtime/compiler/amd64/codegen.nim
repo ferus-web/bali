@@ -486,7 +486,7 @@ proc compile*(cgen: var AMD64Codegen, clause: Clause): Option[JITSegment] =
   if cgen.cached.contains(clause.name):
     debug "jit/amd64: found cached version of JIT'd clause"
     return some(cgen.cached[clause.name])
-
+  
   allocateNativeSegment(cgen)
   cgen.bcToNativeOffsetMap = newSeqOfCap[BackwardsLabel](128)
 

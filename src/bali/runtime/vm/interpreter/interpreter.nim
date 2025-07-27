@@ -412,457 +412,531 @@ proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: i
       InvalidRegisterRead, "Attempt to read from non-existant register " & $register
     )
 
-proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
-  when not defined(mirageNoJit):
-    inc op.called
+{.push cdecl.}
+proc opCall(interpreter: var PulsarInterpreter, op: var Operation) =
+  let name = &op.arguments[0].getStr()
+  msg "call " & name
+  interpreter.call(name, op)
 
-  {.computedGoto.}
-  case op.opCode
-  of LoadStr:
-    msg "load str"
-    interpreter.addAtom(op.arguments[1], &op.arguments[0].getInt())
+proc opLoadInt(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "load int"
+  interpreter.addAtom(op.arguments[1], &op.arguments[0].getInt())
+  inc interpreter.currIndex
+
+proc opLoadStr(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "load str"
+  interpreter.addAtom(op.arguments[1], &op.arguments[0].getInt())
+  inc interpreter.currIndex
+
+proc opJump(interpreter: var PulsarInterpreter, op: var Operation) =
+  if gcStats.pressure > 0.9f:
+    # Assuming we're in a while-loop, perhaps perform a collection
+    # the GC pressure is high so it's best we try to conserve memory
+    # until this memory intensive loop ends
+    boehmGCFullCollect()
+
+  let pos = op.arguments[0].getInt()
+
+  if not *pos:
+    msg "got jump but index is not given, ignoring"
     inc interpreter.currIndex
-  of LoadInt:
-    msg "load int"
-    interpreter.addAtom(op.arguments[1], &op.arguments[0].getInt())
+    return
+
+  msg "jump to " & $(&pos)
+  interpreter.currIndex = (&pos).uint - 1'u
+
+proc opAdd(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    aPos = (&op.arguments[0].getInt())
+    a = &interpreter.get(aPos)
+    b = &interpreter.get((&op.arguments[1].getInt()))
+
+  interpreter.addAtom(floating(&a.getNumeric() + &b.getNumeric()), aPos)
+  inc interpreter.currIndex
+
+proc opMult(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    posA = (&op.arguments[0].getInt())
+    a = &(&interpreter.get(posA)).getNumeric()
+    b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
+
+  interpreter.addAtom(floating(a * b), posA)
+  inc interpreter.currIndex
+
+proc opDiv(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    posA = (&op.arguments[0].getInt())
+    a = &(&interpreter.get(posA)).getNumeric()
+    b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
+
+  if b == 0f:
+    interpreter.addAtom(floating(Inf), posA)
     inc interpreter.currIndex
-  of Equate:
-    msg "equate"
-    var
-      prev = interpreter.get(&op.arguments[0].getInt())
-      accumulator = false
+    return
 
-    for arg in op.arguments[1 ..< op.arguments.len]:
-      let value = interpreter.get(&arg.getInt())
+  interpreter.addAtom(floating(a / b), posA)
+  inc interpreter.currIndex
 
-      if not *value:
-        break
+proc opSub(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    posA = (&op.arguments[0].getInt())
+    a = &(&interpreter.get(posA)).getNumeric()
+    b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
-      accumulator = (&value).hash == (&prev).hash
-      prev = value
-      if not accumulator:
-        break
+  interpreter.addAtom(floating(a - b), posA)
+  inc interpreter.currIndex
 
-    if accumulator:
-      inc interpreter.currIndex
-    else:
-      interpreter.currIndex += 2
-  of Jump:
-    if gcStats.pressure > 0.9f:
-      # Assuming we're in a while-loop, perhaps perform a collection
-      # the GC pressure is high so it's best we try to conserve memory
-      # until this memory intensive loop ends
-      boehmGCFullCollect()
+proc opEquate(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "equate"
+  var
+    prev = interpreter.get(&op.arguments[0].getInt())
+    accumulator = false
 
-    let pos = op.arguments[0].getInt()
+  for arg in op.arguments[1 ..< op.arguments.len]:
+    let value = interpreter.get(&arg.getInt())
 
-    if not *pos:
-      msg "got jump but index is not given, ignoring"
-      inc interpreter.currIndex
-      return
+    if not *value:
+      break
 
-    msg "jump to " & $(&pos)
-    interpreter.currIndex = (&pos).uint - 1'u
-  of Return:
-    let clause = interpreter.getClause()
+    accumulator = (&value).hash == (&prev).hash
+    prev = value
+    if not accumulator:
+      break
 
-    if not *clause:
-      msg "got return but we are not in any clause"
-      inc interpreter.currIndex
-      return
-
-    let idx = &getInt(op.arguments[0])
-
-    # write the return value to the `retVal` register
-    interpreter.registers.retVal = interpreter.get(idx)
-
-    # revert back to where we left off in the previous clause (or exit if this was the final clause - that's handled by the logic in `run`)
-
-    msg "rolling back to clause " & $((&clause).rollback.clause)
-    interpreter.currClause = (&clause).rollback.clause
-
-    msg "rolling back to index " & $((&clause).rollback.opIndex)
-    interpreter.currIndex = (&clause).rollback.opIndex
-  of Call:
-    let name = &op.arguments[0].getStr()
-    msg "call " & name
-    interpreter.call(name, op)
-  of LoadUint:
-    msg "load uint"
-    interpreter.addAtom(integer((&op.arguments[1].getInt())), &op.arguments[0].getInt())
+  if accumulator:
     inc interpreter.currIndex
-  of LoadList:
-    msg "load list"
-    interpreter.addAtom(sequence @[], &op.arguments[0].getInt())
-    inc interpreter.currIndex
-  of AddList:
-    msg "add list"
-    let
-      pos = (&op.arguments[0].getInt())
-      curr = interpreter.get(pos)
-      source = interpreter.get((&op.arguments[1].getInt()))
-
-    if not *curr or not *source:
-      inc interpreter.currIndex
-      return
-
-    var list = &curr
-
-    if list.kind != Sequence:
-      inc interpreter.currIndex
-      return # TODO: type errors
-
-    list.sequence.add((&source)[])
-
-    interpreter.stack[pos] = list
-    inc interpreter.currIndex
-  of LoadBool:
-    msg "load bool"
-    interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()))
-    inc interpreter.currIndex
-  of Swap:
-    msg "swap"
-    let
-      a = &op.arguments[0].getInt()
-      b = &op.arguments[1].getInt()
-
-    interpreter.swap(a, b)
-    inc interpreter.currIndex
-  of JumpOnError:
-    interpreter.currJumpOnErr = some(uint(&op.arguments[0].getInt()))
-    inc interpreter.currIndex
-  of GreaterThanInt:
-    if op.arguments.len < 2:
-      msg "gti: expected 2 args, got " & $op.arguments.len & "; ignoring"
-      inc interpreter.currIndex
-      return
-
-    let
-      a = interpreter.get(&op.arguments[0].getInt())
-      b = interpreter.get(&op.arguments[1].getInt())
-
-    if not *a or not *b:
-      msg "gti: a is empty=" & $(*a) & "; b is empty=" & $(*b)
-
-      return
-
-    let
-      aI = (&a).getNumeric()
-      bI = (&b).getNumeric()
-
-    if not *aI or not *bI:
-      msg "gti: aI is empty=" & $(*aI) & "; bI is empty=" & $(*bI)
-      return
-
-    msg "gti: a=" & $(&aI) & "; b=" & $(&bI)
-
-    if &aI > &bI:
-      msg "gti: a > b; pc++"
-      inc interpreter.currIndex
-    else:
-      msg "gti: a <= b; pc += 2"
-      interpreter.currIndex += 2
-  of LesserThanInt:
-    if op.arguments.len < 2:
-      inc interpreter.currIndex
-      return
-
-    let
-      a = interpreter.get((&op.arguments[0].getInt()))
-      b = interpreter.get((&op.arguments[1].getInt()))
-
-    if not *a or not *b:
-      return
-
-    let
-      aI = (&a).getNumeric()
-      bI = (&b).getNumeric()
-
-    if not *aI or not *bI:
-      return
-
-    if &aI < &bI:
-      inc interpreter.currIndex
-    else:
-      interpreter.currIndex += 2
-  of LoadObject:
-    interpreter.addAtom(obj(), (&op.arguments[0].getInt()))
-    inc interpreter.currIndex
-  of CreateField:
-    let oatomIndex = ((&op.arguments[0].getInt()))
-
-    let oatomId = interpreter.get(oatomIndex)
-
-    if not *oatomId:
-      inc interpreter.currIndex
-      return
-
-    var atom = &oatomId
-    let
-      fieldIndex = (&op.arguments[1].getInt())
-      fieldName = &op.arguments[2].getStr()
-
-    atom.objFields[fieldName] = fieldIndex
-    atom.objValues.add(null())
-
-    interpreter.addAtom(atom, oatomIndex)
-
-    inc interpreter.currIndex
-  of FastWriteField:
-    let
-      oatomIndex = (&op.arguments[0].getInt())
-      oatomId = interpreter.get(oatomIndex)
-
-    if not *oatomId:
-      inc interpreter.currIndex
-      return
-
-    var atom = &oatomId
-    let fieldIndex = (&op.arguments[1].getInt())
-
-    let toWrite = op.consume(Integer, "", enforce = false, some(op.rawArgs.len - 1))
-    atom.objValues[fieldIndex] = toWrite
-
-    interpreter.addAtom(atom, oatomIndex)
-    inc interpreter.currIndex
-  of WriteField:
-    let
-      oatomIndex = (&op.arguments[0].getInt())
-      oatomId = interpreter.get(oatomIndex)
-      fieldName = &op.arguments[1].getStr()
-
-    if not *oatomId:
-      inc interpreter.currIndex
-      return
-
-    var
-      atom = &oatomId
-      fieldIndex = none(int)
-
-    for field, idx in atom.objFields:
-      if field == fieldName:
-        fieldIndex = some(idx)
-
-    if not *fieldIndex:
-      atom.objValues &= undefined()
-      fieldIndex = some(atom.objValues.len - 1)
-
-    let toWrite = op.consume(Integer, "", enforce = false, some(op.rawArgs.len - 1))
-    atom.objValues[&fieldIndex] = &interpreter.get(&toWrite.getInt())
-
-    interpreter.addAtom(atom, oatomIndex)
-    inc interpreter.currIndex
-  of Add:
-    let
-      aPos = (&op.arguments[0].getInt())
-      a = &interpreter.get(aPos)
-      b = &interpreter.get((&op.arguments[1].getInt()))
-
-    interpreter.addAtom(floating(&a.getNumeric() + &b.getNumeric()), aPos)
-    inc interpreter.currIndex
-  of CrashInterpreter:
-    when defined(release):
-      raise newException(
-        CatchableError, "Encountered `CRASHINTERP` during execution; abort!"
-      )
-  of Increment:
-    let atom = &interpreter.get((&op.arguments[0].getInt()))
-
-    case atom.kind
-    of Integer:
-      interpreter.addAtom(integer(&atom.getInt() + 1), (&op.arguments[0].getInt()))
-    else:
-      interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()))
-        # If an invalid atom is attempted to be incremented, set its value to NaN.
-
-    inc interpreter.currIndex
-  of Decrement:
-    let atom = &interpreter.get((&op.arguments[0].getInt()))
-
-    case atom.kind
-    of Integer:
-      interpreter.addAtom(integer(&atom.getInt() - 1), (&op.arguments[0].getInt()))
-    else:
-      interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()))
-        # If an invalid atom is attempted to be decremented, set its value to NaN.
-
-    inc interpreter.currIndex
-  of LoadNull:
-    let idx = (&op.arguments[0].getInt())
-
-    interpreter.addAtom(null(), idx)
-    inc interpreter.currIndex
-  of ReadRegister:
-    let
-      idx = (&op.arguments[0].getInt())
-      register = (&op.arguments[1].getInt())
-      index =
-        if op.arguments.len > 2:
-          (&op.arguments[2].getInt())
-        else:
-          0
-
-    msg "idx: " & $idx & ", register: " & $register & ", index: " & $index
-    interpreter.readRegister(idx, register, index)
-    inc interpreter.currIndex
-  of PassArgument:
-    # append to callArgs register
-    let idx = (&op.arguments[0].getInt())
-    msg "passing to args register: " & $idx
-    let value = &interpreter.get(idx)
-
-    interpreter.registers.callArgs.add(value)
-    inc interpreter.currIndex
-  of ResetArgs:
-    interpreter.registers.callArgs.reset()
-    inc interpreter.currIndex
-  of CopyAtom:
-    let
-      src = (&op.arguments[0].getInt())
-      dest = (&op.arguments[1].getInt())
-
-    interpreter.stack[dest] = &interpreter.get(src)
-    inc interpreter.currIndex
-  of MoveAtom:
-    let
-      src = (&op.arguments[0].getInt())
-      dest = (&op.arguments[1].getInt())
-
-    interpreter.stack[dest] = &interpreter.get(src)
-    baliDealloc(interpreter.stack[src])
-    interpreter.stack[src] = null()
-    inc interpreter.currIndex
-  of LoadFloat:
-    let
-      pos = (&op.arguments[0].getInt())
-      value = op.arguments[1]
-
-    interpreter.addAtom(value, pos)
-    inc interpreter.currIndex
-  of Div:
-    let
-      posA = (&op.arguments[0].getInt())
-      a = &(&interpreter.get(posA)).getNumeric()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
-
-    if b == 0f:
-      interpreter.addAtom(floating(Inf), posA)
-      inc interpreter.currIndex
-      return
-
-    interpreter.addAtom(floating(a / b), posA)
-    inc interpreter.currIndex
-  of Sub:
-    let
-      posA = (&op.arguments[0].getInt())
-      a = &(&interpreter.get(posA)).getNumeric()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
-
-    interpreter.addAtom(floating(a - b), posA)
-    inc interpreter.currIndex
-  of Mult:
-    let
-      posA = (&op.arguments[0].getInt())
-      a = &(&interpreter.get(posA)).getNumeric()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
-
-    interpreter.addAtom(floating(a * b), posA)
-    inc interpreter.currIndex
-  of Power:
-    let
-      posA = (&op.arguments[0].getInt())
-      a = &(&interpreter.get(posA)).getNumeric()
-      b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
-
-    interpreter.addAtom(floating(a ^ b), posA)
-    inc interpreter.currIndex
-  of ZeroRetval:
-    msg "zero retval"
-    interpreter.registers.retVal = none(JSValue)
-    inc interpreter.currIndex
-  of LoadBytecodeCallable:
-    msg "load bytecode segment"
-    let
-      index = (&op.arguments[0].getInt())
-      clause = &op.arguments[1].getStr()
-
-    msg "index is " & $index
-    msg "clause is " & clause
-
-    interpreter.addAtom(bytecodeCallable(clause), index)
-    inc interpreter.currIndex
-  of ExecuteBytecodeCallable:
-    msg "exec bytecode segment"
-    let callable = &getBytecodeClause(&interpreter.get((&op.arguments[0].getInt())))
-
-    interpreter.call(callable, op)
-  of LoadUndefined:
-    msg "load undefined"
-    interpreter.addAtom(undefined(), (&op.arguments[0].getInt()))
-    inc interpreter.currIndex
-  of GreaterThanEqualInt:
-    if op.arguments.len < 2:
-      inc interpreter.currIndex
-      return
-
-    let
-      a = interpreter.get((&op.arguments[0].getInt()))
-      b = interpreter.get((&op.arguments[1].getInt()))
-
-    if not *a or not *b:
-      return
-
-    let
-      aI = (&a).getNumeric()
-      bI = (&b).getNumeric()
-
-    if not *aI or not *bI:
-      inc interpreter.currIndex
-      return
-
-    if &aI >= &bI:
-      inc interpreter.currIndex
-    else:
-      interpreter.currIndex += 2
-  of LesserThanEqualInt:
-    msg "ltei"
-    if op.arguments.len < 2:
-      msg "expected 2 args, ignoring"
-      inc interpreter.currIndex
-      return
-
-    let
-      a = interpreter.get((&op.arguments[0].getInt()))
-
-      b = interpreter.get((&op.arguments[1].getInt()))
-
-    if not *a or not *b:
-      return
-
-    let
-      aI = (&a).getNumeric()
-      bI = (&b).getNumeric()
-
-    if not *aI or not *bI:
-      msg "either of the 2 vals don't exist (or both don't)"
-      return
-
-    if &aI <= &bI:
-      msg "a <= b; pc++"
-      inc interpreter.currIndex
-    else:
-      msg "a >= b; pc += 2"
-      interpreter.currIndex += 2
-  of Invoke:
-    let value = op.arguments[0]
-
-    interpreter.invoke(value)
   else:
-    when defined(release):
-      inc interpreter.currIndex
-    else:
-      echo "Unimplemented opcode: " & $op.opCode
-      quit(1)
+    interpreter.currIndex += 2
+
+proc opReturn(interpreter: var PulsarInterpreter, op: var Operation) =
+  let clause = interpreter.getClause()
+
+  if not *clause:
+    msg "got return but we are not in any clause"
+    inc interpreter.currIndex
+    return
+
+  let idx = &getInt(op.arguments[0])
+
+  # write the return value to the `retVal` register
+  interpreter.registers.retVal = interpreter.get(idx)
+
+  # revert back to where we left off in the previous clause (or exit if this was the final clause - that's handled by the logic in `run`)
+
+  msg "rolling back to clause " & $((&clause).rollback.clause)
+  interpreter.currClause = (&clause).rollback.clause
+
+  msg "rolling back to index " & $((&clause).rollback.opIndex)
+  interpreter.currIndex = (&clause).rollback.opIndex
+
+proc opLoadList(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "load list"
+  interpreter.addAtom(sequence @[], &op.arguments[0].getInt())
+  inc interpreter.currIndex
+
+proc opAddList(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "add list"
+  let
+    pos = (&op.arguments[0].getInt())
+    curr = interpreter.get(pos)
+    source = interpreter.get((&op.arguments[1].getInt()))
+
+  if not *curr or not *source:
+    inc interpreter.currIndex
+    return
+
+  var list = &curr
+
+  if list.kind != Sequence:
+    inc interpreter.currIndex
+    return # TODO: type errors
+
+  list.sequence.add((&source)[])
+
+  interpreter.stack[pos] = list
+  inc interpreter.currIndex
+
+proc opLoadUint(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "load uint"
+  interpreter.addAtom(integer((&op.arguments[1].getInt())), &op.arguments[0].getInt())
+  inc interpreter.currIndex
+
+proc opLoadBool(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "load bool"
+  interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()))
+  inc interpreter.currIndex
+
+proc opSwap(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "swap"
+  let
+    a = &op.arguments[0].getInt()
+    b = &op.arguments[1].getInt()
+
+  interpreter.swap(a, b)
+  inc interpreter.currIndex
+
+proc opJumpOnError(interpreter: var PulsarInterpreter, op: var Operation) =
+  interpreter.currJumpOnErr = some(uint(&op.arguments[0].getInt()))
+  inc interpreter.currIndex
+
+proc opGreaterThanInt(interpreter: var PulsarInterpreter, op: var Operation) =
+  if op.arguments.len < 2:
+    msg "gti: expected 2 args, got " & $op.arguments.len & "; ignoring"
+    inc interpreter.currIndex
+    return
+
+  let
+    a = interpreter.get(&op.arguments[0].getInt())
+    b = interpreter.get(&op.arguments[1].getInt())
+
+  if not *a or not *b:
+    msg "gti: a is empty=" & $(*a) & "; b is empty=" & $(*b)
+
+    return
+
+  let
+    aI = (&a).getNumeric()
+    bI = (&b).getNumeric()
+
+  if not *aI or not *bI:
+    msg "gti: aI is empty=" & $(*aI) & "; bI is empty=" & $(*bI)
+    return
+
+  msg "gti: a=" & $(&aI) & "; b=" & $(&bI)
+
+  if &aI > &bI:
+    msg "gti: a > b; pc++"
+    inc interpreter.currIndex
+  else:
+    msg "gti: a <= b; pc += 2"
+    interpreter.currIndex += 2
+
+proc opLesserThanInt(interpreter: var PulsarInterpreter, op: var Operation) =
+  if op.arguments.len < 2:
+    inc interpreter.currIndex
+    return
+
+  let
+    a = interpreter.get((&op.arguments[0].getInt()))
+    b = interpreter.get((&op.arguments[1].getInt()))
+
+  if not *a or not *b:
+    return
+
+  let
+    aI = (&a).getNumeric()
+    bI = (&b).getNumeric()
+
+  if not *aI or not *bI:
+    return
+
+  if &aI < &bI:
+    inc interpreter.currIndex
+  else:
+    interpreter.currIndex += 2
+
+proc opLoadObject(interpreter: var PulsarInterpreter, op: var Operation) =
+  interpreter.addAtom(obj(), (&op.arguments[0].getInt()))
+  inc interpreter.currIndex
+
+proc opCreateField(interpreter: var PulsarInterpreter, op: var Operation) =
+  let oatomIndex = ((&op.arguments[0].getInt()))
+
+  let oatomId = interpreter.get(oatomIndex)
+
+  if not *oatomId:
+    inc interpreter.currIndex
+    return
+
+  var atom = &oatomId
+  let
+    fieldIndex = (&op.arguments[1].getInt())
+    fieldName = &op.arguments[2].getStr()
+
+  atom.objFields[fieldName] = fieldIndex
+  atom.objValues.add(null())
+
+  interpreter.addAtom(atom, oatomIndex)
+
+  inc interpreter.currIndex
+
+proc opFastWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    oatomIndex = (&op.arguments[0].getInt())
+    oatomId = interpreter.get(oatomIndex)
+
+  if not *oatomId:
+    inc interpreter.currIndex
+    return
+
+  var atom = &oatomId
+  let fieldIndex = (&op.arguments[1].getInt())
+
+  let toWrite = op.consume(Integer, "", enforce = false, some(op.rawArgs.len - 1))
+  atom.objValues[fieldIndex] = toWrite
+
+  interpreter.addAtom(atom, oatomIndex)
+  inc interpreter.currIndex
+
+proc opWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    oatomIndex = (&op.arguments[0].getInt())
+    oatomId = interpreter.get(oatomIndex)
+    fieldName = &op.arguments[1].getStr()
+
+  if not *oatomId:
+    inc interpreter.currIndex
+    return
+
+  var
+    atom = &oatomId
+    fieldIndex = none(int)
+
+  for field, idx in atom.objFields:
+    if field == fieldName:
+      fieldIndex = some(idx)
+
+  if not *fieldIndex:
+    atom.objValues &= undefined()
+    fieldIndex = some(atom.objValues.len - 1)
+
+  let toWrite = op.consume(Integer, "", enforce = false, some(op.rawArgs.len - 1))
+  atom.objValues[&fieldIndex] = &interpreter.get(&toWrite.getInt())
+
+  interpreter.addAtom(atom, oatomIndex)
+  inc interpreter.currIndex
+
+proc opCrashInterpreter(interpreter: var PulsarInterpreter, op: var Operation) =
+  when defined(release):
+    raise newException(
+      CatchableError, "Encountered `CRASHINTERP` during execution; abort!"
+    )
+
+proc opInc(interpreter: var PulsarInterpreter, op: var Operation) =
+  let atom = &interpreter.get((&op.arguments[0].getInt()))
+
+  case atom.kind
+  of Integer:
+    interpreter.addAtom(integer(&atom.getInt() + 1), (&op.arguments[0].getInt()))
+  else:
+    interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()))
+      # If an invalid atom is attempted to be incremented, set its value to NaN.
+
+  inc interpreter.currIndex
+
+proc opDec(interpreter: var PulsarInterpreter, op: var Operation) =
+  let atom = &interpreter.get((&op.arguments[0].getInt()))
+
+  case atom.kind
+  of Integer:
+    interpreter.addAtom(integer(&atom.getInt() - 1), (&op.arguments[0].getInt()))
+  else:
+    interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()))
+      # If an invalid atom is attempted to be decremented, set its value to NaN.
+
+  inc interpreter.currIndex
+
+proc opLoadNull(interpreter: var PulsarInterpreter, op: var Operation) =
+  let idx = (&op.arguments[0].getInt())
+
+  interpreter.addAtom(null(), idx)
+  inc interpreter.currIndex
+
+proc opReadReg(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    idx = (&op.arguments[0].getInt())
+    register = (&op.arguments[1].getInt())
+    index =
+      if op.arguments.len > 2:
+        (&op.arguments[2].getInt())
+      else:
+        0
+
+  msg "idx: " & $idx & ", register: " & $register & ", index: " & $index
+  interpreter.readRegister(idx, register, index)
+  inc interpreter.currIndex
+
+proc opPassArg(interpreter: var PulsarInterpreter, op: var Operation) =
+  # append to callArgs register
+  let idx = (&op.arguments[0].getInt())
+  msg "passing to args register: " & $idx
+  let value = &interpreter.get(idx)
+
+  interpreter.registers.callArgs.add(value)
+  inc interpreter.currIndex
+
+proc opResetArgs(interpreter: var PulsarInterpreter, op: var Operation) =
+  interpreter.registers.callArgs.reset()
+  inc interpreter.currIndex
+
+proc opCopyAtom(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    src = (&op.arguments[0].getInt())
+    dest = (&op.arguments[1].getInt())
+
+  interpreter.stack[dest] = &interpreter.get(src)
+  inc interpreter.currIndex
+
+proc opMoveAtom(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    src = (&op.arguments[0].getInt())
+    dest = (&op.arguments[1].getInt())
+
+  interpreter.stack[dest] = &interpreter.get(src)
+  baliDealloc(interpreter.stack[src])
+  interpreter.stack[src] = null()
+  inc interpreter.currIndex
+
+proc opLoadFloat(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    pos = (&op.arguments[0].getInt())
+    value = op.arguments[1]
+
+  interpreter.addAtom(value, pos)
+  inc interpreter.currIndex
+
+proc opZeroRetval(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "zero retval"
+  interpreter.registers.retVal = none(JSValue)
+  inc interpreter.currIndex
+
+proc opLoadBytecodeCallable(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "load bytecode segment"
+  let
+    index = (&op.arguments[0].getInt())
+    clause = &op.arguments[1].getStr()
+
+  msg "index is " & $index
+  msg "clause is " & clause
+
+  interpreter.addAtom(bytecodeCallable(clause), index)
+  inc interpreter.currIndex
+
+proc opExecuteBytecodeCallable(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "exec bytecode segment"
+  let callable = &getBytecodeClause(&interpreter.get((&op.arguments[0].getInt())))
+
+  interpreter.call(callable, op)
+
+proc opLoadUndefined(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "load undefined"
+  interpreter.addAtom(undefined(), (&op.arguments[0].getInt()))
+  inc interpreter.currIndex
+
+proc opGreaterThanEqualInt(interpreter: var PulsarInterpreter, op: var Operation) =
+  if op.arguments.len < 2:
+    inc interpreter.currIndex
+    return
+
+  let
+    a = interpreter.get((&op.arguments[0].getInt()))
+    b = interpreter.get((&op.arguments[1].getInt()))
+
+  if not *a or not *b:
+    return
+
+  let
+    aI = (&a).getNumeric()
+    bI = (&b).getNumeric()
+
+  if not *aI or not *bI:
+    inc interpreter.currIndex
+    return
+
+  if &aI >= &bI:
+    inc interpreter.currIndex
+  else:
+    interpreter.currIndex += 2
+
+proc opLesserThanEqualInt(interpreter: var PulsarInterpreter, op: var Operation) =
+  msg "ltei"
+  if op.arguments.len < 2:
+    msg "expected 2 args, ignoring"
+    inc interpreter.currIndex
+    return
+
+  let
+    a = interpreter.get((&op.arguments[0].getInt()))
+
+    b = interpreter.get((&op.arguments[1].getInt()))
+
+  if not *a or not *b:
+    return
+
+  let
+    aI = (&a).getNumeric()
+    bI = (&b).getNumeric()
+
+  if not *aI or not *bI:
+    msg "either of the 2 vals don't exist (or both don't)"
+    return
+
+  if &aI <= &bI:
+    msg "a <= b; pc++"
+    inc interpreter.currIndex
+  else:
+    msg "a >= b; pc += 2"
+    interpreter.currIndex += 2
+
+proc opInvoke(interpreter: var PulsarInterpreter, op: var Operation) =
+  interpreter.invoke(op.arguments[0])
+
+proc opPower(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    posA = (&op.arguments[0].getInt())
+    a = &(&interpreter.get(posA)).getNumeric()
+    b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
+
+  interpreter.addAtom(floating(a ^ b), posA)
+  inc interpreter.currIndex
+{.pop.}
+
+const
+  OpDispatchTable = [
+    opCall,
+    opLoadInt,
+    opLoadStr,
+    opJump,
+    opAdd,
+    opMult,
+    opDiv,
+    opSub,
+    opEquate,
+    opReturn,
+    opLoadList,
+    opAddList,
+    opLoadUint,
+    opLoadBool,
+    opSwap,
+    opJumpOnError,
+    opGreaterThanInt,
+    opLesserThanInt,
+    opLoadObject,
+    opCreateField,
+    opFastWriteField,
+    opWriteField,
+    opCrashInterpreter,
+    opInc,
+    opDec,
+    opLoadNull,
+    opReadReg,
+    opPassArg,
+    opResetArgs,
+    opCopyAtom,
+    opMoveAtom,
+    opLoadFloat,
+    opZeroRetval,
+    opLoadBytecodeCallable,
+    opExecuteBytecodeCallable,
+    opLoadUndefined,
+    opGreaterThanEqualInt,
+    opLesserThanEqualInt,
+    opInvoke,
+    opPower
+  ]
+
+proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
+  OpDispatchTable[cast[uint8](op.opcode)](interpreter, op)
 
 proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.} =
   for i, clause in interpreter.clauses:
@@ -875,11 +949,11 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 proc getCompilationJudgement*(
     interpreter: PulsarInterpreter, clause: Clause
 ): CompilationJudgement =
-  if interpreter.profTotalFrames < 20_000:
+  if interpreter.profTotalFrames < 100_000:
     # TODO: Make this a configurable value. Don't make it variable during
     # the runtime for deterministicness' sake.
     return CompilationJudgement.DontCompile
-
+  
   if clause.name == "outer":
     # We don't care much about the outer function.
     # It's generally not _THAT_ hot.
