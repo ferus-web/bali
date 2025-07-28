@@ -10,7 +10,7 @@ import pkg/[shakar]
 
 when hasJITSupport:
   when defined(amd64):
-    import bali/runtime/compiler/amd64/codegen
+    import bali/runtime/compiler/amd64/[baseline]
   else:
     {.
       error:
@@ -43,7 +43,7 @@ type
     registers*: Registers
 
     when defined(amd64):
-      jit*: AMD64Codegen
+      baseline*: BaselineJIT
       useJit*: bool = true
 
     trapped*: bool = false
@@ -983,7 +983,7 @@ proc run*(interpreter: var PulsarInterpreter) =
       if interpreter.shouldCompile(clause):
         # TODO: JIT'd functions should be able to call other JIT'd segments
         vmd "fetch", "has jit support, compiling clause " & clause.name
-        let compiled = interpreter.jit.compile(clause)
+        let compiled = interpreter.baseline.compile(clause)
 
         if *compiled:
           clause.compiled = true
@@ -1027,70 +1027,77 @@ proc run*(interpreter: var PulsarInterpreter) =
     interpreter.clauses[clauseIndex] = move(clause)
     vmd "execute", "saved op state"
 
-proc initJITForPlatform(vm: pointer, callbacks: VMCallbacks): auto =
+proc initJITForPlatform(vm: pointer, callbacks: VMCallbacks, tier: Tier): auto =
   assert(vm != nil)
   assert(hasJITSupport, "Platform does not have a JIT compiler implementation!")
 
   when defined(amd64):
-    return initAMD64CodeGen(vm, callbacks)
+    case tier
+    of Tier.Baseline:
+      return initAMD64BaselineCodegen(vm, callbacks)
+    else: unreachable
 
 proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
-  when hasJITSupport:
-    interp[].jit = initJITForPlatform(
-      interp,
-      VMCallbacks(
-        addAtom: addAtom,
-        getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
-          let atom = vm.get(index.int)
-          return &atom,
-        copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
-          vm.stack[dest] = &vm.get(source.int),
-        resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
-          vm.registers.callArgs.reset(),
-        passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
-          vm.registers.callArgs.add(&vm.get(index.int)),
-        callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
-          vm.trapped = true
-          vm.call($name, default(Operation))
-          vm.run(),
-        invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
-          vm.trapped = true
-          vm.invoke(&vm.get(index))
-          vm.run(),
-        invokeStr: proc(vm: var PulsarInterpreter, index: cstring) {.cdecl.} =
-          vm.trapped = true
-          vm.invoke(str($index))
-          vm.run(),
-        readVectorRegister: proc(
-            vm: var PulsarInterpreter, store: uint, register: uint, index: uint
-        ) {.cdecl.} =
-          vm.readRegister(store.int, register.int, index.int),
-        zeroRetval: proc(vm: var PulsarInterpreter) {.cdecl.} =
-          vm.registers.retVal = none(JSValue),
-        readScalarRegister: proc(
-            vm: var PulsarInterpreter, store, register: uint
-        ) {.cdecl.} =
-          vm.readRegister(store.int, register.int, 0),
-        writeField: proc(
-            vm: var PulsarInterpreter, position: int, source: int, field: cstring
-        ) {.cdecl.} =
-          let field = $field
-          var atom = vm.stack[position]
-          let alreadyExists = field in atom.objFields
-          let index =
-            if alreadyExists:
-              atom.objFields[field]
-            else:
-              atom.objValues.len
-
+  let callbacks =
+    VMCallbacks(
+      addAtom: addAtom,
+      getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
+        let atom = vm.get(index.int)
+        return &atom,
+      copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
+        vm.stack[dest] = &vm.get(source.int),
+      resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
+        vm.registers.callArgs.reset(),
+      passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
+        vm.registers.callArgs.add(&vm.get(index.int)),
+      callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
+        vm.trapped = true
+        vm.call($name, default(Operation))
+        vm.run(),
+      invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
+        vm.trapped = true
+        vm.invoke(&vm.get(index))
+        vm.run(),
+      invokeStr: proc(vm: var PulsarInterpreter, index: cstring) {.cdecl.} =
+        vm.trapped = true
+        vm.invoke(str($index))
+        vm.run(),
+      readVectorRegister: proc(
+          vm: var PulsarInterpreter, store: uint, register: uint, index: uint
+      ) {.cdecl.} =
+        vm.readRegister(store.int, register.int, index.int),
+      zeroRetval: proc(vm: var PulsarInterpreter) {.cdecl.} =
+        vm.registers.retVal = none(JSValue),
+      readScalarRegister: proc(
+          vm: var PulsarInterpreter, store, register: uint
+      ) {.cdecl.} =
+        vm.readRegister(store.int, register.int, 0),
+      writeField: proc(
+          vm: var PulsarInterpreter, position: int, source: int, field: cstring
+      ) {.cdecl.} =
+        let field = $field
+        var atom = vm.stack[position]
+        let alreadyExists = field in atom.objFields
+        let index =
           if alreadyExists:
-            atom.objValues[index] = &vm.get(source)
+            atom.objFields[field]
           else:
-            atom.objValues &= &vm.get(source)
-            atom.objFields[field] = index
+            atom.objValues.len
 
-          vm.stack[position] = atom,
-      ),
+        if alreadyExists:
+          atom.objValues[index] = &vm.get(source)
+        else:
+          atom.objValues &= &vm.get(source)
+          atom.objFields[field] = index
+
+        vm.stack[position] = atom,
+    )
+
+  when hasJITSupport:
+    interp[].baseline = initJITForPlatform(
+      interp,
+      callbacks,
+      Tier.Baseline
     )
 
 proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =

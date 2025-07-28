@@ -3,6 +3,10 @@ import pkg/bali/runtime/vm/interpreter/types
 const hasJITSupport* = defined(amd64) and defined(unix)
 
 type
+  Tier* {.pure, size: sizeof(uint8).} = enum
+    Baseline
+    Midtier
+
   VMCallbacks* = object
     addAtom*: pointer
     getAtom*: pointer
