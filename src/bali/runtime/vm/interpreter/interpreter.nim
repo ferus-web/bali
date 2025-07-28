@@ -44,7 +44,6 @@ type
 
     when defined(amd64):
       baseline*: BaselineJIT
-      midtier*: MidtierJIT
       useJit*: bool = true
 
     trapped*: bool = false
