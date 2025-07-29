@@ -6,17 +6,21 @@ type
   InstKind* {.pure, size: sizeof(uint16).} = enum
     LoadString
     LoadUndefined
+    LoadNumber
+    LoadBoolean
 
   ArgVariantKind* {.size: sizeof(uint8).} = enum
     avkInt
     avkPos
     avkStr
+    avkNum
 
   ArgVariant* = object
     case kind*: ArgVariantKind
     of avkInt: vint*: int
     of avkPos: vreg*: uint32
     of avkStr: str*: string
+    of avkNum: flt*: float
   
   Inst* = object
     kind*: InstKind
@@ -29,13 +33,25 @@ type
 {.push inline.}
 func loadStr*(pos: uint32, str: string): Inst =
   Inst(
-    kind: LoadString,
+    kind: InstKind.LoadString,
     args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant(kind: avkStr, str: str)]
   )
 
 func loadUndefined*(pos: uint32): Inst =
   Inst(
-    kind: LoadUndefined,
+    kind: InstKind.LoadUndefined,
     args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant()]
+  )
+
+func loadNumber*(pos: uint32, value: float): Inst =
+  Inst(
+    kind: InstKind.LoadNumber,
+    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant(kind: avkNum, flt: value)]
+  )
+
+func loadBoolean*(pos: uint32, value: bool | int): Inst =
+  Inst(
+    kind: InstKind.LoadBoolean,
+    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant(kind: avkInt, vint: cast[int](value))]
   )
 {.pop.}

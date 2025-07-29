@@ -54,12 +54,13 @@ proc lowerStream*(fn: Function, stream: var OpStream): bool =
       let op = stream.consume()
       fn.insts &= loadUndefined(uint32(&op.arguments[0].getInt()))
     of CreateField: stream.advance
-    of LoadFloat:
-      stream.advance
-      # fn.insts &= loadFloat()
     of LoadBool:
-      stream.advance
-      # fn.insts &= loadBool()
+      let op = stream.consume()
+
+      fn.insts &= loadBoolean(
+        uint32(&op.arguments[0].getInt()),
+        &op.arguments[1].getBool()
+      )
     of LoadNull:
       stream.advance
       # fn.insts &= loadNull()
@@ -67,10 +68,17 @@ proc lowerStream*(fn: Function, stream: var OpStream): bool =
       stream.advance
     of LoadBytecodeCallable, ReadRegister, ZeroRetval:
       stream.advance
-    of LoadUint, PassArgument, Invoke: stream.advance
+    of PassArgument, Invoke: stream.advance
     of LoadStr:
       if not lowerLoadStrPatterns(fn, stream, stream.consume()):
         discard
+    of LoadUint, LoadInt, LoadFloat:
+      let op = stream.consume()
+
+      fn.insts &= loadNumber(
+        uint32(&op.arguments[0].getInt()),
+        &op.arguments[1].getNumeric()
+      )
     else: echo stream.peekkind(); bailout "cannot find predictable pattern"
 
   true
