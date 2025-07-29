@@ -15,7 +15,7 @@ type
     cursor*: int = 0
 
 func eof*(stream: OpStream): bool {.inline.} =
-  stream.cursor > stream.ops.len
+  stream.cursor > stream.ops.len - 1
 
 func consume*(stream: var OpStream): Operation =
   result = stream.ops[stream.cursor]
@@ -65,12 +65,13 @@ proc lowerStream*(fn: Function, stream: var OpStream): bool =
       # fn.insts &= loadNull()
     of ResetArgs:
       stream.advance
-    of LoadBytecodeCallable:
+    of LoadBytecodeCallable, ReadRegister, ZeroRetval:
       stream.advance
+    of LoadUint, PassArgument, Invoke: stream.advance
     of LoadStr:
       if not lowerLoadStrPatterns(fn, stream, stream.consume()):
         discard
-    else: bailout "cannot find predictable pattern"
+    else: echo stream.peekkind(); bailout "cannot find predictable pattern"
 
   true
 
