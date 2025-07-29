@@ -8,6 +8,15 @@ type
     LoadUndefined
     LoadNumber
     LoadBoolean
+    LoadNull
+    ZeroRetval
+    ReadProperty
+    ReadScalarRegister
+
+  Register* {.size: sizeof(uint8), pure.} = enum
+    ReturnValue = 0
+    CallArgument = 1
+    Error = 2
 
   ArgVariantKind* {.size: sizeof(uint8).} = enum
     avkInt
@@ -53,5 +62,29 @@ func loadBoolean*(pos: uint32, value: bool | int): Inst =
   Inst(
     kind: InstKind.LoadBoolean,
     args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant(kind: avkInt, vint: cast[int](value))]
+  )
+
+func loadNull*(pos: uint32): Inst =
+  Inst(
+    kind: InstKind.LoadNull,
+    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant()]
+  )
+
+func zeroRetval*(): Inst =
+  Inst(
+    kind: InstKind.ZeroRetval,
+    args: [ArgVariant(), ArgVariant()]
+  )
+
+func readProperty*(sourcePos: uint32, field: string): Inst =
+  Inst(
+    kind: InstKind.ReadProperty,
+    args: [ArgVariant(kind: avkPos, vreg: sourcePos), ArgVariant(kind: avkStr, str: field)]
+  )
+
+func readScalarRegister*(register: Register, dest: uint32): Inst =
+  Inst(
+    kind: InstKind.ReadScalarRegister,
+    args: [ArgVariant(kind: avkInt, vint: int(register)), ArgVariant(kind: avkPos, vreg: dest)]
   )
 {.pop.}

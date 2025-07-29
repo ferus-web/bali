@@ -34,13 +34,66 @@ proc lowerLoadStrPatterns*(fn: Function, stream: var OpStream, startOp: Operatio
   stream.advance()
 
   if stream.peekKind() != Call:
+    dec stream.cursor
     return
 
   let call = stream.consume()
   if &call.arguments[0].getStr() != "BALI_CONSTRUCTOR_STRING":
+    stream.cursor -= 2
     return
 
   fn.insts &= loadStr(uint32(&startOp.arguments[0].getInt()), &startOp.arguments[1].getStr())
+
+proc lowerLoadNullPatterns*(fn: Function, stream: var OpStream, op: Operation): bool =
+  let uintLoad = stream.consume()
+  if uintLoad.opcode != LoadUint:
+    stream.cursor.dec
+    return
+
+  let source = uint32(&uintLoad.arguments[1].getInt())
+  
+  let passArg1 = stream.consume()
+  if passArg1.opcode != PassArgument:
+    stream.cursor -= 2
+    return
+  
+  let uintLoad2 = stream.consume()
+  if uintLoad2.opcode != LoadUint:
+    stream.cursor -= 3
+    return
+
+  let dest = uint32(&uintLoad2.arguments[1].getInt())
+  let passArg2 = stream.consume()
+  if passArg2.opcode != PassArgument:
+    stream.cursor -= 4
+    return
+  
+  let strLoadFieldName = stream.consume()
+  if strLoadFieldName.opcode != LoadStr:
+    stream.cursor -= 5
+    return
+
+  let field = &strLoadFieldName.arguments[1].getStr()
+  
+  let passArg3 = stream.consume()
+  if passArg3.opcode != PassArgument:
+    stream.cursor -= 6
+    return
+  
+  let resolverCall = stream.consume()
+  if resolverCall.opcode != Call:
+    stream.cursor -= 7
+    return
+  
+  let resetArgsInv = stream.consume()
+  if resetArgsInv.opcode != ResetArgs:
+    stream.cursor -= 8
+    return
+  
+  fn.insts &= readProperty(source, field)
+  fn.insts &= readScalarRegister(Register.ReturnValue, dest)
+
+  true
 
 proc lowerStream*(fn: Function, stream: var OpStream): bool =
   template bailout(msg: static string) =
@@ -62,16 +115,21 @@ proc lowerStream*(fn: Function, stream: var OpStream): bool =
         &op.arguments[1].getBool()
       )
     of LoadNull:
-      stream.advance
-      # fn.insts &= loadNull()
+      let op = stream.consume()
+      
+      if not lowerLoadNullPatterns(fn, stream, op):
+        fn.insts &= loadNull(
+          uint32(&op.arguments[0].getInt())
+        )
     of ResetArgs:
       stream.advance
     of LoadBytecodeCallable, ReadRegister, ZeroRetval:
       stream.advance
     of PassArgument, Invoke: stream.advance
     of LoadStr:
-      if not lowerLoadStrPatterns(fn, stream, stream.consume()):
-        discard
+      let op = stream.consume()
+      if not lowerLoadStrPatterns(fn, stream, op):
+        fn.insts &= loadStr(uint32(&op.arguments[0].getInt()), &op.arguments[1].getStr())
     of LoadUint, LoadInt, LoadFloat:
       let op = stream.consume()
 
