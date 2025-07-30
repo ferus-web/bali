@@ -1,6 +1,6 @@
 ## Baseline JIT for AMD64 SystemV systems
 
-import std/[logging, posix, hashes, tables, options, streams]
+import std/[logging, hashes, posix, tables, options, streams]
 import pkg/bali/runtime/compiler/base, pkg/bali/runtime/vm/heap/boehm
 import pkg/[shakar]
 import
@@ -10,27 +10,6 @@ import
 
 type
   BaselineJIT* = object of AMD64Codegen
-
-proc allocateNativeSegment(cgen: var BaselineJIT) =
-  debug "jit/amd64: allocating buffer for assembler"
-
-  # TODO: Unhardcode this. Perhaps we can have something that takes in a clause and runs an upper bound estimate of how much memory its native repr will be in?
-  cgen.s = initAssemblerX64(nil)
-
-  if (
-    let code = posix_memalign(cgen.s.data.addr, cgen.pageSize.csize_t, 0x10000)
-    code != 0
-  ):
-    warn "jit/amd64: failed to allocate buffer for assembler: posix_memalign() returned " &
-      $code
-    return
-
-  debug "jit/amd64: allocated buffer successfully; making it executable"
-  if (
-    let code = mprotect(cgen.s.data, 0x10000, PROT_READ or PROT_WRITE or PROT_EXEC)
-    code != 0
-  ):
-    warn "jit/amd64: failed to mark buffer as executable: mprotect() returned: " & $code
 
 proc prepareAtomAddCall(cgen: var BaselineJIT, index: int64) =
   # Signature for addAtom is:
