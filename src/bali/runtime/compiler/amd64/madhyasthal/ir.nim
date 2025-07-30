@@ -26,14 +26,16 @@ type
     avkPos
     avkStr
     avkNum
+  
+  Reg* = uint32
 
   ArgVariant* = object
     case kind*: ArgVariantKind
     of avkInt: vint*: int
-    of avkPos: vreg*: uint32
+    of avkPos: vreg*: Reg
     of avkStr: str*: string
     of avkNum: flt*: float
-  
+
   Inst* = object
     kind*: InstKind
     args*: array[2, ArgVariant]
