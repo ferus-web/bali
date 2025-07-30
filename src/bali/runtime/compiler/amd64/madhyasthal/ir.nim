@@ -13,6 +13,8 @@ type
     ReadProperty
     ReadScalarRegister
     LoadBytecodeCallable
+    PassArgument
+    Invoke
 
   Register* {.size: sizeof(uint8), pure.} = enum
     ReturnValue = 0
@@ -93,5 +95,17 @@ func loadBytecodeCallable*(dest: uint32, name: string): Inst =
   Inst(
     kind: InstKind.LoadBytecodeCallable,
     args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant(kind: avkStr, str: name)]
+  )
+
+func passArgument*(dest: uint32): Inst =
+  Inst(
+    kind: InstKind.PassArgument,
+    args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant()]
+  )
+
+func invoke*(dest: uint32): Inst =
+  Inst(
+    kind: InstKind.Invoke,
+    args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant()]
   )
 {.pop.}

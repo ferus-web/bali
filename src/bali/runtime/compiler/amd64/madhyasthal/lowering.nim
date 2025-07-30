@@ -134,7 +134,18 @@ proc lowerStream*(fn: Function, stream: var OpStream): bool =
         name = &op.arguments[1].getStr()
 
       fn.insts &= loadBytecodeCallable(dest, name)
-    of PassArgument, Invoke: stream.advance
+    of PassArgument:
+      let
+        op = stream.consume()
+        index = uint32(&op.arguments[0].getInt())
+
+      fn.insts &= passArgument(index)
+    of Invoke:
+      let
+        op = stream.consume()
+        index = uint32(&op.arguments[0].getInt())
+
+      fn.insts &= invoke(index)
     of LoadStr:
       let op = stream.consume()
       if not lowerLoadStrPatterns(fn, stream, op):
