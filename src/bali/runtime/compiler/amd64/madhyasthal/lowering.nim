@@ -43,6 +43,7 @@ proc lowerLoadStrPatterns*(fn: Function, stream: var OpStream, startOp: Operatio
     return
 
   fn.insts &= loadStr(uint32(&startOp.arguments[0].getInt()), &startOp.arguments[1].getStr())
+  true
 
 proc lowerLoadNullPatterns*(fn: Function, stream: var OpStream, op: Operation): bool =
   let uintLoad = stream.consume()
