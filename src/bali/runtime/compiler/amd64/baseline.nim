@@ -36,34 +36,6 @@ proc dump*(cgen: var BaselineJIT, file: string) =
   stream.writeData(cgen.s.data[0].addr, 0x10000)
   stream.close()
 
-proc prepareGCAlloc(cgen: var BaselineJIT, size: uint) =
-  cgen.s.mov(regRdi, size.int64)
-  cgen.s.sub(regRsp.reg, 8)
-  cgen.s.call(allocRaw)
-  cgen.s.add(regRsp.reg, 8)
-
-proc prepareLoadString(cgen: var BaselineJIT, str: cstring) =
-  prepareGCAlloc(cgen, str.len.uint)
-
-  # the GC allocated memory's pointer is in rax.
-  # we're going to copy stuff from our const pool into it
-
-  var cstr = cast[cstring](alloc(str.len + 1))
-  for i, c in str:
-    cstr[i] = c
-
-  cgen.cpool.add(cstr)
-  cgen.s.push(regRax.reg) # save the pointer in rax
-  cgen.s.mov(regRdi.reg, regRax)
-  cgen.s.mov(regRsi, cast[int64](cast[pointer](cstr[0].addr)))
-  cgen.s.mov(regRdx, int64(str.len))
-
-  cgen.s.sub(regRsp.reg, 16)
-  cgen.s.call(copyRaw)
-  cgen.s.add(regRsp.reg, 16)
-
-  cgen.s.pop(regR8.reg) # get the pointer that was in rax which is likely gone now
-
 proc patchJumpPoints*(cgen: var BaselineJIT) =
   warn "TODO: Implement jump-point patching"
   unreachable

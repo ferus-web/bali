@@ -3,16 +3,49 @@
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[logging, posix, options, tables]
 import pkg/bali/runtime/compiler/amd64/madhyasthal/[ir, lowering, pipeline, optimizer, dumper],
-       pkg/bali/runtime/compiler/amd64/common,
+       pkg/bali/runtime/compiler/amd64/[common, native_forwarding],
        pkg/bali/runtime/compiler/base
 import pkg/shakar
 
 type
   MidtierJIT* = object of AMD64Codegen
 
+template alignStack(offset: uint, body: untyped) =
+  cgen.s.sub(regRsp.reg, offset)
+  body
+  cgen.s.add(regRsp.reg, offset)
+
 proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
-  echo "Compiling `" & fn.name & "`:\n" & dumpFunction(fn)
-  assert off
+  echo dumpFunction(fn)
+  for inst in fn.insts:
+    case inst.kind
+    of LoadNumber:
+      let
+        index = inst.args[0].vreg
+        num = inst.args[1].flt
+      
+      alignStack 8:
+        cgen.s.mov(regR9, cast[int64](num))
+        cgen.s.movq(regR9.reg, regXmm0)
+        cgen.s.call(allocFloatEncoded)
+
+      cgen.s.mov(regRsi.reg, regRax)
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.call(cgen.callbacks.addAtom)
+    of ReadProperty:
+      let
+        index = inst.args[0].vreg
+        field = inst.args[1].str
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, cast[int64](index))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+      cgen.s.mov(regRdi.reg, regRax)
+    else: assert off, $inst.kind
 
 proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
   if clause.name in cgen.cached:
@@ -26,8 +59,8 @@ proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
   var pipeline = Pipeline(fn: &lowered)
   pipeline.optimize({ Passes.NaiveDeadCodeElim })
 
-  let fn = pipeline.fn
-  return compileLowered(cgen, fn)
+  allocateNativeSegment(cgen)
+  return compileLowered(cgen, pipeline.fn)
 
 proc initAMD64MidtierCodegen*(vm: pointer, callbacks: VMCallbacks): MidtierJIT =
   info "jit/amd64: initializing midtier jit"

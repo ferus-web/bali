@@ -35,3 +35,10 @@ proc allocInt*(i: int): JSValue {.cdecl.} =
 
 proc allocUint*(i: uint): JSValue {.cdecl.} =
   integer(i)
+
+proc getProperty*(value: JSValue, field: cstring): JSValue {.cdecl.} =
+  let conv = $field
+  if conv in value:
+    return value[conv]
+
+  undefined()
