@@ -10,7 +10,7 @@ import pkg/[shakar]
 
 when hasJITSupport:
   when defined(amd64):
-    import bali/runtime/compiler/amd64/[baseline]
+    import bali/runtime/compiler/amd64/[common, baseline, midtier]
   else:
     {.
       error:
@@ -44,6 +44,7 @@ type
 
     when defined(amd64):
       baseline*: BaselineJIT
+      midtier*: MidtierJIT
       useJit*: bool = true
 
     trapped*: bool = false
@@ -924,24 +925,34 @@ proc getCompilationJudgement*(
   let dispatchRatio =
     float(clause.profIterationsSpent.int / interpreter.profTotalFrames.int) * 100f
 
-  # TODO: Add a `jitd` template? It should log JIT debug messages if the JIT is available and debugging is enabled
-  vmd "profiler",
+  jitd "profiler",
     "dispatch ratio (" & clause.name & "): " & $dispatchRatio & "% (total frames: " &
       $interpreter.profTotalFrames & "; dominated: " & $clause.profIterationsSpent & ')'
+  
+  # These totally scientific and empirical values are used as thresholds to see when a function is worth
+  # compiling and with what tier. The source is a secret, just to make sure the likes of Google cannot steal
+  # my hard, impressive work.
 
-  if dispatchRatio > 20f:
+  if dispatchRatio > 25f and dispatchRatio < 35f:
     return CompilationJudgement.Eligible
+  elif dispatchRatio >= 35f:
+    return CompilationJudgement.WarmingUp
 
-proc shouldCompile*(interpreter: PulsarInterpreter, clause: var Clause): bool =
+proc shouldCompile*(interpreter: PulsarInterpreter, clause: var Clause): tuple[gettingCompiled: bool, tier: Option[Tier]] =
   if *clause.cachedJudgement and
       &clause.cachedJudgement == CompilationJudgement.Ineligible:
-    return false
+    return (gettingCompiled: false, tier: none(Tier))
 
   let judgement = interpreter.getCompilationJudgement(clause)
   clause.cachedJudgement = some(judgement)
 
   # TODO: implement more heuristics
-  judgement == CompilationJudgement.Eligible
+  case judgement
+  of CompilationJudgement.Eligible:
+    return (gettingCompiled: true, tier: some(Tier.Baseline))
+  of CompilationJudgement.WarmingUp:
+    return (gettingCompiled: true, tier: some(Tier.Midtier))
+  else: discard
 
 proc run*(interpreter: var PulsarInterpreter) =
   while not interpreter.halt:
@@ -980,10 +991,17 @@ proc run*(interpreter: var PulsarInterpreter) =
     # If this clause is considered hot, consider compiling it.
     if interpreter.currIndex == 0 and hasJITSupport and interpreter.useJit and
         not interpreter.trapped:
-      if interpreter.shouldCompile(clause):
+      let (gettingCompiled, tier) = interpreter.shouldCompile(clause)
+      if gettingCompiled:
         # TODO: JIT'd functions should be able to call other JIT'd segments
-        vmd "fetch", "has jit support, compiling clause " & clause.name
-        let compiled = interpreter.baseline.compile(clause)
+        jitd "fetch", "has jit support, compiling clause " & clause.name & " with JIT tier `" & $tier & '`'
+        let compiled =
+          case &tier
+          of Tier.Baseline:
+            interpreter.baseline.compile(clause)
+          of Tier.Midtier:
+            interpreter.midtier.compile(clause)
+          else: unreachable; none(JITSegment)
 
         if *compiled:
           clause.compiled = true
@@ -1002,7 +1020,7 @@ proc run*(interpreter: var PulsarInterpreter) =
 
           continue
         else:
-          vmd "execute",
+          jitd "execute",
             "cannot compile segment: " & clause.name & ", falling back to VM"
           clause.cachedJudgement = some(CompilationJudgement.Ineligible)
 
@@ -1027,15 +1045,18 @@ proc run*(interpreter: var PulsarInterpreter) =
     interpreter.clauses[clauseIndex] = move(clause)
     vmd "execute", "saved op state"
 
-proc initJITForPlatform(vm: pointer, callbacks: VMCallbacks, tier: Tier): auto =
-  assert(vm != nil)
-  assert(hasJITSupport, "Platform does not have a JIT compiler implementation!")
+when defined(amd64):
+  proc initJITForPlatform(vm: pointer, callbacks: VMCallbacks, tier: Tier): AMD64Codegen =
+    assert(vm != nil)
+    assert(hasJITSupport, "Platform does not have a JIT compiler implementation!")
 
-  when defined(amd64):
-    case tier
-    of Tier.Baseline:
-      return initAMD64BaselineCodegen(vm, callbacks)
-    else: unreachable
+    when defined(amd64):
+      case tier
+      of Tier.Baseline:
+        return initAMD64BaselineCodegen(vm, callbacks)
+      of Tier.Midtier:
+        return initAMD64MidtierCodegen(vm, callbacks)
+      else: unreachable
 
 proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
   let callbacks =
@@ -1094,11 +1115,17 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
     )
 
   when hasJITSupport:
-    interp[].baseline = initJITForPlatform(
+    interp[].baseline = BaselineJIT(initJITForPlatform(
       interp,
       callbacks,
       Tier.Baseline
-    )
+    ))
+
+    interp[].midtier = MidtierJIT(initJITForPlatform(
+      interp,
+      callbacks,
+      Tier.Midtier
+    ))
 
 proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
   var interp = cast[ptr PulsarInterpreter](allocShared(sizeof(PulsarInterpreter)))

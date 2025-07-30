@@ -1,5 +1,5 @@
 import pkg/bali/runtime/compiler/amd64/madhyasthal/[
-  ir, pipeline,
+  pipeline,
 
   # All optimization passes
   naive_dce
