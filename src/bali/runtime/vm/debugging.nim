@@ -21,3 +21,9 @@ template vmd*(phase: string, message: string) =
   ## Non-execution related VM debug messages
   when (not defined(release)) and defined(baliLogVmDbg):
     stdout.write("vm [" & $phase & "] " & message & '\n')
+
+template jitd*(phase: string, message: string) =
+  ## Messages related to the JIT and its surrounding
+  ## subsystems (e.g, profiler)
+  when (not defined(release)) and defined(baliLogJitDbg):
+    stdout.write("jit [" & $phase & "] " & message & '\n')
