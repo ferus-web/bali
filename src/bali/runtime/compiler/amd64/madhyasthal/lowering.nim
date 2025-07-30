@@ -102,6 +102,7 @@ proc lowerStream*(fn: Function, stream: var OpStream): bool =
     return false
 
   while not stream.eof:
+    # echo $stream.cursor & ") " & $stream.peekKind()
     case stream.peekKind()
     of LoadUndefined:
       # Just load undefined
@@ -124,8 +125,15 @@ proc lowerStream*(fn: Function, stream: var OpStream): bool =
         )
     of ResetArgs:
       stream.advance
-    of LoadBytecodeCallable, ReadRegister, ZeroRetval:
+    of ReadRegister, ZeroRetval:
       stream.advance
+    of LoadBytecodeCallable:
+      let
+        op = stream.consume()
+        dest = uint32(&op.arguments[0].getInt())
+        name = &op.arguments[1].getStr()
+
+      fn.insts &= loadBytecodeCallable(dest, name)
     of PassArgument, Invoke: stream.advance
     of LoadStr:
       let op = stream.consume()

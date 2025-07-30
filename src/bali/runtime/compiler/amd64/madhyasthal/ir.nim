@@ -12,6 +12,7 @@ type
     ZeroRetval
     ReadProperty
     ReadScalarRegister
+    LoadBytecodeCallable
 
   Register* {.size: sizeof(uint8), pure.} = enum
     ReturnValue = 0
@@ -86,5 +87,11 @@ func readScalarRegister*(register: Register, dest: uint32): Inst =
   Inst(
     kind: InstKind.ReadScalarRegister,
     args: [ArgVariant(kind: avkInt, vint: int(register)), ArgVariant(kind: avkPos, vreg: dest)]
+  )
+
+func loadBytecodeCallable*(dest: uint32, name: string): Inst =
+  Inst(
+    kind: InstKind.LoadBytecodeCallable,
+    args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant(kind: avkStr, str: name)]
   )
 {.pop.}
