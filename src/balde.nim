@@ -49,7 +49,9 @@ proc die(msg: varargs[string]) {.inline, noReturn.} =
   error(str)
   quit(1)
 
-proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runtime =
+proc allocRuntime*(
+    ctx: Input, file: string, ast: AST, repl: bool = false, dumpIRFor: seq[string]
+): Runtime =
   let test262 = ctx.enabled("test262")
   var runtime = newRuntime(
     file,
@@ -66,6 +68,7 @@ proc allocRuntime*(ctx: Input, file: string, ast: AST, repl: bool = false): Runt
         deadCodeElimination: not ctx.enabled("disable-dead-code-elim"),
         jitCompiler: not ctx.enabled("disable-jit", "Nz") and not repl,
       ),
+      jit: JITOpts(madhyasthalDumpIRFor: dumpIRFor),
     ),
   )
   let expStr = ctx.flag("enable-experiments")
@@ -244,6 +247,12 @@ proc dumpStatisticsPretty(runtime: Runtime) =
     resetStyle,
   )
 
+proc getDumpIRForList(ctx: Input): seq[string] =
+  if *ctx.flag("madhyasthal-dump-ir-fns"):
+    return split(&ctx.flag("madhyasthal-dump-ir-fns"), ';')
+
+  newSeq[string](0)
+
 func `%`(
     t: tuple[str: Option[string], exc: Option[void], ident: Option[string]]
 ): JsonNode =
@@ -296,7 +305,8 @@ proc execFile(ctx: Input, file: string) {.inline.} =
   if ctx.enabled("dump-no-eval"):
     print ast
     if ctx.enabled("dump-statistics"):
-      var runtime = allocRuntime(ctx, file = file, ast = ast)
+      var runtime =
+        allocRuntime(ctx, file = file, ast = ast, dumpIRFor = newSeq[string](0))
       runtime.dumpStatisticsPretty()
 
     quit 0
@@ -305,7 +315,8 @@ proc execFile(ctx: Input, file: string) {.inline.} =
     ast.doNotEvaluate = true
 
   profileThis "allocate runtime":
-    var runtime = allocRuntime(ctx, file = file, ast = ast)
+    var runtime =
+      allocRuntime(ctx, file = file, ast = ast, dumpIRFor = getDumpIRForList(ctx))
 
   profileThis "execution time":
     runtime.run()
@@ -366,9 +377,10 @@ proc baldeRun(ctx: Input) =
 proc baldeRepl(ctx: Input) =
   var prevRuntime: Runtime
   var noise = Noise.init()
+  let dumpIRFor = getDumpIRForList(ctx)
 
   template evaluateSource(ast: AST) =
-    var runtime = allocRuntime(ctx, "<repl>", ast, repl = true)
+    var runtime = allocRuntime(ctx, "<repl>", ast, repl = true, dumpIRFor = dumpIRFor)
     if prevRuntime != nil:
       runtime.values = prevRuntime.values
       runtime.vm.stack = prevRuntime.vm.stack

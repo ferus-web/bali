@@ -47,6 +47,7 @@ proc run*(runtime: Runtime) =
   encodeUri.generateStdIR(runtime)
 
   runtime.vm[].useJit = runtime.opts.codegen.jitCompiler
+  runtime.vm[].midtier.dumpIrForFuncs = runtime.opts.jit.madhyasthalDumpIRFor
 
   when not defined(baliTest262FyiDisableICULinkingCode):
     date.generateStdIR(runtime)

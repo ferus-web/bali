@@ -42,6 +42,9 @@ type
     deadCodeElimination*: bool = true
     jitCompiler*: bool = true
 
+  JITOpts* = object
+    madhyasthalDumpIRFor*: seq[string]
+
   InterpreterOpts* = object
     test262*: bool = false
     repl*: bool = false
@@ -51,6 +54,7 @@ type
 
     codegen*: CodegenOpts
     experiments*: ExperimentOpts
+    jit*: JITOpts
 
   JSType* = object
     name*: string

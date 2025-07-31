@@ -3,7 +3,8 @@
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[logging, posix, options, tables]
 import
-  pkg/bali/runtime/compiler/amd64/madhyasthal/[ir, lowering, pipeline, optimizer],
+  pkg/bali/runtime/compiler/amd64/madhyasthal/
+    [ir, lowering, pipeline, optimizer, dumper],
   pkg/bali/runtime/compiler/amd64/[common, native_forwarding],
   pkg/bali/runtime/compiler/base
 import pkg/shakar
@@ -16,6 +17,9 @@ template alignStack(offset: uint, body: untyped) =
   cgen.s.add(regRsp.reg, offset)
 
 proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
+  if unlikely(fn.name in cgen.dumpIrForFuncs):
+    echo dumpFunction(fn)
+
   for inst in fn.insts:
     case inst.kind
     of InstKind.LoadNumber:

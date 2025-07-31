@@ -19,6 +19,8 @@ type
 
     pageSize*: int64
 
+    dumpIrForFuncs*: seq[string]
+
 proc free(p: pointer): void {.importc, header: "<stdlib.h>".}
 
 proc `=destroy`*(cgen: AMD64Codegen) =
@@ -39,7 +41,7 @@ proc allocateNativeSegment*(cgen: var AMD64Codegen) =
   ):
     warn "jit/amd64: failed to allocate buffer for assembler: posix_memalign() returned " &
       $code
-    return
+    raise newException(Defect, "Cannot allocate assembler's code buffer!")
 
   debug "jit/amd64: allocated buffer successfully; making it executable"
   if (
@@ -47,6 +49,7 @@ proc allocateNativeSegment*(cgen: var AMD64Codegen) =
     code != 0
   ):
     warn "jit/amd64: failed to mark buffer as executable: mprotect() returned: " & $code
+    raise newException(Defect, "Cannot mark assembler's code buffer as executable!")
 
 proc prepareGCAlloc*(cgen: var AMD64Codegen, size: uint) =
   cgen.s.mov(regRdi, size.int64)

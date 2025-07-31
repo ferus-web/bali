@@ -3,7 +3,7 @@
 ## them into Madhyasthal's specialized ops.
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
-import std/[options]
+import std/[options, logging]
 import pkg/[shakar]
 import
   pkg/bali/runtime/compiler/amd64/madhyasthal/ir,
@@ -103,7 +103,7 @@ proc lowerLoadNullPatterns*(
 
 proc lowerStream*(fn: var Function, stream: var OpStream): bool =
   template bailout(msg: static string) =
-    echo msg
+    debug "jit/amd64: midtier jit is bailing out: " & msg
     return false
 
   while not stream.eof:
@@ -160,7 +160,6 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
       fn.insts &=
         loadNumber(uint32(&op.arguments[0].getInt()), &op.arguments[1].getNumeric())
     else:
-      echo stream.peekkind()
       bailout "cannot find predictable pattern"
 
   true
