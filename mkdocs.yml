@@ -18,5 +18,5 @@ nav:
   - Code Style: CODE_STYLE.md
   - Architectural Notes: ARCHITECTURE.md
   - Bali's JIT compilers:
-    - Baseline: BASELINE.md
-    - Midtier/Madhyasthal: MADHYASTHAL.md
+    - Baseline: jit/BASELINE.md
+    - Midtier/Madhyasthal: jit/MADHYASTHAL.md
