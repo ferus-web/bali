@@ -7,7 +7,7 @@ proc dumpInst*(buffer: var string, inst: ir.Inst) =
   buffer &= '('
   buffer &= $inst.kind
   buffer &= ' '
-  
+
   for i, arg in inst.args:
     case arg.kind
     of avkPos:
@@ -33,13 +33,13 @@ proc dumpFunction*(fn: ir.Function): string =
   buffer &= '('
   buffer &= fn.name
   buffer &= " \n"
-  
+
   for i, inst in fn.insts:
     buffer &= "  "
     dumpInst(buffer, inst)
     if i < fn.insts.len - 1:
       buffer &= '\n'
-  
+
   buffer &= '\n'
   buffer &= ')'
 

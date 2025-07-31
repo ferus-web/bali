@@ -8,8 +8,7 @@ import
   pkg/bali/runtime/vm/interpreter/resolver,
   pkg/bali/runtime/compiler/amd64/[common, native_forwarding]
 
-type
-  BaselineJIT* = object of AMD64Codegen
+type BaselineJIT* = object of AMD64Codegen
 
 proc prepareAtomAddCall(cgen: var BaselineJIT, index: int64) =
   # Signature for addAtom is:
