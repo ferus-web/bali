@@ -20,6 +20,7 @@ type
     zeroRetval*: pointer
     readScalarRegister*: pointer
     writeField*: pointer
+    addRetval*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
 

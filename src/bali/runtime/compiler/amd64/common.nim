@@ -1,7 +1,6 @@
 import std/[tables, posix, logging]
 import pkg/catnip/x64assembler
-import pkg/bali/runtime/compiler/base,
-       pkg/bali/runtime/compiler/amd64/native_forwarding
+import pkg/bali/runtime/compiler/base, pkg/bali/runtime/compiler/amd64/native_forwarding
 
 type
   ConstantPool* = seq[cstring]
@@ -49,13 +48,13 @@ proc allocateNativeSegment*(cgen: var AMD64Codegen) =
   ):
     warn "jit/amd64: failed to mark buffer as executable: mprotect() returned: " & $code
 
-proc prepareGCAlloc(cgen: var AMD64Codegen, size: uint) =
+proc prepareGCAlloc*(cgen: var AMD64Codegen, size: uint) =
   cgen.s.mov(regRdi, size.int64)
   cgen.s.sub(regRsp.reg, 8)
   cgen.s.call(allocRaw)
   cgen.s.add(regRsp.reg, 8)
 
-proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
+proc prepareLoadString*(cgen: var AMD64Codegen, str: cstring) =
   prepareGCAlloc(cgen, str.len.uint)
 
   # the GC allocated memory's pointer is in rax.
@@ -76,6 +75,5 @@ proc prepareLoadString(cgen: var AMD64Codegen, str: cstring) =
   cgen.s.add(regRsp.reg, 16)
 
   cgen.s.pop(regR8.reg) # get the pointer that was in rax which is likely gone now
-
 
 export x64assembler
