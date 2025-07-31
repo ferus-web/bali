@@ -916,6 +916,15 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 proc getCompilationJudgement*(
     interpreter: PulsarInterpreter, clause: Clause
 ): CompilationJudgement =
+  # If we haven't executed 50K frames yet, don't bother
+  # optimizing yet. The dispatch ratio for this function will
+  # be _obscenely_ high (and inaccurate!) below this threshold.
+  #
+  # Beyond 50K dispatches, we can start to make educated
+  # guesses properly.
+  #
+  # (Also, we really shouldn't be JITting short-lived
+  # scripts anyways.)
   if interpreter.profTotalFrames < 50_000:
     # TODO: Make this a configurable value. Don't make it variable during
     # the runtime for deterministicness' sake.
@@ -941,12 +950,28 @@ proc getCompilationJudgement*(
 proc shouldCompile*(
     interpreter: PulsarInterpreter, clause: var Clause
 ): tuple[gettingCompiled: bool, tier: Option[Tier]] =
+  ## This routine takes in a clause and decides
+  ## whether it is worthy of getting compiled.
+  ##
+  ## It also caches the result to prevent the expensive
+  ## judgement-calculation logic from being executed
+  ## constantly.
+  ##
+  ## **NOTE**: This routine will _NEVER_ ask for a
+  ## clause to be demoted to a lower tier compiler.
   if *clause.cachedJudgement and
       &clause.cachedJudgement == CompilationJudgement.Ineligible:
     return (gettingCompiled: false, tier: none(Tier))
 
-  let judgement = interpreter.getCompilationJudgement(clause)
-  clause.cachedJudgement = some(judgement)
+  var judgement = interpreter.getCompilationJudgement(clause)
+
+  # Don't demote highly optimized functions. We already have fast versions,
+  # why bother spending time deoptimizing them (or worse,
+  # running them in the interpreter) for no reason?
+  if *clause.cachedJudgement and judgement < &clause.cachedJudgement:
+    judgement = &clause.cachedJudgement
+  else:
+    clause.cachedJudgement = some(judgement)
 
   # TODO: implement more heuristics
   case judgement
