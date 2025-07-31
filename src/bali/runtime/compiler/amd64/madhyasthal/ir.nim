@@ -26,7 +26,7 @@ type
     avkPos
     avkStr
     avkNum
-  
+
   Reg* = uint32
 
   ArgVariant* = object
@@ -40,7 +40,7 @@ type
     kind*: InstKind
     args*: array[2, ArgVariant]
 
-  Function* = ref object
+  Function* = object
     name*: string
     insts*: seq[Inst]
 
@@ -48,66 +48,68 @@ type
 func loadStr*(pos: uint32, str: string): Inst =
   Inst(
     kind: InstKind.LoadString,
-    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant(kind: avkStr, str: str)]
+    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant(kind: avkStr, str: str)],
   )
 
 func loadUndefined*(pos: uint32): Inst =
   Inst(
     kind: InstKind.LoadUndefined,
-    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant()]
+    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant()],
   )
 
 func loadNumber*(pos: uint32, value: float): Inst =
   Inst(
     kind: InstKind.LoadNumber,
-    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant(kind: avkNum, flt: value)]
+    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant(kind: avkNum, flt: value)],
   )
 
 func loadBoolean*(pos: uint32, value: bool | int): Inst =
   Inst(
     kind: InstKind.LoadBoolean,
-    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant(kind: avkInt, vint: cast[int](value))]
+    args: [
+      ArgVariant(kind: avkPos, vreg: pos),
+      ArgVariant(kind: avkInt, vint: cast[int](value)),
+    ],
   )
 
 func loadNull*(pos: uint32): Inst =
   Inst(
-    kind: InstKind.LoadNull,
-    args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant()]
+    kind: InstKind.LoadNull, args: [ArgVariant(kind: avkPos, vreg: pos), ArgVariant()]
   )
 
 func zeroRetval*(): Inst =
-  Inst(
-    kind: InstKind.ZeroRetval,
-    args: [ArgVariant(), ArgVariant()]
-  )
+  Inst(kind: InstKind.ZeroRetval, args: [ArgVariant(), ArgVariant()])
 
 func readProperty*(sourcePos: uint32, field: string): Inst =
   Inst(
     kind: InstKind.ReadProperty,
-    args: [ArgVariant(kind: avkPos, vreg: sourcePos), ArgVariant(kind: avkStr, str: field)]
+    args:
+      [ArgVariant(kind: avkPos, vreg: sourcePos), ArgVariant(kind: avkStr, str: field)],
   )
 
 func readScalarRegister*(register: Register, dest: uint32): Inst =
   Inst(
     kind: InstKind.ReadScalarRegister,
-    args: [ArgVariant(kind: avkInt, vint: int(register)), ArgVariant(kind: avkPos, vreg: dest)]
+    args: [
+      ArgVariant(kind: avkInt, vint: int(register)),
+      ArgVariant(kind: avkPos, vreg: dest),
+    ],
   )
 
 func loadBytecodeCallable*(dest: uint32, name: string): Inst =
   Inst(
     kind: InstKind.LoadBytecodeCallable,
-    args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant(kind: avkStr, str: name)]
+    args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant(kind: avkStr, str: name)],
   )
 
 func passArgument*(dest: uint32): Inst =
   Inst(
     kind: InstKind.PassArgument,
-    args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant()]
+    args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant()],
   )
 
 func invoke*(dest: uint32): Inst =
   Inst(
-    kind: InstKind.Invoke,
-    args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant()]
+    kind: InstKind.Invoke, args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant()]
   )
 {.pop.}

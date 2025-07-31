@@ -1072,39 +1072,56 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
   let callbacks = VMCallbacks(
     addAtom: addAtom,
     getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
+      jitd "callback", "getAtom(index=" & $index & ')'
       let atom = vm.get(index.int)
       return &atom,
     copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
+      jitd "callback", "copyAtom(source=" & $source & "; dest=" & $dest & ')'
       vm.stack[dest] = &vm.get(source.int),
     resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
+      jitd "callback", "resetArgs()"
       vm.registers.callArgs.reset(),
     passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
+      jitd "callback", "passArgument(index=" & $index & ')'
       vm.registers.callArgs.add(&vm.get(index.int)),
     callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
+      jitd "callback", "callBytecodeClause(name=" & $name & ')'
       vm.trapped = true
       vm.call($name, default(Operation))
       vm.run(),
     invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
+      jitd "callback", "invoke(index=" & $index & ')'
       vm.trapped = true
       vm.invoke(&vm.get(index))
-      vm.run(),
+      vm.run()
+      vm.trapped = false,
     invokeStr: proc(vm: var PulsarInterpreter, index: cstring) {.cdecl.} =
+      jitd "callback", "invokeStr(index=" & $index & ')'
       vm.trapped = true
       vm.invoke(str($index))
       vm.run(),
     readVectorRegister: proc(
         vm: var PulsarInterpreter, store: uint, register: uint, index: uint
     ) {.cdecl.} =
+      jitd "callback",
+        "readVectorRegister(store=" & $store & "; register=" & $register & "; index=" &
+          $index & ')'
       vm.readRegister(store.int, register.int, index.int),
     zeroRetval: proc(vm: var PulsarInterpreter) {.cdecl.} =
+      jitd "callback", "zeroRetval()"
       vm.registers.retVal = none(JSValue),
     readScalarRegister: proc(
         vm: var PulsarInterpreter, store, register: uint
     ) {.cdecl.} =
+      jitd "callback",
+        "readScalarRegister(store=" & $store & "; register=" & $register & ')'
       vm.readRegister(store.int, register.int, 0),
     writeField: proc(
         vm: var PulsarInterpreter, position: int, source: int, field: cstring
     ) {.cdecl.} =
+      jitd "callback",
+        "writeField(position=" & $position & "; source=" & $source & "; field=" & $field &
+          ')'
       let field = $field
       var atom = vm.stack[position]
       let alreadyExists = field in atom.objFields
@@ -1122,6 +1139,7 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
 
       vm.stack[position] = atom,
     addRetval: proc(vm: var PulsarInterpreter, value: JSValue) {.cdecl.} =
+      jitd "callback", "addRetval()"
       vm.registers.retVal = some(value),
   )
 

@@ -3,8 +3,7 @@
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[logging, posix, options, tables]
 import
-  pkg/bali/runtime/compiler/amd64/madhyasthal/
-    [ir, lowering, pipeline, optimizer, dumper],
+  pkg/bali/runtime/compiler/amd64/madhyasthal/[ir, lowering, pipeline, optimizer],
   pkg/bali/runtime/compiler/amd64/[common, native_forwarding],
   pkg/bali/runtime/compiler/base
 import pkg/shakar
@@ -17,7 +16,6 @@ template alignStack(offset: uint, body: untyped) =
   cgen.s.add(regRsp.reg, offset)
 
 proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
-  echo dumpFunction(fn)
   for inst in fn.insts:
     case inst.kind
     of LoadNumber:
@@ -41,16 +39,17 @@ proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
         field = inst.args[1].str
 
       prepareLoadString(cgen, cstring(field))
+      cgen.s.push(regR8.reg)
 
-      alignStack 8:
+      alignStack 16:
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi, cast[int64](index))
         cgen.s.call(cgen.callbacks.getAtom)
 
+      cgen.s.pop(regRsi.reg)
       cgen.s.mov(regRdi.reg, regRax)
 
       alignStack 8:
-        cgen.s.mov(regRsi.reg, regR8)
         cgen.s.call(getProperty)
 
       cgen.s.mov(regRsi.reg, regRax)
@@ -58,8 +57,33 @@ proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
       alignStack 8:
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.call(cgen.callbacks.addRetval)
+    of ReadScalarRegister:
+      let
+        register = inst.args[0].vint
+        dest = inst.args[1].vreg
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, cast[int64](dest))
+        cgen.s.mov(regRdx, cast[int64](register))
+        cgen.s.call(cgen.callbacks.readScalarRegister)
+    of PassArgument:
+      let source = inst.args[0].vreg
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, cast[int64](source))
+        cgen.s.call(cgen.callbacks.passArgument)
+    of Invoke:
+      let index = inst.args[0].vreg
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(index))
+        cgen.s.call(cgen.callbacks.invoke)
     else:
       assert off, $inst.kind
+
+  cgen.s.ret()
+  some(cast[JITSegment](cgen.s.data))
 
 proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
   if clause.name in cgen.cached:

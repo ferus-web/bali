@@ -14,3 +14,5 @@ while (i < 10000)
 	i++
 	x() // do totally valid and not useless work
 }
+
+console.log("done")
