@@ -16,4 +16,7 @@ use_directory_urls: true
 nav:
   - Getting started with Bali: MANUAL.md
   - Code Style: CODE_STYLE.md
-  - Architectural Notes: ARCHITECTURE.md 
+  - Architectural Notes: ARCHITECTURE.md
+  - Bali's JIT compilers:
+    - Baseline: BASELINE.md
+    - Midtier/Madhyasthal: MADHYASTHAL.md
