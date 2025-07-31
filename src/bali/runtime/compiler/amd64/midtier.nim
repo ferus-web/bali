@@ -18,7 +18,7 @@ template alignStack(offset: uint, body: untyped) =
 proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
   for inst in fn.insts:
     case inst.kind
-    of LoadNumber:
+    of InstKind.LoadNumber:
       let
         index = inst.args[0].vreg
         num = inst.args[1].flt
@@ -33,7 +33,7 @@ proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
       alignStack 8:
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.call(cgen.callbacks.addAtom)
-    of ReadProperty:
+    of InstKind.ReadProperty:
       let
         index = inst.args[0].vreg
         field = inst.args[1].str
@@ -57,7 +57,7 @@ proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
       alignStack 8:
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.call(cgen.callbacks.addRetval)
-    of ReadScalarRegister:
+    of InstKind.ReadScalarRegister:
       let
         register = inst.args[0].vint
         dest = inst.args[1].vreg
@@ -67,20 +67,37 @@ proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
         cgen.s.mov(regRsi, cast[int64](dest))
         cgen.s.mov(regRdx, cast[int64](register))
         cgen.s.call(cgen.callbacks.readScalarRegister)
-    of PassArgument:
+    of InstKind.PassArgument:
       let source = inst.args[0].vreg
       alignStack 8:
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi, cast[int64](source))
         cgen.s.call(cgen.callbacks.passArgument)
-    of Invoke:
+    of InstKind.Invoke:
       let index = inst.args[0].vreg
       alignStack 8:
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi, int64(index))
         cgen.s.call(cgen.callbacks.invoke)
+    of InstKind.LoadString:
+      let
+        dest = inst.args[0].vreg
+        str = inst.args[1].str
+
+      prepareLoadString(cgen, cstring(str))
+
+      alignStack 8:
+        cgen.s.mov(regRdi.reg, regR8)
+        cgen.s.call(strRaw)
+
+      cgen.s.mov(regRsi.reg, regRax)
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRdx, int64(dest))
     else:
-      assert off, $inst.kind
+      debug "jit/amd64: midtier cannot lower op into x64 code: " & $inst.kind
+      return
 
   cgen.s.ret()
   some(cast[JITSegment](cgen.s.data))
