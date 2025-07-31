@@ -2,6 +2,9 @@
 Bali (ˈbɑːli) is a work-in-progress JavaScript lexer, parser and interpreter written in Nim that aims to be as compliant as possible to the ECMAScript specifications. \
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
 
+Bali has a bytecode VM as well as two tiers of x86-64 JIT compilers (baseline and midtier).
+It also has a tiering mechanism in place to promote functions from the VM -> Baseline -> Midtier as they get hotter.
+
 # Integrating Bali into your programs
 Bali is still an alpha-quality project, but here's how you can embed Bali into your Nim programs.
 With it, you can:
@@ -150,6 +153,6 @@ runtime.run()
 - [X] For-loops
 - [X] Try-catch clauses
 - [X] Compound assignments
-- [X] x86-64 JIT compiler
+- [X] x86-64 JIT compiler (2 tiers)
 - [ ] Modules
 - [ ] Async

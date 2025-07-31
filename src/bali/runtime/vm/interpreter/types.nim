@@ -17,6 +17,7 @@ type
     Ineligible
       ## This function has caused the JIT to bail out before - do not attempt to compile it. It'll just waste time.
     Eligible ## This function might be worth compiling.
+    WarmingUp ## This function is warming up - it's best compiled with the midtier JIT.
 
   InvalidRegisterRead* = object of Defect
 

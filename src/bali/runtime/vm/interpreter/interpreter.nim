@@ -10,7 +10,7 @@ import pkg/[shakar]
 
 when hasJITSupport:
   when defined(amd64):
-    import bali/runtime/compiler/amd64/codegen
+    import bali/runtime/compiler/amd64/[common, baseline, midtier]
   else:
     {.
       error:
@@ -43,7 +43,8 @@ type
     registers*: Registers
 
     when defined(amd64):
-      jit*: AMD64Codegen
+      baseline*: BaselineJIT
+      midtier*: MidtierJIT
       useJit*: bool = true
 
     trapped*: bool = false
@@ -915,6 +916,15 @@ proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.}
 proc getCompilationJudgement*(
     interpreter: PulsarInterpreter, clause: Clause
 ): CompilationJudgement =
+  # If we haven't executed 50K frames yet, don't bother
+  # optimizing yet. The dispatch ratio for this function will
+  # be _obscenely_ high (and inaccurate!) below this threshold.
+  #
+  # Beyond 50K dispatches, we can start to make educated
+  # guesses properly.
+  #
+  # (Also, we really shouldn't be JITting short-lived
+  # scripts anyways.)
   if interpreter.profTotalFrames < 50_000:
     # TODO: Make this a configurable value. Don't make it variable during
     # the runtime for deterministicness' sake.
@@ -924,24 +934,53 @@ proc getCompilationJudgement*(
   let dispatchRatio =
     float(clause.profIterationsSpent.int / interpreter.profTotalFrames.int) * 100f
 
-  # TODO: Add a `jitd` template? It should log JIT debug messages if the JIT is available and debugging is enabled
-  vmd "profiler",
+  jitd "profiler",
     "dispatch ratio (" & clause.name & "): " & $dispatchRatio & "% (total frames: " &
       $interpreter.profTotalFrames & "; dominated: " & $clause.profIterationsSpent & ')'
 
-  if dispatchRatio > 20f:
-    return CompilationJudgement.Eligible
+  # These totally scientific and empirical values are used as thresholds to see when a function is worth
+  # compiling and with what tier. The source is a secret, just to make sure the likes of Google cannot steal
+  # my hard, impressive work.
 
-proc shouldCompile*(interpreter: PulsarInterpreter, clause: var Clause): bool =
+  if dispatchRatio > 25f and dispatchRatio < 35f:
+    return CompilationJudgement.Eligible
+  elif dispatchRatio >= 35f:
+    return CompilationJudgement.WarmingUp
+
+proc shouldCompile*(
+    interpreter: PulsarInterpreter, clause: var Clause
+): tuple[gettingCompiled: bool, tier: Option[Tier]] =
+  ## This routine takes in a clause and decides
+  ## whether it is worthy of getting compiled.
+  ##
+  ## It also caches the result to prevent the expensive
+  ## judgement-calculation logic from being executed
+  ## constantly.
+  ##
+  ## **NOTE**: This routine will _NEVER_ ask for a
+  ## clause to be demoted to a lower tier compiler.
   if *clause.cachedJudgement and
       &clause.cachedJudgement == CompilationJudgement.Ineligible:
-    return false
+    return (gettingCompiled: false, tier: none(Tier))
 
-  let judgement = interpreter.getCompilationJudgement(clause)
-  clause.cachedJudgement = some(judgement)
+  var judgement = interpreter.getCompilationJudgement(clause)
+
+  # Don't demote highly optimized functions. We already have fast versions,
+  # why bother spending time deoptimizing them (or worse,
+  # running them in the interpreter) for no reason?
+  if *clause.cachedJudgement and judgement < &clause.cachedJudgement:
+    judgement = &clause.cachedJudgement
+  else:
+    clause.cachedJudgement = some(judgement)
 
   # TODO: implement more heuristics
-  judgement == CompilationJudgement.Eligible
+  case judgement
+  of CompilationJudgement.Eligible:
+    return (gettingCompiled: true, tier: some(Tier.Baseline))
+  of CompilationJudgement.WarmingUp:
+    return (gettingCompiled: true, tier: some(Tier.Midtier))
+  else:
+    discard
 
 proc run*(interpreter: var PulsarInterpreter) =
   while not interpreter.halt:
@@ -980,10 +1019,21 @@ proc run*(interpreter: var PulsarInterpreter) =
     # If this clause is considered hot, consider compiling it.
     if interpreter.currIndex == 0 and hasJITSupport and interpreter.useJit and
         not interpreter.trapped:
-      if interpreter.shouldCompile(clause):
+      let (gettingCompiled, tier) = interpreter.shouldCompile(clause)
+      if gettingCompiled:
         # TODO: JIT'd functions should be able to call other JIT'd segments
-        vmd "fetch", "has jit support, compiling clause " & clause.name
-        let compiled = interpreter.jit.compile(clause)
+        jitd "fetch",
+          "has jit support, compiling clause " & clause.name & " with JIT tier `" & $tier &
+            '`'
+        let compiled =
+          case &tier
+          of Tier.Baseline:
+            interpreter.baseline.compile(clause)
+          of Tier.Midtier:
+            interpreter.midtier.compile(clause)
+          else:
+            unreachable
+            none(JITSegment)
 
         if *compiled:
           clause.compiled = true
@@ -1002,7 +1052,7 @@ proc run*(interpreter: var PulsarInterpreter) =
 
           continue
         else:
-          vmd "execute",
+          jitd "execute",
             "cannot compile segment: " & clause.name & ", falling back to VM"
           clause.cachedJudgement = some(CompilationJudgement.Ineligible)
 
@@ -1027,71 +1077,102 @@ proc run*(interpreter: var PulsarInterpreter) =
     interpreter.clauses[clauseIndex] = move(clause)
     vmd "execute", "saved op state"
 
-proc initJITForPlatform(vm: pointer, callbacks: VMCallbacks): auto =
-  assert(vm != nil)
-  assert(hasJITSupport, "Platform does not have a JIT compiler implementation!")
+when defined(amd64):
+  proc initJITForPlatform(
+      vm: pointer, callbacks: VMCallbacks, tier: Tier
+  ): AMD64Codegen =
+    assert(vm != nil)
+    assert(hasJITSupport, "Platform does not have a JIT compiler implementation!")
 
-  when defined(amd64):
-    return initAMD64CodeGen(vm, callbacks)
+    when defined(amd64):
+      case tier
+      of Tier.Baseline:
+        return initAMD64BaselineCodegen(vm, callbacks)
+      of Tier.Midtier:
+        return initAMD64MidtierCodegen(vm, callbacks)
+      else:
+        unreachable
 
 proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
+  let callbacks = VMCallbacks(
+    addAtom: addAtom,
+    getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
+      jitd "callback", "getAtom(index=" & $index & ')'
+      let atom = vm.get(index.int)
+      return &atom,
+    copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
+      jitd "callback", "copyAtom(source=" & $source & "; dest=" & $dest & ')'
+      vm.stack[dest] = &vm.get(source.int),
+    resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
+      jitd "callback", "resetArgs()"
+      vm.registers.callArgs.reset(),
+    passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
+      jitd "callback", "passArgument(index=" & $index & ')'
+      vm.registers.callArgs.add(&vm.get(index.int)),
+    callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
+      jitd "callback", "callBytecodeClause(name=" & $name & ')'
+      vm.trapped = true
+      vm.call($name, default(Operation))
+      vm.run(),
+    invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
+      jitd "callback", "invoke(index=" & $index & ')'
+      vm.trapped = true
+      vm.invoke(&vm.get(index))
+      vm.run()
+      vm.trapped = false,
+    invokeStr: proc(vm: var PulsarInterpreter, index: cstring) {.cdecl.} =
+      jitd "callback", "invokeStr(index=" & $index & ')'
+      vm.trapped = true
+      vm.invoke(str($index))
+      vm.run(),
+    readVectorRegister: proc(
+        vm: var PulsarInterpreter, store: uint, register: uint, index: uint
+    ) {.cdecl.} =
+      jitd "callback",
+        "readVectorRegister(store=" & $store & "; register=" & $register & "; index=" &
+          $index & ')'
+      vm.readRegister(store.int, register.int, index.int),
+    zeroRetval: proc(vm: var PulsarInterpreter) {.cdecl.} =
+      jitd "callback", "zeroRetval()"
+      vm.registers.retVal = none(JSValue),
+    readScalarRegister: proc(
+        vm: var PulsarInterpreter, store, register: uint
+    ) {.cdecl.} =
+      jitd "callback",
+        "readScalarRegister(store=" & $store & "; register=" & $register & ')'
+      vm.readRegister(store.int, register.int, 0),
+    writeField: proc(
+        vm: var PulsarInterpreter, position: int, source: int, field: cstring
+    ) {.cdecl.} =
+      jitd "callback",
+        "writeField(position=" & $position & "; source=" & $source & "; field=" & $field &
+          ')'
+      let field = $field
+      var atom = vm.stack[position]
+      let alreadyExists = field in atom.objFields
+      let index =
+        if alreadyExists:
+          atom.objFields[field]
+        else:
+          atom.objValues.len
+
+      if alreadyExists:
+        atom.objValues[index] = &vm.get(source)
+      else:
+        atom.objValues &= &vm.get(source)
+        atom.objFields[field] = index
+
+      vm.stack[position] = atom,
+    addRetval: proc(vm: var PulsarInterpreter, value: JSValue) {.cdecl.} =
+      jitd "callback", "addRetval()"
+      vm.registers.retVal = some(value),
+  )
+
   when hasJITSupport:
-    interp[].jit = initJITForPlatform(
-      interp,
-      VMCallbacks(
-        addAtom: addAtom,
-        getAtom: proc(vm: PulsarInterpreter, index: uint): JSValue {.cdecl.} =
-          let atom = vm.get(index.int)
-          return &atom,
-        copyAtom: proc(vm: var PulsarInterpreter, source, dest: uint) {.cdecl.} =
-          vm.stack[dest] = &vm.get(source.int),
-        resetArgs: proc(vm: var PulsarInterpreter) {.cdecl.} =
-          vm.registers.callArgs.reset(),
-        passArgument: proc(vm: var PulsarInterpreter, index: uint) {.cdecl.} =
-          vm.registers.callArgs.add(&vm.get(index.int)),
-        callBytecodeClause: proc(vm: var PulsarInterpreter, name: cstring) {.cdecl.} =
-          vm.trapped = true
-          vm.call($name, default(Operation))
-          vm.run(),
-        invoke: proc(vm: var PulsarInterpreter, index: int64) {.cdecl.} =
-          vm.trapped = true
-          vm.invoke(&vm.get(index))
-          vm.run(),
-        invokeStr: proc(vm: var PulsarInterpreter, index: cstring) {.cdecl.} =
-          vm.trapped = true
-          vm.invoke(str($index))
-          vm.run(),
-        readVectorRegister: proc(
-            vm: var PulsarInterpreter, store: uint, register: uint, index: uint
-        ) {.cdecl.} =
-          vm.readRegister(store.int, register.int, index.int),
-        zeroRetval: proc(vm: var PulsarInterpreter) {.cdecl.} =
-          vm.registers.retVal = none(JSValue),
-        readScalarRegister: proc(
-            vm: var PulsarInterpreter, store, register: uint
-        ) {.cdecl.} =
-          vm.readRegister(store.int, register.int, 0),
-        writeField: proc(
-            vm: var PulsarInterpreter, position: int, source: int, field: cstring
-        ) {.cdecl.} =
-          let field = $field
-          var atom = vm.stack[position]
-          let alreadyExists = field in atom.objFields
-          let index =
-            if alreadyExists:
-              atom.objFields[field]
-            else:
-              atom.objValues.len
+    interp[].baseline =
+      BaselineJIT(initJITForPlatform(interp, callbacks, Tier.Baseline))
 
-          if alreadyExists:
-            atom.objValues[index] = &vm.get(source)
-          else:
-            atom.objValues &= &vm.get(source)
-            atom.objFields[field] = index
-
-          vm.stack[position] = atom,
-      ),
-    )
+    interp[].midtier = MidtierJIT(initJITForPlatform(interp, callbacks, Tier.Midtier))
 
 proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
   var interp = cast[ptr PulsarInterpreter](allocShared(sizeof(PulsarInterpreter)))
