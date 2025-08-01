@@ -104,6 +104,7 @@ proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
       return
 
   cgen.s.ret()
+  cgen.cached[fn.name] = cast[JITSegment](cgen.s.data)
   some(cast[JITSegment](cgen.s.data))
 
 proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
