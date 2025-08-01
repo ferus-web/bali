@@ -302,3 +302,30 @@ proc generateStdIr*(runtime: Runtime) =
       ret runtime.newJSString(strVal[fromVal .. toVal])
     ,
   )
+
+  runtime.definePrototypeFn(
+    JSString,
+    "charAt",
+    proc(value: JSValue) =
+      ## 22.1.3.2 String.prototype.charAt ( pos )
+
+      # 1. Let O be ? RequireObjectCoercible(this value).
+      let value = runtime.RequireObjectCoercible(value)
+
+      # 2. Let S be ? ToString(O).
+      let str = runtime.ToString(value)
+
+      # 3. Let position be ? ToIntegerOrInfinity(pos).
+      let pos = int(runtime.ToNumber(&runtime.argument(1)))
+
+      # 4. Let size be the length of S.
+      let size = str.len
+
+      # 5. If position < 0 or position ≥ size, return the empty String.
+      if pos < 0 or pos >= size:
+        ret newJSString(runtime, newString(0))
+
+      # 6. Return the substring of S from position to position + 1.
+      ret newJSString(runtime, str[pos ..< pos + 1])
+    ,
+  )
