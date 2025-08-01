@@ -133,18 +133,18 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSSet,
     "has",
-    proc(setValue: JSValue) =
+    proc(setAtom: JSValue) =
       ## 24.2.4.8 Set.prototype.has ( value )
 
       # 1. Let S be the this value.
       # 2. Perform ? RequireInternalSlot(S, [[SetData]]).
-      runtime.RequireInternalSlot(setValue, JSSet)
+      runtime.RequireInternalSlot(setAtom, JSSet)
 
       # 3. Set value to CanonicalizeKeyedCollectionKey(value).
       let value = &runtime.argument(1)
 
       # 4. For each element e of S.[[SetData]], do
-      var data = &(&setValue.tagged("internal")).getSequence()
+      let data = &(&setAtom.tagged("internal")).getSequence()
 
       for i, _ in data:
         # i. If e is not empty and SameValue(e, value) is true, return true.
@@ -154,5 +154,24 @@ proc generateStdIR*(runtime: Runtime) =
 
       # 5. Return false.
       ret false
+    ,
+  )
+
+  runtime.definePrototypeFn(
+    JSSet,
+    "clear",
+    proc(setAtom: JSValue) =
+      ## 24.2.4.1 Set.prototype.add ( value )
+
+      # 1. Let S be the this value.
+      # 2. Perform ? RequireInternalSlot(S, [[SetData]]).
+      runtime.RequireInternalSlot(setAtom, JSSet)
+
+      # 3. For each element e of S.[[SetData]], do
+      # a. Replace the element of S.[[SetData]] whose value is e with an element whose value is empty.
+      setAtom.tag("internal", sequence(newSeq[MAtom](0)))
+
+      # 4. Return undefined.
+      ret undefined()
     ,
   )

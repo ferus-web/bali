@@ -327,6 +327,9 @@ The Set type uses a Sequence atom under the hood, with guards to ensure that no 
 - `Set.prototype.toString()`
 - `Set.prototype.add()`
 - `Set.prototype.size()`
+- `Set.prototype.delete()`
+- `Set.prototype.has()`
+- `Set.prototype.clear()`
 
 **WARNING**: The `Set` type can handle recursion easily, **but other routines may not!** Calling `ToString()` on a recursive `Set` is known to cause a segmentation fault caused due to a stack overflow caused by infinite recursion.
 ```js

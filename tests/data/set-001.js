@@ -25,3 +25,8 @@ assert.sameValue(x.has(1337), false)
 assert.sameValue(x.has(87), true)
 assert.sameValue(x.has(32), false)
 assert.sameValue(x.has("the last thing you want in your burger king burger"), false)
+
+// Set.prototype.clear()
+assert.sameValue(x.clear(), undefined)
+assert.sameValue(x.size(), 0)
+assert.sameValue(x.has(87), false)
