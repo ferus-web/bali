@@ -91,3 +91,41 @@ proc generateStdIR*(runtime: Runtime) =
       ret count
     ,
   )
+
+  runtime.definePrototypeFn(
+    JSSet,
+    "delete",
+    proc(setAtom: JSValue) =
+      ## 24.2.4.4 Set.prototype.delete ( value )
+
+      # 1. Let S be the this value.
+      # 2. Perform ? RequireInternalSlot(S, [[SetData]]).
+      runtime.RequireInternalSlot(setAtom, JSSet)
+
+      # 3. Set value to CanonicalizeKeyedCollectionKey(value).
+      let value = &runtime.argument(1)
+
+      # 4. For each element e of S.[[SetData]], do
+      var data = &(&setAtom.tagged("internal")).getSequence()
+
+      var index = -1
+      for i, elem in data:
+        # a. If e is not empty and SameValue(e, value) is true, then
+        # FIXME: Non-compliant.
+
+        if isStrictlyEqual(runtime, data[i].addr, value):
+          index = i
+          break
+
+      let found = index != -1
+      if found:
+        # i. Replace the element of S.[[SetData]] whose value is e with an element whose value is empty.
+        data.delete(index)
+        setAtom.tag("internal", sequence(move(data)))
+
+        # ii. Return true.
+        ret true
+
+      ret false
+    ,
+  )
