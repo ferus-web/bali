@@ -129,3 +129,30 @@ proc generateStdIR*(runtime: Runtime) =
       ret false
     ,
   )
+
+  runtime.definePrototypeFn(
+    JSSet,
+    "has",
+    proc(setValue: JSValue) =
+      ## 24.2.4.8 Set.prototype.has ( value )
+
+      # 1. Let S be the this value.
+      # 2. Perform ? RequireInternalSlot(S, [[SetData]]).
+      runtime.RequireInternalSlot(setValue, JSSet)
+
+      # 3. Set value to CanonicalizeKeyedCollectionKey(value).
+      let value = &runtime.argument(1)
+
+      # 4. For each element e of S.[[SetData]], do
+      var data = &(&setValue.tagged("internal")).getSequence()
+
+      for i, _ in data:
+        # i. If e is not empty and SameValue(e, value) is true, return true.
+        # FIXME: Non-compliant.
+        if isStrictlyEqual(runtime, data[i].addr, value):
+          ret true
+
+      # 5. Return false.
+      ret false
+    ,
+  )
