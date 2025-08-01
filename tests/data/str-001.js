@@ -6,3 +6,5 @@ assert.sameValue(x.charAt(1), "e")
 assert.sameValue(x.charAt(2), "l")
 assert.sameValue(x.charAt(3), "l")
 assert.sameValue(x.charAt(4), "o")
+
+assert.sameValue(x.at(0), "h")

@@ -329,3 +329,40 @@ proc generateStdIr*(runtime: Runtime) =
       ret newJSString(runtime, str[pos ..< pos + 1])
     ,
   )
+
+  runtime.definePrototypeFn(
+    JSString,
+    "at",
+    proc(value: JSValue) =
+      ## 22.1.3.1 String.prototype.at ( index )
+
+      # 1. Let O be ? RequireObjectCoercible(this value).
+      let value = runtime.RequireObjectCoercible(value)
+
+      # 2. Let S be ? ToString(O).
+      let str = runtime.ToString(value)
+
+      # 3. Let len be the length of S.
+      let size = str.len
+
+      # 4. Let relativeIndex be ? ToIntegerOrInfinity(index).
+      let relativeIndex = int(runtime.ToNumber(&runtime.argument(1)))
+
+      let k: int =
+        if relativeIndex >= 0:
+          # 5. If relativeIndex ≥ 0, then
+          # a. Let k be relativeIndex.
+          relativeIndex
+        else:
+          # 6. Else,
+          # a. Let k be len + relativeIndex.
+          size + relativeIndex
+
+      # 7. If k < 0 or k ≥ len, return undefined.
+      if k < 0 or k >= size:
+        ret undefined()
+
+      # 8. Return the substring of S from k to k + 1.
+      ret newJSString(runtime, str[k ..< k + 1])
+    ,
+  )

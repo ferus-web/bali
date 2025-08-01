@@ -293,6 +293,8 @@ This is perhaps the most complete implemented-by-Bali ECMAScript type here. It u
 - `String.fromCharCode()`
 - `String.prototype.codePointAt()`
 - `String.prototype.substring()`
+- `String.prototype.charAt()`
+- `String.prototype.at()`
 
 ## The Date type
 This is yet another well-implemented-by-Bali ECMAScript type. It uses a mixture of [LibICU](https://unicode-org.github.io/icu/userguide/icu/) and internal math-based logic, mostly translated from Ladybird's LibJS.
