@@ -30,14 +30,7 @@ proc generateStdIR*(runtime: Runtime) =
       # FIXME: non-compliant.
       # this just exists to make primitive coercion happy
 
-      var setVal = &(&setAtom.tagged("internal")).getSequence()
-      var str = "{"
-      for i, elem in setVal:
-        str &= ' ' & runtime.ToString(setVal[i].addr)
-        if i < setVal.len - 1:
-          str &= ','
-
-      ret str & " }"
+      ret "[object Set]"
     ,
   )
 
