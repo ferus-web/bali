@@ -524,11 +524,15 @@ Options:
   --evaluate-bytecode, -B                 Evaluate the provided source as bytecode instead of parsing it as JavaScript.
 
 Codegen Flags:
-  --disable-loop-elision                  Don't attempt to elide loops in the IR generation phase.
+  --disable-loop-elision                  Don't attempt to elide loops in the bytecode generation phase.
   --disable-loop-allocation-elim          Don't attempt to rewrite loops to avoid unnecessary atom allocations.
   --aggressively-free-retvals             Aggressively zero-out the return-value register.
   --disable-dead-code-elim                Disable dead code elimination during the codegen phase.
+
+JIT Compiler Flags:
   --disable-jit                           Disable the baseline JIT compiler.
+  --madhyasthal-dump-ir-fns:<a>;<b>;...   This tells Madhyasthal (the midtier JIT) to dump optimized IR to the standard output for the following functions
+                                          when they are queued to be compiled
 """ %
     [name, Version]
   quit(0)
