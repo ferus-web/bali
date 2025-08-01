@@ -331,14 +331,6 @@ The Set type uses a Sequence atom under the hood, with guards to ensure that no 
 - `Set.prototype.has()`
 - `Set.prototype.clear()`
 
-**WARNING**: The `Set` type can handle recursion easily, **but other routines may not!** Calling `ToString()` on a recursive `Set` is known to cause a segmentation fault caused due to a stack overflow caused by infinite recursion.
-```js
-var x = new Set;
-x.add(x) // this is just fine.
-
-console.log(x) // This ends up calling `Set.prototype.toString()`, which ends up calling `ToString()` on its elements and... I think you get the point.
-```
-
 # Using Balde
 Balde, short for "**Bal**i **de**bugger" is a CLI tool that acts both as a script runner and a REPL.
 
