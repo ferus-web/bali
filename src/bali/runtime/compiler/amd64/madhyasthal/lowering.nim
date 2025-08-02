@@ -169,6 +169,11 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
 
       fn.insts &=
         copy(uint32(&op.arguments[0].getInt()), uint32(&op.arguments[1].getInt()))
+    of Sub:
+      let op = stream.consume()
+
+      fn.insts &=
+        sub(uint32(&op.arguments[0].getInt()), uint32(&op.arguments[1].getInt()))
     else:
       bailout "cannot find predictable pattern"
 

@@ -127,6 +127,35 @@ proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
         cgen.s.mov(regRsi.reg, regRax)
         cgen.s.mov(regRdx, int64(dest))
         cgen.s.call(cgen.callbacks.addAtom)
+    of InstKind.Sub:
+      let
+        source = inst.args[0].vreg
+        dest = inst.args[1].vreg
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(source))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+        cgen.s.mov(regRdi.reg, regRax)
+        cgen.s.call(getRawFloat)
+        cgen.s.movsd(regXmm1, regXmm0.reg)
+
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(dest))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+        cgen.s.mov(regRdi.reg, regRax)
+        cgen.s.call(getRawFloat)
+
+        cgen.s.subsd(regXmm1, regXmm0.reg)
+        cgen.s.movsd(regXmm0, regXmm1.reg)
+        cgen.s.call(allocFloat)
+
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi.reg, regRax)
+        cgen.s.mov(regRdx, int64(dest))
+        cgen.s.call(cgen.callbacks.addAtom)
     of InstKind.Copy:
       let
         source = inst.args[0].vreg

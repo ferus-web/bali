@@ -17,6 +17,7 @@ type
     Invoke
     Add
     Copy
+    Sub
 
   Register* {.size: sizeof(uint8), pure.} = enum
     ReturnValue = 0
@@ -124,6 +125,12 @@ func add*(a, b: uint32): Inst =
 func copy*(source, dest: uint32): Inst =
   Inst(
     kind: InstKind.Copy,
+    args: [ArgVariant(kind: avkPos, vreg: source), ArgVariant(kind: avkPos, vreg: dest)],
+  )
+
+func sub*(source, dest: uint32): Inst =
+  Inst(
+    kind: InstKind.Sub,
     args: [ArgVariant(kind: avkPos, vreg: source), ArgVariant(kind: avkPos, vreg: dest)],
   )
 {.pop.}

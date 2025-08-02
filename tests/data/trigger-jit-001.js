@@ -5,7 +5,7 @@ function x() {
 	let other_thing = 8;
 	let other_thing = 8;
 	let other_thing = 8;
-	console.log(other_thing + 2.5)
+	console.log(other_thing - 2.5)
 }
 
 var i = 0;
