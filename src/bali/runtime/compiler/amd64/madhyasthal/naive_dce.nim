@@ -32,6 +32,9 @@ proc scanForUsedRegs*(pipeline: var pipeline.Pipeline, used: var HashSet[ir.Reg]
     case inst.kind
     of {InstKind.PassArgument, InstKind.Invoke}:
       used.incl inst.args[0].vreg
+    of {InstKind.Add}:
+      used.incl inst.args[0].vreg
+      used.incl inst.args[1].vreg
     else:
       discard
 

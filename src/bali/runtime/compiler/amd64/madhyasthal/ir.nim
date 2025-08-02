@@ -15,6 +15,8 @@ type
     LoadBytecodeCallable
     PassArgument
     Invoke
+    Add
+    Copy
 
   Register* {.size: sizeof(uint8), pure.} = enum
     ReturnValue = 0
@@ -111,5 +113,17 @@ func passArgument*(dest: uint32): Inst =
 func invoke*(dest: uint32): Inst =
   Inst(
     kind: InstKind.Invoke, args: [ArgVariant(kind: avkPos, vreg: dest), ArgVariant()]
+  )
+
+func add*(a, b: uint32): Inst =
+  Inst(
+    kind: InstKind.Add,
+    args: [ArgVariant(kind: avkPos, vreg: a), ArgVariant(kind: avkPos, vreg: b)],
+  )
+
+func copy*(source, dest: uint32): Inst =
+  Inst(
+    kind: InstKind.Copy,
+    args: [ArgVariant(kind: avkPos, vreg: source), ArgVariant(kind: avkPos, vreg: dest)],
   )
 {.pop.}

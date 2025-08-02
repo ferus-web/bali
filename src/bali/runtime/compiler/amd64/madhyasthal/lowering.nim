@@ -159,6 +159,16 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
 
       fn.insts &=
         loadNumber(uint32(&op.arguments[0].getInt()), &op.arguments[1].getNumeric())
+    of Add:
+      let op = stream.consume()
+
+      fn.insts &=
+        add(uint32(&op.arguments[0].getInt()), uint32(&op.arguments[1].getInt()))
+    of CopyAtom:
+      let op = stream.consume()
+
+      fn.insts &=
+        copy(uint32(&op.arguments[0].getInt()), uint32(&op.arguments[1].getInt()))
     else:
       bailout "cannot find predictable pattern"
 
