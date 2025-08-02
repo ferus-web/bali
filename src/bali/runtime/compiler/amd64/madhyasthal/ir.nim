@@ -18,6 +18,8 @@ type
     Add
     Copy
     Sub
+    Mult
+    Divide
 
   Register* {.size: sizeof(uint8), pure.} = enum
     ReturnValue = 0
@@ -131,6 +133,18 @@ func copy*(source, dest: uint32): Inst =
 func sub*(source, dest: uint32): Inst =
   Inst(
     kind: InstKind.Sub,
+    args: [ArgVariant(kind: avkPos, vreg: source), ArgVariant(kind: avkPos, vreg: dest)],
+  )
+
+func mult*(source, dest: uint32): Inst =
+  Inst(
+    kind: InstKind.Mult,
+    args: [ArgVariant(kind: avkPos, vreg: source), ArgVariant(kind: avkPos, vreg: dest)],
+  )
+
+func divide*(source, dest: uint32): Inst =
+  Inst(
+    kind: InstKind.Divide,
     args: [ArgVariant(kind: avkPos, vreg: source), ArgVariant(kind: avkPos, vreg: dest)],
   )
 {.pop.}

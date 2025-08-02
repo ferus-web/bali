@@ -1,11 +1,15 @@
 // this source file attempts to trigger bali's JIT compiler
 
+function y()
+{
+	console.log("y is called!")
+	return 1337
+}
+
 function x() {
 	let useless_work = 5;
 	let other_thing = 8;
-	let other_thing = 8;
-	let other_thing = 8;
-	console.log(other_thing - 2.5)
+	let val = y()
 }
 
 var i = 0;
