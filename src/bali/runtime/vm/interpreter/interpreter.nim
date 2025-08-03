@@ -887,7 +887,7 @@ proc opPower(interpreter: var PulsarInterpreter, op: var Operation) =
     a = &(&interpreter.get(posA)).getNumeric()
     b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
-  interpreter.addAtom(floating(a ^ b), posA)
+  interpreter.addAtom(floating(a ^ b.int), posA)
   inc interpreter.currIndex
 
 {.pop.}
