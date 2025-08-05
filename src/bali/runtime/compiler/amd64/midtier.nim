@@ -19,7 +19,6 @@ template alignStack(offset: uint, body: untyped) =
 proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
   if unlikely(fn.name in cgen.dumpIrForFuncs):
     echo dumpFunction(fn)
-    assert off
 
   for inst in fn.insts:
     case inst.kind
@@ -241,7 +240,7 @@ proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
     return
 
   var pipeline = Pipeline(fn: &lowered)
-  pipeline.optimize({Passes.NaiveDeadCodeElim})
+  pipeline.optimize({Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification})
 
   allocateNativeSegment(cgen)
   return compileLowered(cgen, pipeline.fn)

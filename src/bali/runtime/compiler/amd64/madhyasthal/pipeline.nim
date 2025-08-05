@@ -7,5 +7,6 @@ type
   Passes* {.pure, size: sizeof(uint8).} = enum
     ## All optimization passes Madhyasthal supports
     NaiveDeadCodeElim
+    AlgebraicSimplification
 
   OptimizationPass* = proc(state: var Pipeline): bool

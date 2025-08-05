@@ -35,14 +35,18 @@ proc scanForUsedRegs*(
     of {InstKind.PassArgument, InstKind.Invoke}:
       used.incl inst.args[0].vreg
     of {InstKind.Add, InstKind.Mult, InstKind.Divide, InstKind.Sub}:
-      var usedAhead = initHashSet[ir.Reg]()
-      scanForUsedRegs(pipeline, usedAhead, start = i + 1)
+      when defined(baliMadhyasthalDCENew):
+        var usedAhead = initHashSet[ir.Reg]()
+        scanForUsedRegs(pipeline, usedAhead, start = i + 1)
 
-      if inst.args[1].vreg in usedAhead:
-        # If the destination is used ahead,
-        # we can mark the two registers as
-        # used. Otherwise, we can just let the
-        # operation be elided away.
+        if inst.args[1].vreg in usedAhead:
+          # If the destination is used ahead,
+          # we can mark the two registers as
+          # used. Otherwise, we can just let the
+          # operation be elided away.
+          used.incl inst.args[0].vreg
+          used.incl inst.args[1].vreg
+      else:
         used.incl inst.args[0].vreg
         used.incl inst.args[1].vreg
     else:
