@@ -24,7 +24,6 @@ proc inferLocallyAllocatedNumericOperandValue*(
     return
 
   for i, inst in insts[0 ..< before]:
-    echo inst.kind
     if inst.kind != InstKind.LoadNumber:
       continue
 
