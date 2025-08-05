@@ -76,8 +76,6 @@ proc rewriteAlgebraicExpressions*(pipeline: var pipeline.Pipeline) =
     of InstKind.Add:
       InferOperands
 
-      echo "vsrc: " & $vsrc & "; vdest: " & $vdest
-
       # Case 1:
       # x + 0 = x
       if vsrc == 0 and vdest == 0:
@@ -116,6 +114,38 @@ proc rewriteAlgebraicExpressions*(pipeline: var pipeline.Pipeline) =
 
         rewritten[destAllocPos] = loadNumber(inst.args[0].vreg, 0)
         rewritten.delete(srcAllocPos)
+        continue
+
+      # x * 1 = x
+      if vdest == 1:
+        let
+          srcAllocPos =
+            &findNumericOpAllocationPoint(pipeline, rewritten, inst.args[0].vreg)
+          destAllocPos =
+            &findNumericOpAllocationPoint(pipeline, rewritten, inst.args[1].vreg)
+
+        assert srcAllocPos != destAllocPos
+          # FIXME: We should really handle this properly.
+
+        rewritten[destAllocPos] = loadNumber(inst.args[0].vreg, vsrc)
+        rewritten.delete(srcAllocPos)
+    of InstKind.Divide:
+      InferOperands
+
+      # x / 0 = Inf
+      if vdest == Inf:
+        let
+          srcAllocPos =
+            &findNumericOpAllocationPoint(pipeline, rewritten, inst.args[0].vreg)
+          destAllocPos =
+            &findNumericOpAllocationPoint(pipeline, rewritten, inst.args[1].vreg)
+
+        assert srcAllocPos != destAllocPos
+          # FIXME: We should really handle this properly.
+
+        rewritten[destAllocPos] = loadNumber(inst.args[0].vreg, Inf)
+        rewritten.delete(srcAllocPos)
+        continue
     else:
       rewritten &= inst
 

@@ -22,7 +22,12 @@ These pattern matching routines can be found at `src/bali/runtime/compiler/amd64
 When such patterns cannot be matched, it emits the MIR-equivalent of the bytecode instruction, which is generally fairly close to the bytecode's op name.
 
 ## Optimizations
-Currently, Madhyasthal supports a single optimization: a naive dead-code-elimination pass. More optimizations will gradually be added to it.
+Currently, Madhyasthal supports the following optimizations:
+
+- Naive dead-code-elimination
+- Algebraic simplification
+
+More optimizations will gradually be added to it.
 Madhyasthal uses a pipeline system to let the runtime efficiently choose which optimizations should be enabled, and which shouldn't.
 
 ## Code Generation
