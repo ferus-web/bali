@@ -43,3 +43,4 @@ task analyze, "Run the static analyzer":
 
 task balde, "Compile balde":
   exec "nim c -o:bin/balde src/balde.nim"
+
