@@ -7,12 +7,8 @@ mkShell {
     gmp
     boehmgc
     icu76
-    spidermonkey_128
-    quickjs
-    boa
     pcre
     nph
-    emscripten
     mimalloc
   ];
 
