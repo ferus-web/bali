@@ -1,6 +1,9 @@
 import std/[tables, posix, logging]
 import pkg/catnip/x64assembler
-import pkg/bali/runtime/compiler/base, pkg/bali/runtime/compiler/amd64/native_forwarding
+import
+  pkg/bali/runtime/compiler/base,
+  pkg/bali/runtime/compiler/amd64/native_forwarding,
+  pkg/bali/platform/libc
 
 type
   ConstantPool* = seq[cstring]
@@ -20,8 +23,6 @@ type
     pageSize*: int64
 
     dumpIrForFuncs*: seq[string]
-
-proc free(p: pointer): void {.importc, header: "<stdlib.h>".}
 
 proc `=destroy`*(cgen: AMD64Codegen) =
   for cnst in cgen.cpool:
@@ -79,4 +80,4 @@ proc prepareLoadString*(cgen: var AMD64Codegen, str: cstring) =
 
   cgen.s.pop(regR8.reg) # get the pointer that was in rax which is likely gone now
 
-export x64assembler
+export x64assembler, libc
