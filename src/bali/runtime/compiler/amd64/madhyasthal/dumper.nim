@@ -32,7 +32,9 @@ proc dumpFunction*(fn: ir.Function): string =
 
   buffer &= '('
   buffer &= fn.name
-  buffer &= " \n"
+
+  if fn.insts.len > 0:
+    buffer &= " \n"
 
   for i, inst in fn.insts:
     buffer &= "  "
@@ -40,7 +42,8 @@ proc dumpFunction*(fn: ir.Function): string =
     if i < fn.insts.len - 1:
       buffer &= '\n'
 
-  buffer &= '\n'
+  if fn.insts.len > 0:
+    buffer &= '\n'
   buffer &= ')'
 
   move(buffer)
