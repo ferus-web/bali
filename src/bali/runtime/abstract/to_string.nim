@@ -1,26 +1,20 @@
 import std/[math, logging, options]
-import pkg/bali/runtime/vm/prelude
-import pkg/bali/internal/sugar
-import pkg/bali/runtime/[types, bridge]
-import pkg/bali/stdlib/types/std_string_type
-import pkg/bali/runtime/abstract/to_primitive
-import pkg/bali/third_party/cache
+import bali/runtime/vm/prelude
+import bali/internal/sugar
+import bali/runtime/[types, bridge]
+import bali/stdlib/types/std_string_type
+import bali/runtime/abstract/to_primitive
+import pkg/gmp
 
-var toStringCache = initLruCached[JSValue, string](maxSize = 16)
 proc ToString*(runtime: Runtime, value: JSValue): string =
   ## 7.1.17 ToString ( argument )
   ## The abstract operation ToString takes argument argument (an ECMAScript language value) and returns either a normal completion containing a String or a throw completion. It converts argument to a value of type String. It performs the following steps when called
   debug "runtime: toString(): " & value.crush()
-  if toStringCache.contains(value):
-    return toStringCache.get(value)
 
   case value.kind
   of String: # 1. If argument is a String, return argument.
     debug "runtime: toString(): atom is a String."
-    let strVal = &value.getStr()
-    toStringCache.put(value, strVal)
-
-    return strVal
+    return &value.getStr()
   of Undefined:
     debug "runtime: toString(): atom is undefined."
     # 3. If argument is undefined, return "undefined".
@@ -35,10 +29,7 @@ proc ToString*(runtime: Runtime, value: JSValue): string =
     let primValue = runtime.ToPrimitive(value, some(String))
 
     # 12. Return ? ToString(primValue).
-    let strVal = runtime.ToString(primValue)
-    toStringCache.put(value, strVal)
-
-    return strVal
+    return runtime.ToString(primValue)
   of Null, Ident:
     debug "runtime: toString(): atom is null."
     return "null" # 4. If argument is null, return "null".
@@ -60,20 +51,18 @@ proc ToString*(runtime: Runtime, value: JSValue): string =
     # 7. If argument is a Number, return Number::toString(argument, 10).
 
     debug "runtime: toString(): atom is a number (float)."
-    let floatValue = &getFloat(value)
+    let value = &getFloat(value)
 
-    if floatValue.isNaN:
+    if value.isNaN:
       return "NaN"
 
-    if floatValue == Inf:
+    if value == Inf:
       return "Infinity"
 
-    if floatValue == -Inf:
+    if value == -Inf:
       return "-Infinity"
 
-    let strVal = $floatValue
-    toStringCache.put(value, strVal)
-    return strVal
+    return $value
   of Sequence:
     debug "runtime: toString(): atom is an object (sequence)."
     var buffer = "["
