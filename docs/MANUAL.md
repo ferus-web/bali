@@ -43,6 +43,7 @@ This manual is largely inspired by Monoucha's manual.
     - [Disabling optimizations](#disabling-optimizations)
 * [Using the Native Interface](#using-the-native-interface)
     - [A small example](#a-small-example)
+    - [Allocating memory](#allocating-memory)
 
 # Introduction
 Bali is a JavaScript engine written from scratch in Nim for the [Ferus web engine](https://github.com/ferus-web/ferus). It is designed to be convenient to interface with whilst being fast and compliant. It provides you high-level abstractions as far as humanly possible.
@@ -536,3 +537,18 @@ function shoutify(name)
   let retval = runtime.call(&fn, str("tray")) # Call the `shoutify` function in bytecode. Pass it the arguments it expects.
   echo "I AM SHOUTING YOUR NAME AT YOU, " & runtime.ToString(retval) # Take its return value and print it out.
 ```
+
+## Allocating memory
+Bali lets the programmer allocate memory in the same way as JavaScript code using the `HeapManager` API. Each `Runtime` instance has one attached to it. \
+This essentially lets you tap into Bali's allocation flow.
+```nim
+import pkg/bali/runtime/vm/heap/manager
+
+let x = runtime.heapManager.allocate(1337) # allocate 1337 bytes
+```
+
+This essentially performs the following steps:
+1. If the bump allocator has enough memory leftover for this allocation, it uses that.
+2. Otherwise, it calls into the GC to fetch the pointer of said size.
+
+If allocation fails, the `AllocationFailed` defect is thrown.
