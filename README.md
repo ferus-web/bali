@@ -47,8 +47,7 @@ As such, both of these benchmarks are actually just running in the interpreter. 
 | Bali (JIT)              | 4.3ms (best case) - 5.4ms (worst case)                         |   
 
 ## Finding a substring in a moderately large string
-Bali's string-find function (`String.prototype.indexOf`) is SIMD-accelerated, and as such, is pretty fast. It still gets beaten out by QuickJS, though.
-This is because QuickJS has some of the fastest bootup times you'll find in JavaScript engines.
+Bali's string-find function (`String.prototype.indexOf`) is SIMD-accelerated, and as such, is pretty fast.
 
 **NOTE**: The "JIT" benchmark is actually misleading, because here the "hot part" of the code is fully removed during bytecode generation.
 The JIT is never triggered since there's nothing to optimize.
