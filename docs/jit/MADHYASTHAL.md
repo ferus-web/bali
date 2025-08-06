@@ -4,6 +4,14 @@ It is very fast, but its code generation quality is very bad. It does not perfor
 
 Keeping this in mind, Madhyasthal (literally meaning "middle place" in Hindi) was created. As the name might suggest, it aims to be the middle-point between the baseline JIT and any future higher-tier compilers that may be implemented. It generates much better code than the baseline, at the cost of taking slightly longer to generate the code.
 
+# Table of Contents
+* [Function Compilation Eligibity](#function-compilation-eligibility)
+* [Design](#design)
+  - [Intermediate Representation](#intermediate-representation)
+  - [Lowering](#lowering)
+  - [Optimizations](#optimizations)
+  - [Code Generation](#code-generation)
+
 # Function Compilation Eligibility
 A function becomes eligible to be compiled by this tier when the `getCompilationJudgement()` returns its judgement as `CompilationJudgement.WarmingUp`. This occurs when:
 

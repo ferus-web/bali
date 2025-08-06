@@ -1,6 +1,11 @@
 # Pulsar
 Bali uses an interpreter called Pulsar. It is a fairly fast interpreter that uses an unorthodox mix of a valuespace (called the "stack" internally, as in a stack of values) as well as special-purpose registers for various purposes like passing arguments to functions, and taking out the return value from one.
 
+# Table of Contents
+* [Design](#design)
+  - [From codegen to execution](#from-codegen-to-execution)
+    - [Bootstrapping](#bootstrapping)
+
 # Design
 Bali, like most JavaScript engines, starts off by lowering the abstract syntax-tree into a bytecode format it calls MIR.
 
