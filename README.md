@@ -3,7 +3,7 @@ Bali (ˈbɑːli) is a work-in-progress JavaScript lexer, parser and interpreter 
 Bali is still not in a usable state yet and is probably unstable. It is not meant to be used in production for now.
 
 Bali has a bytecode VM as well as two tiers of x86-64 JIT compilers (baseline and midtier).
-It also has a tiering mechanism in place to promote functions from the VM -> Baseline -> Midtier as they get hotter.
+It also has a tiering mechanism in place to promote functions from the VM to the Baseline JIT to the Midtier JIT as they get hotter.
 
 # Integrating Bali into your programs
 Bali is still an alpha-quality project, but here's how you can embed Bali into your Nim programs.
@@ -34,26 +34,42 @@ Bali is formatted using the [nph](https://github.com/arnetheduck/nph) code forma
 It isn't indicative of the code quality, but I do put some extent into making the code slightly readable. :^)
 
 ## Iterating 999999999 times and incrementing an integer each loop
-Bali has some loop elision optimizations in place which can fully eliminate an expensive loop when it sees the opportunity. \
-QuickJS turns out to be the slowest whilst Bali outperforms it by a huge margin.
+Bali has some loop elision optimizations in place which can fully eliminate an expensive loop when it sees the opportunity.
+
+**NOTE**: The "JIT" benchmark is actually misleading, because here the "hot part" of the code is fully removed during bytecode generation.
+The JIT is never triggered since there's nothing to optimize.
+As such, both of these benchmarks are actually just running in the interpreter. :^)
 
 **Try it for yourself**: [Source code](tests/data/iterate-for-no-reason-001.js)
 | Engine                  | Time Taken                                                     |
 | ----------------------- | -------------------------------------------------------------- |
-| Bali (Interpreter)      | ~3.1ms (best case) - ~5.0ms (worst case)                       |
-| Bali (Baseline JIT)     | ~3.2ms (best case) - ~4.7ms (worst case)                       |   
-| QuickJS                 | ~20.5 **seconds** (best case) - ~24.7 **seconds** (worst case) |
+| Bali (Interpreter)      | 4.3ms (best case) - 6.4ms (worst case)                         |
+| Bali (JIT)              | 4.3ms (best case) - 5.4ms (worst case)                         |   
 
 ## Finding a substring in a moderately large string
 Bali's string-find function (`String.prototype.indexOf`) is SIMD-accelerated, and as such, is pretty fast. It still gets beaten out by QuickJS, though.
 This is because QuickJS has some of the fastest bootup times you'll find in JavaScript engines.
 
+**NOTE**: The "JIT" benchmark is actually misleading, because here the "hot part" of the code is fully removed during bytecode generation.
+The JIT is never triggered since there's nothing to optimize.
+As such, both of these benchmarks are actually just running in the interpreter. :^)
+
 **Try it for yourself**: [Source code](tests/data/string-find-001.js)
 | Engine                     | Time Taken                                   |
 | -------------------------- | -------------------------------------------- |
-| Bali (Interpreter)         | ~3.4ms (best case) - ~8.0ms (worst case)     |
-| Bali (Baseline JIT)        | ~3.5ms (best case) - ~11.0ms (worst case)    |
-| QuickJS                    | 813.9ns (best case) - ~1471.2ns (worst case) |
+| Bali (Interpreter)         | 4.6ms (best case) - 5.9ms (worst case)       |
+| Bali (JIT)                 | 4.6ms (best case) - 6.0ms (worst case)       |
+
+## JIT-triggering microbenchmark
+This script is intentionally designed to make Bali's profiling mechanism catch onto it and optimize it.
+
+**Try it for yourself**: [Source code](tests/data/trigger-jit-001.js)
+| Engine                     | Time Taken                                   |
+| -------------------------- | -------------------------------------------- |
+| Bali (Interpreter)         | 839.0ms (best case) - 900.7ms (worst case)   |
+| Bali (JIT)                 | 362.3ms (best case) - 367.2ms (worst case)   |
+
+Here, the JIT is **57.2%** faster than the interpreter!
 
 # Contact Me
 You can join the [Ferus Discord Server](https://discord.gg/9MwfGn2Jkb) to discuss Bali and other components of the Ferus web engine.
