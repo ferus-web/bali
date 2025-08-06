@@ -4,6 +4,12 @@
 import std/posix
 import pkg/bali/platform/libc
 
+const DefaultAllocatorBufferSize* =
+  when defined(amd64) or defined(aarch64) or defined(riscv64):
+    8_388_608'u64 # 8MB
+  else:
+    2_097_152'u64 # 2MB
+
 type BumpAllocator* {.acyclic.} = object
   pool: pointer
 
@@ -27,5 +33,7 @@ func allocate*(allocator: var BumpAllocator, size: uint64): pointer {.cdecl.} =
 proc release*(allocator: var BumpAllocator) =
   free(allocator.pool)
 
-proc initBumpAllocator*(size: uint64 = 8_388_608'u64): BumpAllocator {.sideEffect.} =
+proc initBumpAllocator*(
+    size: uint64 = DefaultAllocatorBufferSize
+): BumpAllocator {.sideEffect.} =
   BumpAllocator(pool: malloc(size), cap: size)
