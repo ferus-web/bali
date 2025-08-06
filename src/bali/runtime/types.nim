@@ -1,11 +1,12 @@
 ## Runtime types
 
 import std/[options, hashes, logging, tables, sugar]
-import bali/runtime/vm/ir/generator
-import bali/runtime/vm/prelude
-import bali/grammar/prelude
-import bali/internal/sugar
-import bali/runtime/[atom_obj_variant, atom_helpers, normalize]
+import pkg/bali/runtime/vm/ir/generator
+import pkg/bali/runtime/vm/prelude
+import pkg/bali/grammar/prelude
+import pkg/bali/internal/sugar
+import pkg/bali/runtime/[atom_obj_variant, atom_helpers, normalize]
+import pkg/bali/runtime/vm/heap/manager
 
 type
   NativeFunction* = proc()
@@ -86,10 +87,6 @@ type
     numAllocations*, numDeallocations*: uint
       ## How many allocations/deallocations happened during execution?
 
-  Lifecycle* {.pure.} = enum
-    ShortLived
-    LongTerm
-
   Runtime* = ref object
     ast*: AST
     ir*: IRGenerator
@@ -110,7 +107,7 @@ type
     types*: seq[JSType]
     predefinedBytecode*: string
 
-    lifecycle*: Lifecycle
+    heapManager*: HeapManager
 
 {.push warning[UnreachableCode]: off.}
 proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =

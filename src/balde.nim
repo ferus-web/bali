@@ -11,7 +11,7 @@ import bali/grammar/prelude
 import bali/internal/sugar
 import bali/runtime/prelude
 import bali/private/argparser
-import bali/runtime/vm/heap/[prelude, boehm]
+import bali/runtime/vm/heap/[boehm]
 import pkg/[colored_logger, jsony, pretty, noise, fuzzy]
 
 const Version {.strdefine: "NimblePkgVersion".} = "<version not defined>"
@@ -350,6 +350,14 @@ proc execFile(ctx: Input, file: string) {.inline.} =
   if ctx.enabled("dump-runtime-after-exec"):
     print runtime
 
+  if ctx.enabled("dump-allocation-metrics", "A"):
+    echo "=== Execution Allocation Metrics ==="
+    echo "* Total Allocations: " & $runtime.heapManager.metrics.allocatedBytesTotal &
+      " bytes"
+    echo "* Bump Allocations: " & $runtime.heapManager.metrics.allocatedBytesBump &
+      " bytes"
+    echo "* GC Allocations: " & $runtime.heapManager.metrics.allocatedBytesGc & " bytes"
+
 proc execBytecodeFile(file: string) =
   if not fileExists(file):
     die "file not found:", file
@@ -522,6 +530,7 @@ Options:
   --incremental                           Set the garbage collector mode to incremental, potentially reducing GC latency.
   --version, -V                           Output the version of Bali/Balde in the standard output
   --evaluate-bytecode, -B                 Evaluate the provided source as bytecode instead of parsing it as JavaScript.
+  --dump-allocation-metrics, -A           Dump information about all allocations performed during the JavaScript execution phase.
 
 Codegen Flags:
   --disable-loop-elision                  Don't attempt to elide loops in the bytecode generation phase.
@@ -559,8 +568,6 @@ proc main() {.inline.} =
 
     baldeRepl(input)
     quit(0)
-
-  initializeGC(GCKind.Boehm, input.enabled("incremental"))
 
   if input.command.len > 0:
     if not input.enabled("evaluate-bytecode", "B"):

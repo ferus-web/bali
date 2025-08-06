@@ -7,7 +7,7 @@ import
   pkg/bali/runtime/niche/lowering,
   pkg/bali/runtime/vm/prelude,
   pkg/bali/runtime/vm/ir/generator,
-  pkg/bali/runtime/vm/heap/boehm,
+  pkg/bali/runtime/vm/heap/manager,
   pkg/bali/runtime/vm/atom
 import pkg/bali/stdlib/prelude
 import pkg/bali/grammar/prelude
@@ -123,10 +123,8 @@ proc newRuntime*(
   ## If the input isn't from a file, you can set it to anything - it's primarily used for caching.
   ## The AST must be valid.
   ## You can check the options exposed to you in `InterpreterOpts` by checking its documentation.
-  # initializeGC(getStackPtr(), 4) # Initialize the M&S garbage collector
-
-  boehmGCinit()
-  boehmGC_enable()
+  var heapManager = initHeapManager()
+  setHeapManager(heapManager)
 
   Runtime(
     ast: ast,
@@ -135,4 +133,5 @@ proc newRuntime*(
     vm: newPulsarInterpreter(predefinedBytecode),
     opts: opts,
     predefinedBytecode: predefinedBytecode,
+    heapManager: heapManager,
   )

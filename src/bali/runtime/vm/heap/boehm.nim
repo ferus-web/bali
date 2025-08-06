@@ -1,6 +1,5 @@
 ## Taken from the Nim compiler source code
-import std/[logging, strutils]
-import pkg/bali/runtime/vm/heap/bump_allocator
+import std/[strutils]
 
 {.passC: gorge("pkg-config --cflags bdw-gc").strip().}
 {.passL: gorge("pkg-config --libs bdw-gc").strip().}
@@ -16,7 +15,7 @@ proc boehmGC_set_all_interior_pointers*(
   flag: cint
 ) {.importc: "GC_set_all_interior_pointers", boehmGC.}
 
-proc boehmAlloc*(size: int): pointer {.importc: "GC_malloc", boehmGC.}
+proc boehmAlloc*(size: uint): pointer {.importc: "GC_malloc", boehmGC.}
 proc boehmAllocAtomic*(size: int): pointer {.importc: "GC_malloc_atomic", boehmGC.}
 proc boehmRealloc*(p: pointer, size: int): pointer {.importc: "GC_realloc", boehmGC.}
 var
@@ -56,8 +55,6 @@ type BaliGCStatistics* = object
 
   currFrame*: int
 
-var gcStats* {.global.}: BaliGCStatistics
-
 proc update(stats: var BaliGCStatistics) =
   stats.peakAllocatedBytes = boehmGetTotalBytes()
   stats.allocationRate = boehmGetBytesSinceGC()
@@ -77,55 +74,3 @@ func pressure*(
     generalBias * (stats.liveMemory / stats.totalMemory) +
     spaceBias * (stats.liberationRate / stats.allocationRate)
   ) #/ (generalBias + spaceBias)
-
-proc baliDealloc*(p: pointer) {.inline.} =
-  # debug "heap: performing explicit deallocation of GC'd chunk"
-  # boehmDealloc(p)
-
-  inc gcStats.currFrame
-  # debug "heap: event deferral frame: " & $gcStats.currFrame
-
-  when not defined(baliPreciseGCPressureTracking):
-    if gcStats.currFrame >= BaliGCStatsTrackingPerFrame:
-      #[debug "heap: hit GC-stats tracking frame deferral limit: " &
-        $BaliGCStatsTrackingPerFrame &
-        "; performing collection and updating GC stats (set -d:BaliGCStatsTrackingPerFrame to change this threshold)" ]#
-      update gcStats
-      gcStats.currFrame = 0
-  else:
-    update gcStats
-
-var totalAlloc*: int
-
-# TODO: We should really move all of these (including baliAlloc) into a
-# separate structure that lets us control memory allocations more smoothly,
-# without relying on a global state that can come crashing down at any minute.
-var bumpAlloc* = initBumpAllocator()
-
-proc baliAlloc*(size: SomeInteger): pointer {.cdecl.} =
-  if bumpAlloc.remaining > uint64(size):
-    return bumpAlloc.allocate(uint64(size))
-
-  debug "heap: allocating GC'd chunk of size: " & $size & " bytes"
-
-  var pointr = boehmAlloc(size)
-
-  totalAlloc += size
-
-  # debug "heap: zeroing out chunk"
-  zeroMem(pointr, size)
-
-  when not defined(baliPreciseGCPressureTracking):
-    inc gcStats.currFrame
-    # debug "heap: event deferral frame: " & $gcStats.currFrame
-    if gcStats.currFrame >= BaliGCStatsTrackingPerFrame:
-      #[ debug "heap: hit GC-stats tracking frame deferral limit: " &
-        $BaliGCStatsTrackingPerFrame &
-        "; performing collection and updating GC stats (set -d:BaliGCStatsTrackingPerFrame to change this threshold)" ]#
-      boehmGcfullCollect()
-      update gcStats
-      gcStats.currFrame = 0
-  else:
-    update gcStats
-
-  pointr

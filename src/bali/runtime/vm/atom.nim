@@ -3,7 +3,7 @@
 
 import std/[tables, hashes, options]
 import pkg/[shakar, gmp]
-import ./heap/boehm
+import pkg/bali/runtime/vm/heap/manager
 
 {.experimental: "strictDefs".}
 
@@ -180,11 +180,28 @@ proc getNativeCallable*(atom: MAtom | JSValue): Option[proc()] {.inline.} =
 
   none(proc())
 
+var heapManagerCtx {.threadvar.}: manager.HeapManager
+
+proc setHeapManager*(ctx: manager.HeapManager) {.sideEffect, inline, raises: [].} =
+  ## Set the heap manager.
+  ##
+  ## This is a thread-local variable, so each thread that's executing code
+  ## needs to run it, but ideally that should be a single thread.
+  heapManagerCtx = ctx
+
+proc getHeapManager*(): manager.HeapManager {.sideEffect, inline, raises: [].} =
+  ## Get the heap manager context for this thread.
+  ##
+  ## **WARNING**: Calling this prior to calling `newRuntime()` will result
+  ## in a zero'd out struct being returned. Any operations on it will result in
+  ## undefined behaviour.
+  heapManagerCtx
+
 proc newJSValue*(kind: MAtomKind): JSValue =
   ## Allocate a new `JSValue` using Bali's garbage collector.
   ## A `JSValue` is a pointer to an atom.
 
-  var mem = cast[ptr MAtom](baliAlloc(sizeof(MAtom)))
+  var mem = cast[JSValue](heapManagerCtx.allocate(uint16(sizeof(MAtom))))
 
   {.cast(uncheckedAssign).}:
     mem[].kind = kind

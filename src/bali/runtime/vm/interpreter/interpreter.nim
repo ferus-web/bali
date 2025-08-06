@@ -347,9 +347,6 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
     else:
       raise newException(ValueError, "Reference to unknown clause: " & name)
 
-  if gcStats.pressure > 0.9f:
-    boehmGCFullCollect()
-
 proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) =
   if value.kind == Integer:
     let index = &getInt(value)
@@ -430,12 +427,6 @@ proc opLoadStr(interpreter: var PulsarInterpreter, op: var Operation) =
   inc interpreter.currIndex
 
 proc opJump(interpreter: var PulsarInterpreter, op: var Operation) =
-  if gcStats.pressure > 0.9f:
-    # Assuming we're in a while-loop, perhaps perform a collection
-    # the GC pressure is high so it's best we try to conserve memory
-    # until this memory intensive loop ends
-    boehmGCFullCollect()
-
   let pos = op.arguments[0].getInt()
 
   if not *pos:
@@ -783,7 +774,6 @@ proc opMoveAtom(interpreter: var PulsarInterpreter, op: var Operation) =
     dest = (&op.arguments[1].getInt())
 
   interpreter.stack[dest] = &interpreter.get(src)
-  baliDealloc(interpreter.stack[src])
   interpreter.stack[src] = null()
   inc interpreter.currIndex
 

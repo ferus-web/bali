@@ -36,4 +36,4 @@ proc release*(allocator: var BumpAllocator) =
 proc initBumpAllocator*(
     size: uint64 = DefaultAllocatorBufferSize
 ): BumpAllocator {.sideEffect.} =
-  BumpAllocator(pool: malloc(size), cap: size)
+  result = BumpAllocator(pool: malloc(size), cap: size)

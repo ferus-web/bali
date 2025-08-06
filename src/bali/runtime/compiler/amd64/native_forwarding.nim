@@ -3,7 +3,7 @@
 import
   pkg/bali/runtime/vm/atom,
   pkg/bali/runtime/atom_helpers,
-  pkg/bali/runtime/vm/heap/boehm
+  pkg/bali/runtime/vm/heap/manager
 import pkg/shakar
 
 proc createFieldRaw*(atom: JSValue, field: cstring) {.cdecl.} =
@@ -19,7 +19,7 @@ proc allocFloatEncoded*(v: int64): JSValue {.cdecl.} =
   allocFloat(cast[float64](v))
 
 proc allocRaw*(size: int64): pointer {.cdecl.} =
-  baliAlloc(size)
+  getHeapManager().allocate(uint(size))
 
 proc copyRaw*(dest, source: pointer, size: uint) {.cdecl.} =
   copyMem(dest, source, size)
