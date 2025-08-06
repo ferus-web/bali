@@ -1,5 +1,6 @@
 ## Taken from the Nim compiler source code
 import std/[logging, strutils]
+import pkg/bali/runtime/vm/heap/bump_allocator
 
 {.passC: gorge("pkg-config --cflags bdw-gc").strip().}
 {.passL: gorge("pkg-config --libs bdw-gc").strip().}
@@ -79,7 +80,7 @@ func pressure*(
 
 proc baliDealloc*(p: pointer) {.inline.} =
   # debug "heap: performing explicit deallocation of GC'd chunk"
-  boehmDealloc(p)
+  # boehmDealloc(p)
 
   inc gcStats.currFrame
   # debug "heap: event deferral frame: " & $gcStats.currFrame
@@ -96,8 +97,17 @@ proc baliDealloc*(p: pointer) {.inline.} =
 
 var totalAlloc*: int
 
+# TODO: We should really move all of these (including baliAlloc) into a
+# separate structure that lets us control memory allocations more smoothly,
+# without relying on a global state that can come crashing down at any minute.
+var bumpAlloc* = initBumpAllocator()
+
 proc baliAlloc*(size: SomeInteger): pointer {.cdecl.} =
+  if bumpAlloc.remaining > uint64(size):
+    return bumpAlloc.allocate(uint64(size))
+
   debug "heap: allocating GC'd chunk of size: " & $size & " bytes"
+
   var pointr = boehmAlloc(size)
 
   totalAlloc += size

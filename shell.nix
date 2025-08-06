@@ -9,6 +9,8 @@ mkShell {
     icu76
     pcre
     nph
+    quickjs
+    boa
     mimalloc
   ];
 
