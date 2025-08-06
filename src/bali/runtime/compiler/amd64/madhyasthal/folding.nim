@@ -95,6 +95,9 @@ proc rewriteAlgebraicExpressions*(pipeline: var pipeline.Pipeline) =
       # x - 0 = x
       if vdest == 0:
         rewritten &= copy(inst.args[0].vreg, inst.args[1].vreg)
+        continue
+
+      rewritten &= inst
     of InstKind.Mult:
       InferOperands
 
@@ -128,6 +131,8 @@ proc rewriteAlgebraicExpressions*(pipeline: var pipeline.Pipeline) =
 
         rewritten[destAllocPos] = loadNumber(inst.args[0].vreg, vsrc)
         rewritten.delete(srcAllocPos)
+
+      rewritten &= inst
     of InstKind.Divide:
       InferOperands
 
@@ -145,6 +150,8 @@ proc rewriteAlgebraicExpressions*(pipeline: var pipeline.Pipeline) =
         rewritten[destAllocPos] = loadNumber(inst.args[0].vreg, Inf)
         rewritten.delete(srcAllocPos)
         continue
+
+      rewritten &= inst
     else:
       rewritten &= inst
 
