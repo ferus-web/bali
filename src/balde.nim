@@ -395,6 +395,14 @@ proc baldeRepl(ctx: Input) =
         # Copy all atoms of the previous runtime to the new one
 
     runtime.run()
+    if ctx.enabled("dump-allocation-metrics", "A"):
+      echo "=== Execution Allocation Metrics ==="
+      echo "* Total Allocations: " & $runtime.heapManager.metrics.allocatedBytesTotal &
+        " bytes"
+      echo "* Bump Allocations: " & $runtime.heapManager.metrics.allocatedBytesBump &
+        " bytes"
+      echo "* GC Allocations: " & $runtime.heapManager.metrics.allocatedBytesGc &
+        " bytes"
     prevRuntime = runtime
 
   echo "Welcome to Balde, with Bali v" & Version
