@@ -65,7 +65,6 @@ proc allocRuntime*(
         elideLoops: not ctx.enabled("disable-loop-elision"),
         loopAllocationEliminator: not ctx.enabled("disable-loop-allocation-elim"),
         aggressivelyFreeRetvals: ctx.enabled("aggressively-free-retvals"),
-        deadCodeElimination: not ctx.enabled("disable-dead-code-elim"),
         jitCompiler: not ctx.enabled("disable-jit", "Nz") and not repl,
       ),
       jit: JITOpts(madhyasthalDumpIRFor: dumpIRFor),
@@ -544,7 +543,6 @@ Codegen Flags:
   --disable-loop-elision                  Don't attempt to elide loops in the bytecode generation phase.
   --disable-loop-allocation-elim          Don't attempt to rewrite loops to avoid unnecessary atom allocations.
   --aggressively-free-retvals             Aggressively zero-out the return-value register.
-  --disable-dead-code-elim                Disable dead code elimination during the codegen phase.
 
 JIT Compiler Flags:
   --disable-jit                           Disable the baseline JIT compiler.
