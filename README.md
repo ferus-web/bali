@@ -5,6 +5,8 @@ Bali is still not in a usable state yet and is probably unstable. It is not mean
 Bali has a bytecode VM as well as two tiers of x86-64 JIT compilers (baseline and midtier).
 It also has a tiering mechanism in place to promote functions from the VM to the Baseline JIT to the Midtier JIT as they get hotter.
 
+Bali is licensed under the BSD-3 license, allowing you to freely embed it in any of your programs.
+
 # Integrating Bali into your programs
 Bali is still an alpha-quality project, but here's how you can embed Bali into your Nim programs.
 With it, you can:
