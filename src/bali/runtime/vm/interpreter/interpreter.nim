@@ -50,6 +50,10 @@ type
     trapped*: bool = false
     profTotalFrames: uint64
 
+    #               clause      op index  error
+    #                  V             V      V
+    sourceMap*: Table[string, Table[uint, string]]
+
 proc `=destroy`*(vm: PulsarInterpreter) =
   # FIXME: Why is this called for no reason?
   # I think we're somehow confusing ORC.
@@ -210,7 +214,8 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
     let clause = interpreter.getClause(currTrace.clause.some)
     assert *clause, "No clause found with ID: " & $currTrace.clause
 
-    let op = (&clause).find(currTrace.index)
+    let cls = &clause
+    let op = cls.find(currTrace.index)
 
     let line =
       # FIXME: weird stuff
@@ -219,9 +224,9 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
       else:
         currTrace.exception.operation - 1
 
-    if not *op:
-      msg &= "\n\tClause \"" & currTrace.exception.clause & "\", " & $(line)
+    msg &= "\n\tFunction \"" & currTrace.exception.clause & "\""
 
+    if not *op:
       if *currTrace.next:
         currTrace = &currTrace.next
       else:
@@ -230,18 +235,46 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
           currTrace.exception.message & '\n'
         break
     else:
-      var operation = &op
-      resolve(&clause, operation)
-      operation.consumed = true
-
-      msg &= "\n\tClause \"" & currTrace.exception.clause & "\", operation " & $(line)
+      let operation = &op
 
       if *currTrace.next:
         currTrace = &currTrace.next
       else:
+        var sourceLine: string
+        let opIndex = operation.index
+        var
+          minRange = opIndex.int
+          maxRange = 0
+
+        for opIdx, sourceStr in interpreter.sourceMap[cls.name]:
+          let idx = opIdx.int
+          if minRange == -1:
+            minRange = idx
+            continue
+
+          if maxRange < idx:
+            maxRange = idx
+            continue
+
+          if minRange > idx:
+            minRange = idx
+            continue
+
+        for opIdx, sourceStr in interpreter.sourceMap[cls.name]:
+          if opIdx == opIndex:
+            sourceLine = sourceStr
+            break
+
+          if opIdx > opIndex:
+            sourceLine = sourceStr
+            break
+
+        if sourceLine.len < 1:
+          sourceLine = "<failed to find mapped source, report this as a bug>"
+
         msg &=
-          "\n\t\t" & operation.expand() & "\n\n" & $typeof(currTrace.exception) & ": " &
-          currTrace.exception.message & '\n'
+          "\n\t\t" & move(sourceLine) & "\n\n" & $typeof(currTrace.exception) & ": " &
+          currTrace.exception.message
         break
 
   some(msg)

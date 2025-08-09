@@ -20,6 +20,7 @@ type
 
   IRGenerator* = ref object
     name*: string
+    cachedIndex*: uint
     modules*: seq[CodeModule]
     currModule*: string
 

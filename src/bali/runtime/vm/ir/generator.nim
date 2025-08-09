@@ -30,7 +30,8 @@ proc addOp*(gen: IRGenerator, operation: IROperation): uint {.inline.} =
     if module.name == gen.currModule:
       module.operations &= operation
       gen.modules[i] = module
-      return module.operations.len.uint
+      gen.cachedIndex = module.operations.len.uint
+      return gen.cachedIndex
 
   raise newException(FieldDefect, "Cannot find any clause with name: " & gen.currModule)
 
