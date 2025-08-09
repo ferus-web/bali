@@ -859,8 +859,8 @@ proc parseFunction*(parser: Parser): Option[Function] =
 
     body &= statement
 
-  # if not metRCurly:
-  #  parser.error Other, "function body must end with curly bracket"
+  if not metRCurly:
+    parser.error Other, "function body must end with curly bracket"
 
   info "parser: parsed function: " & &name
   some function(&name, body, arguments)
