@@ -12,7 +12,7 @@ type
     ignoreWhitespace*: bool = false
 
   SourceLocation* = object
-    line*, col*: uint = 1
+    line*, col*: uint = 0
 
   Tokenizer* = ref object
     pos*: uint = 0
@@ -20,6 +20,8 @@ type
     source: string
 
 {.push inline, gcsafe.}
+func source*(tokenizer: Tokenizer): string =
+  tokenizer.source
 
 func eof*(tokenizer: Tokenizer): bool =
   let len =
@@ -60,7 +62,7 @@ proc advance*(tokenizer: Tokenizer, offset: uint = 1) =
   tokenizer.location.col += offset
 
 func newTokenizer*(source: string): Tokenizer =
-  Tokenizer(pos: 0, source: source)
+  Tokenizer(pos: 0, location: SourceLocation(col: 0, line: 0), source: source)
 
 proc next*(tokenizer: Tokenizer): Token
 

@@ -89,6 +89,8 @@ type
 
   Statement* = ref object
     line*, col*: uint = 1
+    source*: string
+
     case kind*: StatementKind
     of CreateMutVal:
       mutIdentifier*: string

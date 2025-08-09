@@ -19,6 +19,7 @@ type
   Parser* = ref object
     tokenizer*: Tokenizer
     ast: AST
+    lines: seq[string]
     errors*: seq[ParseError]
     opts*: ParserOpts
 
@@ -1361,7 +1362,6 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     parser.error Other, "expected statement, got EOF instead."
 
   let tok = parser.tokenizer.nextExceptWhitespace()
-
   if !tok:
     return #parser.error Other, "expected statement, got whitespace/EOF instead."
 
@@ -1581,6 +1581,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
 proc parse*(parser: Parser): AST {.inline.} =
   parser.ast = newAST()
+  parser.lines = parser.tokenizer.source.split('\n')
 
   while not parser.tokenizer.eof():
     let stmt = parser.parseStatement()
@@ -1589,6 +1590,7 @@ proc parse*(parser: Parser): AST {.inline.} =
       var statement = &stmt
       statement.line = parser.tokenizer.location.line
       statement.col = parser.tokenizer.location.col
+      statement.source = parser.lines[statement.line]
 
       case statement.kind
       of WhileStmt, IfStmt, ForLoop:

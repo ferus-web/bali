@@ -1,4 +1,4 @@
-import std/[math, tables, options]
+import std/[math, tables, strutils, options]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/vm/[atom, debugging]
 import bali/runtime/vm/[shared, tokenizer, exceptions]
@@ -50,9 +50,9 @@ type
     trapped*: bool = false
     profTotalFrames: uint64
 
-    #               clause      op index  error
-    #                  V             V      V
-    sourceMap*: Table[string, Table[uint, string]]
+    #               clause      op index        error     source position/line
+    #                  V             V            V               V
+    sourceMap*: Table[string, Table[uint, tuple[message: string, line: uint]]]
 
 proc `=destroy`*(vm: PulsarInterpreter) =
   # FIXME: Why is this called for no reason?
@@ -224,9 +224,9 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
       else:
         currTrace.exception.operation - 1
 
-    msg &= "\n\tFunction \"" & currTrace.exception.clause & "\""
-
     if not *op:
+      msg &= "\n\tFunction <" & currTrace.exception.clause & '>'
+
       if *currTrace.next:
         currTrace = &currTrace.next
       else:
@@ -240,13 +240,16 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
       if *currTrace.next:
         currTrace = &currTrace.next
       else:
-        var sourceLine: string
+        var
+          sourceLine: string
+          codeLine: uint
+
         let opIndex = operation.index
         var
           minRange = opIndex.int
           maxRange = 0
 
-        for opIdx, sourceStr in interpreter.sourceMap[cls.name]:
+        for opIdx, sourceInfo in interpreter.sourceMap[cls.name]:
           let idx = opIdx.int
           if minRange == -1:
             minRange = idx
@@ -260,21 +263,32 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
             minRange = idx
             continue
 
-        for opIdx, sourceStr in interpreter.sourceMap[cls.name]:
-          if opIdx == opIndex:
-            sourceLine = sourceStr
+        for opIdx, sourceInfo in interpreter.sourceMap[cls.name]:
+          let opIdx = opIdx.int
+          if opIdx == minRange or opIdx == maxRange:
+            sourceLine = sourceInfo.message
+            codeLine = sourceInfo.line
             break
 
-          if opIdx > opIndex:
-            sourceLine = sourceStr
-            break
+          if opIdx > maxRange:
+            continue
+
+          if opIdx < minRange:
+            continue
+
+          sourceLine = sourceInfo.message
+          codeLine = sourceInfo.line
+          break
+
+        msg &=
+          "\n\tFunction <" & currTrace.exception.clause & ">, line " & $(codeLine + 1)
 
         if sourceLine.len < 1:
           sourceLine = "<failed to find mapped source, report this as a bug>"
 
-        msg &=
-          "\n\t\t" & move(sourceLine) & "\n\n" & $typeof(currTrace.exception) & ": " &
-          currTrace.exception.message
+        msg &= "\n\t\t" & sourceLine
+        msg &= "\n\t\t" & repeat('^', sourceLine.len - 1)
+        msg &= "\n\n" & $typeof(currTrace.exception) & ": " & currTrace.exception.message
         break
 
   some(msg)

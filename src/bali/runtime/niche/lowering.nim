@@ -1173,7 +1173,8 @@ proc generateBytecode(
   else:
     warn "emitter: unimplemented bytecode generation directive: " & $stmt.kind
 
-  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex] = "throw \"meow\""
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex] =
+    (message: stmt.source, line: stmt.line)
 
 proc loadArgumentsOntoStack(runtime: Runtime, fn: Function) =
   info "emitter: loading up function signature arguments onto stack via IR: " & fn.name
@@ -1226,7 +1227,7 @@ proc generateBytecodeForScope(
       )
 
   runtime.irHints.generatedClauses &= name
-  runtime.vm.sourceMap[name] = initTable[uint, string]()
+  runtime.vm.sourceMap[name] = initTable[uint, tuple[message: string, line: uint]]()
 
   if name != "outer":
     runtime.loadArgumentsOntoStack(fn)
