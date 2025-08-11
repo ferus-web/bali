@@ -41,7 +41,6 @@ proc findNumericOpAllocationPoint*(
       return some(i)
 
 proc rewriteAlgebraicExpressions*(pipeline: var pipeline.Pipeline) =
-  assert pipeline.fn.insts.len != 0
   var insts = pipeline.fn.insts
   var rewritten = newSeqOfCap[ir.Inst](insts.len)
   pipeline.fn.insts.reset()
