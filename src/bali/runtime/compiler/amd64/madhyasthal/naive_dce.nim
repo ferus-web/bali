@@ -4,11 +4,9 @@
 import std/[sets]
 import pkg/bali/runtime/compiler/amd64/madhyasthal/[ir, pipeline]
 
-proc scanForReferencedRegs*(
-    pipeline: var pipeline.Pipeline, regs: var HashSet[ir.Reg]
-) =
+proc scanForAllocatedRegs*(pipeline: var pipeline.Pipeline, regs: var HashSet[ir.Reg]) =
   ## This routine goes over the entire function's body and checks which registers
-  ## have been referenced in some way or the other.
+  ## have been allocated in some way or the other.
   ##
   ## When such a register is found, it is added to the `regs` set which constitutes
   ## all the values the compiler knows have been referred to atleast once.
@@ -74,7 +72,7 @@ proc eliminateDeadCodeNaive*(pipeline: var pipeline.Pipeline) =
     allRegs = initHashSet[ir.Reg]()
     usedRegs = initHashSet[ir.Reg]()
 
-  scanForReferencedRegs(pipeline, allRegs)
+  scanForAllocatedRegs(pipeline, allRegs)
   scanForUsedRegs(pipeline, usedRegs)
 
   let deadRegs = allRegs - usedRegs
