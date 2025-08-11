@@ -33,11 +33,12 @@ proc scanForUsedRegs*(
     of {InstKind.PassArgument, InstKind.Invoke}:
       used.incl inst.args[0].vreg
     of {InstKind.Add, InstKind.Mult, InstKind.Divide, InstKind.Sub}:
-      when defined(baliMadhyasthalDCENew):
+      when not defined(baliMadhyasthalDCEOldAlgorithm):
+        # Newer algorithm, can eliminate unused arithmetic ops
         var usedAhead = initHashSet[ir.Reg]()
-        scanForUsedRegs(pipeline, usedAhead, start = i + 1)
+        scanForUsedRegs(pipeline, usedAhead, start = start + i + 1)
 
-        if inst.args[1].vreg in usedAhead:
+        if inst.args[0].vreg in usedAhead:
           # If the destination is used ahead,
           # we can mark the two registers as
           # used. Otherwise, we can just let the
@@ -45,6 +46,16 @@ proc scanForUsedRegs*(
           used.incl inst.args[0].vreg
           used.incl inst.args[1].vreg
       else:
+        # Old algorithm
+        used.incl inst.args[0].vreg
+        used.incl inst.args[1].vreg
+    of InstKind.Copy:
+      # Check if the results of this copy are used ahead anywhere.
+      # If they aren't, then there's no point in this copy op.
+      var usedAhead = initHashSet[ir.Reg]()
+      scanForUsedRegs(pipeline, usedAhead, start = start + i + 1)
+
+      if inst.args[1].vreg in usedAhead:
         used.incl inst.args[0].vreg
         used.incl inst.args[1].vreg
     else:
