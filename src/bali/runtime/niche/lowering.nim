@@ -332,7 +332,7 @@ proc genCall(
     fillArguments()
 
     # then, invoke it.
-    discard runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackInteger fn]))
+    runtime.ir.invoke(fn)
   else:
     debug "interpreter: generate IR for calling traditional function: " & nam &
       (if stmt.mangle: " (mangled)" else: newString 0)
@@ -342,11 +342,9 @@ proc genCall(
     let indexed = runtime.index(nam, defaultParams(fn))
 
     if indexed == runtime.index("undefined", defaultParams(fn)):
-      discard runtime.ir.addOp(IROperation(opcode: Invoke, arguments: @[stackStr nam]))
+      runtime.ir.invoke(nam)
     else:
-      discard runtime.ir.addOp(
-        IROperation(opcode: Invoke, arguments: @[stackInteger indexed])
-      )
+      runtime.ir.invoke(indexed)
 
   runtime.ir.resetArgs()
     # Reset the call arguments register to prevent this call's arguments from leaking into future calls
@@ -414,11 +412,9 @@ proc genReassignVal(runtime: Runtime, fn: Function, stmt: Statement) =
     of Integer:
       runtime.ir.loadInt(index, stmt.reAtom)
     of String:
-      discard runtime.ir.loadStr(index, stmt.reAtom)
+      runtime.ir.loadStr(index, stmt.reAtom)
     of Float:
-      discard runtime.ir.addOp(
-        IROperation(opcode: LoadFloat, arguments: @[stackInteger index, stmt.reAtom])
-      ) # FIXME: mirage: loadFloat isn't implemented
+      runtime.ir.loadFloat(index, stmt.reAtom)
     else:
       unreachable
   else:
@@ -563,26 +559,11 @@ proc genBinaryOp(
         runtime.ir.loadBool(runtime.index(&stmt.binStoreIn, defaultParams(fn)), false)
     runtime.ir.overrideArgs(equalJmp, @[stackInteger(equalBranch)])
   of BinaryOperation.GreaterThan:
-    discard runtime.ir.addOp(
-      IROperation(
-        opcode: GreaterThanInt,
-        arguments: @[stackInteger leftIdx, stackInteger rightIdx],
-      ) # FIXME: mirage doesn't have a nicer IR function for this.
-    )
+    runtime.ir.greaterThan(leftIdx, rightIdx)
   of BinaryOperation.LesserThan:
-    discard runtime.ir.addOp(
-      IROperation(
-        opcode: GreaterThanEqualInt,
-        arguments: @[stackInteger leftIdx, stackInteger rightIdx],
-      ) # FIXME: mirage doesn't have a nicer IR function for this.
-    )
+    runtime.ir.greaterThanEqual(leftIdx, rightIdx)
   of BinaryOperation.LesserOrEqual:
-    discard runtime.ir.addOp(
-      IROperation(
-        opcode: LesserThanEqualInt,
-        arguments: @[stackInteger leftIdx, stackInteger rightIdx],
-      )
-    )
+    runtime.ir.lesserThanEqual(leftIdx, rightIdx)
   else:
     warn "emitter: unimplemented binary operation: " & $stmt.op
 
@@ -648,31 +629,13 @@ proc genIfStmt(runtime: Runtime, fn: Function, stmt: Statement) =
         "BALI_EQUATE_ATOMS_STRICT"
     )
   of BinaryOperation.GreaterThan:
-    discard runtime.ir.addOp(
-      IROperation(
-        opcode: GreaterThanInt, arguments: @[stackInteger lhsIdx, stackInteger rhsIdx]
-      ) # FIXME: mirage doesn't have a nicer IR function for this.
-    )
+    runtime.ir.greaterThan(lhsIdx, rhsIdx)
   of BinaryOperation.LesserThan:
-    discard runtime.ir.addOp(
-      IROperation(
-        opcode: LesserThanInt, arguments: @[stackInteger lhsIdx, stackInteger rhsIdx]
-      )
-    )
+    runtime.ir.lesserThan(lhsIdx, rhsIdx)
   of BinaryOperation.GreaterOrEqual:
-    discard runtime.ir.addOp(
-      IROperation(
-        opcode: GreaterThanEqualInt,
-        arguments: @[stackInteger lhsIdx, stackInteger rhsIdx],
-      )
-    )
+    runtime.ir.greaterThanEqual(lhsIdx, rhsIdx)
   of BinaryOperation.LesserOrEqual:
-    discard runtime.ir.addOp(
-      IROperation(
-        opcode: LesserThanEqualInt,
-        arguments: @[stackInteger lhsIdx, stackInteger rhsIdx],
-      )
-    )
+    runtime.ir.lesserThanEqual(lhsIdx, rhsIdx)
   else:
     unreachable
 
@@ -809,17 +772,9 @@ proc genWhileStmt(runtime: Runtime, fn: Function, stmt: Statement) =
         "BALI_EQUATE_ATOMS_STRICT"
     )
   of GreaterThan:
-    discard runtime.ir.addOp(
-      IROperation(
-        opcode: GreaterThanInt, arguments: @[stackInteger lhsIdx, stackInteger rhsIdx]
-      ) # FIXME: mirage doesn't have a nicer IR function for this.
-    )
+    runtime.ir.greaterThan(lhsIdx, rhsIdx)
   of LesserThan:
-    discard runtime.ir.addOp(
-      IROperation(
-        opcode: LesserThanInt, arguments: @[stackInteger lhsIdx, stackInteger rhsIdx]
-      ) # FIXME: mirage doesn't have a nicer IR function for this.
-    )
+    runtime.ir.lesserThan(lhsIdx, rhsIdx)
   else:
     unreachable
 
@@ -1219,12 +1174,7 @@ proc generateBytecodeForScope(
     if clause.len > 0:
       runtime.markGlobal(clause)
       let fnIndex = runtime.addrIdx - 1
-      discard runtime.ir.addOp(
-        IROperation(
-          opcode: LoadBytecodeCallable,
-          arguments: @[stackInteger(fnIndex), stackStr(clause)],
-        )
-      )
+      runtime.ir.loadBytecodeCallable(fnIndex, clause)
 
   runtime.irHints.generatedClauses &= name
   runtime.vm.sourceMap[name] = initTable[uint, tuple[message: string, line: uint]]()
