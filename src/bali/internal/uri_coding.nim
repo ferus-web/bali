@@ -1,9 +1,9 @@
 ## URI encoding/decoding routines
-## Author(s):
-## Trayambak Rai (xtrayambak at disroot dot org)
+##
+## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 ## https://ecma-international.org/wp-content/uploads/ECMA-262_15th_edition_june_2024.pdf
-import std/[unicode, strutils]
-import bali/internal/[str_padding]
+import std/[strutils]
+import pkg/bali/internal/[str_padding], pkg/ferrite/utf16view
 
 proc encode*(uri: string, extraUnescaped: set[char] = {}): string =
   ## 19.2.6.5 Encode ( string, extraUnescaped )
@@ -20,6 +20,7 @@ proc encode*(uri: string, extraUnescaped: set[char] = {}): string =
   let unescapedSet = alwaysUnescaped + extraUnescaped
     # 4. Let unescapedSet be the string-concatenation of alwaysUnescaped and extraUnescaped
   var k = 0'u32 # 5. Let k be 0
+  let view = newUTF16View(uri)
 
   # 6. Repeat, while k < len
   while k < length:
@@ -34,10 +35,8 @@ proc encode*(uri: string, extraUnescaped: set[char] = {}): string =
       # ii. Set R to the string-concatenation of res and C.
       res &= c
     else: # c. Else,
-      # FIXME: This is non-compliant!! Fix this!
       # i. Let cp be CodePointAt(uri, k)
-      let cp = uri.runeAt(k).toUTF8()
-
+      let cp = cast[uint8](view.codePointAt(k))
       inc k
 
       let hex = cp.toHex()
