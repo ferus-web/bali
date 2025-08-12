@@ -4,6 +4,7 @@ function x() {
 	let useless_work = 5;
 	let other_thing = 8;
 	let a = other_thing + 8;
+	console.log(a)
 }
 
 var i = 0;

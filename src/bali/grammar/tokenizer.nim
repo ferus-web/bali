@@ -30,7 +30,7 @@ func eof*(tokenizer: Tokenizer): bool =
     else:
       tokenizer.source.len.uint - 1
 
-  tokenizer.pos > len
+  tokenizer.source.len < 1 or tokenizer.pos > len
 
 proc consume*(tokenizer: Tokenizer): char =
   inc tokenizer.pos

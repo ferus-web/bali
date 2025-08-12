@@ -1359,7 +1359,7 @@ proc parseCompoundAssignment*(
 
 proc parseStatement*(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
-    parser.error Other, "expected statement, got EOF instead."
+    return
 
   let tok = parser.tokenizer.nextExceptWhitespace()
   if !tok:
