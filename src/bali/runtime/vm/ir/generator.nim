@@ -19,19 +19,27 @@ proc newModule*(gen: IRGenerator, name: string) {.inline.} =
             "\"; already exists at position " & $i,
         )
 
+  gen.cachedModule = nil
   gen.modules.add(CodeModule(name: name, operations: newSeq[IROperation]()))
   gen.currModule = name
 
 proc addOp*(gen: IRGenerator, operation: IROperation): uint {.inline.} =
   ## Add an operation to the current clause's operation list.
   ## You shouldn't have to use this directly.
-  for i, _ in gen.modules:
-    var module = gen.modules[i]
-    if module.name == gen.currModule:
-      module.operations &= operation
-      gen.modules[i] = module
-      gen.cachedIndex = module.operations.len.uint
-      return gen.cachedIndex
+
+  if gen.cachedModule == nil:
+    for i, _ in gen.modules:
+      var module = gen.modules[i]
+      if module.name == gen.currModule:
+        module.operations &= operation
+        gen.modules[i] = module
+        gen.cachedIndex = module.operations.len.uint
+        gen.cachedModule = gen.modules[i].addr
+        return gen.cachedIndex
+  else:
+    gen.cachedModule.operations &= operation
+    gen.cachedIndex = gen.cachedModule.operations.len.uint
+    return gen.cachedIndex
 
   raise newException(FieldDefect, "Cannot find any clause with name: " & gen.currModule)
 

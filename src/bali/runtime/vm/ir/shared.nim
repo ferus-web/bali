@@ -24,6 +24,8 @@ type
     modules*: seq[CodeModule]
     currModule*: string
 
+    cachedModule*: ptr CodeModule
+
 proc hash*(operation: IROperation): Hash {.inline.} =
   hash((operation.opCode, operation.arguments))
 
