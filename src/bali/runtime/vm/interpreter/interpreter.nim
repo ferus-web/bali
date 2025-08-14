@@ -237,61 +237,62 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
     else:
       let operation = &op
 
-      if *currTrace.next:
-        currTrace = &currTrace.next
-      else:
-        var
-          sourceLine: string
-          codeLine: uint
+      var
+        sourceLine: string
+        codeLine: uint
 
-        let opIndex = operation.index
-        var
-          minRange = opIndex.int
-          maxRange = 0
+      let opIndex = operation.index
+      var
+        minRange = opIndex.int
+        maxRange = 0
 
-        for opIdx, sourceInfo in interpreter.sourceMap[cls.name]:
-          let idx = opIdx.int
-          if minRange == -1:
-            minRange = idx
-            continue
+      for opIdx, sourceInfo in interpreter.sourceMap[cls.name]:
+        let idx = opIdx.int
+        if minRange == -1:
+          minRange = idx
+          continue
 
-          if maxRange < idx:
-            maxRange = idx
-            continue
+        if maxRange < idx:
+          maxRange = idx
+          continue
 
-          if minRange > idx:
-            minRange = idx
-            continue
+        if minRange > idx:
+          minRange = idx
+          continue
 
-        for opIdx, sourceInfo in interpreter.sourceMap[cls.name]:
-          let opIdx = opIdx.int
-          if opIdx == minRange or opIdx == maxRange:
-            sourceLine = sourceInfo.message
-            codeLine = sourceInfo.line
-            break
-
-          if opIdx > maxRange:
-            continue
-
-          if opIdx < minRange:
-            continue
-
+      for opIdx, sourceInfo in interpreter.sourceMap[cls.name]:
+        let opIdx = opIdx.int
+        if opIdx == minRange or opIdx == maxRange:
           sourceLine = sourceInfo.message
           codeLine = sourceInfo.line
           break
 
-        msg &=
-          "\n\tFunction <" & currTrace.exception.clause & ">, line " & $(codeLine + 1)
+        if opIdx > maxRange:
+          continue
 
+        if opIdx < minRange:
+          continue
+
+        sourceLine = sourceInfo.message
+        codeLine = sourceInfo.line
+        break
+
+      msg &= "\n\tFunction <" & currTrace.exception.clause & ">, line " & $(
+        codeLine + 1
+      )
+
+      if *currTrace.next:
+        currTrace = &currTrace.next
+      else:
         if sourceLine.len < 1:
           sourceLine = "<failed to find mapped source, report this as a bug>"
 
         msg &= "\n\t\t" & sourceLine
         msg &= "\n\t\t" & repeat('^', sourceLine.len - 1)
-        msg &= "\n\n" & $typeof(currTrace.exception) & ": " & currTrace.exception.message
+        msg &= "\n\n" & currTrace.exception.message
         break
 
-  some(msg)
+  some(ensureMove(msg))
 
 proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: int) =
   let

@@ -452,10 +452,16 @@ proc genThrowError(runtime: Runtime, fn: Function, stmt: Statement, internal: bo
     runtime.ir.passArgument(runtime.index("error_msg", internalIndex(stmt)))
     runtime.ir.call("BALI_THROWERROR")
     runtime.ir.resetArgs()
+
+    runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+      (message: stmt.source, line: stmt.line)
   elif *stmt.error.ident:
     runtime.ir.passArgument(runtime.index(&stmt.error.ident, defaultParams(fn)))
     runtime.ir.call("BALI_THROWERROR")
     runtime.ir.resetArgs()
+
+    runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+      (message: stmt.source, line: stmt.line)
   else:
     unreachable
 
