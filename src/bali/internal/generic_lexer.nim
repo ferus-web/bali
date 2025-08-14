@@ -34,7 +34,7 @@ func lexNDigits*(lexer: var GenericLexer, n: uint): Option[int] =
   var r: int
   for i in 0 ..< n:
     let ch = lexer.consume()
-    if not ch.isAlphaNumeric:
+    if ch notin strutils.Digits:
       return
 
     r = 10 * r + int(((uint8) ch) - (uint8) '0')

@@ -30,7 +30,6 @@ proc parseSimplifiedISO8601*(date: string): Option[float] =
       year = some(-(&absYear))
 
     result = (year = lexer.lexNDigits(4); *year)
-    assert *year
 
   proc lexMonth(): bool =
     month = lexer.lexNDigits(2)
@@ -43,7 +42,7 @@ proc parseSimplifiedISO8601*(date: string): Option[float] =
   proc lexDate(): bool =
     return
       lexYear() and (
-        not lexer.consumeSpecific('-') or
+        lexer.consumeSpecific('-') and
         (lexMonth() and (not lexer.consumeSpecific('-') or lexDay()))
       )
 
