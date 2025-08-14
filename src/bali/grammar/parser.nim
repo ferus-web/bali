@@ -1025,7 +1025,10 @@ proc parseThrow*(parser: Parser): Option[Statement] =
   if !throwStr and !throwErr and !throwIdent:
     parser.error Other, "throw statement is missing an expression"
 
-  some(throwError(throwStr, throwErr, throwIdent))
+  var stmt = throwError(throwStr, throwErr, throwIdent)
+  stmt.source = parser.lines[parser.tokenizer.location.line]
+
+  some(ensureMove(stmt))
 
 proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
   info "parser: parsing re-assignment to identifier: " & ident
