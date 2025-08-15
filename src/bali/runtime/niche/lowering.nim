@@ -31,34 +31,34 @@ proc generateBytecode(
 proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false) =
   case stmt.kind
   of Call:
-    debug "ir: expand Call statement"
+    debug "niche: expand Call statement"
     for i, arg in stmt.arguments:
       if arg.kind == cakAtom:
-        debug "ir: load immutable value to expand Call's immediate arguments: " &
+        debug "niche: load immutable value to expand Call's immediate arguments: " &
           arg.atom.crush()
         discard runtime.loadIRAtom(arg.atom)
         runtime.markInternal(stmt, $i)
       elif arg.kind == cakImmediateExpr:
-        debug "ir: add code to solve expression to expand Call's immediate arguments"
+        debug "niche: add code to solve expression to expand Call's immediate arguments"
         runtime.markInternal(stmt, $i)
         runtime.generateBytecode(
           fn, arg.expr, internal = true, exprStoreIn = some($i), parentStmt = some(stmt)
         )
   of ConstructObject:
-    debug "ir: expand ConstructObject statement"
+    debug "niche: expand ConstructObject statement"
     for i, arg in stmt.args:
       if arg.kind == cakAtom:
-        debug "ir: load immutable value to ConstructObject's immediate arguments: " &
+        debug "niche: load immutable value to ConstructObject's immediate arguments: " &
           arg.atom.crush()
 
         discard runtime.loadIRAtom(arg.atom)
         let name = $hash(stmt) & '_' & $i
         runtime.markInternal(stmt, name)
   of CallAndStoreResult:
-    debug "ir: expand CallAndStoreResult statement by expanding child Call statement"
+    debug "niche: expand CallAndStoreResult statement by expanding child Call statement"
     runtime.expand(fn, stmt.storeFn, internal)
   of ThrowError:
-    debug "ir: expand ThrowError"
+    debug "niche: expand ThrowError"
 
     if *stmt.error.str:
       runtime.generateBytecode(
@@ -68,34 +68,31 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         internal = true,
       )
   of BinaryOp:
-    debug "ir: expand BinaryOp"
+    debug "niche: expand BinaryOp"
 
     if *stmt.binStoreIn:
-      debug "ir: BinaryOp evaluation will be stored in: " & &stmt.binStoreIn & " (" &
+      debug "niche: BinaryOp evaluation will be stored in: " & &stmt.binStoreIn & " (" &
         $runtime.addrIdx & ')'
       runtime.ir.loadInt(runtime.addrIdx, 0)
 
       if not internal:
-        debug "ir: ...locally"
+        debug "niche: ...locally"
         runtime.markLocal(fn, &stmt.binStoreIn)
       else:
-        debug "ir: ...internally"
+        debug "niche: ...internally"
         runtime.markInternal(stmt, &stmt.binStoreIn)
 
     if stmt.binLeft.kind == AtomHolder:
-      debug "ir: BinaryOp left term is an atom"
+      debug "niche: BinaryOp left term is an atom"
       runtime.generateBytecode(
         fn,
         createImmutVal("left_term", stmt.binLeft.atom),
         ownerStmt = some(stmt),
         internal = true,
       )
-    #else:
-    #  debug "ir: BinaryOp left term is an ident, reserving new index for result"
-    #  runtime.generateBytecode(fn, createImmutVal("store_in", stackNull()), ownerStmt = some(stmt), internal = true)
 
     if stmt.binRight.kind == AtomHolder:
-      debug "ir: BinaryOp right term is an atom"
+      debug "niche: BinaryOp right term is an atom"
       runtime.generateBytecode(
         fn,
         createImmutVal("right_term", stmt.binRight.atom),
@@ -103,12 +100,12 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         internal = true,
       )
     elif stmt.binRight.kind == IdentHolder:
-      debug "ir: BinaryOp right term is an ident"
+      debug "niche: BinaryOp right term is an ident"
   of IfStmt:
-    debug "ir: expand IfStmt"
+    debug "niche: expand IfStmt"
 
     if stmt.conditionExpr.binLeft.kind == AtomHolder:
-      debug "ir: if-stmt: left term is an atom"
+      debug "niche: if-stmt: left term is an atom"
       runtime.generateBytecode(
         fn,
         createImmutVal("left_term", stmt.conditionExpr.binLeft.atom),
@@ -117,7 +114,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
       )
 
     if stmt.conditionExpr.binRight.kind == AtomHolder:
-      debug "ir: if-stmt: right term is an atom"
+      debug "niche: if-stmt: right term is an atom"
       runtime.generateBytecode(
         fn,
         createImmutVal("right_term", stmt.conditionExpr.binRight.atom),
@@ -125,9 +122,9 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         internal = true,
       )
   of WhileStmt:
-    debug "ir: expand WhileStmt"
+    debug "niche: expand WhileStmt"
     if stmt.whConditionExpr.binLeft.kind == AtomHolder:
-      debug "ir: while-stmt: left term is an atom"
+      debug "niche: while-stmt: left term is an atom"
       runtime.generateBytecode(
         fn,
         createImmutVal("left_term", stmt.whConditionExpr.binLeft.atom),
@@ -136,7 +133,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
       )
 
     if stmt.whConditionExpr.binRight.kind == AtomHolder:
-      debug "ir: while-stmt: right term is an atom"
+      debug "niche: while-stmt: right term is an atom"
       runtime.generateBytecode(
         fn,
         createImmutVal("right_term", stmt.whConditionExpr.binRight.atom),
@@ -1138,7 +1135,7 @@ proc generateBytecode(
     (message: stmt.source, line: stmt.line)
 
 proc loadArgumentsOntoStack(runtime: Runtime, fn: Function) =
-  info "emitter: loading up function signature arguments onto stack via IR: " & fn.name
+  info "niche: loading up function signature arguments onto stack via IR: " & fn.name
 
   for i, arg in fn.arguments:
     runtime.markLocal(fn, arg)
