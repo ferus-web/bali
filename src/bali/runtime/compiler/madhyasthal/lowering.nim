@@ -6,7 +6,7 @@
 import std/[options, logging]
 import pkg/[shakar]
 import
-  pkg/bali/runtime/compiler/amd64/madhyasthal/ir,
+  pkg/bali/runtime/compiler/madhyasthal/ir,
   pkg/bali/runtime/vm/[atom, shared],
   pkg/bali/runtime/vm/interpreter/[types, operation]
 

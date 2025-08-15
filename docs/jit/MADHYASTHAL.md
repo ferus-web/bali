@@ -25,7 +25,7 @@ It is a two-address-code IR that is fully in-memory by design, in contrast to th
 
 ## Lowering
 Madhyasthal's lowering mechanism works by condensing certain multi-op bytecode patterns into singular operations when possible.
-These pattern matching routines can be found at `src/bali/runtime/compiler/amd64/madhyasthal/lowering.nim`.
+These pattern matching routines can be found at `src/bali/runtime/compiler/madhyasthal/lowering.nim`.
 
 When such patterns cannot be matched, it emits the MIR-equivalent of the bytecode instruction, which is generally fairly close to the bytecode's op name.
 

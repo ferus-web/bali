@@ -1,8 +1,6 @@
 ## madhyasthal lowering tests
 import std/[importutils, tables]
-import
-  pkg/bali/runtime/compiler/amd64/madhyasthal/
-    [ir, lowering, dumper, pipeline, optimizer]
+import pkg/bali/runtime/compiler/madhyasthal/[ir, lowering, dumper, pipeline, optimizer]
 import pkg/bali/runtime/vm/interpreter/interpreter
 import pkg/bali/easy
 import pkg/[shakar, pretty]

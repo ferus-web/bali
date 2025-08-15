@@ -2,7 +2,7 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/sets
-import pkg/bali/runtime/compiler/amd64/madhyasthal/[ir]
+import pkg/bali/runtime/compiler/madhyasthal/[ir]
 
 type
   UseOrDef* = object

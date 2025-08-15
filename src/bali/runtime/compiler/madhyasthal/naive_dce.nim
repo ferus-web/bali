@@ -2,7 +2,7 @@
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[sets]
-import pkg/bali/runtime/compiler/amd64/madhyasthal/[ir, pipeline]
+import pkg/bali/runtime/compiler/madhyasthal/[ir, pipeline]
 
 proc scanForAllocatedRegs*(pipeline: var pipeline.Pipeline, regs: var HashSet[ir.Reg]) =
   ## This routine goes over the entire function's body and checks which registers

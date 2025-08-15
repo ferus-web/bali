@@ -1,11 +1,10 @@
 import
-  pkg/bali/runtime/compiler/amd64/madhyasthal/[
+  pkg/bali/runtime/compiler/madhyasthal/[
     pipeline,
 
     # All optimization passes
     naive_dce,
     folding,
-    copy_propagation,
   ]
 import pkg/[shakar]
 

@@ -1,7 +1,7 @@
 ## IR -> human-readable string conversion routine(s)
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
-import pkg/bali/runtime/compiler/amd64/madhyasthal/ir
+import pkg/bali/runtime/compiler/madhyasthal/ir
 
 proc dumpInst*(buffer: var string, inst: ir.Inst) =
   buffer &= '('

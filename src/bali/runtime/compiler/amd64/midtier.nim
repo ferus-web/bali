@@ -3,8 +3,7 @@
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[logging, posix, options, tables]
 import
-  pkg/bali/runtime/compiler/amd64/madhyasthal/
-    [ir, lowering, pipeline, optimizer, dumper],
+  pkg/bali/runtime/compiler/madhyasthal/[ir, lowering, pipeline, optimizer, dumper],
   pkg/bali/runtime/compiler/amd64/[common, native_forwarding],
   pkg/bali/runtime/compiler/base
 import pkg/shakar
