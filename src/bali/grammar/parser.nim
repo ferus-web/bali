@@ -1,6 +1,6 @@
 ## JavaScript parser
 
-import std/[options, logging, strutils, tables]
+import std/[options, logging, strutils, tables, sequtils]
 import bali/grammar/[token, tokenizer, ast, errors, statement]
 import pkg/bali/runtime/vm/atom
 import pkg/[results, pretty, yaml, shakar]
@@ -1584,7 +1584,7 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
 proc parse*(parser: Parser): AST {.inline.} =
   parser.ast = newAST()
-  parser.lines = parser.tokenizer.source.split('\n')
+  parser.lines = parser.tokenizer.source.split('\n').mapIt(it.strip(trailing = false))
 
   while not parser.tokenizer.eof():
     let stmt = parser.parseStatement()
