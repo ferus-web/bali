@@ -43,7 +43,7 @@ proc generateDescribeFnCode*(runtime: Runtime) =
       of String:
         stdout.write "Unboxed string (atom String)\n"
       of Integer:
-        stdout.write "Unboxed number (atom Int32)\n"
+        stdout.write "Unboxed number (atom Int64)\n"
       of Float:
         stdout.write "Unboxed number (atom Float64)\n"
       else:
