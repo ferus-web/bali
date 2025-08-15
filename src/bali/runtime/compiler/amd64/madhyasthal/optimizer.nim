@@ -5,6 +5,7 @@ import
     # All optimization passes
     naive_dce,
     folding,
+    copy_propagation,
   ]
 import pkg/[shakar]
 

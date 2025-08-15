@@ -25,7 +25,9 @@ echo "Lowered: "
 echo dumpFunction(lowered)
 
 var ppl = Pipeline(fn: lowered)
-ppl.optimize({Passes.NaiveDeadCodeElim})
+ppl.optimize(
+  {Passes.NaiveDeadCodeElim, Passes.NaiveDeadCodeElim, Passes.CopyPropagation}
+)
 
 echo "Optimized: "
 echo dumpFunction(ppl.fn)
