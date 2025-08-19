@@ -5,6 +5,7 @@ import
     # All optimization passes
     naive_dce,
     folding,
+    copy_propagation,
   ]
 import pkg/[shakar]
 
@@ -15,5 +16,7 @@ proc optimize*(pipeline: var pipeline.Pipeline, passes: set[Passes] = {}) =
       eliminateDeadCodeNaive(pipeline)
     of Passes.AlgebraicSimplification:
       rewriteAlgebraicExpressions(pipeline)
+    of Passes.CopyPropagation:
+      propagateCopies(pipeline)
     else:
       unreachable

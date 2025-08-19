@@ -9,12 +9,13 @@ type
     reg*: ir.Reg ## The register that was used/defined in this function
     inst*: uint32 ## The instruction that used/defined it
 
-  Definition* = distinct UseOrDef
-  Use* = distinct UseOrDef
+  Definition* = UseOrDef
+  Use* = UseOrDef
 
   DCEPassInfo* = object
     defs*: HashSet[Definition]
     uses*: HashSet[Use]
+    alive*: HashSet[ir.Reg]
 
   CopyPropInfo* = object
     aliased*: HashSet[ir.Reg]

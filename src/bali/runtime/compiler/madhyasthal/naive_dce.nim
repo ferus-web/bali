@@ -4,19 +4,34 @@
 import std/[sets]
 import pkg/bali/runtime/compiler/madhyasthal/[ir, pipeline]
 
+func markDef(pipeline: var pipeline.Pipeline, reg: ir.Reg, at: SomeNumber) =
+  #!fmt: off
+  pipeline.info.dce.defs.incl(
+    Definition(reg: reg, inst: uint32(at))
+  )
+  #!fmt: on
+
+func markUse(pipeline: var pipeline.Pipeline, reg: ir.Reg, at: SomeNumber) =
+  #!fmt: off
+  pipeline.info.dce.uses.incl(
+    Use(reg: reg, inst: uint32(at))
+  )
+  #!fmt: on
+
 proc scanForAllocatedRegs*(pipeline: var pipeline.Pipeline, regs: var HashSet[ir.Reg]) =
   ## This routine goes over the entire function's body and checks which registers
   ## have been allocated in some way or the other.
   ##
   ## When such a register is found, it is added to the `regs` set which constitutes
   ## all the values the compiler knows have been referred to atleast once.
-  for inst in pipeline.fn.insts:
+  for i, inst in pipeline.fn.insts:
     case inst.kind
     of {
       InstKind.LoadUndefined, InstKind.LoadNumber, InstKind.LoadBoolean,
       InstKind.LoadNull, InstKind.LoadBytecodeCallable, InstKind.LoadString,
     }:
       regs.incl inst.args[0].vreg
+      markDef pipeline, inst.args[0].vreg, i
     else:
       discard # The rest either have side-effects or don't cause value allocations
 
@@ -45,10 +60,16 @@ proc scanForUsedRegs*(
           # operation be elided away.
           used.incl inst.args[0].vreg
           used.incl inst.args[1].vreg
+
+          markUse pipeline, inst.args[0].vreg, i
+          markUse pipeline, inst.args[1].vreg, i
       else:
         # Old algorithm
         used.incl inst.args[0].vreg
         used.incl inst.args[1].vreg
+
+        markUse pipeline, inst.args[0].vreg, i
+        markUse pipeline, inst.args[1].vreg, i
     of InstKind.Copy:
       # Check if the results of this copy are used ahead anywhere.
       # If they aren't, then there's no point in this copy op.
@@ -58,6 +79,9 @@ proc scanForUsedRegs*(
       if inst.args[1].vreg in usedAhead:
         used.incl inst.args[0].vreg
         used.incl inst.args[1].vreg
+
+        markUse pipeline, inst.args[0].vreg, i
+        markUse pipeline, inst.args[1].vreg, i
     else:
       discard
 
@@ -75,6 +99,12 @@ proc scanAndElimDeadRefs*(pipeline: var pipeline.Pipeline, dead: HashSet[ir.Reg]
       continue
 
     pipeline.fn.insts &= inst
+
+    if inst.args[0].kind == avkPos:
+      pipeline.info.dce.alive.incl(inst.args[0].vreg)
+
+    if inst.args[1].kind == avkPos:
+      pipeline.info.dce.alive.incl(inst.args[1].vreg)
 
 proc eliminateDeadCodeNaive*(pipeline: var pipeline.Pipeline) =
   ## Entry routine into the naive dead code elimination mechanism

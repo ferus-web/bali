@@ -242,7 +242,9 @@ proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
     return
 
   var pipeline = Pipeline(fn: &lowered)
-  pipeline.optimize({Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification})
+  pipeline.optimize(
+    {Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.CopyPropagation}
+  )
 
   return compileLowered(cgen, pipeline.fn)
 
