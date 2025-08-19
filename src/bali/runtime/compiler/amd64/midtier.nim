@@ -5,7 +5,8 @@ import std/[logging, posix, options, tables]
 import
   pkg/bali/runtime/compiler/madhyasthal/[ir, lowering, pipeline, optimizer, dumper],
   pkg/bali/runtime/compiler/amd64/[common, native_forwarding],
-  pkg/bali/runtime/compiler/base
+  pkg/bali/runtime/compiler/base,
+  pkg/bali/internal/assembler/amd64
 import pkg/shakar
 
 type MidtierJIT* = object of AMD64Codegen
@@ -243,13 +244,12 @@ proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
   var pipeline = Pipeline(fn: &lowered)
   pipeline.optimize({Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification})
 
-  allocateNativeSegment(cgen)
   return compileLowered(cgen, pipeline.fn)
 
 proc initAMD64MidtierCodegen*(vm: pointer, callbacks: VMCallbacks): MidtierJIT =
   info "jit/amd64: initializing midtier jit"
 
-  var cgen = MidtierJIT(vm: vm, callbacks: callbacks)
+  var cgen = MidtierJIT(vm: vm, callbacks: callbacks, s: initAssemblerX64())
   cgen.pageSize = sysconf(SC_PAGESIZE)
   debug "jit/amd64: page size is " & $cgen.pageSize
 

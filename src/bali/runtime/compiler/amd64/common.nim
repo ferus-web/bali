@@ -1,9 +1,9 @@
-import std/[tables, posix, logging]
-import pkg/catnip/x64assembler
+import std/[tables, posix]
 import
   pkg/bali/runtime/compiler/base,
   pkg/bali/runtime/compiler/amd64/native_forwarding,
-  pkg/bali/platform/libc
+  pkg/bali/platform/libc,
+  pkg/bali/internal/assembler/amd64
 
 type
   ConstantPool* = seq[cstring]
@@ -29,28 +29,6 @@ proc `=destroy`*(cgen: AMD64Codegen) =
     dealloc(cast[pointer](cnst))
 
   free(cgen.s.data)
-
-proc allocateNativeSegment*(cgen: var AMD64Codegen) =
-  debug "jit/amd64: allocating buffer for assembler"
-
-  # TODO: Unhardcode this. Perhaps we can have something that takes in a clause and runs an upper bound estimate of how much memory its native repr will be in?
-  cgen.s = initAssemblerX64(nil)
-
-  if (
-    let code = posix_memalign(cgen.s.data.addr, cgen.pageSize.csize_t, 0x10000)
-    code != 0
-  ):
-    warn "jit/amd64: failed to allocate buffer for assembler: posix_memalign() returned " &
-      $code
-    raise newException(Defect, "Cannot allocate assembler's code buffer!")
-
-  debug "jit/amd64: allocated buffer successfully; making it executable"
-  if (
-    let code = mprotect(cgen.s.data, 0x10000, PROT_READ or PROT_WRITE or PROT_EXEC)
-    code != 0
-  ):
-    warn "jit/amd64: failed to mark buffer as executable: mprotect() returned: " & $code
-    raise newException(Defect, "Cannot mark assembler's code buffer as executable!")
 
 proc prepareGCAlloc*(cgen: var AMD64Codegen, size: uint) =
   cgen.s.mov(regRdi, size.int64)
@@ -80,4 +58,4 @@ proc prepareLoadString*(cgen: var AMD64Codegen, str: cstring) =
 
   cgen.s.pop(regR8.reg) # get the pointer that was in rax which is likely gone now
 
-export x64assembler, libc
+export libc

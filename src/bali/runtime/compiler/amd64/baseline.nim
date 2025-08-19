@@ -6,7 +6,8 @@ import pkg/[shakar]
 import
   pkg/bali/runtime/vm/[atom, shared],
   pkg/bali/runtime/vm/interpreter/resolver,
-  pkg/bali/runtime/compiler/amd64/[common, native_forwarding]
+  pkg/bali/runtime/compiler/amd64/[common, native_forwarding],
+  pkg/bali/internal/assembler/amd64
 
 type BaselineJIT* = object of AMD64Codegen
 
@@ -415,7 +416,6 @@ proc compile*(cgen: var BaselineJIT, clause: Clause): Option[JITSegment] =
     debug "jit/amd64: found cached version of JIT'd clause"
     return some(cgen.cached[clause.name])
 
-  allocateNativeSegment(cgen)
   cgen.bcToNativeOffsetMap = newSeqOfCap[BackwardsLabel](128)
 
   if emitNativeCode(cgen, clause):
@@ -432,7 +432,7 @@ proc compile*(cgen: var BaselineJIT, clause: Clause): Option[JITSegment] =
 proc initAMD64BaselineCodegen*(vm: pointer, callbacks: VMCallbacks): BaselineJIT =
   info "jit/amd64: initializing baseline jit"
 
-  var cgen = BaselineJIT(vm: vm, callbacks: callbacks)
+  var cgen = BaselineJIT(vm: vm, callbacks: callbacks, s: initAssemblerX64())
   cgen.pageSize = sysconf(SC_PAGESIZE)
   debug "jit/amd64: page size is " & $cgen.pageSize
 

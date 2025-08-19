@@ -31,7 +31,6 @@ requires "icu4nim >= 76.1.0.1"
 requires "ptr_math >= 0.3.0"
 requires "libbacktrace >= 0.0.8"
 requires "shakar >= 0.1.3"
-requires "catnip >= 0.3.0"
 
 taskRequires "fmt", "nph#master"
 task fmt, "Format code":
