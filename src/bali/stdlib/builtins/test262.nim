@@ -98,6 +98,6 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let msg = runtime.ToString(&runtime.argument(1))
       stderr.styledWriteLine(
-        bgRed, fgBlack, " SUCCESS ", resetStyle, " ", styleBright, msg, resetStyle
+        bgGreen, fgBlack, " SUCCESS ", resetStyle, " ", styleBright, msg, resetStyle
       ),
   )
