@@ -334,6 +334,8 @@ proc genCall(
     debug "interpreter: generate IR for calling traditional function: " & nam &
       (if stmt.mangle: " (mangled)" else: newString 0)
 
+    # assert nam != "a"
+
     fillArguments()
 
     let indexed = runtime.index(nam, defaultParams(fn))
@@ -1060,6 +1062,14 @@ proc genCompoundAsgn(runtime: Runtime, fn: Function, stmt: Statement) =
   else:
     unreachable
 
+proc genDefineFunction(runtime: Runtime, fn: Function, stmt: Statement) =
+  debug "emitter: generate bytecode for define-function"
+
+  let moduleName = runtime.ir.currModule
+  runtime.generateBytecodeForScope(Scope(stmt.defunFn))
+  runtime.ir.cachedModule = nil
+  runtime.ir.currModule = moduleName
+
 proc generateBytecode(
     runtime: Runtime,
     fn: Function,
@@ -1128,6 +1138,8 @@ proc generateBytecode(
     runtime.genTryClause(fn = fn, stmt = stmt)
   of CompoundAssignment:
     runtime.genCompoundAsgn(fn = fn, stmt = stmt)
+  of DefineFunction:
+    runtime.genDefineFunction(fn = fn, stmt = stmt)
   else:
     warn "emitter: unimplemented bytecode generation directive: " & $stmt.kind
 
