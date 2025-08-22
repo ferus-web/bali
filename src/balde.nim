@@ -559,7 +559,7 @@ proc main() {.inline.} =
   if input.enabled("version", "V"):
     echo "Bali: " & Version
     echo "Boehm-Demers-Weiser GC: " & $boehmVersion()
-    echo "Bali is developed by the Ferus Project. All of the source code is licensed under the GNU General Public License 3."
+    echo "Bali is developed by the Ferus Project. All of the source code is licensed under the BSD-3 license."
     quit(0)
 
   if input.enabled("verbose", "v"):
