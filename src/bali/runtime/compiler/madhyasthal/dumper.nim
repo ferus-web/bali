@@ -3,7 +3,7 @@
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import pkg/bali/runtime/compiler/madhyasthal/ir
 
-proc dumpInst*(buffer: var string, inst: ir.Inst) =
+func dumpInst*(buffer: var string, inst: ir.Inst) =
   buffer &= '('
   buffer &= $inst.kind
   buffer &= ' '
@@ -27,7 +27,7 @@ proc dumpInst*(buffer: var string, inst: ir.Inst) =
 
   buffer &= ')'
 
-proc dumpFunction*(fn: ir.Function): string =
+func dumpFunction*(fn: ir.Function): string =
   var buffer = newStringOfCap(512)
 
   buffer &= '('

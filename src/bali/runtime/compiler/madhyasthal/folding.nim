@@ -17,7 +17,7 @@ import std/[options, sets]
 import pkg/bali/runtime/compiler/madhyasthal/[ir, pipeline]
 import pkg/shakar
 
-proc inferLocallyAllocatedNumericOperandValue*(
+func inferLocallyAllocatedNumericOperandValue*(
     pipeline: pipeline.Pipeline, insts: seq[ir.Inst], before: int, operand: ir.Reg
 ): Option[float] =
   if insts.len < 1:
@@ -30,7 +30,7 @@ proc inferLocallyAllocatedNumericOperandValue*(
     if inst.args[0].vreg == operand:
       return some(inst.args[1].flt)
 
-proc findNumericOpAllocationPoint*(
+func findNumericOpAllocationPoint*(
     pipeline: pipeline.Pipeline, insts: seq[ir.Inst], op: ir.Reg
 ): Option[int] =
   for i, inst in insts:
@@ -40,7 +40,7 @@ proc findNumericOpAllocationPoint*(
     if inst.args[0].vreg == op:
       return some(i)
 
-proc rewriteAlgebraicExpressions*(pipeline: var pipeline.Pipeline) =
+func rewriteAlgebraicExpressions*(pipeline: var pipeline.Pipeline) =
   var insts = pipeline.fn.insts
   var rewritten = newSeqOfCap[ir.Inst](insts.len)
   pipeline.fn.insts.reset()
@@ -156,5 +156,5 @@ proc rewriteAlgebraicExpressions*(pipeline: var pipeline.Pipeline) =
 
   pipeline.fn.insts &= ensureMove(rewritten)
 
-proc foldExpressions*(pipeline: var pipeline.Pipeline) =
+func foldExpressions*(pipeline: var pipeline.Pipeline) =
   rewriteAlgebraicExpressions(pipeline)

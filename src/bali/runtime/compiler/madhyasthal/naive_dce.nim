@@ -18,7 +18,7 @@ func markUse(pipeline: var pipeline.Pipeline, reg: ir.Reg, at: SomeNumber) =
   )
   #!fmt: on
 
-proc scanForAllocatedRegs*(pipeline: var pipeline.Pipeline, regs: var HashSet[ir.Reg]) =
+func scanForAllocatedRegs*(pipeline: var pipeline.Pipeline, regs: var HashSet[ir.Reg]) =
   ## This routine goes over the entire function's body and checks which registers
   ## have been allocated in some way or the other.
   ##
@@ -35,7 +35,7 @@ proc scanForAllocatedRegs*(pipeline: var pipeline.Pipeline, regs: var HashSet[ir
     else:
       discard # The rest either have side-effects or don't cause value allocations
 
-proc scanForUsedRegs*(
+func scanForUsedRegs*(
     pipeline: var pipeline.Pipeline, used: var HashSet[ir.Reg], start: int = 0
 ) =
   ## This routine goes over the entire function's body and checks which registers
@@ -85,7 +85,7 @@ proc scanForUsedRegs*(
     else:
       discard
 
-proc scanAndElimDeadRefs*(pipeline: var pipeline.Pipeline, dead: HashSet[ir.Reg]) =
+func scanAndElimDeadRefs*(pipeline: var pipeline.Pipeline, dead: HashSet[ir.Reg]) =
   ## This routine eliminates all instructions that are known 
   ## to be working with dead values.
   let unelimInsts = pipeline.fn.insts
@@ -106,7 +106,7 @@ proc scanAndElimDeadRefs*(pipeline: var pipeline.Pipeline, dead: HashSet[ir.Reg]
     if inst.args[1].kind == avkPos:
       pipeline.info.dce.alive.incl(inst.args[1].vreg)
 
-proc eliminateDeadCodeNaive*(pipeline: var pipeline.Pipeline) =
+func eliminateDeadCodeNaive*(pipeline: var pipeline.Pipeline) =
   ## Entry routine into the naive dead code elimination mechanism
 
   var
