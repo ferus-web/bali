@@ -24,11 +24,7 @@ func source*(tokenizer: Tokenizer): string =
   tokenizer.source
 
 func eof*(tokenizer: Tokenizer): bool =
-  let len =
-    if tokenizer.source.len.uint < 1:
-      0'u
-    else:
-      tokenizer.source.len.uint - 1
+  let len = tokenizer.source.len.uint - 1
 
   tokenizer.source.len < 1 or tokenizer.pos > len
 

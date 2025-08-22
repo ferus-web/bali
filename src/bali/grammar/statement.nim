@@ -33,6 +33,7 @@ type
     ForLoop
     TryCatch
     CompoundAssignment
+    DefineFunction
 
   FieldAccess* = ref object
     prev*, next*: FieldAccess
@@ -176,6 +177,9 @@ type
       compAsgnTarget*: string
       compAsgnCompounder*: Option[MAtom]
       compAsgnCompounderIdent*: Option[string]
+    of DefineFunction:
+      defunFn*: Function
+      limitedTo*: Option[Scope]
 
 func hash*(access: FieldAccess): Hash {.inline.} =
   hash((access.identifier))
@@ -272,6 +276,9 @@ proc pushImmExpr*(args: var PositionedArguments, expr: Statement) {.inline.} =
   args &= CallArg(kind: cakImmediateExpr, expr: expr)
 
 {.push checks: off, inline.}
+proc defineFunction*(fn: Function, limitedTo: Option[Scope] = none(Scope)): Statement =
+  Statement(kind: DefineFunction, defunFn: fn, limitedTo: limitedTo)
+
 proc throwError*(
     errorStr: Option[string], errorExc: Option[void], errorIdent: Option[string]
 ): Statement =

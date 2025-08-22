@@ -584,6 +584,10 @@ proc parseTernaryOp*(
 
   some(tern)
 
+proc parseFunction*(
+  parser: Parser, name: Option[string] = none(string)
+): Option[Function]
+
 proc parseDeclaration*(
     parser: Parser, initialIdent: string, reassignment: bool = false
 ): Option[Statement] =
@@ -649,6 +653,7 @@ proc parseDeclaration*(
     vIdent: Option[string]
     ternary: Option[Statement]
     toCall: Option[Statement]
+    declareFn: Option[Function]
 
   while not parser.tokenizer.eof and !vIdent and !atom and !toCall:
     let tok = parser.tokenizer.next()
@@ -704,16 +709,28 @@ proc parseDeclaration*(
     of TokenKind.LCurly:
       atom = parser.parseTable()
       break
+    of TokenKind.Function:
+      let fn = parser.parseFunction(name = some(ident))
+      declareFn = fn
+    of TokenKind.Semicolon:
+      if (!atom and !vIdent and !toCall and !ternary and !declareFn):
+        parser.error UnexpectedToken, "expected value, got semicolon instead"
+
+      break
     else:
       parser.error UnexpectedToken, $tok.kind
 
-  assert not (*atom and *vIdent and *toCall and *ternary),
+  assert not (*atom and *vIdent and *toCall and *ternary and *declareFn),
     "Attempt to assign a value to nothing (something went wrong)"
 
   if *ternary:
     var tern = &ternary
     tern.ternaryStoreIn = some(ident)
     return some(tern)
+
+  if *declareFn:
+    return
+      some(defineFunction(&declareFn, some(parser.ast.scopes[parser.ast.currentScope])))
 
   if not reassignment:
     case initialIdent
@@ -747,21 +764,27 @@ proc parseDeclaration*(
 
 proc parseStatement*(parser: Parser): Option[Statement]
 
-proc parseFunction*(parser: Parser): Option[Function] =
+proc parseFunction*(
+    parser: Parser, name: Option[string] = none(string)
+): Option[Function] =
   info "parser: parse function"
+  let nameOpt = name
   var name: Option[string]
 
-  while not parser.tokenizer.eof:
-    let tok = parser.tokenizer.next()
-    case tok.kind
-    of TokenKind.Identifier:
-      name = some(tok.ident)
-      break
-    else:
-      discard
+  if !nameOpt:
+    while not parser.tokenizer.eof:
+      let tok = parser.tokenizer.next()
+      case tok.kind
+      of TokenKind.Identifier:
+        name = some(tok.ident)
+        break
+      else:
+        discard
 
-  if not *name:
-    parser.error Other, "function statement requires a name"
+    if not *name:
+      parser.error Other, "function statement requires a name"
+  else:
+    name = nameOpt
 
   var
     metLParen = false
