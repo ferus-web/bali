@@ -48,6 +48,8 @@ type
       useJit*: bool = true
 
     trapped*: bool = false
+    runningCompiled*: bool = false
+      ## `true` if the current code segment is compiled, `false` if it's interpreted
     profTotalFrames: uint64
 
     #               clause      op index        error     source position/line
@@ -1078,7 +1080,9 @@ proc run*(interpreter: var PulsarInterpreter) =
           interpreter.clauses[interpreter.currClause] = clause
 
           vmd "execute", "entering JIT'd segment"
+          interpreter.runningCompiled = true
           (&compiled)()
+          interpreter.runningCompiled = false
           interpreter.currIndex = clause.rollback.opIndex
           interpreter.currClause = clause.rollback.clause
           vmd "execute",

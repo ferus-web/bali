@@ -1440,4 +1440,11 @@ proc generateInternalIR*(runtime: Runtime) =
         GC_partialCollect(limit),
     )
 
+    runtime.defineFn(
+      "baliVM_IsCompiled",
+      proc() =
+        ret runtime.vm.runningCompiled
+      ,
+    )
+
 export types
