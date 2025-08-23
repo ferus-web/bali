@@ -43,7 +43,12 @@ func scanForUsedRegs*(
   ##
   ## When such a register is found, it adds it to the `used` set which constitutes
   ## all the values the compiler believes are alive.
-  for i, inst in pipeline.fn.insts[start ..< pipeline.fn.insts.len]:
+  let iteration = pipeline.fn.insts[start ..< pipeline.fn.insts.len]
+  var i = start
+
+  while i < iteration.len:
+    let inst = iteration[i]
+
     case inst.kind
     of {InstKind.PassArgument, InstKind.Invoke}:
       used.incl inst.args[0].vreg
@@ -63,6 +68,19 @@ func scanForUsedRegs*(
 
           markUse pipeline, inst.args[0].vreg, i
           markUse pipeline, inst.args[1].vreg, i
+
+        if start > 0:
+          # Optimization: Now that we've scanned ahead for used registers, we can simply merge
+          # `usedAhead with `used` and skip a lot of instructions.
+          #
+          # `scanForUsedRegs()` pretty much scans everything ahead and builds up use-info
+          # for instructions ahead, so there's no point in wasting time going ahead.
+          #
+          # This is only safe when we're in a recursion of this function, or when start > 0.
+          # Do it when start == 0 (or... somehow less than zero, idk how but that isn't possible in normal cases)
+          # and everything gets marked as dead and blown up.
+          used = used + ensureMove(usedAhead)
+          break
       else:
         # Old algorithm
         used.incl inst.args[0].vreg
@@ -82,8 +100,15 @@ func scanForUsedRegs*(
 
         markUse pipeline, inst.args[0].vreg, i
         markUse pipeline, inst.args[1].vreg, i
+
+      if start > 0:
+        # Optimization: The same as the huge wall of text I wrote above. I'm too lazy to write something here.
+        used = used + ensureMove(usedAhead)
+        break
     else:
       discard
+
+    inc i
 
 func scanAndElimDeadRefs*(pipeline: var pipeline.Pipeline, dead: HashSet[ir.Reg]) =
   ## This routine eliminates all instructions that are known 
