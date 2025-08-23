@@ -1067,8 +1067,14 @@ proc genDefineFunction(runtime: Runtime, fn: Function, stmt: Statement) =
 
   let moduleName = runtime.ir.currModule
   runtime.generateBytecodeForScope(Scope(stmt.defunFn))
+
   runtime.ir.cachedModule = nil
   runtime.ir.currModule = moduleName
+
+  runtime.markLocal(fn, stmt.defunFn.name)
+  runtime.ir.loadBytecodeCallable(
+    runtime.addrIdx - 1, normalizeIRName(stmt.defunFn.name)
+  )
 
 proc generateBytecode(
     runtime: Runtime,
