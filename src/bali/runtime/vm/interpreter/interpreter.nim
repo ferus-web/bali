@@ -723,6 +723,7 @@ proc opWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
     oatomIndex = (&op.arguments[0].getInt())
     oatomId = interpreter.get(oatomIndex)
     fieldName = &op.arguments[1].getStr()
+    sourceAtom = interpreter.get(&op.arguments[2].getInt())
 
   if not *oatomId:
     inc interpreter.currIndex
@@ -740,8 +741,7 @@ proc opWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
     atom.objValues &= undefined()
     fieldIndex = some(atom.objValues.len - 1)
 
-  let toWrite = op.consume(Integer, "", enforce = false, some(op.rawArgs.len - 1))
-  atom.objValues[&fieldIndex] = &interpreter.get(&toWrite.getInt())
+  atom.objValues[&fieldIndex] = &sourceAtom
 
   interpreter.addAtom(atom, oatomIndex)
   inc interpreter.currIndex
