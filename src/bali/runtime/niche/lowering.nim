@@ -589,6 +589,9 @@ proc genBinaryOp(
       leftIdx, runtime.index(&exprStoreIn, internalIndex(&parentStmt))
     )
 
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
+
 proc genIfStmt(runtime: Runtime, fn: Function, stmt: Statement) =
   info "emitter: emitting bytecode for if statement"
 
@@ -679,6 +682,9 @@ proc genIfStmt(runtime: Runtime, fn: Function, stmt: Statement) =
   else:
     unreachable
 
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
+
 proc genCopyValMut(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate IR for copying value to a mutable address with source: " &
     stmt.cpMutSourceIdent & " and destination: " & stmt.cpMutDestIdent
@@ -700,6 +706,9 @@ proc genCopyValMut(runtime: Runtime, fn: Function, stmt: Statement) =
   else:
     runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
 
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
+
 proc genCopyValImmut(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate IR for copying value to an immutable address with source: " &
     stmt.cpImmutSourceIdent & " and destination: " & stmt.cpImmutDestIdent
@@ -709,6 +718,9 @@ proc genCopyValImmut(runtime: Runtime, fn: Function, stmt: Statement) =
   let dest = runtime.addrIdx - 1
 
   runtime.ir.copyAtom(runtime.index(stmt.cpImmutSourceIdent, defaultParams(fn)), dest)
+
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
 
 proc genWhileStmt(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate IR for while loop"
@@ -825,17 +837,26 @@ proc genWhileStmt(runtime: Runtime, fn: Function, stmt: Statement) =
   else:
     unreachable
 
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
+
 proc genIncrement(runtime: Runtime, fn: Function, stmt: Statement) {.inline.} =
   debug "emitter: generate IR for increment"
   runtime.ir.incrementInt(runtime.index(stmt.incIdent, defaultParams(fn)))
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
 
 proc genDecrement(runtime: Runtime, fn: Function, stmt: Statement) {.inline.} =
   debug "emitter: generate IR for decrement"
   runtime.ir.decrementInt(runtime.index(stmt.decIdent, defaultParams(fn)))
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
 
 proc genBreak(runtime: Runtime, fn: Function, stmt: Statement) {.inline.} =
   debug "emitter: generate IR for break"
   runtime.irHints.breaksGeneratedAt &= runtime.ir.addOp(IROperation(opcode: Jump)) - 1
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
 
 proc genWaste(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate IR for wasting value"
@@ -875,6 +896,9 @@ proc genWaste(runtime: Runtime, fn: Function, stmt: Statement) =
       ),
     )
 
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
+
 proc genAccessArrayIndex(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate IR for array indexing"
   let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
@@ -891,6 +915,8 @@ proc genAccessArrayIndex(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.ir.passArgument(fieldIndex)
   runtime.ir.call("BALI_INDEX")
   runtime.ir.resetArgs()
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
 
 proc genTernaryOp(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate IR for ternary op"
@@ -954,11 +980,17 @@ proc genTernaryOp(runtime: Runtime, fn: Function, stmt: Statement) =
 
   runtime.ir.copyAtom(addrOfFalseExpr, finalAddr)
 
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
+
 proc genForLoop(runtime: Runtime, fn: Function, stmt: Statement) =
   # if runtime.opts.codegen.deadCodeElimination and forLoopIsDead(stmt):
   # If the for-loop has no side effects, we can safely elide it.
   #  debug "emitter: dce tells us that this for-loop has no side effects, preventing codegen"
   #  return
+
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
 
   # Generate bytecode for initializer, if it exists.
   if *stmt.forLoopInitializer:
@@ -1013,6 +1045,9 @@ proc genForLoop(runtime: Runtime, fn: Function, stmt: Statement) =
 proc genTryClause(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate bytecode for try clause"
 
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
+
   # Install a jump-on-exception handler
   let excHandler = runtime.ir.placeholder(JumpOnError) - 1
 
@@ -1062,8 +1097,14 @@ proc genCompoundAsgn(runtime: Runtime, fn: Function, stmt: Statement) =
   else:
     unreachable
 
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
+
 proc genDefineFunction(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate bytecode for define-function"
+
+  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+    (message: stmt.source, line: stmt.line)
 
   let moduleName = runtime.ir.currModule
   runtime.generateBytecodeForScope(Scope(stmt.defunFn))

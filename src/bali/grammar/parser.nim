@@ -1067,6 +1067,7 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
     else:
       expr.applyThis:
         this.binStoreIn = some(ident)
+        this.source = parser.lines[copiedTok.location.line]
 
       return expr
 
@@ -1117,11 +1118,20 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
       parser.error UnexpectedToken, $tok.kind
 
   if *atom:
-    return some(reassignVal(ident, &atom))
+    var reassignExpr = reassignVal(ident, &atom)
+    reassignExpr.source = parser.lines[parser.tokenizer.location.line]
+
+    return some(ensureMove(reassignExpr))
   elif *vIdent:
-    return some(copyValMut(ident, &vIdent))
+    var copyExpr = copyValMut(ident, &vIdent)
+    copyExpr.source = parser.lines[parser.tokenizer.location.line]
+
+    return some(ensureMove(copyExpr))
   elif *toCall:
-    return some(callAndStoreMut(ident, &toCall))
+    var callStoreExpr = callAndStoreMut(ident, &toCall)
+    callStoreExpr.source = parser.lines[parser.tokenizer.location.line]
+
+    return some(ensureMove(callStoreExpr))
 
 proc parseScope*(parser: Parser): seq[Statement] =
   ## Firstly, parse the opening right-facing curly bracket (`{`), and then
@@ -1164,6 +1174,7 @@ proc parseScope*(parser: Parser): seq[Statement] =
     var statement = &stmt
     statement.line = parser.tokenizer.location.line
     statement.col = parser.tokenizer.location.col
+    statement.source = parser.lines[parser.tokenizer.location.line]
 
     stmts &= statement
 
@@ -1290,8 +1301,8 @@ proc parseTryClause*(parser: Parser): Option[Statement] =
   ## Parse a try-catch clause.
   debug "parser: parsing try-catch clause"
   var statement = Statement(kind: TryCatch)
-
   statement.tryStmtBody = Scope(stmts: parser.parseScope())
+  statement.source = parser.lines[parser.tokenizer.location.line]
 
   let copied = parser.tokenizer.deepCopy()
 
@@ -1376,9 +1387,15 @@ proc parseCompoundAssignment*(
         $compound.kind & " instead"
 
   if *atom:
-    return some compoundAssignment(binOp, target = target, compounder = &atom)
+    var asgnExpr = compoundAssignment(binOp, target = target, compounder = &atom)
+    asgnExpr.source = parser.lines[parser.tokenizer.location.line]
+
+    return some(ensureMove(asgnExpr))
   elif *identifier:
-    return some compoundAssignment(binOp, target = target, compounder = &identifier)
+    var asgnExpr = compoundAssignment(binOp, target = target, compounder = &identifier)
+    asgnExpr.source = parser.lines[parser.tokenizer.location.line]
+
+    return some(ensureMove(asgnExpr))
   else:
     parser.error Other,
       "expected expression, literal or identifier after compound assignment"
