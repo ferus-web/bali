@@ -18,11 +18,11 @@ jobs:
             ${{ runner.os }}-nimble-
       - uses: jiro4989/setup-nim-action@v2
         with:
-          nim-version: '2.2.0'
+          nim-version: '2.2.4'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       
       - run: sudo apt-get install gcc libgmp-dev libgc-dev
-      - run: git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install . -j$(nproc) && cd .. && nimble refresh && nimble install && rm src/config.nims && make NIMFLAGS="--define:release --define:baliTest262FyiDisableICULinkingCode --define:speed --out:./"
+      - run: git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install . -j$(nproc) && cd .. && nimble refresh && nimble install && rm src/config.nims && make NIMFLAGS="--define:release --define:baliTest262FyiDisableICULinkingCode --define:speed"
 
       - name: Upload Build Artifact (balde)
         uses: actions/upload-artifact@v4
