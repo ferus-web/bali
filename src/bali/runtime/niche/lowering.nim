@@ -365,9 +365,12 @@ proc genReturnFn(runtime: Runtime, fn: Function, stmt: Statement) =
 
 proc genCallAndStoreResult(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.generateBytecode(fn, stmt.storeFn, ownerStmt = some(stmt))
-  runtime.markLocal(fn, stmt.storeIdent)
+  var index = runtime.index(stmt.storeIdent, defaultParams(fn))
 
-  let index = runtime.index(stmt.storeIdent, defaultParams(fn))
+  if index == runtime.index("undefined", defaultParams(fn)):
+    runtime.markLocal(fn, stmt.storeIdent)
+    index = runtime.addrIdx - 1
+
   debug "emitter: call-and-store result will be stored in ident \"" & stmt.storeIdent &
     "\" or index " & $index
   runtime.ir.loadUndefined(index) # load `undefined` on that index
