@@ -20,8 +20,6 @@ type
     bcToNativeOffsetMap*: seq[BackwardsLabel]
     patchJmpOffsets*: Table[int, int]
 
-    pageSize*: int64
-
     dumpIrForFuncs*: seq[string]
 
 proc `=destroy`*(cgen: AMD64Codegen) =

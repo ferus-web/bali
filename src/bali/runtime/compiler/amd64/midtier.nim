@@ -249,8 +249,4 @@ proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
 proc initAMD64MidtierCodegen*(vm: pointer, callbacks: VMCallbacks): MidtierJIT =
   info "jit/amd64: initializing midtier jit"
 
-  var cgen = MidtierJIT(vm: vm, callbacks: callbacks, s: initAssemblerX64())
-  cgen.pageSize = sysconf(SC_PAGESIZE)
-  debug "jit/amd64: page size is " & $cgen.pageSize
-
-  move(cgen)
+  MidtierJIT(vm: vm, callbacks: callbacks, s: initAssemblerX64())

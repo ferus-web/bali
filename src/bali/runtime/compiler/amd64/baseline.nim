@@ -432,8 +432,4 @@ proc compile*(cgen: var BaselineJIT, clause: Clause): Option[JITSegment] =
 proc initAMD64BaselineCodegen*(vm: pointer, callbacks: VMCallbacks): BaselineJIT =
   info "jit/amd64: initializing baseline jit"
 
-  var cgen = BaselineJIT(vm: vm, callbacks: callbacks, s: initAssemblerX64())
-  cgen.pageSize = sysconf(SC_PAGESIZE)
-  debug "jit/amd64: page size is " & $cgen.pageSize
-
-  move(cgen)
+  BaselineJIT(vm: vm, callbacks: callbacks, s: initAssemblerX64())
