@@ -688,26 +688,34 @@ proc genIfStmt(runtime: Runtime, fn: Function, stmt: Statement) =
 proc genCopyValMut(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate IR for copying value to a mutable address with source: " &
     stmt.cpMutSourceIdent & " and destination: " & stmt.cpMutDestIdent
-  runtime.generateBytecode(
-    fn, createMutVal(stmt.cpMutDestIdent, stackNull()), internal = false
-  )
-  let dest = runtime.addrIdx - 1
 
-  if stmt.cpMutDestIdent.contains('.'):
-    # Field access.
-    let fields = createFieldAccess(stmt.cpMutDestIdent.split('.'))
+  let preExistingDestIndex = runtime.index(stmt.cpMutDestIdent, defaultParams(fn))
 
-    # TODO: recursively find the field to modify
-    runtime.ir.writeField(
-      runtime.index(fields.identifier, defaultParams(fn)),
-      fields.next.identifier,
-      runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)),
+  if preExistingDestIndex == runtime.index("undefined", defaultParams(fn)):
+    runtime.generateBytecode(
+      fn, createMutVal(stmt.cpMutDestIdent, stackNull()), internal = false
     )
-  else:
-    runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
+    let dest = runtime.addrIdx - 1
 
-  runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
-    (message: stmt.source, line: stmt.line)
+    if stmt.cpMutDestIdent.contains('.'):
+      # Field access.
+      let fields = createFieldAccess(stmt.cpMutDestIdent.split('.'))
+
+      # TODO: recursively find the field to modify
+      runtime.ir.writeField(
+        runtime.index(fields.identifier, defaultParams(fn)),
+        fields.next.identifier,
+        runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)),
+      )
+    else:
+      runtime.ir.copyAtom(runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), dest)
+
+    runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
+      (message: stmt.source, line: stmt.line)
+  else:
+    runtime.ir.copyAtom(
+      runtime.index(stmt.cpMutSourceIdent, defaultParams(fn)), preExistingDestIndex
+    )
 
 proc genCopyValImmut(runtime: Runtime, fn: Function, stmt: Statement) =
   debug "emitter: generate IR for copying value to an immutable address with source: " &
