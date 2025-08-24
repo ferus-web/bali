@@ -21,17 +21,11 @@ jobs:
           nim-version: '2.2.4'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       
-      - run: sudo apt-get install gcc libgmp-dev libgc-dev
-      - run: git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install . -j$(nproc) && cd .. && nimble refresh && nimble install && rm src/config.nims && make NIMFLAGS="--define:release --define:baliTest262FyiDisableICULinkingCode --define:speed"
+      - run: sudo apt-get update && sudo apt-get install gcc libgmp-dev libgc-dev cmake -y
+      - run: git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install . -j$(nproc) && cd .. && nimble refresh && nimble install && make NIMFLAGS="--define:release --define:baliTest262FyiDisableICULinkingCode --define:speed"
 
       - name: Upload Build Artifact (balde)
         uses: actions/upload-artifact@v4
         with:
           name: Balde
           path: bin/balde 
-
-      - name: Upload Build Artifacts (test262)
-        uses: actions/upload-artifact@v4
-        with:
-          name: Test262
-          path: bin/test262

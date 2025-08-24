@@ -10,6 +10,7 @@ mkShell {
     pcre
     nph
     quickjs
+    act
     boa
     mimalloc
   ];

@@ -54,9 +54,9 @@ proc allocRuntime*(
 ): Runtime =
   let test262 = ctx.enabled("test262")
   var runtime = newRuntime(
-    file,
-    ast,
-    InterpreterOpts(
+    file = file,
+    ast = ast,
+    opts = InterpreterOpts(
       test262: test262,
       dumpBytecode: ctx.enabled("dump-bytecode", "D"),
       repl: repl,
