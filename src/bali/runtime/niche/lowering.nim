@@ -1374,7 +1374,7 @@ proc generateInternalIR*(runtime: Runtime) =
         "BUG: BALI_INDEX_INTERNAL was passed a " & $(&atom).kind,
       )
 
-      let idx = &(&index).getInt()
+      let idx = int(&(&index).getNumeric())
       var vec = (&atom).sequence
       if idx < 0 or idx > vec.len - 1:
         ret undefined()
