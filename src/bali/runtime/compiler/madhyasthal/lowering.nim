@@ -102,7 +102,7 @@ proc lowerLoadNullPatterns*(
   true
 
 proc lowerStream*(fn: var Function, stream: var OpStream): bool =
-  template bailout(msg: static string) =
+  template bailout(msg: string) =
     debug "jit/amd64: midtier jit is bailing out: " & msg
     return false
 
@@ -184,8 +184,12 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
 
       fn.insts &=
         divide(uint32(&op.arguments[0].getInt()), uint32(&op.arguments[1].getInt()))
+    of Return:
+      let op = stream.consume()
+
+      fn.insts &= returnV(uint32(&op.arguments[0].getInt()))
     else:
-      bailout "cannot find predictable pattern"
+      bailout "cannot find predictable pattern for op: " & $stream.peekKind()
 
   true
 

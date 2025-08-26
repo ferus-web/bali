@@ -44,7 +44,7 @@ func scanForUsedRegs*(
   ## When such a register is found, it adds it to the `used` set which constitutes
   ## all the values the compiler believes are alive.
   let iteration = pipeline.fn.insts[start ..< pipeline.fn.insts.len]
-  var i = start
+  var i = 0
 
   while i < iteration.len:
     let inst = iteration[i]
@@ -105,6 +105,8 @@ func scanForUsedRegs*(
         # Optimization: The same as the huge wall of text I wrote above. I'm too lazy to write something here.
         used = used + ensureMove(usedAhead)
         break
+    of InstKind.Return:
+      used.incl(inst.args[0].vreg)
     else:
       discard
 

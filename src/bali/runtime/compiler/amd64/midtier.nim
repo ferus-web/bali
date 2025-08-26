@@ -224,6 +224,19 @@ proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi, int64(source))
         cgen.s.mov(regRdx, int64(dest))
+        cgen.s.call(cgen.callbacks.copyAtom)
+    of InstKind.Return:
+      let index = inst.args[0].vreg
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, cast[int64](index))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi.reg, regRax)
+        cgen.s.call(cgen.callbacks.addRetval)
     else:
       debug "jit/amd64: midtier cannot lower op into x64 code: " & $inst.kind
       return
