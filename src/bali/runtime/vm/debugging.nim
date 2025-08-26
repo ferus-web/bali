@@ -5,7 +5,7 @@ template msg*(message: string) =
   ## Execution related VM debug messages
   when (not defined(release)) and defined(baliLogExecDbg):
     let
-      pc = interpreter.currIndex
+      pc = interpreter.currIndex + 1
       clauseObj = interpreter.clauses[interpreter.currClause]
       clause = clauseObj.name
 
