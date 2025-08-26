@@ -12,6 +12,9 @@ type
   Definition* = UseOrDef
   Use* = UseOrDef
 
+  EscapeAnalysisInfo* = object
+    locals*: HashSet[ir.Reg]
+
   DCEPassInfo* = object
     defs*: HashSet[Definition]
     uses*: HashSet[Use]
@@ -23,6 +26,7 @@ type
   OptimizerInfo* = object
     dce*: DCEPassInfo
     cprop*: CopyPropInfo
+    esc*: EscapeAnalysisInfo
 
   Pipeline* = object
     fn*: ir.Function
@@ -33,5 +37,6 @@ type
     NaiveDeadCodeElim
     AlgebraicSimplification
     CopyPropagation
+    EscapeAnalysis
 
   OptimizationPass* = proc(state: var Pipeline): bool
