@@ -927,6 +927,7 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
     args: PositionedArguments
     idx = -1
     last: Option[TokenKind]
+    lastData: Option[Token]
 
   while not parser.tokenizer.eof and not metEnd:
     inc idx
@@ -953,6 +954,7 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
       last = some(TokenKind.Comma)
     of TokenKind.Identifier:
       last = some(TokenKind.Identifier)
+      lastData = some(token)
       let
         prevPos = parser.tokenizer.pos
         prevLocation = parser.tokenizer.location
@@ -1008,12 +1010,22 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
       parser.ast.appendToCurrentScope(callAndStoreMut(resIdent, &call))
       args.pushIdent(resIdent)
     of TokenKind.LBracket:
-      # array
-      let arr = parser.parseArray()
-      if !arr:
-        parser.error Other, "got malformed array while parsing arguments"
+      if !last or &last != TokenKind.Identifier:
+        # If there was no identifier immediately preceding this, we're at an array literal
+        let arr = parser.parseArray()
+        if !arr:
+          parser.error Other, "got malformed array while parsing arguments"
 
-      args.pushAtom(&arr)
+        args.pushAtom(&arr)
+      else:
+        # Else, we're at an array index.
+        let access = parser.parseArrayIndex((&lastData).ident)
+        if !access:
+          parser.error Other, "got malformed array indexing while parsing arguments"
+
+        discard
+          args.pop() # We should remove the last argument, it was accidentally added in.
+        args.pushImmExpr(&access)
     else:
       parser.error UnexpectedToken, $token.kind
 
