@@ -40,7 +40,7 @@ proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = f
         runtime.markInternal(stmt, $i)
       elif arg.kind == cakImmediateExpr:
         debug "niche: add code to solve expression to expand Call's immediate arguments"
-        runtime.markInternal(stmt, $i)
+        runtime.markInternal(arg.expr, $i)
         runtime.generateBytecode(
           fn, arg.expr, internal = true, exprStoreIn = some($i), parentStmt = some(stmt)
         )
@@ -313,7 +313,7 @@ proc genCall(
         )
         runtime.ir.passArgument(index)
       of cakImmediateExpr:
-        let index = runtime.index($i, internalIndex(stmt))
+        let index = runtime.index($i, internalIndex(arg.expr))
         runtime.ir.passArgument(index)
 
   if *stmt.fn.field:
@@ -910,7 +910,12 @@ proc genWaste(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
     (message: stmt.source, line: stmt.line)
 
-proc genAccessArrayIndex(runtime: Runtime, fn: Function, stmt: Statement) =
+proc genAccessArrayIndex(
+    runtime: Runtime,
+    fn: Function,
+    stmt: Statement,
+    storeIn: Option[string] = none(string),
+) =
   debug "emitter: generate IR for array indexing"
   let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
   let fieldIndex =
@@ -925,7 +930,13 @@ proc genAccessArrayIndex(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.ir.passArgument(atomIdx)
   runtime.ir.passArgument(fieldIndex)
   runtime.ir.call("BALI_INDEX")
-  runtime.ir.resetArgs()
+
+  if !storeIn:
+    runtime.ir.resetArgs()
+  else:
+    runtime.ir.readRegister(
+      runtime.index(&storeIn, internalIndex(stmt)), Register.ReturnValue
+    )
   runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
     (message: stmt.source, line: stmt.line)
 
@@ -1187,7 +1198,7 @@ proc generateBytecode(
   of Waste:
     runtime.genWaste(fn = fn, stmt = stmt)
   of AccessArrayIndex:
-    runtime.genAccessArrayIndex(fn = fn, stmt = stmt)
+    runtime.genAccessArrayIndex(fn = fn, stmt = stmt, storeIn = exprStoreIn)
   of TernaryOp:
     runtime.genTernaryOp(fn = fn, stmt = stmt)
   of ForLoop:
