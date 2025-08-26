@@ -1,11 +1,14 @@
 import std/tables
-import bali/runtime/atom_helpers
+import pkg/bali/runtime/prelude
+import pkg/bali/runtime/wrapping
 import pretty
 
-print wrap(3)
-print wrap(":^)")
-print wrap(@[3, 4, 5])
-print wrap(@[3.wrap, ":^)".wrap, @[3, 4, 5].wrap])
+var runtime = newRuntime("tval_wrap.js")
+
+print wrap(runtime, 3)
+print wrap(runtime, ":^)")
+print wrap(runtime, @[3, 4, 5])
+print wrap(runtime, @[runtime.wrap(3), runtime.wrap ":^)", runtime.wrap @[3, 4, 5]])
 
 type
   NestedType* = object
@@ -15,4 +18,4 @@ type
     name*: string = "A very epic class"
     nested*: NestedType
 
-print wrap(EpicClass())
+print wrap(runtime, EpicClass())

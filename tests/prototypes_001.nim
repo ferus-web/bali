@@ -1,8 +1,8 @@
 import std/[options, tables, logging]
-import bali/grammar/prelude
-import bali/runtime/prelude
-import bali/runtime/abstract/coercion
-import mirage/atom
+import pkg/bali/grammar/prelude
+import pkg/bali/runtime/prelude
+import pkg/bali/runtime/abstract/coercion
+import pkg/bali/runtime/vm/atom
 import pretty, colored_logger
 
 let parser = newParser(
