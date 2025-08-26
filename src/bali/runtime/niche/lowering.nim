@@ -931,12 +931,12 @@ proc genAccessArrayIndex(
   runtime.ir.passArgument(fieldIndex)
   runtime.ir.call("BALI_INDEX")
 
-  if !storeIn:
-    runtime.ir.resetArgs()
-  else:
+  if *storeIn:
     runtime.ir.readRegister(
       runtime.index(&storeIn, internalIndex(stmt)), Register.ReturnValue
     )
+
+  runtime.ir.resetArgs()
   runtime.vm.sourceMap[fn.name][runtime.ir.cachedIndex - 1] =
     (message: stmt.source, line: stmt.line)
 
