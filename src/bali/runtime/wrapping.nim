@@ -23,14 +23,14 @@ proc wrap*(runtime: Runtime, val: SomeInteger | string | float | bool): JSValue 
     return floating(val)
 
 proc wrap*[T: not JSValue](runtime: Runtime, val: openArray[T]): JSValue =
-  var vec = sequence(newSeq[MAtom](0))
+  var vec = sequence(newSeqOfCap[MAtom](val.len - 1))
 
   for v in val:
-    vec.sequence &= v.wrap()
+    vec.sequence &= runtime.wrap(v)[]
 
   vec
 
-proc wrap*[V: JSValue | MAtom](runtime: Runtime, atom: V): V {.inline.} =
+func wrap*[V: JSValue | MAtom](runtime: Runtime, atom: V): V {.inline.} =
   atom
 
 proc wrap*[A, B](runtime: Runtime, val: Table[A, B]): JSValue =
@@ -44,7 +44,7 @@ proc wrap*[T: object](runtime: Runtime, obj: T): JSValue =
   var mObj = atom.obj()
 
   for name, field in obj.fieldPairs:
-    mObj[name] = field.wrap()
+    mObj[name] = runtime.wrap(field)
 
   mObj
 
