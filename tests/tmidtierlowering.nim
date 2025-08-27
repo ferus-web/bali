@@ -1,5 +1,5 @@
 ## madhyasthal lowering tests
-import std/[importutils, tables]
+import std/[importutils, tables, sets]
 import pkg/bali/runtime/compiler/madhyasthal/[ir, lowering, dumper, pipeline, optimizer]
 import pkg/bali/runtime/vm/interpreter/interpreter
 import pkg/bali/easy
@@ -36,7 +36,7 @@ echo dumpFunction(lowered)
 
 var ppl = Pipeline(fn: lowered)
 ppl.optimize(
-  {Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.EscapeAnalysis}
+  {Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.CopyPropagation}
 )
 print ppl.info
 

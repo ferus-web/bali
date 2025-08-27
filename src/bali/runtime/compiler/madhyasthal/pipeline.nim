@@ -11,6 +11,7 @@ type
 
   Definition* = UseOrDef
   Use* = UseOrDef
+  Mutation* = UseOrDef
 
   EscapeAnalysisInfo* = object
     locals*: HashSet[ir.Reg]
@@ -19,6 +20,10 @@ type
     defs*: HashSet[Definition]
     uses*: HashSet[Use]
     alive*: HashSet[ir.Reg]
+
+  Copy* = object
+    inst*: uint32
+    source*, dest*: ir.Reg
 
   CopyPropInfo* = object
     aliased*: HashSet[ir.Reg]

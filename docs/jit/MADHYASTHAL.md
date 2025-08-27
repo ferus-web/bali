@@ -34,6 +34,8 @@ Currently, Madhyasthal supports the following optimizations:
 
 - Naive dead-code-elimination
 - Algebraic simplification
+- Naive escape analysis (**Disabled by default as no pass uses its information**)
+- Copy elimination
 
 More optimizations will gradually be added to it.
 Madhyasthal uses a pipeline system to let the runtime efficiently choose which optimizations should be enabled, and which shouldn't.
