@@ -25,15 +25,18 @@ Have a cool project that you use Bali in? Open a PR and add it here! :^)
 Thanks to [@CanadaHonk](https://github.com/CanadaHonk), Bali is now on [test262.fyi](https://test262.fyi/#|bali)! \
 You can check how much Bali progresses/regresses by each day's run.
 
+# How "well written" is it?
+Bali is formatted using the [nph](https://github.com/arnetheduck/nph) code formatter and each commit is statically analyzed by [Nimalyzer](https://github.com/thindil/nimalyzer).
+
+It isn't indicative of the code quality, but I do put some extent into making the code slightly readable. :^)
+
 # How fast is it?
 With some recent codegen optimizations, Bali is already pretty fast on cherry-picked benchmarks. Bali can perform some optimizations when it is generating code for the provided JavaScript source, granted that it can prove that there is an opportunity to optimize away things.
 
 It also has some rudimentary dead code elimination for some cases.
 
-# How "well written" is it?
-Bali is formatted using the [nph](https://github.com/arnetheduck/nph) code formatter and each commit is statically analyzed by [Nimalyzer](https://github.com/thindil/nimalyzer).
-
-It isn't indicative of the code quality, but I do put some extent into making the code slightly readable. :^)
+**CPU**: AMD Ryzen 5 5600H (12) @ 4.28 GHz \
+**RAM**: 16 GB + 32GB swap
 
 ## Iterating 999999999 times and incrementing an integer each loop
 Bali has some loop elision optimizations in place which can fully eliminate an expensive loop when it sees the opportunity.
@@ -45,8 +48,10 @@ As such, both of these benchmarks are actually just running in the interpreter. 
 **Try it for yourself**: [Source code](tests/data/iterate-for-no-reason-001.js)
 | Engine                  | Time Taken                                                     |
 | ----------------------- | -------------------------------------------------------------- |
-| Bali (Interpreter)      | 4.3ms (best case) - 6.4ms (worst case)                         |
-| Bali (JIT)              | 4.3ms (best case) - 5.4ms (worst case)                         |   
+| Bali (Interpreter)      | 3.9ms (best case) - 5.9ms (worst case)                         |
+| Bali (JIT)              | 3.9ms (best case) - 6.0ms (worst case)                         |   
+
+This proves that the JIT barely worsens the worst case scenario.
 
 ## Finding a substring in a moderately large string
 Bali's string-find function (`String.prototype.indexOf`) is SIMD-accelerated, and as such, is pretty fast.
@@ -58,8 +63,8 @@ As such, both of these benchmarks are actually just running in the interpreter. 
 **Try it for yourself**: [Source code](tests/data/string-find-001.js)
 | Engine                     | Time Taken                                   |
 | -------------------------- | -------------------------------------------- |
-| Bali (Interpreter)         | 4.6ms (best case) - 5.9ms (worst case)       |
-| Bali (JIT)                 | 4.6ms (best case) - 6.0ms (worst case)       |
+| Bali (Interpreter)         | 4.1ms (best case) - 6.1ms (worst case)       |
+| Bali (JIT)                 | 4.1ms (best case) - 7.1ms (worst case)       |
 
 ## JIT-triggering microbenchmark
 This script is intentionally designed to make Bali's profiling mechanism catch onto it and optimize it.
@@ -67,10 +72,10 @@ This script is intentionally designed to make Bali's profiling mechanism catch o
 **Try it for yourself**: [Source code](tests/data/trigger-jit-001.js)
 | Engine                     | Time Taken                                   |
 | -------------------------- | -------------------------------------------- |
-| Bali (Interpreter)         | 839.0ms (best case) - 900.7ms (worst case)   |
-| Bali (JIT)                 | 362.3ms (best case) - 367.2ms (worst case)   |
+| Bali (Interpreter)         | 586.9ms (best case) - 601.3ms (worst case)   |
+| Bali (JIT)                 | 356.7ms (best case) - 374.5ms (worst case)   |
 
-Here, the JIT is **57.2%** faster than the interpreter!
+Here, the JIT is **1.65x** faster than the interpreter!
 
 # Contact Me
 You can join the [Ferus Discord Server](https://discord.gg/9MwfGn2Jkb) to discuss Bali and other components of the Ferus web engine.
