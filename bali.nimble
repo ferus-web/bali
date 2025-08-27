@@ -40,5 +40,8 @@ taskRequires "analyze", "nimalyzer >= 0.12.0"
 task analyze, "Run the static analyzer":
   exec "nimalyzer nimalyzer.cfg"
 
+task grammarfuzzer, "Compile the grammarfuzzer":
+  exec "nim c -d:release -o:bin/grammarfuzzer tests/fuzz/parser/grammarfuzzer.nim"
+
 task balde, "Compile balde":
   exec "nim c -o:bin/balde src/balde.nim"
