@@ -20,6 +20,7 @@ type
     Sub
     Mult
     Divide
+    Return
 
   Register* {.size: sizeof(uint8), pure.} = enum
     ReturnValue = 0
@@ -147,4 +148,7 @@ func divide*(source, dest: uint32): Inst =
     kind: InstKind.Divide,
     args: [ArgVariant(kind: avkPos, vreg: source), ArgVariant(kind: avkPos, vreg: dest)],
   )
+
+func returnV*(reg: uint32): Inst =
+  Inst(kind: InstKind.Return, args: [ArgVariant(kind: avkPos, vreg: reg), ArgVariant()])
 {.pop.}

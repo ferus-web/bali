@@ -16,11 +16,16 @@ template alignStack(offset: uint, body: untyped) =
   body
   cgen.s.add(regRsp.reg, offset)
 
-proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
+proc compileLowered(
+    cgen: var MidtierJIT, pipeline: pipeline.Pipeline
+): Option[JITSegment] =
+  let fn = pipeline.fn
   if unlikely(fn.name in cgen.dumpIrForFuncs):
     echo dumpFunction(fn)
     when not defined(release):
       assert(off)
+
+  # cgen.s.sub(regRsp.reg, 64) # FIXME: bad, evil, ugly, bald, no-good hack
 
   for inst in fn.insts:
     case inst.kind
@@ -29,6 +34,7 @@ proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
         index = inst.args[0].vreg
         num = inst.args[1].flt
 
+      # Heap allocation path
       alignStack 8:
         cgen.s.mov(regR9, cast[int64](num))
         cgen.s.movq(regR9.reg, regXmm0)
@@ -224,6 +230,19 @@ proc compileLowered(cgen: var MidtierJIT, fn: ir.Function): Option[JITSegment] =
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi, int64(source))
         cgen.s.mov(regRdx, int64(dest))
+        cgen.s.call(cgen.callbacks.copyAtom)
+    of InstKind.Return:
+      let index = inst.args[0].vreg
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, cast[int64](index))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi.reg, regRax)
+        cgen.s.call(cgen.callbacks.addRetval)
     else:
       debug "jit/amd64: midtier cannot lower op into x64 code: " & $inst.kind
       return
@@ -242,9 +261,11 @@ proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
     return
 
   var pipeline = Pipeline(fn: &lowered)
-  pipeline.optimize({Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification})
+  pipeline.optimize(
+    {Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.CopyPropagation}
+  )
 
-  return compileLowered(cgen, pipeline.fn)
+  return compileLowered(cgen, pipeline)
 
 proc initAMD64MidtierCodegen*(vm: pointer, callbacks: VMCallbacks): MidtierJIT =
   info "jit/amd64: initializing midtier jit"

@@ -11,11 +11,19 @@ type
 
   Definition* = UseOrDef
   Use* = UseOrDef
+  Mutation* = UseOrDef
+
+  EscapeAnalysisInfo* = object
+    locals*: HashSet[ir.Reg]
 
   DCEPassInfo* = object
     defs*: HashSet[Definition]
     uses*: HashSet[Use]
     alive*: HashSet[ir.Reg]
+
+  Copy* = object
+    inst*: uint32
+    source*, dest*: ir.Reg
 
   CopyPropInfo* = object
     aliased*: HashSet[ir.Reg]
@@ -23,6 +31,7 @@ type
   OptimizerInfo* = object
     dce*: DCEPassInfo
     cprop*: CopyPropInfo
+    esc*: EscapeAnalysisInfo
 
   Pipeline* = object
     fn*: ir.Function
@@ -33,5 +42,6 @@ type
     NaiveDeadCodeElim
     AlgebraicSimplification
     CopyPropagation
+    EscapeAnalysis
 
   OptimizationPass* = proc(state: var Pipeline): bool

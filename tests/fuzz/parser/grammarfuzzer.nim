@@ -84,6 +84,9 @@ proc main() =
   if paramCount() < 2:
     quit "Usage: grammarfuzzer [run | try] [iterations/128 | path] [?mode/pretty]"
 
+  if existsEnv("GFUZZ_SEED"):
+    randomize(parseInt(getEnv("GFUZZ_SEED")))
+
   let cmd = paramStr(1)
 
   case cmd
@@ -116,6 +119,12 @@ proc main() =
       displayOutputJson(state)
     else:
       quit "Invalid output dumper: `" & mode & "`; valid options are:\n* pretty"
+
+    for run in state.runs:
+      if run.verdict == Verdict.Failed:
+        quit(1)
+
+    quit(0)
   of "try":
     let parser = newParser(readFile(paramStr(2)))
     let ast = parser.parse()
