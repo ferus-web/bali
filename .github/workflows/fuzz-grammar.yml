@@ -22,5 +22,5 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       
       - run: sudo apt-get update && sudo apt-get install gcc libgmp-dev libgc-dev cmake -y
-      - run: git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install . -j$(nproc) && cd .. && nimble refresh && nimble install && nimble grammarfuzzer
+      - run: nimble refresh && nimble install && nimble grammarfuzzer
       - run: ./bin/grammarfuzzer run 256
