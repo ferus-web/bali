@@ -1,0 +1,26 @@
+# Used for test262.fyi
+
+name: Grammar subsystem fuzzer
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache nimble
+        id: cache-nimble
+        uses: actions/cache@v4
+        with:
+          path: ~/.nimble
+          key: ${{ runner.os }}-nimble-${{ hashFiles('*.nimble') }}
+          restore-keys: |
+            ${{ runner.os }}-nimble-
+      - uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: '2.2.4'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - run: sudo apt-get update && sudo apt-get install gcc libgmp-dev libgc-dev cmake -y
+      - run: git clone https://github.com/simdutf/simdutf && cd simdutf && cmake . && sudo make install . -j$(nproc) && cd .. && nimble refresh && nimble install && nimble grammarfuzzer
+      - run: ./bin/grammarfuzzer run 256
