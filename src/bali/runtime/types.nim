@@ -95,6 +95,7 @@ type
 
     irHints*: IRHints
     constantsGenerated*: bool = false
+    registeredEcmaTypes*: bool = false
 
     addrIdx*: uint
     values*: seq[Value]
