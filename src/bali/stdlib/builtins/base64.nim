@@ -3,8 +3,7 @@
 ##
 
 import std/[options, logging]
-import bali/runtime/vm/prelude
-import bali/runtime/[arguments, types, bridge]
+import bali/runtime/[arguments, types, bridge, construction]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/internal/sugar
@@ -37,7 +36,7 @@ proc generateStdIr*(runtime: Runtime) =
         strVal = runtime.ToString(value)
 
       try:
-        ret str decode(strVal)
+        ret str(runtime, decode(strVal))
       except Base64DecodeError as exc:
         decodeError,
   )
@@ -57,6 +56,6 @@ proc generateStdIr*(runtime: Runtime) =
         )
         str = runtime.ToString(value)
 
-      ret str encode(str)
+      ret str(runtime, encode(str))
     ,
   )

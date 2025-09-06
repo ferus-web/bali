@@ -38,7 +38,8 @@ proc compileLowered(
       alignStack 8:
         cgen.s.mov(regR9, cast[int64](num))
         cgen.s.movq(regR9.reg, regXmm0)
-        cgen.s.call(allocFloatEncoded)
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.call(cgen.callbacks.allocEncodedFloat)
 
       cgen.s.mov(regRsi.reg, regRax)
 
@@ -59,10 +60,11 @@ proc compileLowered(
         cgen.s.call(cgen.callbacks.getAtom)
 
       cgen.s.pop(regRsi.reg)
-      cgen.s.mov(regRdi.reg, regRax)
+      cgen.s.mov(regRsi.reg, regRax)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
 
       alignStack 8:
-        cgen.s.call(getProperty)
+        cgen.s.call(cgen.callbacks.getProperty)
 
       cgen.s.mov(regRsi.reg, regRax)
 
@@ -99,8 +101,9 @@ proc compileLowered(
       prepareLoadString(cgen, cstring(str))
 
       alignStack 8:
-        cgen.s.mov(regRdi.reg, regR8)
-        cgen.s.call(strRaw)
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi.reg, regR8)
+        cgen.s.call(cgen.callbacks.allocStr)
 
       cgen.s.mov(regRsi.reg, regRax)
 
@@ -129,7 +132,8 @@ proc compileLowered(
         cgen.s.call(getRawFloat)
 
         cgen.s.addsd(regXmm0, regXmm1.reg)
-        cgen.s.call(allocFloat)
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.call(cgen.callbacks.allocFloat)
 
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi.reg, regRax)
@@ -158,7 +162,8 @@ proc compileLowered(
 
         cgen.s.subsd(regXmm1, regXmm0.reg)
         cgen.s.movsd(regXmm0, regXmm1.reg)
-        cgen.s.call(allocFloat)
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.call(cgen.callbacks.addAtom)
 
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi.reg, regRax)
@@ -186,7 +191,8 @@ proc compileLowered(
         cgen.s.call(getRawFloat)
 
         cgen.s.mulsd(regXmm0, regXmm1.reg)
-        cgen.s.call(allocFloat)
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.call(cgen.callbacks.allocFloat)
 
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi.reg, regRax)
@@ -215,7 +221,8 @@ proc compileLowered(
 
         cgen.s.ddivsd(regXmm1, regXmm0.reg)
         cgen.s.movsd(regXmm0, regXmm1.reg)
-        cgen.s.call(allocFloat)
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.call(cgen.callbacks.allocFloat)
 
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi.reg, regRax)
@@ -267,7 +274,9 @@ proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
 
   return compileLowered(cgen, pipeline)
 
-proc initAMD64MidtierCodegen*(vm: pointer, callbacks: VMCallbacks): MidtierJIT =
+proc initAMD64MidtierCodegen*(
+    vm: pointer, heap: HeapManager, callbacks: VMCallbacks
+): MidtierJIT =
   info "jit/amd64: initializing midtier jit"
 
-  MidtierJIT(vm: vm, callbacks: callbacks, s: initAssemblerX64())
+  MidtierJIT(vm: vm, heap: heap, callbacks: callbacks, s: initAssemblerX64())

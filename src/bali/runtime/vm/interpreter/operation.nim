@@ -1,5 +1,5 @@
 import std/[options, tables, strutils]
-import pkg/bali/runtime/vm/[atom, shared]
+import pkg/bali/runtime/vm/[atom, shared], pkg/bali/runtime/vm/heap/manager
 import pkg/shakar
 
 const MirageOperationJitThreshold* {.intdefine.} = 8
@@ -40,6 +40,7 @@ proc consume*(
     expects: string,
     enforce: bool = true,
     position: Option[int] = none(int),
+    heap: HeapManager,
 ): JSValue {.inline.} =
   operation.consumed = true
 
@@ -65,18 +66,18 @@ proc consume*(
 
   case raw.kind
   of tkQuotedString:
-    return str raw.str
+    return str(heap, raw.str)
   of tkIdent:
     # if it is a boolean, return it as such
     # otherwise, return as a string
 
     if raw.ident == "true" or raw.ident == "false":
-      return boolean(parseBool(raw.ident))
+      return boolean(heap, parseBool(raw.ident))
 
-    return str raw.ident
+    return str(heap, raw.ident)
   of tkInteger:
-    return integer raw.integer
+    return integer(heap, raw.integer)
   of tkDouble:
-    return floating raw.double.float64
+    return floating(heap, raw.double.float64)
   else:
     discard

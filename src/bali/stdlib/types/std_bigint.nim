@@ -1,7 +1,7 @@
 ## Arbitrary-precision integers
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import std/[options]
-import bali/runtime/[arguments, atom_helpers, types, wrapping, bridge]
+import bali/runtime/[arguments, atom_helpers, types, wrapping, bridge, construction]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/internal/[sugar, trim_string]
@@ -20,10 +20,10 @@ proc stringToBigInt*(runtime: Runtime, str: JSValue): JSValue =
   var bigint =
     try:
       # 2. Let literal be ParseText(text, StringIntegerLiteral).
-      bigint(text)
+      bigint(runtime, text)
     except ValueError:
       # 3. If literal is a List of errors, return undefined.
-      undefined()
+      undefined(runtime)
 
   # 6. Return ℤ(mv).
   var bigintAtom = runtime.createObjFromType(JSBigInt)
@@ -78,7 +78,7 @@ proc toBigInt*(runtime: Runtime, atom: JSValue): JSValue =
     # Return 1n if prim is true and 0n if prim is false.
 
     var bigint = runtime.createObjFromType(JSBigInt)
-    bigint.tag("value", bigint(int(&prim.getBool())))
+    bigint.tag("value", bigint(runtime, int(&prim.getBool())))
     return bigint
 
 proc numberToBigInt*(runtime: Runtime, primitive: JSValue): JSValue {.inline.} =
@@ -92,7 +92,7 @@ proc numberToBigInt*(runtime: Runtime, primitive: JSValue): JSValue {.inline.} =
 
   var bigint = runtime.createObjFromType(JSBigInt)
 
-  bigint.tag("value", bigint(runtime.ToNumber(primitive).int()))
+  bigint.tag("value", bigint(runtime, runtime.ToNumber(primitive).int()))
 
   bigint
 

@@ -103,8 +103,8 @@ $ nimble add gh:ferus-web/bali
 ```
 Here is a basic example of the API:
 ```nim
-import bali/grammar/prelude
-import bali/runtime/prelude
+import pkg/bali/grammar/prelude
+import pkg/bali/runtime/prelude
 
 const JS_SRC = """
 console.log("Hello world!")

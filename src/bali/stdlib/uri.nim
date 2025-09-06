@@ -1,7 +1,7 @@
 ## JavaScript URL API - uses sanchar's builtin URL parser
 import std/[options, logging]
 import bali/internal/sugar
-import bali/runtime/[arguments, types, atom_helpers, bridge]
+import bali/runtime/[arguments, types, atom_helpers, bridge, construction]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/stdlib/types/std_string_type
@@ -25,7 +25,7 @@ proc transposeUrlToObject(runtime: Runtime, parsed: URL, source: string): JSValu
   var url = runtime.createObjFromType(JSURL)
   url["hostname"] = runtime.newJSString(parsed.hostname())
   url["pathname"] = runtime.newJSString(parsed.path())
-  url["port"] = parsed.port().int.integer()
+  url["port"] = integer(runtime, parsed.port.int)
   url["protocol"] = runtime.newJSString(parsed.scheme() & ':')
   url["search"] = runtime.newJSString(parsed.query())
   url["hostname"] = runtime.newJSString(parsed.hostname())
@@ -108,7 +108,7 @@ proc generateStdIR*(runtime: Runtime) =
       let source = &ensureMove(osource)
 
       if not runtime.isA(source, JSString):
-        ret null()
+        ret null(runtime)
 
       let str = runtime.ToString(source)
 

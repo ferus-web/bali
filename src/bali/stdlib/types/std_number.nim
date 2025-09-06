@@ -1,7 +1,7 @@
 ## Number type
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import std/[math, fenv, logging]
-import bali/runtime/[arguments, bridge, atom_helpers, wrapping, types]
+import bali/runtime/[arguments, bridge, atom_helpers, wrapping, types, construction]
 import bali/runtime/abstract/[to_number, to_string]
 import bali/stdlib/builtins/parse_int
 import bali/stdlib/errors
@@ -127,25 +127,27 @@ proc generateStdIR*(runtime: Runtime) =
 
   # 21.1.2.10 Number.NaN
   # The value of Number.NaN is NaN.
-  runtime.setProperty(JSNumber, "NaN", floating(NaN))
+  runtime.setProperty(JSNumber, "NaN", floating(runtime, NaN))
 
   # 21.1.2.6 Number.MAX_SAFE_INTEGER
   # The value of Number.MAX_SAFE_INTEGER is 9007199254740991𝔽 (𝔽(253 - 1)).
-  runtime.setProperty(JSNumber, "MAX_SAFE_INTEGER", floating(9007199254740991'f64))
+  runtime.setProperty(
+    JSNumber, "MAX_SAFE_INTEGER", floating(runtime, 9007199254740991'f64)
+  )
 
   # 21.1.2.14 Number.POSITIVE_INFINITY
   # The value of Number.POSITIVE_INFINITY is +∞𝔽.
-  runtime.setProperty(JSNumber, "POSITIVE_INFINITY", floating(Inf))
+  runtime.setProperty(JSNumber, "POSITIVE_INFINITY", floating(runtime, Inf))
 
   # 21.1.2.11 Number.NEGATIVE_INFINITY
   # The value of Number.NEGATIVE_INFINITY is -∞∞𝔽.
-  runtime.setProperty(JSNumber, "NEGATIVE_INFINITY", floating(-Inf))
+  runtime.setProperty(JSNumber, "NEGATIVE_INFINITY", floating(runtime, -Inf))
 
   # 21.1.2.1 Number.EPSILON
   # The value of Number.EPSILON is the Number value for the magnitude of the difference between 1
   # and the smallest value greater than 1 that is representable as a Number value, which is approximately
   # 2.2204460492503130808472633361816 × 10-16.
-  runtime.setProperty(JSNumber, "EPSILON", floating(epsilon(float)))
+  runtime.setProperty(JSNumber, "EPSILON", floating(runtime, epsilon(float)))
 
   runtime.definePrototypeFn(
     JSNumber,

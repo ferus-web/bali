@@ -49,7 +49,7 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
     var op = op # FIXME: stupid ugly hack
 
     if not op.resolved:
-      clause.resolve(op)
+      clause.resolve(op, cgen.heap)
 
     cgen.bcToNativeOffsetMap &= cgen.s.label()
 
@@ -67,17 +67,19 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
 
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
     of LoadFloat:
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+
       case op.arguments[1].kind
       of String:
         # it's NaN
-        cgen.s.mov(regRdi, 0x7FF0000000000001'i64)
+        cgen.s.mov(regRsi, 0x7FF0000000000001'i64)
       of Float:
-        cgen.s.mov(regRdi, cast[int64](&op.arguments[1].getFloat()))
+        cgen.s.mov(regRsi, cast[int64](&op.arguments[1].getFloat()))
       else:
         unreachable
 
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(allocFloatEncoded)
+      cgen.s.call(cgen.callbacks.allocEncodedFloat)
       cgen.s.add(reg(regRsp), 8)
 
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
@@ -96,20 +98,13 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
       cgen.s.mov(regRsi.reg, regR8)
 
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(createFieldRaw)
-        # it gets the JSValue just fine, but rsi is an empty cstring (it points to a totally different location???)
+      cgen.s.call(cgen.callbacks.createField)
       cgen.s.add(regRsp.reg, 8)
-    of LoadInt:
-      cgen.s.mov(regRdi, int64(&op.arguments[1].getInt()))
+    of {LoadInt, LoadUint}:
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.mov(regRsi, int64(&op.arguments[1].getInt()))
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(allocInt)
-      cgen.s.add(regRsp.reg, 8)
-
-      cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
-    of LoadUint:
-      cgen.s.mov(regRdi, int64(&op.arguments[1].getInt()))
-      cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(allocUInt)
+      cgen.s.call(cgen.callbacks.allocInt)
       cgen.s.add(regRsp.reg, 8)
 
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
@@ -136,9 +131,10 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
       cgen.s.movq(regXmm1, regR9.reg)
 
       # Add [1] and [2], then box [1]
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
       cgen.s.addsd(regXmm0, regXmm1.reg)
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(allocFloat)
+      cgen.s.call(cgen.callbacks.allocFloat)
       cgen.s.add(regRsp.reg, 8)
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
@@ -170,8 +166,9 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
       # Allocate the string on GC'd memory
       # FIXME: Can't we just reuse the same heap memory used in the prep-load-string call?
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.mov(regRdi.reg, regR8)
-      cgen.s.call(strRaw)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.mov(regRsi.reg, regR8)
+      cgen.s.call(cgen.callbacks.allocStr)
       cgen.s.add(regRsp.reg, 8)
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
@@ -207,8 +204,9 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
       prepareLoadString(cgen, &op.arguments[1].getStr())
 
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.mov(regRdi.reg, regR8)
-      cgen.s.call(allocBytecodeCallable)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.mov(regRsi.reg, regR8)
+      cgen.s.call(cgen.callbacks.allocBytecodeCallable)
       cgen.s.add(regRsp.reg, 8)
 
       cgen.prepareAtomAddCall(int64(&op.arguments[0].getInt()))
@@ -265,7 +263,8 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
       # Multiply [1] and [2], then box [1]
       cgen.s.mulsd(regXmm0, regXmm1.reg)
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(allocFloat)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.call(cgen.callbacks.allocFloat)
       cgen.s.add(regRsp.reg, 8)
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
@@ -295,7 +294,8 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
       # Divide [1] and [2], then box [1]
       cgen.s.ddivsd(regXmm0, regXmm1.reg)
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(allocFloat)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.call(cgen.callbacks.allocFloat)
       cgen.s.add(regRsp.reg, 8)
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
@@ -324,7 +324,8 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
       # Subtract [1] and [2], then box [1]
       cgen.s.subsd(regXmm0, regXmm1.reg)
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(allocFloat)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.call(cgen.callbacks.allocFloat)
       cgen.s.add(regRsp.reg, 8)
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
@@ -379,7 +380,8 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
 
       cgen.s.addsd(regXmm0, regXmm1.reg)
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(allocFloat)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.call(cgen.callbacks.allocFloat)
       cgen.s.add(regRsp.reg, 8)
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
@@ -397,7 +399,8 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
 
       cgen.s.subsd(regXmm0, regXmm1.reg)
       cgen.s.sub(regRsp.reg, 8)
-      cgen.s.call(allocFloat)
+      cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.call(cgen.callbacks.allocFloat)
       cgen.s.add(regRsp.reg, 8)
 
       prepareAtomAddCall(cgen, &op.arguments[0].getInt())
@@ -429,7 +432,9 @@ proc compile*(cgen: var BaselineJIT, clause: Clause): Option[JITSegment] =
 
     none(JITSegment)
 
-proc initAMD64BaselineCodegen*(vm: pointer, callbacks: VMCallbacks): BaselineJIT =
+proc initAMD64BaselineCodegen*(
+    vm: pointer, heap: HeapManager, callbacks: VMCallbacks
+): BaselineJIT =
   info "jit/amd64: initializing baseline jit"
 
-  BaselineJIT(vm: vm, callbacks: callbacks, s: initAssemblerX64())
+  BaselineJIT(vm: vm, callbacks: callbacks, heap: heap, s: initAssemblerX64())

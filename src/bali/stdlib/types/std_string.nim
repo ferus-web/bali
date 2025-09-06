@@ -3,7 +3,7 @@
 ## Author(s):
 ## Trayambak Rai (xtrayambak at disroot dot org)
 import std/[tables, strutils, hashes, unicode]
-import bali/runtime/[arguments, bridge, wrapping, atom_helpers, types]
+import bali/runtime/[arguments, bridge, wrapping, atom_helpers, types, construction]
 import bali/runtime/abstract/[coercible, to_number, to_string]
 import bali/stdlib/errors, bali/stdlib/types/std_string_type
 import bali/internal/[trim_string, sugar]
@@ -21,7 +21,7 @@ proc generateStdIr*(runtime: Runtime) =
       if runtime.argumentCount > 0:
         &runtime.argument(1)
       else:
-        str("")
+        str(runtime, newString(0))
 
     let strVal =
       if argument.kind == Object and runtime.isA(argument, JSString):
@@ -35,8 +35,8 @@ proc generateStdIr*(runtime: Runtime) =
       ret argument
 
     var atom = runtime.createObjFromType(JSString)
-    atom["@internal"] = str(strVal)
-    atom["length"] = integer(newUtf16View(strVal).codeunitLen().int)
+    atom["@internal"] = str(runtime, strVal)
+    atom["length"] = integer(runtime, newUtf16View(strVal).codeunitLen().int)
     ret atom
 
   runtime.defineConstructor("String", stringConstructor)
@@ -246,7 +246,7 @@ proc generateStdIr*(runtime: Runtime) =
 
       # 5. If position < 0 or position ≥ size, return undefined.
       if position < 0 or position >= size:
-        ret undefined()
+        ret undefined(runtime)
 
       # 6. Let cp be CodePointAt(S, position).
       let codepoint = newUtf16View(str).codePointAt(position.uint())
@@ -360,7 +360,7 @@ proc generateStdIr*(runtime: Runtime) =
 
       # 7. If k < 0 or k ≥ len, return undefined.
       if k < 0 or k >= size:
-        ret undefined()
+        ret undefined(runtime)
 
       # 8. Return the substring of S from k to k + 1.
       ret newJSString(runtime, str[k ..< k + 1])

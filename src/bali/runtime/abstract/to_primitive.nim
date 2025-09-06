@@ -11,7 +11,7 @@ type PrimitiveHint* {.pure.} = enum
 
 proc OrdinaryToPrimitive*(
     runtime: Runtime, input: JSValue, hint: PrimitiveHint
-): JSValue =
+): JSValue {.gcsafe.} =
   # 1. If hint is string, then
   let methodNames =
     if hint == PrimitiveHint.String:
@@ -46,7 +46,7 @@ proc OrdinaryToPrimitive*(
 
 proc ToPrimitive*(
     runtime: Runtime, input: JSValue, preferredType: Option[MAtomKind] = none(MAtomKind)
-): JSValue =
+): JSValue {.gcsafe.} =
   # 1. If input is an Object, then
   if input.kind == Object:
     # a. Let exoticToPrim be ? GetMethod(input, @@toPrimitive).

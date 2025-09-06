@@ -6,37 +6,26 @@ import bali/runtime/[arguments, types, bridge]
 import bali/runtime/abstract/coercion
 import bali/internal/sugar
 
-type
-  ConsoleLevel* {.pure.} = enum
-    Debug
-    Error
-    Info
-    Log
-    Trace
-    Warn
+type JSConsole* = object
 
-  ConsoleDelegate* = proc(level: ConsoleLevel, msg: string)
-  JSConsole* = object
-
-const DefaultConsoleDelegate* = proc(level: ConsoleLevel, msg: string) =
+const DefaultConsoleDelegate* = proc(level: ConsoleLevel, msg: string) {.gcsafe.} =
   echo $level & ": " & msg
 
-var delegate: ConsoleDelegate = DefaultConsoleDelegate
+proc attachConsoleDelegate*(runtime: Runtime, del: ConsoleDelegate) {.inline.} =
+  runtime.consoleDelegate = del
 
-proc attachConsoleDelegate*(del: ConsoleDelegate) {.inline.} =
-  delegate = del
-
-proc console(runtime: Runtime, level: ConsoleLevel) {.inline.} =
+proc console(runtime: Runtime, level: ConsoleLevel) {.inline, gcsafe.} =
   var accum: string
 
   for i in 1 .. runtime.argumentCount():
     let value = runtime.ToString(&runtime.argument(i))
     accum &= value & ' '
 
-  delegate(level, accum)
+  runtime.consoleDelegate(level, accum)
 
 proc consoleLogIR*(runtime: Runtime) =
   # generate binding interface
+  attachConsoleDelegate(runtime, DefaultConsoleDelegate)
   runtime.registerType(prototype = JSConsole, name = "console")
 
   # console.log
