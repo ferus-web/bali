@@ -1,7 +1,7 @@
 # Bali Manual
 **Author**: Trayambak Rai (xtrayambak at disroot dot org)
 
-**Version Series Targetted**: 0.7.x
+**Version Series Targetted**: 0.8.0
 
 This manual is largely inspired by Monoucha's manual.
 
@@ -17,6 +17,7 @@ This manual is largely inspired by Monoucha's manual.
         - [Atom](#atom)
     - [Drooling Baby's First Scripts](#drooling-babys-first-scripts)
     - [Baby's First Scripts](#babys-first-scripts)
+    - [The holy grail of Bali, the Runtime structure](#the-holy-grail-of-bali-the-runtime-structure)
 * [Creating new types](#creating-new-types)
     - [Wrapping Primitives](#wrapping-primitives)
     - [Wrapping our Type](#wrapping-our-type)
@@ -44,6 +45,8 @@ This manual is largely inspired by Monoucha's manual.
 * [Using the Native Interface](#using-the-native-interface)
     - [A small example](#a-small-example)
     - [Allocating memory](#allocating-memory)
+* [Migration Notices](#migration-notices)
+    - [0.7.x -> 0.8.0](#v0.7.x-to-v0.8.0)
 
 # Introduction
 Bali is a JavaScript engine written from scratch in Nim for the [Ferus web engine](https://github.com/ferus-web/ferus). It is designed to be convenient to interface with whilst being fast and compliant. It provides you high-level abstractions as far as humanly possible.
@@ -98,8 +101,8 @@ Now, we'll learn how to write a Nim program that can load and evaluate JavaScrip
 However, all of the complexities are neatly abstracted away, so you needn't worry about all of that. The API is deceptively simple.
 Here's the minimal example.
 ```nim
-import bali/grammar/prelude
-import bali/runtime/prelude
+import pkg/bali/grammar/prelude
+import pkg/bali/runtime/prelude
 
 # Create a parser.
 let parser = newParser("""
@@ -125,6 +128,9 @@ Let's breakdown what each line does:
 
 That's it! You just executed JavaScript with Bali! Yay.
 
+# The holy grail of Bali, the Runtime structure
+The `Runtime` type is what you initialize when you wish to execute JavaScript. It acts as a "
+
 # Creating new types
 Now, let us learn how to create new types. Bali can automatically "wrap" a Nim object into its representative atom.
 Bali can do this for primitives like integers, floats, strings and sequences of said primitives as well.
@@ -133,15 +139,15 @@ Bali can do this for primitives like integers, floats, strings and sequences of 
 Let us try wrapping some primitives into atoms before wrapping a Nim object.
 ```nim
 import std/options
-import bali/runtime/prelude
+import pkg/bali/runtime/prelude
 
 let name = "John Doe"
 let age = 24'u
 let likes = @["Skating", "Tennis", "Programming"]
 
-let aName = wrap(name)
-let aAge = wrap(age)
-let aLikes = wrap(likes)
+let aName = runtime.wrap(name)
+let aAge = runtime.wrap(age)
+let aLikes = runtime.wrap(likes)
 
 assert aName.kind == String
 assert aAge.kind == Integer
@@ -168,12 +174,12 @@ type Person* = object
   likes*: seq[string]
 
 runtime.registerType(prototype = Person, name = "Person")
-runtime.setProperty(Person, "name", str("John Doe"))
-runtime.setProperty(Person, "age", integer(24'u))
-runtime.setProperty(Person, "likes", sequence(@[
-  str("Skating"),
-  str("Tennis"),
-  str("Programming")
+runtime.setProperty(Person, "name", str(runtime, "John Doe"))
+runtime.setProperty(Person, "age", integer(runtime, 24'u))
+runtime.setProperty(Person, "likes", sequence(runtime, @[
+  str(runtime, "Skating"),
+  str(runtime, "Tennis"),
+  str(runtime, "Programming")
 ]))
 ```
 Here, we're exposing our `Person` type to the JavaScript environment by specifying what fields it has, and also setting those fields.
@@ -183,6 +189,8 @@ console.log(Person.name) // Log: John Doe
 console.log(Person.age) // Log: 24
 console.log(Person.likes) // Log: [Skating, Tennis, Programming]
 ```
+
+You might notice that when we create JavaScript values, we need to pass our `Runtime` instance to the functions. This is because the function will then use our runtime's isolated heap context to allocate memory for the object. Earlier versions of Bali utilized a global, shared, thread-local heap context. As one might expect, this caused all sorts of issues, ranging from thread-offloading being impossible, to test-code drivers being very wonky.
 
 ## Modifying our Prototype
 Now, what if you wanted to add a function that can be called by every instance of your type?
@@ -524,7 +532,7 @@ function shoutify(name)
     "greet",
     proc() =
       let arg = runtime.ToString(&runtime.argument(1))
-      ret str("Hi there, " & arg)
+      ret str(runtime, "Hi there, " & arg)
     ,
   )
 
@@ -540,7 +548,7 @@ function shoutify(name)
 
 ## Allocating memory
 Bali lets the programmer allocate memory in the same way as JavaScript code using the `HeapManager` API. Each `Runtime` instance has one attached to it. \
-This essentially lets you tap into Bali's allocation flow.
+This essentially lets you tap into Bali's allocation flow. In most cases, however, you do not need to do this. All of the `JSValue`-returning functions already use your `Runtime` instance's internal heap context.
 ```nim
 import pkg/bali/runtime/vm/heap/manager
 
@@ -552,3 +560,23 @@ This essentially performs the following steps:
 2. Otherwise, it calls into the GC to fetch the pointer of said size.
 
 If allocation fails, the `AllocationFailed` defect is thrown.
+
+# Migration Notices
+Bali is constantly evolving in terms of its design, architecture and subsystems. Here's a few notes that can help you migrate from one version to another with the least amount of headaches.
+
+## 0.7.x to 0.8.0
+0.7.8 was bumped to 0.8.0 for one major reason: **All global states have been fully eliminated.**
+
+This brings a plethora of benefits with it, which you can probably guess. However, it also breaks most code written for any version prior to 0.8.0!
+Thankfully, the migration process is fairly straightforward. All functions that perform allocations on the JavaScript heap need to modified.
+
+Assuming your initialized `Runtime` instance is at `runtime`, the following migrations will suffice in the illustrated examples:
+* `str("Hello World!")` -> `str(runtime, "Hello World!")`
+* `obj()` -> `obj(runtime)`
+* `floating(13.37)` -> `floating(runtime, 13.37)`
+* `sequence(@[])` -> `sequence(runtime, @[])`
+* `bigint("383248324832843284832483248324")` -> `bigint(runtime, "383248324832843284832483248324")`
+
+And so on, and so forth.
+
+Another change is that the death callback is now a member of the `Runtime` struct and needs to be set via the `deathCallback` property, instead of using the previously provided function. The signature for the death callback has also been changed from `proc(PulsarInterpreter, int)` to `proc(PulsarInterpreter)`.
