@@ -38,7 +38,7 @@ proc compileLowered(
       alignStack 8:
         cgen.s.mov(regR9, cast[int64](num))
         cgen.s.movq(regR9.reg, regXmm0)
-        cgen.s.mov(regRsi, cast[int64](cgen.vm))
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.call(cgen.callbacks.allocEncodedFloat)
 
       cgen.s.mov(regRsi.reg, regRax)
