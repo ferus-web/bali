@@ -28,148 +28,160 @@ proc generateBytecode(
   exprStoreIn: Option[string] = none(string),
   parentStmt: Option[Statement] = none(Statement),
   index: Option[uint] = none(uint),
-)
+) {.gcsafe.}
 
-proc expand*(runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false) =
-  case stmt.kind
-  of Call:
-    debug "niche: expand Call statement"
-    for i, arg in stmt.arguments:
-      if arg.kind == cakAtom:
-        debug "niche: load immutable value to expand Call's immediate arguments: " &
-          arg.atom.crush()
-        discard runtime.loadIRAtom(arg.atom)
-        runtime.markInternal(stmt, $i)
-      elif arg.kind == cakImmediateExpr:
-        debug "niche: add code to solve expression to expand Call's immediate arguments"
-        runtime.markInternal(arg.expr, $i)
+proc expand*(
+    runtime: Runtime, fn: Function, stmt: Statement, internal: bool = false
+) {.gcsafe.} =
+  {.cast(gcsafe).}:
+    # FIXME: All of this is GC-safe, because I say so: moronic compiler!
+    # I beseech thee to obey my orders and compile this steaming pile of
+    # garbage this instant!
+    case stmt.kind
+    of Call:
+      debug "niche: expand Call statement"
+      for i, arg in stmt.arguments:
+        if arg.kind == cakAtom:
+          debug "niche: load immutable value to expand Call's immediate arguments: " &
+            arg.atom.crush()
+          discard runtime.loadIRAtom(arg.atom)
+          runtime.markInternal(stmt, $i)
+        elif arg.kind == cakImmediateExpr:
+          debug "niche: add code to solve expression to expand Call's immediate arguments"
+          runtime.markInternal(arg.expr, $i)
+          runtime.generateBytecode(
+            fn,
+            arg.expr,
+            internal = true,
+            exprStoreIn = some($i),
+            parentStmt = some(stmt),
+          )
+    of ConstructObject:
+      debug "niche: expand ConstructObject statement"
+      for i, arg in stmt.args:
+        if arg.kind == cakAtom:
+          debug "niche: load immutable value to ConstructObject's immediate arguments: " &
+            arg.atom.crush()
+
+          discard runtime.loadIRAtom(arg.atom)
+          let name = $hash(stmt) & '_' & $i
+          runtime.markInternal(stmt, name)
+    of CallAndStoreResult:
+      debug "niche: expand CallAndStoreResult statement by expanding child Call statement"
+      runtime.expand(fn, stmt.storeFn, internal)
+    of ThrowError:
+      debug "niche: expand ThrowError"
+
+      if *stmt.error.str:
         runtime.generateBytecode(
-          fn, arg.expr, internal = true, exprStoreIn = some($i), parentStmt = some(stmt)
+          fn,
+          createImmutVal("error_msg", stackStr(&stmt.error.str)),
+          ownerStmt = some(stmt),
+          internal = true,
         )
-  of ConstructObject:
-    debug "niche: expand ConstructObject statement"
-    for i, arg in stmt.args:
-      if arg.kind == cakAtom:
-        debug "niche: load immutable value to ConstructObject's immediate arguments: " &
-          arg.atom.crush()
+    of BinaryOp:
+      debug "niche: expand BinaryOp"
 
-        discard runtime.loadIRAtom(arg.atom)
-        let name = $hash(stmt) & '_' & $i
-        runtime.markInternal(stmt, name)
-  of CallAndStoreResult:
-    debug "niche: expand CallAndStoreResult statement by expanding child Call statement"
-    runtime.expand(fn, stmt.storeFn, internal)
-  of ThrowError:
-    debug "niche: expand ThrowError"
+      if *stmt.binStoreIn:
+        debug "niche: BinaryOp evaluation will be stored in: " & &stmt.binStoreIn & " (" &
+          $runtime.addrIdx & ')'
+        runtime.ir.loadInt(runtime.addrIdx, 0)
 
-    if *stmt.error.str:
-      runtime.generateBytecode(
-        fn,
-        createImmutVal("error_msg", stackStr(&stmt.error.str)),
-        ownerStmt = some(stmt),
-        internal = true,
-      )
-  of BinaryOp:
-    debug "niche: expand BinaryOp"
+        if not internal:
+          debug "niche: ...locally"
+          runtime.markLocal(fn, &stmt.binStoreIn)
+        else:
+          debug "niche: ...internally"
+          runtime.markInternal(stmt, &stmt.binStoreIn)
 
-    if *stmt.binStoreIn:
-      debug "niche: BinaryOp evaluation will be stored in: " & &stmt.binStoreIn & " (" &
-        $runtime.addrIdx & ')'
-      runtime.ir.loadInt(runtime.addrIdx, 0)
+      if stmt.binLeft.kind == AtomHolder:
+        debug "niche: BinaryOp left term is an atom"
+        runtime.generateBytecode(
+          fn,
+          createImmutVal("left_term", stmt.binLeft.atom),
+          ownerStmt = some(stmt),
+          internal = true,
+        )
 
-      if not internal:
-        debug "niche: ...locally"
-        runtime.markLocal(fn, &stmt.binStoreIn)
+      if stmt.binRight.kind == AtomHolder:
+        debug "niche: BinaryOp right term is an atom"
+        runtime.generateBytecode(
+          fn,
+          createImmutVal("right_term", stmt.binRight.atom),
+          ownerStmt = some(stmt),
+          internal = true,
+        )
+      elif stmt.binRight.kind == IdentHolder:
+        debug "niche: BinaryOp right term is an ident"
+    of IfStmt:
+      debug "niche: expand IfStmt"
+
+      if stmt.conditionExpr.binLeft.kind == AtomHolder:
+        debug "niche: if-stmt: left term is an atom"
+        runtime.generateBytecode(
+          fn,
+          createImmutVal("left_term", stmt.conditionExpr.binLeft.atom),
+          ownerStmt = some(stmt),
+          internal = true,
+        )
+
+      if stmt.conditionExpr.binRight.kind == AtomHolder:
+        debug "niche: if-stmt: right term is an atom"
+        runtime.generateBytecode(
+          fn,
+          createImmutVal("right_term", stmt.conditionExpr.binRight.atom),
+          ownerStmt = some(stmt),
+          internal = true,
+        )
+    of WhileStmt:
+      debug "niche: expand WhileStmt"
+      if stmt.whConditionExpr.binLeft.kind == AtomHolder:
+        debug "niche: while-stmt: left term is an atom"
+        runtime.generateBytecode(
+          fn,
+          createImmutVal("left_term", stmt.whConditionExpr.binLeft.atom),
+          ownerStmt = some(stmt),
+          internal = true,
+        )
+
+      if stmt.whConditionExpr.binRight.kind == AtomHolder:
+        debug "niche: while-stmt: right term is an atom"
+        runtime.generateBytecode(
+          fn,
+          createImmutVal("right_term", stmt.whConditionExpr.binRight.atom),
+          ownerStmt = some(stmt),
+          internal = true,
+        )
+    of ReturnFn:
+      if *stmt.retVal:
+        runtime.generateBytecode(
+          fn,
+          createImmutVal("retval", &stmt.retVal),
+          internal = true,
+          ownerStmt = some(stmt),
+        )
+      elif *stmt.retExpr:
+        runtime.generateBytecode(
+          fn,
+          createImmutVal("retval", stackUndefined()),
+          internal = true,
+          ownerStmt = some(stmt),
+        ) # load undefined atom
+
+        var expr = &stmt.retExpr
+        expr.binStoreIn = some("retval")
+        runtime.generateBytecode(
+          fn, move(expr), internal = true, ownerStmt = some(stmt)
+        )
       else:
-        debug "niche: ...internally"
-        runtime.markInternal(stmt, &stmt.binStoreIn)
-
-    if stmt.binLeft.kind == AtomHolder:
-      debug "niche: BinaryOp left term is an atom"
-      runtime.generateBytecode(
-        fn,
-        createImmutVal("left_term", stmt.binLeft.atom),
-        ownerStmt = some(stmt),
-        internal = true,
-      )
-
-    if stmt.binRight.kind == AtomHolder:
-      debug "niche: BinaryOp right term is an atom"
-      runtime.generateBytecode(
-        fn,
-        createImmutVal("right_term", stmt.binRight.atom),
-        ownerStmt = some(stmt),
-        internal = true,
-      )
-    elif stmt.binRight.kind == IdentHolder:
-      debug "niche: BinaryOp right term is an ident"
-  of IfStmt:
-    debug "niche: expand IfStmt"
-
-    if stmt.conditionExpr.binLeft.kind == AtomHolder:
-      debug "niche: if-stmt: left term is an atom"
-      runtime.generateBytecode(
-        fn,
-        createImmutVal("left_term", stmt.conditionExpr.binLeft.atom),
-        ownerStmt = some(stmt),
-        internal = true,
-      )
-
-    if stmt.conditionExpr.binRight.kind == AtomHolder:
-      debug "niche: if-stmt: right term is an atom"
-      runtime.generateBytecode(
-        fn,
-        createImmutVal("right_term", stmt.conditionExpr.binRight.atom),
-        ownerStmt = some(stmt),
-        internal = true,
-      )
-  of WhileStmt:
-    debug "niche: expand WhileStmt"
-    if stmt.whConditionExpr.binLeft.kind == AtomHolder:
-      debug "niche: while-stmt: left term is an atom"
-      runtime.generateBytecode(
-        fn,
-        createImmutVal("left_term", stmt.whConditionExpr.binLeft.atom),
-        ownerStmt = some(stmt),
-        internal = true,
-      )
-
-    if stmt.whConditionExpr.binRight.kind == AtomHolder:
-      debug "niche: while-stmt: right term is an atom"
-      runtime.generateBytecode(
-        fn,
-        createImmutVal("right_term", stmt.whConditionExpr.binRight.atom),
-        ownerStmt = some(stmt),
-        internal = true,
-      )
-  of ReturnFn:
-    if *stmt.retVal:
-      runtime.generateBytecode(
-        fn,
-        createImmutVal("retval", &stmt.retVal),
-        internal = true,
-        ownerStmt = some(stmt),
-      )
-    elif *stmt.retExpr:
-      runtime.generateBytecode(
-        fn,
-        createImmutVal("retval", stackUndefined()),
-        internal = true,
-        ownerStmt = some(stmt),
-      ) # load undefined atom
-
-      var expr = &stmt.retExpr
-      expr.binStoreIn = some("retval")
-      runtime.generateBytecode(fn, move(expr), internal = true, ownerStmt = some(stmt))
+        runtime.generateBytecode(
+          fn,
+          createImmutVal("retval", stackUndefined()),
+          internal = true,
+          ownerStmt = some(stmt),
+        ) # load undefined atom
     else:
-      runtime.generateBytecode(
-        fn,
-        createImmutVal("retval", stackUndefined()),
-        internal = true,
-        ownerStmt = some(stmt),
-      ) # load undefined atom
-  else:
-    discard
+      discard
 
 proc verifyNotOccupied*(runtime: Runtime, ident: string, fn: Function): bool =
   var prev = fn.prev
@@ -206,7 +218,8 @@ proc loadFieldAccessStrings*(runtime: Runtime, access: FieldAccess) =
 proc resolveFieldAccess*(
     runtime: Runtime, fn: Function, stmt: Statement, address: uint, access: FieldAccess
 ): uint =
-  let internalName = $(hash(stmt) !& hash(access.identifier))
+  {.cast(gcsafe).}:
+    let internalName = $(hash(stmt) !& hash(access.identifier))
   runtime.generateBytecode(
     fn,
     createImmutVal(internalName, stackNull()),
@@ -235,7 +248,7 @@ proc resolveFieldAccess*(
 
 proc generateBytecodeForScope*(
   runtime: Runtime, scope: Scope, allocateConstants: bool = true
-)
+) {.gcsafe.}
 
 func willIRGenerateClause*(runtime: Runtime, clause: string): bool {.inline.} =
   for cls in runtime.ir.modules:
@@ -244,6 +257,7 @@ func willIRGenerateClause*(runtime: Runtime, clause: string): bool {.inline.} =
 
   false
 
+{.push gcsafe.}
 proc genCreateImmutVal(
     runtime: Runtime,
     fn: Function,
@@ -390,7 +404,8 @@ proc genConstructObject(
       info "interpreter: passing ident parameter to function with ident: " & ident
       runtime.ir.passArgument(runtime.index(ident, defaultParams(fn)))
     of cakAtom: # already loaded via the statement expander
-      let ident = $hash(stmt) & '_' & $i
+      {.cast(gcsafe).}:
+        let ident = $hash(stmt) & '_' & $i
       info "interpreter: passing atom parameter to function with ident: " & ident
       runtime.ir.passArgument(runtime.index(ident, internalIndex(stmt)))
     of cakFieldAccess:
@@ -993,7 +1008,9 @@ proc genTernaryOp(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.markLocal(fn, storeIn)
   let finalAddr = runtime.addrIdx - 1
 
-  runtime.ir.equate(addrOfCond, runtime.index("true", defaultParams(fn)))
+  runtime.ir.passArgument(addrOfCond)
+  runtime.ir.passArgument(runtime.index("true", defaultParams(fn)))
+  runtime.ir.call("BALI_EQUATE_ATOMS")
   # If addrOfCond == true:
   runtime.ir.jump(getCurrOpNum() + 2'u)
   # If addrOfCond == false (or != true, which means false anyways):
@@ -1141,6 +1158,8 @@ proc genDefineFunction(runtime: Runtime, fn: Function, stmt: Statement) =
     runtime.addrIdx - 1, normalizeIRName(stmt.defunFn.name)
   )
 
+{.pop.}
+
 proc generateBytecode(
     runtime: Runtime,
     fn: Function,
@@ -1150,7 +1169,7 @@ proc generateBytecode(
     exprStoreIn: Option[string] = none(string),
     parentStmt: Option[Statement] = none(Statement),
     index: Option[uint] = none(uint),
-) =
+) {.gcsafe.} =
   ## Given a statement `stmt` and its encompassing functional scope `fn` (which can be a plain scope as well),
   ## generate the bytecode for that statement.
   ## **NOTE**: This function can be _HIGHLY_ recursive in nature and has side effects*
@@ -1230,7 +1249,7 @@ proc loadArgumentsOntoStack(runtime: Runtime, fn: Function) =
 
 proc generateBytecodeForScope(
     runtime: Runtime, scope: Scope, allocateConstants: bool = true
-) =
+) {.gcsafe.} =
   let
     fn =
       try:

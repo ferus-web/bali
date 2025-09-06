@@ -38,13 +38,11 @@ type JSMath = object
   E*: float = math.E
   PI*: float = math.PI
 
-# Global RNG source
-var rng = newRNG(algo = Algorithm)
-
 proc generateStdIr*(runtime: Runtime) =
   info "math: generating IR interfaces"
 
   runtime.registerType("Math", JSMath)
+  runtime.rng = newRNG(algo = Algorithm)
   runtime.setProperty(JSMath, "LN10", floating(runtime.heapManager, math.ln(10'f64)))
   runtime.setProperty(JSMath, "LN2", floating(runtime.heapManager, math.ln(2'f64)))
   runtime.setProperty(
@@ -62,8 +60,11 @@ proc generateStdIr*(runtime: Runtime) =
   runtime.defineFn(
     JSMath,
     "random",
-    proc() =
-      let value = float64(rng.generator.next()) / 1.8446744073709552e+19'f64
+    proc() {.gcsafe.} =
+      # TODO: Patch librng to annotate it with gcsafe rather than doing...
+      # whatever this is.
+      {.cast(gcsafe).}:
+        let value = float64(runtime.rng.generator.next()) / 1.8446744073709552e+19'f64
       ret value
     ,
   )

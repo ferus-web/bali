@@ -53,7 +53,7 @@ type
     of BytecodeCallable:
       clauseName*: string
     of NativeCallable:
-      fn*: proc()
+      fn*: proc() {.gcsafe.}
     of Null: discard
 
   JSValue* = ptr MAtom
@@ -274,7 +274,9 @@ proc boolean*(
 
   ensureMove(mem)
 
-proc nativeCallable*(heap: HeapManager, fn: proc()): JSValue {.inline, cdecl.} =
+proc nativeCallable*(
+    heap: HeapManager, fn: proc() {.gcsafe.}
+): JSValue {.inline, cdecl.} =
   var mem = newJSValue(heap, NativeCallable)
   mem.fn = fn
 

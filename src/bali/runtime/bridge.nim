@@ -158,7 +158,7 @@ proc isA*[T: object](runtime: Runtime, atom: JSValue, typ: typedesc[T]): bool =
 
   false
 
-proc getMethod*(runtime: Runtime, v: JSValue, p: string): Option[proc()] =
+proc getMethod*(runtime: Runtime, v: JSValue, p: string): Option[proc() {.gcsafe.}] =
   ## Get a method from the provided object's prototype.
   ## Returns an `Option[proc()]` if a function with the name `p` is found (it is wrapped!),
   ## else it returns an empty `Option`.
@@ -267,7 +267,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
 
   runtime.vm[].registerBuiltin(
     "BALI_CONSTRUCTOR_" & strutils.toUpperAscii(name),
-    proc(_: Operation) =
+    proc(_: Operation) {.gcsafe.} =
       if runtime.types[typIdx].constructor == nil:
         runtime.typeError(runtime.types[typIdx].name & " is not a constructor")
 

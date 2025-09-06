@@ -30,6 +30,6 @@ type
     allocInt*: pointer
     getProperty*: pointer
 
-  JITSegment* = proc(): void {.cdecl.}
+  JITSegment* = proc(): void {.cdecl, gcsafe.}
 
 export Clause

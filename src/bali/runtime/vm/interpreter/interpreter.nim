@@ -28,6 +28,8 @@ type
     callArgs*: seq[JSValue]
     error*: Option[JSValue]
 
+  Builtin* = proc(op: Operation) {.gcsafe.}
+
   PulsarInterpreter* = object
     tokenizer: Tokenizer
     currClause: int
@@ -36,7 +38,7 @@ type
     currJumpOnErr: Option[uint]
 
     stack*: seq[JSValue]
-    builtins*: Table[string, proc(op: Operation)]
+    builtins*: Table[string, proc(op: Operation) {.gcsafe.}]
     errors*: seq[RuntimeException]
     halt*: bool = false
     trace*: ExceptionTrace
@@ -136,11 +138,13 @@ proc hasBuiltin*(interpreter: PulsarInterpreter, name: string): bool =
   name in interpreter.builtins
 
 proc registerBuiltin*(
-    interpreter: var PulsarInterpreter, name: string, builtin: proc(op: Operation)
+    interpreter: var PulsarInterpreter, name: string, builtin: Builtin
 ) =
   interpreter.builtins[name] = builtin
 
-proc callBuiltin*(interpreter: PulsarInterpreter, name: string, op: Operation) =
+proc callBuiltin*(
+    interpreter: PulsarInterpreter, name: string, op: Operation
+) {.gcsafe.} =
   interpreter.builtins[name](op)
 
 {.pop.}
@@ -362,7 +366,7 @@ proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
   interpreter.addAtom(&atomA, b)
   interpreter.addAtom(&atomB, a)
 
-proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
+proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) {.gcsafe.} =
   msg "calling function " & name
   msg "trapped? " & $interpreter.trapped
 
@@ -400,7 +404,7 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) =
     else:
       raise newException(ValueError, "Reference to unknown clause: " & name)
 
-proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) =
+proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) {.gcsafe.} =
   if value.kind == Integer:
     let index = &getInt(value)
     msg "atom is integer/ref to atom: " & $index
@@ -463,7 +467,7 @@ proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: i
       InvalidRegisterRead, "Attempt to read from non-existant register " & $register
     )
 
-{.push cdecl.}
+{.push cdecl, gcsafe.}
 proc opCall(interpreter: var PulsarInterpreter, op: var Operation) =
   let name = &op.arguments[0].getStr()
   msg "call " & name
@@ -533,7 +537,7 @@ proc opSub(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(floating(interpreter.heapManager, a - b), posA)
   inc interpreter.currIndex
 
-proc opEquate(interpreter: var PulsarInterpreter, op: var Operation) =
+#[proc opEquate(interpreter: var PulsarInterpreter, op: var Operation) =
   msg "equate"
   var
     prev = interpreter.get(&op.arguments[0].getInt())
@@ -553,7 +557,7 @@ proc opEquate(interpreter: var PulsarInterpreter, op: var Operation) =
   if accumulator:
     inc interpreter.currIndex
   else:
-    interpreter.currIndex += 2
+    interpreter.currIndex += 2]#
 
 proc opReturn(interpreter: var PulsarInterpreter, op: var Operation) =
   let clause = interpreter.getClause()
@@ -948,17 +952,16 @@ proc opPower(interpreter: var PulsarInterpreter, op: var Operation) =
 
 {.pop.}
 
-const OpDispatchTable = [
-  opCall, opLoadInt, opLoadStr, opJump, opAdd, opMult, opDiv, opSub, opEquate, opReturn,
-  opLoadList, opAddList, opLoadUint, opLoadBool, opSwap, opJumpOnError,
-  opGreaterThanInt, opLesserThanInt, opLoadObject, opCreateField, opFastWriteField,
-  opWriteField, opCrashInterpreter, opInc, opDec, opLoadNull, opReadReg, opPassArg,
-  opResetArgs, opCopyAtom, opMoveAtom, opLoadFloat, opZeroRetval,
-  opLoadBytecodeCallable, opExecuteBytecodeCallable, opLoadUndefined,
-  opGreaterThanEqualInt, opLesserThanEqualInt, opInvoke, opPower,
-]
-
-proc execute*(interpreter: var PulsarInterpreter, op: var Operation) =
+proc execute*(interpreter: var PulsarInterpreter, op: var Operation) {.gcsafe.} =
+  const OpDispatchTable = [
+    opCall, opLoadInt, opLoadStr, opJump, opAdd, opMult, opDiv, opSub, opReturn,
+    opLoadList, opAddList, opLoadUint, opLoadBool, opSwap, opJumpOnError,
+    opGreaterThanInt, opLesserThanInt, opLoadObject, opCreateField, opFastWriteField,
+    opWriteField, opCrashInterpreter, opInc, opDec, opLoadNull, opReadReg, opPassArg,
+    opResetArgs, opCopyAtom, opMoveAtom, opLoadFloat, opZeroRetval,
+    opLoadBytecodeCallable, opExecuteBytecodeCallable, opLoadUndefined,
+    opGreaterThanEqualInt, opLesserThanEqualInt, opInvoke, opPower,
+  ]
   OpDispatchTable[cast[uint8](op.opcode)](interpreter, op)
 
 proc setEntryPoint*(interpreter: var PulsarInterpreter, name: string) {.inline.} =
@@ -1038,7 +1041,7 @@ proc shouldCompile*(
   else:
     discard
 
-proc run*(interpreter: var PulsarInterpreter) =
+proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
   while not interpreter.halt:
     inc interpreter.profTotalFrames
     vmd "fetch", "new frame " & $interpreter.currIndex
@@ -1280,7 +1283,7 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
   interp[] = PulsarInterpreter(
     tokenizer: newTokenizer(source),
     clauses: @[],
-    builtins: initTable[string, proc(op: Operation)](),
+    builtins: initTable[string, Builtin](),
     currIndex: 0'u,
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
     trapped: false, # Pre-allocate space for some value pointers
@@ -1328,7 +1331,7 @@ proc newPulsarInterpreter*(clauses: seq[CodeModule]): ptr PulsarInterpreter =
   var interp = cast[ptr PulsarInterpreter](allocShared(sizeof(PulsarInterpreter)))
   interp[] = PulsarInterpreter(
     clauses: @[],
-    builtins: initTable[string, proc(op: Operation)](),
+    builtins: initTable[string, Builtin](),
     currIndex: 0'u,
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
     trapped: false, # Pre-allocate space for some value pointers

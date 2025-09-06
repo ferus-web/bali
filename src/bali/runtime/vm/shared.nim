@@ -66,12 +66,6 @@ type
     Div
     Sub
 
-    ## Executes the line after this instruction if the condition is true, otherwise the line after that line.
-    ## Wherever the line is, execution continues from there on.
-    ## Arguments:
-    ## `...`: Integer - indexes on the stack
-    Equate
-
     ## Do not execute any more lines after this, signifying an end to a clause.
     ## Arguments:
     ## value: Integer - a return value, can be NULL
@@ -189,7 +183,6 @@ const
     "MUL": Mult,
     "DIV": Div,
     "SUB": Sub,
-    "EQU": Equate,
     "ADDL": AddList,
     "LDUI": LoadUint,
     "LDB": LoadBool,

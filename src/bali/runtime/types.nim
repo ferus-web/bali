@@ -7,10 +7,11 @@ import pkg/bali/grammar/prelude
 import pkg/bali/internal/sugar
 import pkg/bali/runtime/[atom_obj_variant, atom_helpers, normalize]
 import pkg/bali/runtime/vm/heap/manager
+import pkg/librng
 
 type
-  NativeFunction* = proc()
-  NativePrototypeFunction* = proc(value: JSValue)
+  NativeFunction* = proc() {.gcsafe.}
+  NativePrototypeFunction* = proc(value: JSValue) {.gcsafe.}
 
   ValueKind* = enum
     vkGlobal
@@ -75,7 +76,16 @@ type
     generatedClauses*: seq[string]
       ## FIXME: This is a horrible fix for the double-clause codegen bug!
 
-  DeathCallback* = proc(vm: PulsarInterpreter)
+  ConsoleLevel* {.pure.} = enum
+    Debug
+    Error
+    Info
+    Log
+    Trace
+    Warn
+
+  DeathCallback* = proc(vm: PulsarInterpreter) {.gcsafe.}
+  ConsoleDelegate* = proc(level: ConsoleLevel, msg: string) {.gcsafe.}
 
   RuntimeStats* = object
     atomsAllocated*: uint ## How many atoms have been allocated so far?
@@ -112,6 +122,8 @@ type
 
     heapManager*: HeapManager
     deathCallback*: DeathCallback
+    consoleDelegate*: ConsoleDelegate
+    rng*: librng.RNG
 
 {.push warning[UnreachableCode]: off.}
 proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
@@ -189,13 +201,17 @@ proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
   for rm in toRm:
     runtime.values.del(rm)
 
-  runtime.values &=
-    Value(
-      kind: vkInternal, index: runtime.addrIdx, identifier: ident, ownerStmt: hash(stmt)
-    )
+  {.cast(gcsafe).}:
+    runtime.values &=
+      Value(
+        kind: vkInternal,
+        index: runtime.addrIdx,
+        identifier: ident,
+        ownerStmt: hash(stmt),
+      )
 
-  info "Ident \"" & ident & "\" is being internally marked at index " & $runtime.addrIdx &
-    " with statement hash: " & $hash(stmt)
+    info "Ident \"" & ident & "\" is being internally marked at index " &
+      $runtime.addrIdx & " with statement hash: " & $hash(stmt)
 
   inc runtime.addrIdx
 
@@ -292,7 +308,7 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
 
 proc index*(
     runtime: Runtime, ident: string, params: IndexParams, demangle: bool = false
-): uint =
+): uint {.gcsafe.} =
   for value in runtime.values:
     for prio in params.priorities:
       if value.kind == vkGlobal and value.identifier == ident:
@@ -307,16 +323,17 @@ proc index*(
         else:
           value.identifier == ident
 
-      let cond =
-        case value.kind
-        of vkGlobal:
-          identMatch
-        of vkLocal:
-          assert *params.fn
-          identMatch and value.ownerFunc == hash(&params.fn)
-        of vkInternal:
-          assert *params.stmt
-          identMatch and value.ownerStmt == hash(&params.stmt)
+      {.cast(gcsafe).}:
+        let cond =
+          case value.kind
+          of vkGlobal:
+            identMatch
+          of vkLocal:
+            assert *params.fn
+            identMatch and value.ownerFunc == hash(&params.fn)
+          of vkInternal:
+            assert *params.stmt
+            identMatch and value.ownerStmt == hash(&params.stmt)
 
       if cond:
         return value.index

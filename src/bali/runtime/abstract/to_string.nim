@@ -6,7 +6,7 @@ import bali/stdlib/types/std_string_type
 import bali/runtime/abstract/to_primitive
 import pkg/gmp
 
-proc ToString*(runtime: Runtime, value: JSValue): string =
+proc ToString*(runtime: Runtime, value: JSValue): string {.gcsafe.} =
   ## 7.1.17 ToString ( argument )
   ## The abstract operation ToString takes argument argument (an ECMAScript language value) and returns either a normal completion containing a String or a throw completion. It converts argument to a value of type String. It performs the following steps when called
   debug "runtime: toString(): " & value.crush()

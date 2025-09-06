@@ -25,10 +25,10 @@ proc resolve*(clause: Clause, op: var Operation, heap: HeapManager) =
           OpCodeToString[op.opCode] & " expects an integer at position " & $x,
           heap = heap,
         )
-  of Equate:
-    for x, _ in op.rawArgs.deepCopy():
-      op.arguments &=
-        op.consume(Integer, "EQU expects an integer at position " & $x, heap = heap)
+  #of Equate:
+  #  for x, _ in op.rawArgs.deepCopy():
+  #    op.arguments &=
+  #      op.consume(Integer, "EQU expects an integer at position " & $x, heap = heap)
   of GreaterThanInt, LesserThanInt, GreaterThanEqualInt, LesserThanEqualInt:
     for x in 1 .. 2:
       op.arguments &=

@@ -291,10 +291,11 @@ proc overrideArgs*(
 
   raise newException(FieldDefect, "Cannot find any clause with name: " & gen.currModule)
 
-proc equate*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
+#[ proc equate*(gen: IRGenerator, a, b: uint): uint {.inline, discardable.} =
   ## Equate two atoms together.
   ## If they match, the operation directly below this conditional is executed. Otherwise, the operation two operations down this conditional is executed.
   gen.addOp(IROperation(opCode: Equate, arguments: @[stackInteger a, stackInteger b]))
+]#
 
 proc add*(gen: IRGenerator, dest, source: uint): uint {.inline, discardable.} =
   gen.addOp(

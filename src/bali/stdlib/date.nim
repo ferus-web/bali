@@ -88,11 +88,11 @@ proc getSystemTimezoneIdentifier*(): string =
   cachedSystemTimeZoneIdentifier = some(systemTimeZoneString)
   systemTimeZoneString
 
-proc getTimeZoneString*(time: float): string =
+proc getTimeZoneString*(time: float): string {.gcsafe.} =
   # FIXME: non-compliant.
   return " (" & getCurrentTimeZone() & ')'
 
-proc toDateString*(tv: float): string =
+proc toDateString*(tv: float): string {.gcsafe.} =
   # 1. If tv is NaN, return "Invalid Date".
   if tv.isNaN or tv == Inf or tv == -Inf:
     return "Invalid Date"
@@ -216,7 +216,7 @@ proc generateStdIR*(runtime: Runtime) =
   runtime.definePrototypeFn(
     JSDate,
     "toString",
-    proc(value: JSValue) =
+    proc(value: JSValue) {.gcsafe.} =
       ## 21.4.4.41 Date.prototype.toString ( )
 
       # 1. Let dateObject be the this value.
