@@ -5,9 +5,6 @@ import bali/grammar/errors
 import bali/runtime/types
 import bali/stdlib/errors_common
 
-proc setDeathCallback*(fn: DeathCallback) {.inline.} =
-  deathCallback = fn
-
 proc typeError*(runtime: Runtime, message: string, exitCode: int = 1) {.inline.} =
   ## Meant for other Bali stdlib methods to use.
   runtime.vm[].throw(jsException("TypeError: " & message))

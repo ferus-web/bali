@@ -17,6 +17,8 @@ type JSError* = object
 proc generateStdIr*(runtime: Runtime) =
   info "errors: generate IR interface"
   runtime.registerType(name = "Error", JSError)
+  if runtime.deathCallback == nil:
+    runtime.deathCallback = DefaultDeathCallback
   runtime.definePrototypeFn(
     JSError,
     "toString",

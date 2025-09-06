@@ -5,21 +5,16 @@ import bali/internal/sugar
 
 privateAccess(PulsarInterpreter)
 
-type
-  JSException* = ref object of RuntimeException
-    name: string = ""
+type JSException* = ref object of RuntimeException
+  name: string = ""
 
-  DeathCallback* = proc(vm: PulsarInterpreter, exitCode: int = 1)
-
-proc DefaultDeathCallback(vm: PulsarInterpreter, exitCode: int = 1) =
+proc DefaultDeathCallback*(vm: PulsarInterpreter) =
   when not defined(baliCrashAndBurnEverythingOnError):
     # Gracefully exit.
-    quit(exitCode)
+    quit(QuitFailure)
   else:
     # Crash and burn everything down, as the above define suggests.
     assert(false, ":(")
-
-var deathCallback*: DeathCallback = DefaultDeathCallback
 
 proc generateMessage*(exc: JSException, err: string): string =
   var msg = "Uncaught "
@@ -42,7 +37,7 @@ proc logTracebackAndDie*(runtime: Runtime, exitCode: int = 1) =
 
   if not runtime.vm.trace.exception.message.contains(runtime.test262.negative.`type`):
     stdout.write(&traceback & '\n')
-    deathCallback(runtime.vm[], exitCode)
+    runtime.deathCallback(runtime.vm[])
   else:
     stderr.write &traceback & '\n'
-    deathCallback(runtime.vm[], exitCode)
+    runtime.deathCallback(runtime.vm[])

@@ -75,6 +75,8 @@ type
     generatedClauses*: seq[string]
       ## FIXME: This is a horrible fix for the double-clause codegen bug!
 
+  DeathCallback* = proc(vm: PulsarInterpreter)
+
   RuntimeStats* = object
     atomsAllocated*: uint ## How many atoms have been allocated so far?
     bytecodeSize*: uint ## How many kilobytes is the bytecode?
@@ -109,6 +111,7 @@ type
     predefinedBytecode*: string
 
     heapManager*: HeapManager
+    deathCallback*: DeathCallback
 
 {.push warning[UnreachableCode]: off.}
 proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =

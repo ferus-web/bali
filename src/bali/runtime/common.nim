@@ -76,13 +76,11 @@ proc run*(runtime: Runtime) =
 
   if runtime.opts.test262:
     test262.generateStdIR(runtime)
-    setDeathCallback(
-      proc(vm: PulsarInterpreter, exitCode: int) =
-        if not vm.trace.exception.message.contains(runtime.test262.negative.`type`):
-          quit(1)
-        else:
-          quit(0)
-    )
+    runtime.deathCallback = proc(vm: PulsarInterpreter) =
+      if not vm.trace.exception.message.contains(runtime.test262.negative.`type`):
+        quit(QuitSuccess)
+      else:
+        quit(QuitFailure)
 
   for ident in ["undefined", "NaN", "true", "false", "null", "Infinity"]:
     runtime.markGlobal(ident)
