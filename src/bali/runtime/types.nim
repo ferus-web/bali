@@ -141,22 +141,23 @@ proc createAtom*(runtime: Runtime, typ: JSType): JSValue =
   ## in determining what type this object belongs to. It also attaches all the prototype functions needed.
   ##
   ## **This value will be allocated via Bali's internal garbage collector. Don't unnecessarily call this or else you might trigger a GC collection sweep.**
-  var atom = obj()
+  var atom = obj(runtime.heapManager)
 
   for name, member in typ.members:
     if member.isAtom():
       let idx = atom.objValues.len
-      atom.objValues &= undefined()
+      atom.objValues &= undefined(runtime.heapManager)
       atom.objFields[name] = idx
 
   for name, protoFn in typ.prototypeFunctions:
     capture name, protoFn:
       atom[name] = nativeCallable(
+        runtime.heapManager,
         proc() =
-          typ.prototypeFunctions[name](atom)
+          typ.prototypeFunctions[name](atom),
       )
 
-  atom.tag("bali_object_type", integer(typ.proto.int))
+  atom.tag("bali_object_type", integer(runtime.heapManager, typ.proto.int))
 
   ensureMove(atom)
 

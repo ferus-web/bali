@@ -2,41 +2,41 @@
 
 import std/[json, options, logging, tables]
 import bali/internal/sugar
-import bali/runtime/[arguments, types, bridge]
+import bali/runtime/[arguments, types, bridge, construction]
 import bali/runtime/abstract/coercion
 import bali/stdlib/errors
 import bali/runtime/vm/atom
 import jsony
 
-proc convertJsonNodeToAtom*(node: JsonNode): JSValue =
+proc convertJsonNodeToAtom*(runtime: Runtime, node: JsonNode): JSValue =
   if node.kind == JInt:
     let value = node.getInt()
 
-    return integer(value)
+    return integer(runtime, value)
   elif node.kind == JString:
-    return str(node.getStr())
+    return str(runtime, node.getStr())
   elif node.kind == JNull:
-    return null(true)
+    return null(runtime)
   elif node.kind == JBool:
-    return boolean(node.getBool())
+    return boolean(runtime, node.getBool())
   elif node.kind == JArray:
-    var arr = sequence(@[])
+    var arr = sequence(runtime, @[])
     for elem in node.getElems():
-      arr.sequence &= elem.convertJsonNodeToAtom()[]
+      arr.sequence &= convertJsonNodeToAtom(runtime, elem)[]
 
     return arr
   elif node.kind == JFloat:
-    return floating(node.getFloat())
+    return floating(runtime, node.getFloat())
   elif node.kind == JObject:
-    var jObj = obj()
+    var jObj = obj(runtime)
 
     for key, value in node.getFields():
-      jObj.objValues &= value.convertJsonNodeToAtom()
+      jObj.objValues &= convertJsonNodeToAtom(runtime, value)
       jObj.objFields[key] = jObj.objValues.len - 1
 
     return jObj
 
-  null()
+  null(runtime)
 
 type JSON = object
 
@@ -89,7 +89,7 @@ proc generateStdIR*(runtime: Runtime) =
           runtime.syntaxError(exc.msg)
           JsonNode()
 
-      let atom = convertJsonNodeToAtom(parsed)
+      let atom = runtime.convertJsonNodeToAtom(parsed)
       ret atom
     ,
   )
@@ -107,7 +107,7 @@ proc generateStdIR*(runtime: Runtime) =
         atom = &runtime.argument(1)
         node = atomToJsonNode(atom)
 
-      ret str(pretty node)
+      ret str(runtime, pretty node)
     ,
   )
   #[ else:

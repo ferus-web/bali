@@ -21,6 +21,14 @@ type
     readScalarRegister*: pointer
     writeField*: pointer
     addRetval*: pointer
+    createField*: pointer
+    allocEncodedFloat*: pointer
+    allocFloat*: pointer
+    alloc*: pointer
+    allocBytecodeCallable*: pointer
+    allocStr*: pointer
+    allocInt*: pointer
+    getProperty*: pointer
 
   JITSegment* = proc(): void {.cdecl.}
 

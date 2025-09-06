@@ -180,38 +180,22 @@ proc getNativeCallable*(atom: MAtom | JSValue): Option[proc()] {.inline.} =
 
   none(proc())
 
-var heapManagerCtx {.threadvar.}: manager.HeapManager
-
-proc setHeapManager*(ctx: manager.HeapManager) {.sideEffect, inline, raises: [].} =
-  ## Set the heap manager.
-  ##
-  ## This is a thread-local variable, so each thread that's executing code
-  ## needs to run it, but ideally that should be a single thread.
-  heapManagerCtx = ctx
-
-proc getHeapManager*(): manager.HeapManager {.sideEffect, inline, raises: [].} =
-  ## Get the heap manager context for this thread.
-  ##
-  ## **WARNING**: Calling this prior to calling `newRuntime()` will result
-  ## in a zero'd out struct being returned. Any operations on it will result in
-  ## undefined behaviour.
-  heapManagerCtx
-
-proc newJSValue*(kind: MAtomKind): JSValue =
+proc newJSValue*(heap: HeapManager, kind: MAtomKind): JSValue =
   ## Allocate a new `JSValue` using Bali's garbage collector.
   ## A `JSValue` is a pointer to an atom.
+  assert heap != nil, "CRITICAL: newJSValue() was passed an uninit'd HeapManager!"
 
-  var mem = cast[JSValue](heapManagerCtx.allocate(uint16(sizeof(MAtom))))
+  var mem = cast[JSValue](heap.allocate(uint16(sizeof(MAtom))))
 
   {.cast(uncheckedAssign).}:
     mem[].kind = kind
 
   ensureMove(mem)
 
-proc atomToJSValue*(atom: MAtom): JSValue =
+proc atomToJSValue*(heap: HeapManager, atom: MAtom): JSValue =
   let kind = if atom.kind != Ident: atom.kind else: String
 
-  var value = newJSValue(kind)
+  var value = newJSValue(heap, kind)
   case atom.kind
   of Null, Undefined:
     discard
@@ -240,25 +224,9 @@ proc atomToJSValue*(atom: MAtom): JSValue =
 
   move(value)
 
-const internStrings = defined(baliExperimentalStringInterning)
-when internStrings:
-  var interned {.global.}: Table[string, pointer]
-  var constantEmptyStr = newJSValue(String)
-  constantEmptyStr.str = newStringUninit(1)
-
-proc str*(s: string): JSValue {.inline, cdecl.} =
-  when internStrings:
-    if s.len < 1:
-      return constantEmptyStr
-
-    if s in interned:
-      return cast[JSValue](interned[s])
-
-  var mem = newJSValue(String)
+proc str*(heap: HeapManager, s: string): JSValue {.inline, cdecl.} =
+  var mem = newJSValue(heap, String)
   mem.str = s
-
-  when internStrings:
-    interned[s] = mem
 
   mem
 
@@ -267,25 +235,23 @@ func stackStr*(s: string): MAtom =
   ## This is used by the parser.
   MAtom(kind: String, str: s)
 
-proc ident*(ident: string): JSValue {.inline, cdecl.} =
-  var mem = newJSValue(Ident)
-  mem.ident = ident
-
-  ensureMove(mem)
-
 func stackIdent*(i: string): MAtom =
   ## Allocate a Ident atom on the stack.
   ## This is used by the parser.
   MAtom(kind: Ident, ident: i)
 
-proc integer*(value: int, inRuntime: bool = false): JSValue {.inline, cdecl.} =
-  var mem = newJSValue(Integer)
+proc integer*(
+    heap: HeapManager, value: int, inRuntime: bool = false
+): JSValue {.inline, cdecl.} =
+  var mem = newJSValue(heap, Integer)
   mem.integer = value
 
   ensureMove(mem)
 
-proc integer*(value: uint, inRuntime: bool = false): JSValue {.inline, cdecl.} =
-  var mem = newJSValue(Integer)
+proc integer*(
+    heap: HeapManager, value: uint, inRuntime: bool = false
+): JSValue {.inline, cdecl.} =
+  var mem = newJSValue(heap, Integer)
   mem.integer = int(value)
 
   ensureMove(mem)
@@ -300,14 +266,16 @@ func stackInteger*(value: uint): MAtom =
   ## This is used by the parser.
   MAtom(kind: Integer, integer: int(value))
 
-proc boolean*(b: bool, inRuntime: bool = false): JSValue {.inline, cdecl.} =
-  var mem = newJSValue(Boolean)
+proc boolean*(
+    heap: HeapManager, b: bool, inRuntime: bool = false
+): JSValue {.inline, cdecl.} =
+  var mem = newJSValue(heap, Boolean)
   mem.state = b
 
   ensureMove(mem)
 
-proc nativeCallable*(fn: proc()): JSValue {.inline, cdecl.} =
-  var mem = newJSValue(NativeCallable)
+proc nativeCallable*(heap: HeapManager, fn: proc()): JSValue {.inline, cdecl.} =
+  var mem = newJSValue(heap, NativeCallable)
   mem.fn = fn
 
   ensureMove(mem)
@@ -315,8 +283,8 @@ proc nativeCallable*(fn: proc()): JSValue {.inline, cdecl.} =
 func stackBoolean*(b: bool): MAtom =
   MAtom(kind: Boolean, state: b)
 
-proc bytecodeCallable*(clause: string): JSValue {.cdecl.} =
-  var mem = newJSValue(BytecodeCallable)
+proc bytecodeCallable*(heap: HeapManager, clause: string): JSValue {.cdecl.} =
+  var mem = newJSValue(heap, BytecodeCallable)
   mem.clauseName = clause
 
   ensureMove(mem)
@@ -330,8 +298,8 @@ proc getBytecodeClause*(atom: JSValue): Option[string] =
 
   none(string)
 
-proc floating*(value: float64): JSValue {.cdecl.} =
-  var mem = newJSValue(Float)
+proc floating*(heap: HeapManager, value: float64): JSValue {.cdecl.} =
+  var mem = newJSValue(heap, Float)
   mem.floatVal = value
 
   mem
@@ -339,20 +307,20 @@ proc floating*(value: float64): JSValue {.cdecl.} =
 func stackFloating*(value: float64): MAtom =
   MAtom(kind: Float, floatVal: value)
 
-proc undefined*(): JSValue {.inline, cdecl.} =
-  newJSValue(Undefined)
+proc undefined*(heap: HeapManager): JSValue {.inline, cdecl.} =
+  newJSValue(heap, Undefined)
 
 func stackUndefined*(): MAtom =
   MAtom(kind: Undefined)
 
-proc null*(inRuntime: bool = false): JSValue {.inline, cdecl.} =
-  newJSValue(Null)
+proc null*(heap: HeapManager): JSValue {.inline, cdecl.} =
+  newJSValue(heap, Null)
 
 func stackNull*(): MAtom =
   MAtom(kind: Null)
 
-proc sequence*(s: seq[MAtom]): JSValue {.inline, cdecl.} =
-  var mem = newJSValue(Sequence)
+proc sequence*(heap: HeapManager, s: seq[MAtom]): JSValue {.inline, cdecl.} =
+  var mem = newJSValue(heap, Sequence)
   mem.sequence = s
 
   ensureMove(mem)
@@ -360,14 +328,16 @@ proc sequence*(s: seq[MAtom]): JSValue {.inline, cdecl.} =
 func stackSequence*(s: seq[MAtom]): MAtom {.inline.} =
   MAtom(kind: Sequence, sequence: s)
 
-proc bigint*(value: SomeSignedInt | string): JSValue {.inline, cdecl.} =
-  var mem = newJSValue(BigInteger)
+proc bigint*(
+    heap: HeapManager, value: SomeSignedInt | string
+): JSValue {.inline, cdecl.} =
+  var mem = newJSValue(heap, BigInteger)
   mem.bigint = initBigInt(value)
 
   ensureMove(mem)
 
-proc obj*(): JSValue {.inline, cdecl.} =
-  var mem = newJSValue(Object)
+proc obj*(heap: HeapManager): JSValue {.inline, cdecl.} =
+  var mem = newJSValue(heap, Object)
   mem.objFields = initTable[string, int]()
   mem.objValues = newSeq[JSValue]()
 

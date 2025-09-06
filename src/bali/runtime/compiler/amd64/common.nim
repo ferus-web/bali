@@ -1,9 +1,13 @@
+## The common code shared between different JIT tiers for x86-64
+##
+## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[tables, posix]
 import
   pkg/bali/runtime/compiler/base,
   pkg/bali/runtime/compiler/amd64/native_forwarding,
   pkg/bali/platform/libc,
-  pkg/bali/internal/assembler/amd64
+  pkg/bali/internal/assembler/amd64,
+  pkg/bali/runtime/vm/heap/manager
 
 type
   ConstantPool* = seq[cstring]
@@ -14,6 +18,7 @@ type
     callbacks*: VMCallbacks
     vm*: pointer
     cpool*: ConstantPool
+    heap*: HeapManager
 
     ## This vector maps bytecode indices
     ## to native offsets in executable memory.
@@ -29,9 +34,10 @@ proc `=destroy`*(cgen: AMD64Codegen) =
   free(cgen.s.data)
 
 proc prepareGCAlloc*(cgen: var AMD64Codegen, size: uint) =
-  cgen.s.mov(regRdi, size.int64)
+  cgen.s.mov(regRdi, cast[int64](cgen.vm))
+  cgen.s.mov(regRsi, size.int64)
   cgen.s.sub(regRsp.reg, 8)
-  cgen.s.call(allocRaw)
+  cgen.s.call(cgen.callbacks.alloc)
   cgen.s.add(regRsp.reg, 8)
 
 proc prepareLoadString*(cgen: var AMD64Codegen, str: cstring) =
@@ -56,4 +62,4 @@ proc prepareLoadString*(cgen: var AMD64Codegen, str: cstring) =
 
   cgen.s.pop(regR8.reg) # get the pointer that was in rax which is likely gone now
 
-export libc
+export libc, manager

@@ -3,7 +3,9 @@
 import std/[logging, tables, options, strutils, hashes, importutils]
 import bali/runtime/vm/prelude
 import bali/runtime/vm/ir/generator
-import bali/runtime/[atom_obj_variant, wrapping, atom_helpers, types, normalize]
+import
+  bali/runtime/
+    [atom_obj_variant, wrapping, atom_helpers, types, normalize, construction]
 import bali/stdlib/errors
 import bali/internal/sugar
 
@@ -179,7 +181,7 @@ proc getMethod*(runtime: Runtime, v: JSValue, p: string): Option[proc()] =
 
           # If the function returned nothing, just push undefined to that register.
           if !runtime.vm.registers.retVal:
-            runtime.vm.registers.retVal = some(undefined())
+            runtime.vm.registers.retVal = some(undefined(runtime.heapManager))
       )
     else:
       debug "runtime: getMethod(): field is not callable"
@@ -256,7 +258,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
 
   for fname, fatom in prototype().fieldPairs:
     when fatom is JSValue:
-      jsType.members[fname] = initAtomOrFunction[NativeFunction](undefined())
+      jsType.members[fname] = initAtomOrFunction[NativeFunction](undefined(runtime))
     else:
       jsType.members[fname] = initAtomOrFunction[NativeFunction](runtime.wrap(fatom))
 
@@ -284,6 +286,6 @@ proc call*(runtime: Runtime, callable: JSValue, arguments: varargs[JSValue]): JS
 
   let retVal = runtime.getReturnValue()
   if !retVal:
-    return undefined()
+    return undefined(runtime.heapManager)
 
   &retVal

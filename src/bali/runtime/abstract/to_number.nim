@@ -70,7 +70,7 @@ proc ToNumeric*(runtime: Runtime, value: JSValue): JSValue =
     return primValue
 
   # 3. Return ? ToNumber(primValue)
-  floating(runtime.ToNumber(primValue))
+  floating(runtime.heapManager, runtime.ToNumber(primValue))
 
 proc isFiniteNumber*(runtime: Runtime, number: JSValue): bool {.inline.} =
   if not isNumber(number):

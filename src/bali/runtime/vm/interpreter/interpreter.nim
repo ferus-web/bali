@@ -1,11 +1,12 @@
 import std/[math, tables, strutils, options]
-import bali/runtime/vm/heap/boehm
-import bali/runtime/vm/[atom, debugging]
-import bali/runtime/vm/[shared, tokenizer, exceptions]
-import bali/runtime/vm/interpreter/[operation, bytecodeopsetconv, types, resolver]
-import bali/runtime/vm/ir/shared
-import bali/runtime/normalize
-import bali/runtime/compiler/base
+import pkg/bali/runtime/vm/heap/[manager, boehm]
+import pkg/bali/runtime/vm/[atom, debugging]
+import pkg/bali/runtime/vm/[shared, tokenizer, exceptions]
+import pkg/bali/runtime/vm/interpreter/[operation, bytecodeopsetconv, types, resolver]
+import pkg/bali/runtime/vm/ir/shared
+import pkg/bali/runtime/normalize
+import pkg/bali/runtime/compiler/base
+import pkg/bali/runtime/atom_helpers
 import pkg/[shakar]
 
 when hasJITSupport:
@@ -39,6 +40,8 @@ type
     errors*: seq[RuntimeException]
     halt*: bool = false
     trace*: ExceptionTrace
+
+    heapManager*: HeapManager
 
     registers*: Registers
 
@@ -318,7 +321,7 @@ proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: int) =
       n1 = &satom.getInt()
       n2 = &datom.getInt()
 
-    var aiAtom = integer(n1 + n2)
+    var aiAtom = integer(interpreter.heapManager, n1 + n2)
 
     interpreter.addAtom(aiAtom, src)
   of String:
@@ -326,7 +329,7 @@ proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: int) =
       str1 = &satom.getStr()
       str2 = &datom.getStr()
 
-    var asAtom = str(str1 & str2)
+    var asAtom = str(interpreter.heapManager, str1 & str2)
 
     interpreter.addAtom(asAtom, src)
   of Sequence:
@@ -334,7 +337,7 @@ proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: int) =
       seq1 = &satom.getSequence()
       seq2 = &datom.getSequence()
 
-    var asAtom = sequence(seq1 & seq2)
+    var asAtom = sequence(interpreter.heapManager, seq1 & seq2)
 
     interpreter.addAtom(asAtom, src)
   else:
@@ -437,7 +440,7 @@ proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: i
       if *interpreter.registers.retVal:
         &interpreter.registers.retVal
       else:
-        undefined(),
+        undefined(interpreter.heapManager),
       store,
     )
     interpreter.registers.retVal = none(JSValue)
@@ -452,7 +455,7 @@ proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: i
       if *interpreter.registers.error:
         &interpreter.registers.error
       else:
-        undefined(),
+        undefined(interpreter.heapManager),
       store,
     )
   else:
@@ -493,7 +496,9 @@ proc opAdd(interpreter: var PulsarInterpreter, op: var Operation) =
     a = &interpreter.get(aPos)
     b = &interpreter.get((&op.arguments[1].getInt()))
 
-  interpreter.addAtom(floating(&a.getNumeric() + &b.getNumeric()), aPos)
+  interpreter.addAtom(
+    floating(interpreter.heapManager, &a.getNumeric() + &b.getNumeric()), aPos
+  )
   inc interpreter.currIndex
 
 proc opMult(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -502,7 +507,7 @@ proc opMult(interpreter: var PulsarInterpreter, op: var Operation) =
     a = &(&interpreter.get(posA)).getNumeric()
     b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
-  interpreter.addAtom(floating(a * b), posA)
+  interpreter.addAtom(floating(interpreter.heapManager, a * b), posA)
   inc interpreter.currIndex
 
 proc opDiv(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -512,11 +517,11 @@ proc opDiv(interpreter: var PulsarInterpreter, op: var Operation) =
     b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
   if b == 0f:
-    interpreter.addAtom(floating(Inf), posA)
+    interpreter.addAtom(floating(interpreter.heapManager, Inf), posA)
     inc interpreter.currIndex
     return
 
-  interpreter.addAtom(floating(a / b), posA)
+  interpreter.addAtom(floating(interpreter.heapManager, a / b), posA)
   inc interpreter.currIndex
 
 proc opSub(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -525,7 +530,7 @@ proc opSub(interpreter: var PulsarInterpreter, op: var Operation) =
     a = &(&interpreter.get(posA)).getNumeric()
     b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
-  interpreter.addAtom(floating(a - b), posA)
+  interpreter.addAtom(floating(interpreter.heapManager, a - b), posA)
   inc interpreter.currIndex
 
 proc opEquate(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -573,7 +578,7 @@ proc opReturn(interpreter: var PulsarInterpreter, op: var Operation) =
 
 proc opLoadList(interpreter: var PulsarInterpreter, op: var Operation) =
   msg "load list"
-  interpreter.addAtom(sequence @[], &op.arguments[0].getInt())
+  interpreter.addAtom(sequence(interpreter.heapManager, @[]), &op.arguments[0].getInt())
   inc interpreter.currIndex
 
 proc opAddList(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -600,7 +605,10 @@ proc opAddList(interpreter: var PulsarInterpreter, op: var Operation) =
 
 proc opLoadUint(interpreter: var PulsarInterpreter, op: var Operation) =
   msg "load uint"
-  interpreter.addAtom(integer((&op.arguments[1].getInt())), &op.arguments[0].getInt())
+  interpreter.addAtom(
+    integer(interpreter.heapManager, (&op.arguments[1].getInt())),
+    &op.arguments[0].getInt(),
+  )
   inc interpreter.currIndex
 
 proc opLoadBool(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -678,7 +686,7 @@ proc opLesserThanInt(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.currIndex += 2
 
 proc opLoadObject(interpreter: var PulsarInterpreter, op: var Operation) =
-  interpreter.addAtom(obj(), (&op.arguments[0].getInt()))
+  interpreter.addAtom(obj(interpreter.heapManager), (&op.arguments[0].getInt()))
   inc interpreter.currIndex
 
 proc opCreateField(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -696,7 +704,7 @@ proc opCreateField(interpreter: var PulsarInterpreter, op: var Operation) =
     fieldName = &op.arguments[2].getStr()
 
   atom.objFields[fieldName] = fieldIndex
-  atom.objValues.add(null())
+  atom.objValues.add(null(interpreter.heapManager))
 
   interpreter.addAtom(atom, oatomIndex)
 
@@ -714,7 +722,9 @@ proc opFastWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
   var atom = &oatomId
   let fieldIndex = (&op.arguments[1].getInt())
 
-  let toWrite = op.consume(Integer, "", enforce = false, some(op.rawArgs.len - 1))
+  let toWrite = op.consume(
+    Integer, "", enforce = false, some(op.rawArgs.len - 1), interpreter.heapManager
+  )
   atom.objValues[fieldIndex] = toWrite
 
   interpreter.addAtom(atom, oatomIndex)
@@ -740,7 +750,7 @@ proc opWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
       fieldIndex = some(idx)
 
   if not *fieldIndex:
-    atom.objValues &= undefined()
+    atom.objValues &= undefined(interpreter.heapManager)
     fieldIndex = some(atom.objValues.len - 1)
 
   atom.objValues[&fieldIndex] = &sourceAtom
@@ -758,10 +768,13 @@ proc opInc(interpreter: var PulsarInterpreter, op: var Operation) =
 
   case atom.kind
   of Integer:
-    interpreter.addAtom(integer(&atom.getInt() + 1), (&op.arguments[0].getInt()))
+    interpreter.addAtom(
+      integer(interpreter.heapManager, &atom.getInt() + 1), (&op.arguments[0].getInt())
+    )
   else:
-    interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()))
-      # If an invalid atom is attempted to be incremented, set its value to NaN.
+    interpreter.addAtom(
+      floating(interpreter.heapManager, NaN), (&op.arguments[0].getInt())
+    ) # If an invalid atom is attempted to be incremented, set its value to NaN.
 
   inc interpreter.currIndex
 
@@ -770,17 +783,20 @@ proc opDec(interpreter: var PulsarInterpreter, op: var Operation) =
 
   case atom.kind
   of Integer:
-    interpreter.addAtom(integer(&atom.getInt() - 1), (&op.arguments[0].getInt()))
+    interpreter.addAtom(
+      integer(interpreter.heapManager, &atom.getInt() - 1), (&op.arguments[0].getInt())
+    )
   else:
-    interpreter.addAtom(floating(NaN), (&op.arguments[0].getInt()))
-      # If an invalid atom is attempted to be decremented, set its value to NaN.
+    interpreter.addAtom(
+      floating(interpreter.heapManager, NaN), (&op.arguments[0].getInt())
+    ) # If an invalid atom is attempted to be decremented, set its value to NaN.
 
   inc interpreter.currIndex
 
 proc opLoadNull(interpreter: var PulsarInterpreter, op: var Operation) =
   let idx = (&op.arguments[0].getInt())
 
-  interpreter.addAtom(null(), idx)
+  interpreter.addAtom(null(interpreter.heapManager), idx)
   inc interpreter.currIndex
 
 proc opReadReg(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -824,7 +840,7 @@ proc opMoveAtom(interpreter: var PulsarInterpreter, op: var Operation) =
     dest = (&op.arguments[1].getInt())
 
   interpreter.stack[dest] = &interpreter.get(src)
-  interpreter.stack[src] = null()
+  interpreter.stack[src] = null(interpreter.heapManager)
   inc interpreter.currIndex
 
 proc opLoadFloat(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -849,7 +865,7 @@ proc opLoadBytecodeCallable(interpreter: var PulsarInterpreter, op: var Operatio
   msg "index is " & $index
   msg "clause is " & clause
 
-  interpreter.addAtom(bytecodeCallable(clause), index)
+  interpreter.addAtom(bytecodeCallable(interpreter.heapManager, clause), index)
   inc interpreter.currIndex
 
 proc opExecuteBytecodeCallable(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -860,7 +876,7 @@ proc opExecuteBytecodeCallable(interpreter: var PulsarInterpreter, op: var Opera
 
 proc opLoadUndefined(interpreter: var PulsarInterpreter, op: var Operation) =
   msg "load undefined"
-  interpreter.addAtom(undefined(), (&op.arguments[0].getInt()))
+  interpreter.addAtom(undefined(interpreter.heapManager), (&op.arguments[0].getInt()))
   inc interpreter.currIndex
 
 proc opGreaterThanEqualInt(interpreter: var PulsarInterpreter, op: var Operation) =
@@ -927,7 +943,7 @@ proc opPower(interpreter: var PulsarInterpreter, op: var Operation) =
     a = &(&interpreter.get(posA)).getNumeric()
     b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
-  interpreter.addAtom(floating(a ^ b.int), posA)
+  interpreter.addAtom(floating(interpreter.heapManager, a ^ b.int), posA)
   inc interpreter.currIndex
 
 {.pop.}
@@ -1106,7 +1122,7 @@ proc run*(interpreter: var PulsarInterpreter) =
 
     if not operation.resolved:
       vmd "decode", "op is not resolved, resolving"
-      resolve(clause, operation)
+      resolve(clause, operation, interpreter.heapManager)
       operation.resolved = true
 
       vmd "decode", "resolved/decoded op"
@@ -1121,7 +1137,7 @@ proc run*(interpreter: var PulsarInterpreter) =
 
 when defined(amd64):
   proc initJITForPlatform(
-      vm: pointer, callbacks: VMCallbacks, tier: Tier
+      vm: pointer, heap: HeapManager, callbacks: VMCallbacks, tier: Tier
   ): AMD64Codegen =
     assert(vm != nil)
     assert(hasJITSupport, "Platform does not have a JIT compiler implementation!")
@@ -1129,9 +1145,9 @@ when defined(amd64):
     when defined(amd64):
       case tier
       of Tier.Baseline:
-        return initAMD64BaselineCodegen(vm, callbacks)
+        return initAMD64BaselineCodegen(vm, heap, callbacks)
       of Tier.Midtier:
-        return initAMD64MidtierCodegen(vm, callbacks)
+        return initAMD64MidtierCodegen(vm, heap, callbacks)
       else:
         unreachable
 
@@ -1165,7 +1181,7 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
     invokeStr: proc(vm: var PulsarInterpreter, index: cstring) {.cdecl.} =
       jitd "callback", "invokeStr(index=" & $index & ')'
       vm.trapped = true
-      vm.invoke(str($index))
+      vm.invoke(str(vm.heapManager, $index))
       vm.run(),
     readVectorRegister: proc(
         vm: var PulsarInterpreter, store: uint, register: uint, index: uint
@@ -1208,13 +1224,56 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
     addRetval: proc(vm: var PulsarInterpreter, value: JSValue) {.cdecl.} =
       jitd "callback", "addRetval()"
       vm.registers.retVal = some(value),
+    createField: proc(
+        vm: var PulsarInterpreter, target: JSValue, field: cstring
+    ) {.cdecl.} =
+      jitd "callback", "createField()"
+      target[$field] = undefined(vm.heapManager),
+    allocEncodedFloat: proc(vm: var PulsarInterpreter, v: int64): JSValue {.cdecl.} =
+      jitd "callback", "allocEncodedFloat()"
+
+      floating(vm.heapManager, cast[float64](v)),
+    allocFloat: proc(vm: var PulsarInterpreter, v: float64): JSValue {.cdecl.} =
+      jitd "callback", "allocFloat()"
+
+      floating(vm.heapManager, v),
+    alloc: proc(vm: var PulsarInterpreter, size: int64): pointer {.cdecl.} =
+      jitd "callback", "alloc()"
+
+      vm.heapManager.allocate(size.uint),
+    allocBytecodeCallable: proc(
+        vm: var PulsarInterpreter, str: cstring
+    ): JSValue {.cdecl.} =
+      jitd "callback", "allocBytecodeCallable()"
+
+      bytecodeCallable(vm.heapManager, $str),
+    allocStr: proc(vm: var PulsarInterpreter, value: cstring): JSValue {.cdecl.} =
+      jitd "callback", "allocStr()"
+
+      str(vm.heapManager, $value),
+    allocInt: proc(vm: var PulsarInterpreter, i: int64): JSValue {.cdecl.} =
+      jitd "callback", "allocInt()"
+
+      integer(vm.heapManager, i),
+    getProperty: proc(
+        vm: var PulsarInterpreter, value: JSValue, field: cstring
+    ): JSValue {.cdecl.} =
+      jitd "callback", "getProperty()"
+      let field = $field
+      if value.contains(field):
+        return value[field]
+
+      undefined(vm.heapManager),
   )
 
   when hasJITSupport:
-    interp[].baseline =
-      BaselineJIT(initJITForPlatform(interp, callbacks, Tier.Baseline))
+    interp[].baseline = BaselineJIT(
+      initJITForPlatform(interp, interp.heapManager, callbacks, Tier.Baseline)
+    )
 
-    interp[].midtier = MidtierJIT(initJITForPlatform(interp, callbacks, Tier.Midtier))
+    interp[].midtier = MidtierJIT(
+      initJITForPlatform(interp, interp.heapManager, callbacks, Tier.Midtier)
+    )
 
 proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
   var interp = cast[ptr PulsarInterpreter](allocShared(sizeof(PulsarInterpreter)))
@@ -1259,7 +1318,7 @@ proc feed*(interp: var PulsarInterpreter, modules: seq[CodeModule]) =
         arguments: newSeqOfCap[JSValue](op.arguments.len),
       )
       for arg in op.arguments:
-        operation.arguments &= atomToJSValue(arg)
+        operation.arguments &= atomToJSValue(interp.heapManager, arg)
 
       clause.operations &= move(operation)
 
@@ -1274,6 +1333,7 @@ proc newPulsarInterpreter*(clauses: seq[CodeModule]): ptr PulsarInterpreter =
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
     trapped: false, # Pre-allocate space for some value pointers
   )
+  interp.heapManager = initHeapManager()
   interp[].feed(clauses)
   interp.tryInitializeJIT()
 

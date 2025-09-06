@@ -1,7 +1,7 @@
 ## Atom functions
 
 import std/[options, tables]
-import bali/runtime/vm/atom
+import bali/runtime/vm/atom, bali/runtime/vm/heap/manager
 
 {.push warning[UnreachableCode]: off, inline.}
 
@@ -36,8 +36,8 @@ proc `[]=`*(atom: JSValue, name: string, value: sink JSValue) =
   else:
     atom.objValues[atom.objFields[name]] = ensureMove(value)
 
-proc createField*(atom: JSValue, field: string) =
-  atom[field] = undefined()
+proc createField*(atom: JSValue, field: string, heap: HeapManager) =
+  atom[field] = undefined(heap)
 
 proc contains*(atom: JSValue, name: string): bool =
   atom.objFields.contains(name)

@@ -5,7 +5,7 @@
 import std/[math, strformat, times, logging, options]
 import bali/internal/sugar
 import bali/runtime/vm/atom
-import bali/runtime/[atom_helpers, arguments, types, bridge, wrapping]
+import bali/runtime/[atom_helpers, arguments, types, bridge, construction, wrapping]
 import bali/runtime/abstract/[coercion, slots]
 import bali/internal/date/[utils, constants, parser]
 import bali/internal/timezone
@@ -133,7 +133,7 @@ proc generateStdIR*(runtime: Runtime) =
           dateValue = timeClip(runtime.ToNumber(value))
 
       var date = runtime.createObjFromType(JSDate)
-      date.tag("epoch", floating(dateValue))
+      date.tag("epoch", floating(runtime, dateValue))
       ret date
     ,
   )

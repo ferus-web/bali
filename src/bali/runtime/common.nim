@@ -3,7 +3,7 @@
 ## Copyright (C) 2025 Trayambak Rai
 import std/[strutils, logging, tables, sugar]
 import
-  pkg/bali/runtime/[atom_helpers, atom_obj_variant, types],
+  pkg/bali/runtime/[atom_helpers, atom_obj_variant, types, construction],
   pkg/bali/runtime/niche/lowering,
   pkg/bali/runtime/vm/prelude,
   pkg/bali/runtime/vm/ir/generator,
@@ -16,14 +16,15 @@ proc typeRegistrationFinalizer*(runtime: Runtime) =
   ## Called by the engine when it needs to register all types' function properties.
   for typ in runtime.types:
     let index = runtime.index(typ.name, globalIndex())
-    var jsObj = obj()
+    var jsObj = obj(runtime)
 
     for name, value in typ.members:
       if value.isFn:
         capture name, value:
           jsObj[name] = nativeCallable(
+            runtime.heapManager,
             proc() =
-              value.fn()()
+              value.fn()(),
           )
       else:
         jsObj[name] = value.atom()
@@ -58,13 +59,18 @@ proc run*(runtime: Runtime) =
   ## It also starts the interpreter's garbage collector. Any attempts to interact with the Bali GC
   ## prior to this function being called will result in undefined behaviour, generally an infinite loop.
 
+  # Prior to _ANY_ possibility of allocations occurring,
+  # we must instantiate the heap manager.
+  runtime.vm.heapManager = initHeapManager()
+  runtime.heapManager = runtime.vm.heapManager
+
   runtime.test262 = runtime.ast.test262
   runtime.registerEcmaTypes()
 
   runtime.allocStatsStart = getAllocStats()
 
-  runtime.vm[].useJit = runtime.opts.codegen.jitCompiler
-  runtime.vm[].midtier.dumpIrForFuncs = runtime.opts.jit.madhyasthalDumpIRFor
+  runtime.vm.useJit = runtime.opts.codegen.jitCompiler
+  runtime.vm.midtier.dumpIrForFuncs = runtime.opts.jit.madhyasthalDumpIRFor
 
   runtime.generateInternalIR()
 
@@ -131,15 +137,14 @@ proc newRuntime*(
   ## If the input isn't from a file, you can set it to anything - it's primarily used for caching.
   ## The AST must be valid.
   ## You can check the options exposed to you in `InterpreterOpts` by checking its documentation.
-  var heapManager = initHeapManager()
-  setHeapManager(heapManager)
+  var vm = newPulsarInterpreter(predefinedBytecode)
 
   Runtime(
     ast: ast,
     clauses: @[],
     ir: newIRGenerator("bali"),
-    vm: newPulsarInterpreter(predefinedBytecode),
+    vm: vm,
     opts: opts,
     predefinedBytecode: predefinedBytecode,
-    heapManager: heapManager,
+    heapManager: vm.heapManager,
   )

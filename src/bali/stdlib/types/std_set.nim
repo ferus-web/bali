@@ -1,7 +1,7 @@
 ## Set type implementation
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import std/[options]
-import bali/runtime/[arguments, atom_helpers, types, wrapping, bridge]
+import bali/runtime/[arguments, atom_helpers, types, wrapping, bridge, construction]
 import bali/runtime/abstract/[coercion, equating, slots]
 import bali/internal/sugar
 import bali/runtime/vm/atom
@@ -18,7 +18,7 @@ proc generateStdIR*(runtime: Runtime) =
       # FIXME: Non-compliant.
 
       var set = runtime.createObjFromType(JSSet)
-      set.tag("internal", sequence(@[]))
+      set.tag("internal", sequence(runtime, @[]))
       ret set
     ,
   )
@@ -57,11 +57,11 @@ proc generateStdIR*(runtime: Runtime) =
 
       # 4. If value is -0𝔽, set value to +0𝔽.
       if value.isNumber and runtime.ToNumber(value) == -0f:
-        value = floating(0f)
+        value = floating(runtime, 0f)
 
       # 5. Append value to S.[[SetData]].
       setVal.add(value[])
-      setAtom.tag("internal", sequence(setVal))
+      setAtom.tag("internal", sequence(runtime, setVal))
 
       # 6. Return S.
       ret setAtom
@@ -121,7 +121,7 @@ proc generateStdIR*(runtime: Runtime) =
       if found:
         # i. Replace the element of S.[[SetData]] whose value is e with an element whose value is empty.
         data.delete(index)
-        setAtom.tag("internal", sequence(move(data)))
+        setAtom.tag("internal", sequence(runtime, move(data)))
 
         # ii. Return true.
         ret true
@@ -169,9 +169,9 @@ proc generateStdIR*(runtime: Runtime) =
 
       # 3. For each element e of S.[[SetData]], do
       # a. Replace the element of S.[[SetData]] whose value is e with an element whose value is empty.
-      setAtom.tag("internal", sequence(newSeq[MAtom](0)))
+      setAtom.tag("internal", sequence(runtime, newSeq[MAtom](0)))
 
       # 4. Return undefined.
-      ret undefined()
+      ret undefined(runtime)
     ,
   )

@@ -16,7 +16,7 @@ func value*(str: JSString): string {.inline.} =
 proc newJSString*(runtime: Runtime, native: string): JSValue =
   ## Given a native string, turn it into a `JSString` allocated on the heap.
   var str = runtime.createObjFromType(JSString)
-  str.tag("internal", native.str())
+  str.tag("internal", str(runtime.heapManager, native))
 
   ensureMove(str)
 

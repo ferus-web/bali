@@ -3,7 +3,7 @@
 ## Author: Trayambak Rai (xtrayambak at disroot dot org)
 import pkg/[bali/runtime/vm/atom, gmp/gmp]
 import pkg/ferrite/utf16view
-import bali/runtime/[atom_helpers, types, bridge]
+import bali/runtime/[atom_helpers, types, bridge, construction]
 import bali/runtime/abstract/[coercion]
 import bali/internal/sugar
 import bali/stdlib/types/[std_bigint, std_string_type]
@@ -106,11 +106,11 @@ proc isLooselyEqual*(runtime: Runtime, x, y: JSValue): bool =
 
   # 5. If x is a Number and y is a String, return ! IsLooselyEqual(x, ! ToNumber(y))
   if x.isNumber and runtime.isA(y, JSString):
-    return runtime.isLooselyEqual(x, floating(runtime.ToNumber(y)))
+    return runtime.isLooselyEqual(x, floating(runtime, runtime.ToNumber(y)))
 
   # 6. If x is a String and y is a Number, return ! IsLooselyEqual(! ToNumber(x), y).
   if runtime.isA(x, JSString) and y.isNumber:
-    return runtime.isLooselyEqual(floating(runtime.ToNumber(x)), y)
+    return runtime.isLooselyEqual(floating(runtime, runtime.ToNumber(x)), y)
 
   # 7. If x is a BigInt and y is a String, then
   if x.isBigInt and runtime.isA(y, JSString):
@@ -141,11 +141,11 @@ proc isLooselyEqual*(runtime: Runtime, x, y: JSValue): bool =
 
   # 9. If x is a Boolean, return ! IsLooselyEqual(! ToNumber(x), y).
   if x.kind == Boolean:
-    return runtime.isLooselyEqual(floating(runtime.ToNumber(x)), y)
+    return runtime.isLooselyEqual(floating(runtime, runtime.ToNumber(x)), y)
 
   # 10. If y is a Boolean, return ! IsLooselyEqual(x, ! ToNumber(y)).
   if y.kind == Boolean:
-    return runtime.isLooselyEqual(x, floating(runtime.ToNumber(y)))
+    return runtime.isLooselyEqual(x, floating(runtime, runtime.ToNumber(y)))
 
   # 11. If x is either a String, a Number, a BigInt, or a Symbol and y is an Object, return ! IsLooselyEqual(x, ? ToPrimitive(y)).
   if (runtime.isA(x, JSString) or x.isBigInt or x.isNumber) and y.isObject:

@@ -45,12 +45,16 @@ proc generateStdIr*(runtime: Runtime) =
   info "math: generating IR interfaces"
 
   runtime.registerType("Math", JSMath)
-  runtime.setProperty(JSMath, "LN10", floating(math.ln(10'f64)))
-  runtime.setProperty(JSMath, "LN2", floating(math.ln(2'f64)))
-  runtime.setProperty(JSMath, "LOG10E", floating(math.log10(math.E)))
-  runtime.setProperty(JSMath, "LOG2E", floating(math.log2(math.E)))
-  runtime.setProperty(JSMath, "SQRT1_2", floating(math.sqrt(1 / 2)))
-  runtime.setProperty(JSMath, "SQRT2", floating(math.sqrt(2'f64)))
+  runtime.setProperty(JSMath, "LN10", floating(runtime.heapManager, math.ln(10'f64)))
+  runtime.setProperty(JSMath, "LN2", floating(runtime.heapManager, math.ln(2'f64)))
+  runtime.setProperty(
+    JSMath, "LOG10E", floating(runtime.heapManager, math.log10(math.E))
+  )
+  runtime.setProperty(JSMath, "LOG2E", floating(runtime.heapManager, math.log2(math.E)))
+  runtime.setProperty(
+    JSMath, "SQRT1_2", floating(runtime.heapManager, math.sqrt(1 / 2))
+  )
+  runtime.setProperty(JSMath, "SQRT2", floating(runtime.heapManager, math.sqrt(2'f64)))
 
   # Math.random
   # WARN: Do not use this for cryptography! This uses one of eight highly predictable pseudo-random
@@ -60,7 +64,7 @@ proc generateStdIr*(runtime: Runtime) =
     "random",
     proc() =
       let value = float64(rng.generator.next()) / 1.8446744073709552e+19'f64
-      ret floating(value)
+      ret value
     ,
   )
 
@@ -73,7 +77,7 @@ proc generateStdIr*(runtime: Runtime) =
         value = runtime.ToNumber(&runtime.argument(1))
         exponent = runtime.ToNumber(&runtime.argument(2))
 
-      ret floating pow(value, exponent)
+      ret pow(value, exponent)
     ,
   )
 
@@ -83,7 +87,7 @@ proc generateStdIr*(runtime: Runtime) =
     "cos",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
-      ret floating cos(value)
+      ret cos(value)
     ,
   )
 
@@ -93,7 +97,7 @@ proc generateStdIr*(runtime: Runtime) =
     "sqrt",
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
-      ret floating sqrt(value)
+      ret sqrt(value)
     ,
   )
 
@@ -104,7 +108,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
-      ret floating tanh(value)
+      ret tanh(value)
     ,
   )
 
@@ -115,7 +119,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
-      ret floating sin(value)
+      ret sin(value)
     ,
   )
 
@@ -126,7 +130,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
-      ret floating sinh(value)
+      ret sinh(value)
     ,
   )
 
@@ -137,7 +141,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
-      ret floating tan(value)
+      ret tan(value)
     ,
   )
 
@@ -148,7 +152,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
-      ret floating trunc(value)
+      ret trunc(value)
     ,
   )
 
@@ -159,7 +163,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
-      ret floating floor(value)
+      ret floor(value)
     ,
   )
 
@@ -170,7 +174,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
-      ret floating ceil(value)
+      ret ceil(value)
     ,
   )
 
@@ -181,7 +185,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
-      ret floating cbrt(value)
+      ret cbrt(value)
     ,
   )
 
@@ -192,7 +196,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
-      ret floating ln(value)
+      ret ln(value)
     ,
   )
 
@@ -203,7 +207,7 @@ proc generateStdIr*(runtime: Runtime) =
     proc() =
       let value = runtime.ToNumber(&runtime.argument(1))
 
-      ret floating abs(value)
+      ret abs(value)
     ,
   )
 
@@ -216,7 +220,7 @@ proc generateStdIr*(runtime: Runtime) =
         a = runtime.ToNumber(&runtime.argument(1))
         b = runtime.ToNumber(&runtime.argument(2))
 
-      ret floating max(a, b)
+      ret max(a, b)
     ,
   )
 
@@ -229,6 +233,6 @@ proc generateStdIr*(runtime: Runtime) =
         a = runtime.ToNumber(&runtime.argument(1))
         b = runtime.ToNumber(&runtime.argument(2))
 
-      ret floating min(a, b)
+      ret min(a, b)
     ,
   )

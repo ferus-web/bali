@@ -6,8 +6,10 @@ import bali/runtime/vm/prelude
 import bali/grammar/prelude
 import bali/internal/sugar
 import
-  bali/runtime/
-    [normalize, types, atom_helpers, arguments, statement_utils, bridge, describe]
+  bali/runtime/[
+    normalize, types, atom_helpers, arguments, statement_utils, bridge, describe,
+    construction,
+  ]
 import bali/runtime/optimize/[mutator_loops, redundant_loop_allocations]
 import bali/runtime/vm/heap/boehm
 import bali/runtime/abstract/equating
@@ -204,7 +206,7 @@ proc loadFieldAccessStrings*(runtime: Runtime, access: FieldAccess) =
 proc resolveFieldAccess*(
     runtime: Runtime, fn: Function, stmt: Statement, address: uint, access: FieldAccess
 ): uint =
-  let internalName = $(hash(stmt) !& hash(ident) !& hash(access.identifier))
+  let internalName = $(hash(stmt) !& hash(access.identifier))
   runtime.generateBytecode(
     fn,
     createImmutVal(internalName, stackNull()),
@@ -1283,14 +1285,14 @@ proc generateBytecodeForScope(
   for child in scope.children:
     runtime.generateBytecodeForScope(child)
 
-proc findField*(atom: JSValue, accesses: FieldAccess): JSValue =
+proc findField*(runtime: Runtime, atom: JSValue, accesses: FieldAccess): JSValue =
   if accesses.identifier in atom.objFields:
     if accesses.next == nil:
       return atom.objValues[atom.objFields[accesses.identifier]]
     else:
-      return atom.findField(accesses.next)
+      return runtime.findField(atom, accesses.next)
   else:
-    return undefined()
+    return undefined(runtime)
 
 proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
   ## Compute the type of an atom.
@@ -1356,10 +1358,10 @@ proc generateInternalIR*(runtime: Runtime) =
 
       if atom.kind != Object:
         debug "runtime: atom is not an object, returning undefined."
-        runtime.vm[].addAtom(undefined(), storeAt)
+        runtime.vm[].addAtom(undefined(runtime), storeAt)
         return
 
-      runtime.vm[].addAtom(atom.findField(accesses), storeAt),
+      runtime.vm[].addAtom(runtime.findField(atom, accesses), storeAt),
   )
 
   runtime.vm[].registerBuiltin(
@@ -1388,7 +1390,7 @@ proc generateInternalIR*(runtime: Runtime) =
       let idx = int(&(&index).getNumeric())
       var vec = (&atom).sequence
       if idx < 0 or idx > vec.len - 1:
-        ret undefined()
+        ret undefined(runtime)
 
       ret vec[idx].addr # TODO: add indexing for tables/object fields
     ,

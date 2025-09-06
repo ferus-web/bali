@@ -3,12 +3,12 @@
 
 import std/[strutils, math, options, logging]
 import bali/runtime/vm/prelude
-import bali/runtime/[arguments, types, bridge]
+import bali/runtime/[arguments, types, bridge, construction]
 import bali/internal/[sugar, trim_string]
 
 template parseIntFunctionSubstitution*() =
   if runtime.vm.registers.callArgs.len < 1:
-    runtime.vm.registers.retVal = some floating NaN
+    runtime.vm.registers.retVal = some floating(runtime, NaN)
     return
 
   let
@@ -32,22 +32,22 @@ template parseIntFunctionSubstitution*() =
     runtime.vm.registers.retVal = some(
       case &radix
       of 2:
-        integer parseBinInt(value)
+        integer(runtime, parseBinInt(value))
       of 8:
-        integer parseOctInt(value)
+        integer(runtime, parseOctInt(value))
       of 10:
-        integer parseInt(value)
+        integer(runtime, parseInt(value))
       of 16:
-        integer parseHexInt(value)
+        integer(runtime, parseHexInt(value))
       else:
         if unlikely(&radix < 2 or &radix > 36):
-          floating NaN
+          floating(runtime, NaN)
         else:
-          floating NaN
+          floating(runtime, NaN)
     )
   except ValueError as exc:
     warn "builtins.parse_int(" & $value & "): " & exc.msg & " (radix=" & $radix & ')'
-    runtime.vm.registers.retVal = some floating NaN
+    runtime.vm.registers.retVal = some floating(runtime, NaN)
 
 proc parseIntGenerateStdIr*(runtime: Runtime) =
   info "builtins.parse_int: generating IR interfaces"

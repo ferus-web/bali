@@ -11,19 +11,19 @@ import
 
 proc wrap*(runtime: Runtime, val: SomeInteger | string | float | bool): JSValue =
   when val is SomeInteger:
-    return integer(val.int)
+    return integer(runtime.heapManager, val.int)
 
   when val is bool:
-    return boolean(val)
+    return boolean(runtime.heapManager, val)
 
   when val is string:
     return runtime.newJSString(val)
 
   when val is float:
-    return floating(val)
+    return floating(runtime.heapManager, val)
 
 proc wrap*[T: not JSValue](runtime: Runtime, val: openArray[T]): JSValue =
-  var vec = sequence(newSeqOfCap[MAtom](val.len - 1))
+  var vec = sequence(runtime.heapManager, newSeqOfCap[MAtom](val.len - 1))
 
   for v in val:
     vec.sequence &= runtime.wrap(v)[]
@@ -34,14 +34,14 @@ func wrap*[V: JSValue | MAtom](runtime: Runtime, atom: V): V {.inline.} =
   atom
 
 proc wrap*[A, B](runtime: Runtime, val: Table[A, B]): JSValue =
-  var atom = obj()
+  var atom = obj(runtime.heapManager)
   for k, v in val:
-    atom[$k] = wrap(v)
+    atom[$k] = runtime.wrap(v)
 
   atom
 
 proc wrap*[T: object](runtime: Runtime, obj: T): JSValue =
-  var mObj = atom.obj()
+  var mObj = atom.obj(runtime.heapManager)
 
   for name, field in obj.fieldPairs:
     mObj[name] = runtime.wrap(field)
@@ -54,7 +54,7 @@ proc wrap*(runtime: Runtime, val: seq[JSValue]): JSValue =
   for i, value in val:
     atoms[i] = val[i][]
 
-  sequence(ensureMove(atoms))
+  sequence(runtime.heapManager, ensureMove(atoms))
 
 template `[]`*[T: not JSValue](atom: JSValue, name: string, value: T) =
   atom[name] = runtime.wrap(value)

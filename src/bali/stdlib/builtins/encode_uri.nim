@@ -1,10 +1,9 @@
 ## Implementation of encodeURI()
 ## Author(s):
 ## Trayambak Rai (xtrayambak at disroot dot org)
-import bali/runtime/[arguments, bridge, types]
-import bali/runtime/abstract/coercion
-import bali/runtime/vm/atom
-import bali/internal/[sugar, uri_coding]
+import pkg/bali/runtime/[arguments, bridge, types, construction]
+import pkg/bali/runtime/abstract/coercion
+import pkg/bali/internal/[sugar, uri_coding]
 
 proc generateStdIR*(runtime: Runtime) =
   runtime.defineFn(
@@ -14,7 +13,7 @@ proc generateStdIR*(runtime: Runtime) =
         if runtime.argumentCount() > 0:
           &runtime.argument(1)
         else:
-          undefined()
+          undefined(runtime)
 
       # 1. Let uriString be ? ToString(uri)
       let uriString = runtime.ToString(uri)
