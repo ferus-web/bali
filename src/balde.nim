@@ -1,17 +1,17 @@
 ## Balde - the Bali Debugger
+## This binary acts like a script executor, test runner, debugging system and REPL for Bali.
 ##
-## Author(s):
-## Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 
 when not isMainModule:
   {.error: "This file is not meant to be separately imported!".}
 
 import std/[strutils, terminal, times, tables, os, options, monotimes, logging, json]
-import bali/grammar/prelude
-import bali/internal/sugar
-import bali/runtime/prelude
-import bali/private/argparser
-import bali/runtime/vm/heap/[boehm]
+import pkg/bali/grammar/prelude
+import pkg/bali/internal/sugar
+import pkg/bali/runtime/prelude
+import pkg/bali/private/argparser
+import pkg/bali/runtime/vm/heap/[boehm], pkg/bali/runtime/vm/interpreter/interpreter
 import pkg/[colored_logger, jsony, pretty, noise, fuzzy]
 
 const Version {.strdefine: "NimblePkgVersion".} = "<version not defined>"
@@ -388,6 +388,12 @@ proc baldeRepl(ctx: Input) =
 
   template evaluateSource(ast: AST) =
     var runtime = allocRuntime(ctx, "<repl>", ast, repl = true, dumpIRFor = dumpIRFor)
+    runtime.deathCallback = proc(vm: PulsarInterpreter) =
+      styledWriteLine(
+        stderr, fgRed, "An error occurred while evaluating the previous expression.",
+        resetStyle,
+      )
+
     if prevRuntime != nil:
       runtime.values = prevRuntime.values
       runtime.vm.stack = prevRuntime.vm.stack
