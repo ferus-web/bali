@@ -1241,27 +1241,27 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
 
       floating(vm.heapManager, v),
     alloc: proc(vm: var PulsarInterpreter, size: int64): pointer {.cdecl.} =
-      jitd "callback", "alloc()"
+      jitd "callback", "alloc(" & $size & ')'
 
       vm.heapManager.allocate(size.uint),
     allocBytecodeCallable: proc(
         vm: var PulsarInterpreter, str: cstring
     ): JSValue {.cdecl.} =
-      jitd "callback", "allocBytecodeCallable()"
+      jitd "callback", "allocBytecodeCallable(" & $str & ')'
 
       bytecodeCallable(vm.heapManager, $str),
     allocStr: proc(vm: var PulsarInterpreter, value: cstring): JSValue {.cdecl.} =
-      jitd "callback", "allocStr()"
+      jitd "callback", "allocStr(" & $value & ')'
 
       str(vm.heapManager, $value),
     allocInt: proc(vm: var PulsarInterpreter, i: int64): JSValue {.cdecl.} =
-      jitd "callback", "allocInt()"
+      jitd "callback", "allocInt(" & $i & ')'
 
       integer(vm.heapManager, i),
     getProperty: proc(
         vm: var PulsarInterpreter, value: JSValue, field: cstring
     ): JSValue {.cdecl.} =
-      jitd "callback", "getProperty()"
+      jitd "callback", "getProperty(field: " & $field & ')'
       let field = $field
       if value.contains(field):
         return value[field]

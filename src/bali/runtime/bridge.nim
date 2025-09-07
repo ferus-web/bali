@@ -6,7 +6,6 @@ import bali/runtime/vm/ir/generator
 import
   bali/runtime/
     [atom_obj_variant, wrapping, atom_helpers, types, normalize, construction]
-import bali/stdlib/errors
 import bali/internal/sugar
 
 privateAccess(Runtime)
@@ -265,14 +264,14 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
   runtime.types[index] = ensureMove(jsType)
   let typIdx = runtime.types.len - 1
 
-  runtime.vm[].registerBuiltin(
+  #[ runtime.vm[].registerBuiltin(
     "BALI_CONSTRUCTOR_" & strutils.toUpperAscii(name),
     proc(_: Operation) {.gcsafe.} =
       if runtime.types[typIdx].constructor == nil:
         runtime.typeError(runtime.types[typIdx].name & " is not a constructor")
 
       runtime.types[typIdx].constructor(),
-  )
+  ) ]#
 
 proc call*(runtime: Runtime, callable: JSValue, arguments: varargs[JSValue]): JSValue =
   if callable.kind != BytecodeCallable:

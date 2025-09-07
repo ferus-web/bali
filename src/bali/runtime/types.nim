@@ -261,51 +261,6 @@ proc markLocal*(
 
   inc runtime.addrIdx
 
-proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
-  debug "codegen: loading atom with kind: " & $atom.kind
-  case atom.kind
-  of Integer:
-    runtime.ir.loadInt(runtime.addrIdx, atom)
-    return runtime.addrIdx
-  of String:
-    runtime.ir.loadStr(runtime.addrIdx, atom)
-    runtime.ir.passArgument(runtime.addrIdx)
-    runtime.ir.call("BALI_CONSTRUCTOR_STRING")
-    runtime.ir.resetArgs()
-    runtime.ir.readRegister(runtime.addrIdx, Register.ReturnValue)
-    runtime.ir.zeroRetval()
-    return runtime.addrIdx
-  of Null:
-    runtime.ir.loadNull(runtime.addrIdx)
-    return runtime.addrIdx
-  of Ident:
-    unreachable
-  of Boolean:
-    runtime.ir.loadBool(runtime.addrIdx, atom)
-    return runtime.addrIdx
-  of Object:
-    if atom.isUndefined():
-      runtime.ir.loadObject(runtime.addrIdx)
-      return runtime.addrIdx
-    else:
-      unreachable # FIXME
-  of Float:
-    runtime.ir.loadFloat(runtime.addrIdx, atom)
-    return runtime.addrIdx
-  of Sequence:
-    runtime.ir.loadList(runtime.addrIdx)
-    result = runtime.addrIdx
-
-    for item in atom.sequence:
-      inc runtime.addrIdx
-      let idx = runtime.loadIRAtom(item)
-      runtime.ir.appendList(result, idx)
-  of Undefined:
-    runtime.ir.loadUndefined(runtime.addrIdx)
-    return runtime.addrIdx
-  else:
-    unreachable
-
 proc index*(
     runtime: Runtime, ident: string, params: IndexParams, demangle: bool = false
 ): uint {.gcsafe.} =
@@ -341,3 +296,49 @@ proc index*(
   debug "runtime: cannot find identifier \"" & ident &
     "\" in index search, returning pointer to undefined()"
   runtime.index("undefined", params)
+
+proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
+  debug "codegen: loading atom with kind: " & $atom.kind
+  case atom.kind
+  of Integer:
+    runtime.ir.loadInt(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of String:
+    runtime.ir.loadStr(runtime.addrIdx, atom)
+    runtime.ir.passArgument(runtime.index("String", globalIndex()))
+    runtime.ir.passArgument(runtime.addrIdx)
+    runtime.ir.call("BALI_ICTOR")
+    runtime.ir.resetArgs()
+    runtime.ir.readRegister(runtime.addrIdx, Register.ReturnValue)
+    runtime.ir.zeroRetval()
+    return runtime.addrIdx
+  of Null:
+    runtime.ir.loadNull(runtime.addrIdx)
+    return runtime.addrIdx
+  of Ident:
+    unreachable
+  of Boolean:
+    runtime.ir.loadBool(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of Object:
+    if atom.isUndefined():
+      runtime.ir.loadObject(runtime.addrIdx)
+      return runtime.addrIdx
+    else:
+      unreachable # FIXME
+  of Float:
+    runtime.ir.loadFloat(runtime.addrIdx, atom)
+    return runtime.addrIdx
+  of Sequence:
+    runtime.ir.loadList(runtime.addrIdx)
+    result = runtime.addrIdx
+
+    for item in atom.sequence:
+      inc runtime.addrIdx
+      let idx = runtime.loadIRAtom(item)
+      runtime.ir.appendList(result, idx)
+  of Undefined:
+    runtime.ir.loadUndefined(runtime.addrIdx)
+    return runtime.addrIdx
+  else:
+    unreachable

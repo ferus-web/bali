@@ -4,7 +4,6 @@ import std/[importutils, tables, math, options, logging]
 import bali/runtime/vm/prelude
 import bali/runtime/[arguments, types, bridge]
 import bali/runtime/abstract/[to_number]
-import bali/stdlib/errors
 import bali/internal/sugar
 import pkg/[librng, librng/generator]
 

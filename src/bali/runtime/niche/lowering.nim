@@ -397,6 +397,7 @@ proc genConstructObject(
     runtime: Runtime, fn: Function, stmt: Statement, internal: bool
 ) =
   runtime.expand(fn, stmt, internal)
+  runtime.ir.passArgument(runtime.index(stmt.objName, defaultParams(fn)))
   for i, arg in stmt.args:
     case arg.kind
     of cakIdent:
@@ -416,7 +417,7 @@ proc genConstructObject(
     of cakImmediateExpr:
       discard
 
-  runtime.ir.call("BALI_CONSTRUCTOR_" & stmt.objName.toUpperAscii())
+  runtime.ir.call("BALI_ICTOR")
   runtime.ir.resetArgs()
 
 proc genReassignVal(runtime: Runtime, fn: Function, stmt: Statement) =
@@ -1413,6 +1414,22 @@ proc generateInternalIR*(runtime: Runtime) =
 
       ret vec[idx].addr # TODO: add indexing for tables/object fields
     ,
+  )
+
+  runtime.vm[].registerBuiltin(
+    "BALI_ICTOR",
+    proc(op: Operation) =
+      let typ = deepCopy(&runtime.argument(1))
+      let ctor = typ.tagged("Construct")
+
+      runtime.vm.registers.callArgs.delete(0)
+
+      if !ctor:
+        runtime.typeError("Type has no constructor")
+        return
+
+      runtime.vm[].invoke(&ctor)
+      runtime.vm.registers.callArgs.reset(),
   )
 
   runtime.vm[].registerBuiltin(

@@ -29,6 +29,11 @@ proc typeRegistrationFinalizer*(runtime: Runtime) {.gcsafe.} =
       else:
         jsObj[name] = value.atom()
 
+    if typ.constructor != nil:
+      let fn = nativeCallable(runtime.heapManager, typ.constructor)
+      jsObj.tag("Construct", fn)
+      jsObj["constructor"] = fn
+
     runtime.vm[].addAtom(ensureMove(jsObj), index.int)
 
 proc registerEcmaTypes*(runtime: Runtime) =
