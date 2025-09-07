@@ -7,7 +7,7 @@ import pkg/bali/grammar/[ast, parser], pkg/bali/runtime/prelude
 
 export prelude
 
-proc createRuntimeForSource*(source: string): Runtime =
+proc createRuntimeForSource*(source: string): Runtime {.gcsafe.} =
   ## Parse a JavaScript `source` string and
   ## create an execution runtime for it.
 
@@ -16,7 +16,7 @@ proc createRuntimeForSource*(source: string): Runtime =
 
   newRuntime("<eval>", ast)
 
-proc createRuntimeForFile*(file: string): Runtime =
+proc createRuntimeForFile*(file: string): Runtime {.gcsafe.} =
   ## Parse a JavaScript file's contents and
   ## create an execution runtime for it.
   ##

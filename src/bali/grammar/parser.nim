@@ -46,6 +46,7 @@ func `$`*(error: ParseError): string =
 
   buff & " (line " & $error.location.line & ", column " & $error.location.col & ')'
 
+{.push gcsafe.}
 proc parseArguments*(parser: Parser): Option[PositionedArguments]
 
 proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
@@ -506,7 +507,7 @@ proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
     parser.error Other, "expected expression, got EOF"
 
 proc expectEqualsSign*(
-    parser: Parser, stubDef: proc(): Result[Option[Statement], void]
+    parser: Parser, stubDef: proc(): Result[Option[Statement], void] {.gcsafe.}
 ): Result[Option[Statement], void] =
   # FIXME: this is utterly fucking deranged.
   let nextTok = parser.tokenizer.next()
@@ -1621,7 +1622,9 @@ proc parseStatement*(parser: Parser): Option[Statement] =
 
     if parser.opts.test262:
       try:
-        yaml.load(token.comment, parser.ast.test262)
+        # TODO: Verify that nim-yaml is actually gcsafe.
+        {.cast(gcsafe).}:
+          yaml.load(token.comment, parser.ast.test262)
       except CatchableError as exc:
         discard
   of TokenKind.Typeof:
@@ -1657,6 +1660,8 @@ proc parse*(parser: Parser): AST {.inline.} =
 
   parser.ast.errors = deepCopy(parser.errors)
   parser.ast
+
+{.pop.}
 
 func newParser*(
     input: string, opts: ParserOpts = default(ParserOpts)
