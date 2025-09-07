@@ -46,7 +46,7 @@ This manual is largely inspired by Monoucha's manual.
     - [A small example](#a-small-example)
     - [Allocating memory](#allocating-memory)
 * [Migration Notices](#migration-notices)
-    - [0.7.x -> 0.8.0](#v0.7.x-to-v0.8.0)
+    - [0.7.x -> 0.8.0](#07x-to-080)
 
 # Introduction
 Bali is a JavaScript engine written from scratch in Nim for the [Ferus web engine](https://github.com/ferus-web/ferus). It is designed to be convenient to interface with whilst being fast and compliant. It provides you high-level abstractions as far as humanly possible.
@@ -129,7 +129,15 @@ Let's breakdown what each line does:
 That's it! You just executed JavaScript with Bali! Yay.
 
 # The holy grail of Bali, the Runtime structure
-The `Runtime` type is what you initialize when you wish to execute JavaScript. It acts as a "
+The `Runtime` type is what you initialize when you wish to execute JavaScript. It acts as a catalyst where various different Bali subsystems intersect and work together. It helps you do the following things:
+
+- Expose your custom types written in Nim to JavaScript
+- Expose your Nim-native functions to JavaScript (for instance, you can create a `perlinNoise()` function and implement it in Nim so that it's fast!)
+- Set properties on types
+- Call JavaScript functions and get their return values in Nim
+and much, much more.
+
+Basically, if you wish to do anything with Bali apart from just using it as a script executor, chances are that you'll need to interact with the `Runtime` structure, obtained via `newRuntime()` or the `createRuntimeForFile()` / `createRuntimeForSource()` functions.
 
 # Creating new types
 Now, let us learn how to create new types. Bali can automatically "wrap" a Nim object into its representative atom.
