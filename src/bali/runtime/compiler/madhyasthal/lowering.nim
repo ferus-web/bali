@@ -150,10 +150,7 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
       fn.insts &= invoke(index)
     of LoadStr:
       let op = stream.consume()
-      if not lowerLoadStrPatterns(fn, stream, op):
-        fn.insts &= loadStr(
-          uint32(&op.arguments[0].getInt()), &op.arguments[1].getStr()
-        )
+      fn.insts &= loadStr(uint32(&op.arguments[0].getInt()), &op.arguments[1].getStr())
     of LoadUint, LoadInt, LoadFloat:
       let op = stream.consume()
 

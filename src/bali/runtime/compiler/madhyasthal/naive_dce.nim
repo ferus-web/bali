@@ -46,6 +46,8 @@ func scanForUsedRegs*(
   let iteration = pipeline.fn.insts[start ..< pipeline.fn.insts.len]
   var i = 0
 
+  #   template used(reg: ir.Reg) =
+  #     used.incl reg
   while i < iteration.len:
     let inst = iteration[i]
 
@@ -106,6 +108,8 @@ func scanForUsedRegs*(
         used = used + ensureMove(usedAhead)
         break
     of InstKind.Return:
+      used.incl(inst.args[0].vreg)
+    of InstKind.ReadProperty:
       used.incl(inst.args[0].vreg)
     else:
       discard

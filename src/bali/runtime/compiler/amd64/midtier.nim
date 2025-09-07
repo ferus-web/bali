@@ -58,10 +58,10 @@ proc compileLowered(
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi, cast[int64](index))
         cgen.s.call(cgen.callbacks.getAtom)
-
-      cgen.s.pop(regRsi.reg)
       cgen.s.mov(regRsi.reg, regRax)
+
       cgen.s.mov(regRdi, cast[int64](cgen.vm))
+      cgen.s.pop(regRdx.reg)
 
       alignStack 8:
         cgen.s.call(cgen.callbacks.getProperty)
