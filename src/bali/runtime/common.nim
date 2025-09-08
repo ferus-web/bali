@@ -66,8 +66,8 @@ proc run*(runtime: Runtime) {.gcsafe.} =
 
   # Prior to _ANY_ possibility of allocations occurring,
   # we must instantiate the heap manager.
-  runtime.vm.heapManager = initHeapManager()
-  runtime.heapManager = runtime.vm.heapManager
+  runtime.vm.heapManager = runtime.heapManager
+  # runtime.heapManager = runtime.vm.heapManager
 
   runtime.test262 = runtime.ast.test262
   runtime.registerEcmaTypes()
@@ -140,14 +140,13 @@ proc newRuntime*(
   ## If the input isn't from a file, you can set it to anything - it's primarily used for caching.
   ## The AST must be valid.
   ## You can check the options exposed to you in `InterpreterOpts` by checking its documentation.
-  var vm = newPulsarInterpreter(predefinedBytecode)
 
   Runtime(
     ast: ast,
     clauses: @[],
     ir: newIRGenerator("bali"),
-    vm: vm,
+    vm: newPulsarInterpreter(predefinedBytecode),
+    heapManager: initHeapManager(),
     opts: opts,
     predefinedBytecode: predefinedBytecode,
-    heapManager: vm.heapManager,
   )
