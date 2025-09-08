@@ -47,8 +47,8 @@ proc expand*(
           discard runtime.loadIRAtom(arg.atom)
           runtime.markInternal(stmt, $i)
         elif arg.kind == cakImmediateExpr:
-          debug "niche: add code to solve expression to expand Call's immediate arguments"
-          runtime.markInternal(arg.expr, $i)
+          debug "niche: add code to solve expression to expand Call's immediate expression argument"
+          runtime.markInternal(stmt, $i)
           runtime.generateBytecode(
             fn,
             arg.expr,
@@ -329,7 +329,7 @@ proc genCall(
         )
         runtime.ir.passArgument(index)
       of cakImmediateExpr:
-        let index = runtime.index($i, internalIndex(arg.expr))
+        let index = runtime.index($i, internalIndex(stmt))
         runtime.ir.passArgument(index)
 
   if *stmt.fn.field:
