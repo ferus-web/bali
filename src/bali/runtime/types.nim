@@ -305,6 +305,7 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
     return runtime.addrIdx
   of String:
     runtime.ir.loadStr(runtime.addrIdx, atom)
+    runtime.ir.resetArgs()
     runtime.ir.passArgument(runtime.index("String", globalIndex()))
     runtime.ir.passArgument(runtime.addrIdx)
     runtime.ir.call("BALI_ICTOR")

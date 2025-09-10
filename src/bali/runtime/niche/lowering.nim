@@ -397,6 +397,7 @@ proc genConstructObject(
     runtime: Runtime, fn: Function, stmt: Statement, internal: bool
 ) =
   runtime.expand(fn, stmt, internal)
+  runtime.ir.resetArgs()
   runtime.ir.passArgument(runtime.index(stmt.objName, defaultParams(fn)))
   for i, arg in stmt.args:
     case arg.kind
