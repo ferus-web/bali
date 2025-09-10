@@ -21,6 +21,8 @@ type
     Mult
     Divide
     Return
+    Call
+    ResetArgs
 
   Register* {.size: sizeof(uint8), pure.} = enum
     ReturnValue = 0
@@ -151,4 +153,10 @@ func divide*(source, dest: uint32): Inst =
 
 func returnV*(reg: uint32): Inst =
   Inst(kind: InstKind.Return, args: [ArgVariant(kind: avkPos, vreg: reg), ArgVariant()])
+
+func call*(clause: string): Inst =
+  Inst(kind: InstKind.Call, args: [ArgVariant(kind: avkStr, str: clause), ArgVariant()])
+
+func resetArgs*(): Inst =
+  Inst(kind: InstKind.ResetArgs)
 {.pop.}

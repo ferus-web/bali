@@ -250,6 +250,13 @@ proc compileLowered(
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.mov(regRsi.reg, regRax)
         cgen.s.call(cgen.callbacks.addRetval)
+    of InstKind.Call:
+      prepareLoadString(cgen, cstring(inst.args[0].str))
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi.reg, regR8)
+        cgen.s.call(cgen.callbacks.callBytecodeClause)
     else:
       debug "jit/amd64: midtier cannot lower op into x64 code: " & $inst.kind
       return

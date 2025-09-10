@@ -101,13 +101,16 @@ proc lowerLoadNullPatterns*(
 
   true
 
+import pretty, tables, sets
 proc lowerStream*(fn: var Function, stream: var OpStream): bool =
   template bailout(msg: string) =
     debug "jit/amd64: midtier jit is bailing out: " & msg
     return false
 
+  print stream
+
   while not stream.eof:
-    # echo $stream.cursor & ") " & $stream.peekKind()
+    echo $stream.cursor & ") " & $stream.peekKind()
     case stream.peekKind()
     of LoadUndefined:
       # Just load undefined
@@ -126,7 +129,9 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
       if not lowerLoadNullPatterns(fn, stream, op):
         fn.insts &= loadNull(uint32(&op.arguments[0].getInt()))
     of ResetArgs:
-      stream.advance
+      discard stream.advance()
+
+      fn.insts &= resetArgs()
     of ReadRegister, ZeroRetval:
       stream.advance
     of LoadBytecodeCallable:
@@ -185,6 +190,10 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
       let op = stream.consume()
 
       fn.insts &= returnV(uint32(&op.arguments[0].getInt()))
+    of Call:
+      let op = stream.consume()
+
+      fn.insts &= call(&op.arguments[0].getStr())
     else:
       bailout "cannot find predictable pattern for op: " & $stream.peekKind()
 
