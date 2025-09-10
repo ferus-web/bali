@@ -129,7 +129,7 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
       if not lowerLoadNullPatterns(fn, stream, op):
         fn.insts &= loadNull(uint32(&op.arguments[0].getInt()))
     of ResetArgs:
-      discard stream.advance()
+      stream.advance()
 
       fn.insts &= resetArgs()
     of ReadRegister, ZeroRetval:
