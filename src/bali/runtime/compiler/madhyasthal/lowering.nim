@@ -101,16 +101,12 @@ proc lowerLoadNullPatterns*(
 
   true
 
-import pretty, tables, sets
 proc lowerStream*(fn: var Function, stream: var OpStream): bool =
   template bailout(msg: string) =
     debug "jit/amd64: midtier jit is bailing out: " & msg
     return false
 
-  print stream
-
   while not stream.eof:
-    echo $stream.cursor & ") " & $stream.peekKind()
     case stream.peekKind()
     of LoadUndefined:
       # Just load undefined
