@@ -23,6 +23,8 @@ type
     Return
     Call
     ResetArgs
+    Jump
+    Equate
 
   Register* {.size: sizeof(uint8), pure.} = enum
     ReturnValue = 0
@@ -159,4 +161,13 @@ func call*(clause: string): Inst =
 
 func resetArgs*(): Inst =
   Inst(kind: InstKind.ResetArgs)
+
+func jump*(index: int): Inst =
+  Inst(kind: InstKind.Jump, args: [ArgVariant(kind: avkInt, vint: index), ArgVariant()])
+
+func equate*(a, b: uint32): Inst =
+  Inst(
+    kind: InstKind.Equate,
+    args: [ArgVariant(kind: avkPos, vreg: a), ArgVariant(kind: avkPos, vreg: b)],
+  )
 {.pop.}

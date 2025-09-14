@@ -6,7 +6,7 @@
 import std/[options, logging]
 import pkg/[shakar]
 import
-  pkg/bali/runtime/compiler/madhyasthal/ir,
+  pkg/bali/runtime/compiler/madhyasthal/[dumper, ir],
   pkg/bali/runtime/vm/[atom, shared],
   pkg/bali/runtime/vm/interpreter/[types, operation]
 
@@ -20,6 +20,9 @@ func eof*(stream: OpStream): bool {.inline.} =
 func consume*(stream: var OpStream): Operation =
   result = stream.ops[stream.cursor]
   stream.cursor.inc
+
+func hasAhead*(stream: OpStream, cnt: uint = 1'u): bool =
+  uint(stream.ops.len - stream.cursor) >= cnt
 
 func advance*(stream: var OpStream, cnt: uint = 1'u) =
   stream.cursor += cnt.int
@@ -101,10 +104,31 @@ proc lowerLoadNullPatterns*(
 
   true
 
+proc lowerPassArgPatterns*(
+    fn: var Function, stream: var OpStream, startIdx: uint32
+): bool =
+  let
+    arg1 = startIdx
+    arg2 = uint32(&(stream.consume().arguments[0]).getInt())
+
+  let next = stream.consume()
+  if next.opcode == Call and &next.arguments[0].getStr() != "BALI_EQUATE_ATOMS":
+    return false
+
+  echo "appending equate"
+  fn.insts &= equate(arg1, arg2)
+  echo dumpfunction fn
+
+  return true
+
 proc lowerStream*(fn: var Function, stream: var OpStream): bool =
   template bailout(msg: string) =
     debug "jit/amd64: midtier jit is bailing out: " & msg
-    return false
+
+    when not defined(baliExplosiveBailouts):
+      return false
+    else:
+      raise newException(Defect, "Bailout in midtier JIT: " & msg)
 
   while not stream.eof:
     case stream.peekKind()
@@ -141,6 +165,10 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
       let
         op = stream.consume()
         index = uint32(&op.arguments[0].getInt())
+
+      if stream.hasAhead(2) and stream.peekKind() == PassArgument and
+          lowerPassArgPatterns(fn, stream, index):
+        continue
 
       fn.insts &= passArgument(index)
     of Invoke:
@@ -188,8 +216,13 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
       fn.insts &= returnV(uint32(&op.arguments[0].getInt()))
     of Call:
       let op = stream.consume()
+      let name = &op.arguments[0].getStr()
 
-      fn.insts &= call(&op.arguments[0].getStr())
+      fn.insts &= call(name)
+    of Jump:
+      let op = stream.consume()
+
+      fn.insts &= jump(&op.arguments[0].getInt())
     else:
       bailout "cannot find predictable pattern for op: " & $stream.peekKind()
 
