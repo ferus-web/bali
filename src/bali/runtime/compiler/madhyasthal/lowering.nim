@@ -3,16 +3,20 @@
 ## them into Madhyasthal's specialized ops.
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
-import std/[options, logging]
+import std/[algorithm, options, logging, tables]
 import pkg/[shakar]
 import
-  pkg/bali/runtime/compiler/madhyasthal/[dumper, ir],
+  pkg/bali/runtime/compiler/madhyasthal/[ir],
   pkg/bali/runtime/vm/[atom, shared],
   pkg/bali/runtime/vm/interpreter/[types, operation]
 
 type OpStream* = object
   ops*: seq[operation.Operation]
   cursor*: int = 0
+
+  opToIrMap*: Table[int, int]
+
+import pretty
 
 func eof*(stream: OpStream): bool {.inline.} =
   stream.cursor > stream.ops.len - 1
@@ -29,6 +33,9 @@ func advance*(stream: var OpStream, cnt: uint = 1'u) =
 
 func peekKind*(stream: OpStream): Ops {.inline.} =
   stream.ops[stream.cursor].opcode
+
+func peek*(stream: OpStream): operation.Operation {.inline.} =
+  stream.ops[stream.cursor]
 
 proc lowerLoadStrPatterns*(
     fn: var Function, stream: var OpStream, startOp: Operation
@@ -115,11 +122,25 @@ proc lowerPassArgPatterns*(
   if next.opcode == Call and &next.arguments[0].getStr() != "BALI_EQUATE_ATOMS":
     return false
 
-  echo "appending equate"
   fn.insts &= equate(arg1, arg2)
-  echo dumpfunction fn
 
   return true
+
+proc patchJumps*(fn: var Function, stream: OpStream) =
+  var toDelete = newSeqOfCap[int](1)
+
+  for i, inst in fn.insts:
+    if inst.kind != InstKind.Jump:
+      continue
+
+    let index = inst.args[0].vint
+    if not stream.opToIrMap.contains(index):
+      toDelete.add(i)
+    else:
+      fn.insts[i].args[0] = ArgVariant(kind: avkInt, vint: stream.opToIrMap[index] - 1)
+
+  for del in toDelete.reversed:
+    fn.insts.delete(del)
 
 proc lowerStream*(fn: var Function, stream: var OpStream): bool =
   template bailout(msg: string) =
@@ -131,7 +152,10 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
       raise newException(Defect, "Bailout in midtier JIT: " & msg)
 
   while not stream.eof:
-    case stream.peekKind()
+    let op = stream.peek()
+    stream.opToIrMap[op.index.int] = fn.insts.len
+
+    case op.opcode
     of LoadUndefined:
       # Just load undefined
       let op = stream.consume()
@@ -222,9 +246,13 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
     of Jump:
       let op = stream.consume()
 
+      # We need to "patch" this once the IR is fully lowered
       fn.insts &= jump(&op.arguments[0].getInt())
     else:
       bailout "cannot find predictable pattern for op: " & $stream.peekKind()
+
+  print stream.opToIrMap
+  patchJumps(fn, stream)
 
   true
 
