@@ -30,6 +30,8 @@ type
 
   Builtin* = proc(op: Operation) {.gcsafe.}
 
+  EquationHook* = proc(a, b: JSValue): bool {.gcsafe.}
+
   PulsarInterpreter* = object
     tokenizer: Tokenizer
     currClause: int
@@ -46,6 +48,7 @@ type
     heapManager*: HeapManager
 
     registers*: Registers
+    equationHook*: EquationHook
 
     when defined(amd64):
       baseline*: BaselineJIT
@@ -1281,6 +1284,10 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
         return value[field]
 
       undefined(vm.heapManager),
+    equate: proc(vm: var PulsarInterpreter, a, b: JSValue): bool {.cdecl.} =
+      jitd "callback", "equate"
+      assert vm.equationHook != nil
+      vm.equationHook(a, b),
   )
 
   when hasJITSupport:

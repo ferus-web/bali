@@ -14,6 +14,9 @@ import pkg/bali/private/argparser
 import pkg/bali/runtime/vm/heap/[boehm], pkg/bali/runtime/vm/interpreter/interpreter
 import pkg/[colored_logger, jsony, pretty, noise, fuzzy]
 
+when defined(amd64):
+  import pkg/bali/internal/assembler/amd64 # FIXME: This sucks
+
 const Version {.strdefine: "NimblePkgVersion".} = "<version not defined>"
 
 type DumpMode = enum

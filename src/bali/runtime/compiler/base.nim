@@ -29,6 +29,7 @@ type
     allocStr*: pointer
     allocInt*: pointer
     getProperty*: pointer
+    equate*: pointer
 
   JITSegment* = proc(): void {.cdecl, gcsafe.}
 

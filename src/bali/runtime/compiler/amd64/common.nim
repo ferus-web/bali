@@ -25,6 +25,9 @@ type
     bcToNativeOffsetMap*: seq[BackwardsLabel]
     patchJmpOffsets*: Table[int, int]
 
+    irToNativeMap*: Table[int, BackwardsLabel]
+    patchJmps*: Table[BackwardsLabel, int]
+
     dumpIrForFuncs*: seq[string]
 
 proc `=destroy`*(cgen: AMD64Codegen) =

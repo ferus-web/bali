@@ -8,7 +8,8 @@ import
   pkg/bali/runtime/vm/prelude,
   pkg/bali/runtime/vm/ir/generator,
   pkg/bali/runtime/vm/heap/manager,
-  pkg/bali/runtime/vm/atom
+  pkg/bali/runtime/vm/atom,
+  pkg/bali/runtime/abstract/equating
 import pkg/bali/stdlib/prelude
 import pkg/bali/grammar/prelude
 
@@ -98,25 +99,13 @@ proc run*(runtime: Runtime) {.gcsafe.} =
     echo runtime.ir.emit()
     quit(0)
 
-  #[ let source =
-    if runtime.predefinedBytecode.len < 1:
-      runtime.ir.emit()
-    else:
-      runtime.predefinedBytecode ]#
+  # We have to attach an "equation hook" since the VM itself has no way
+  # of equating values in a standards-compliant way.
+  runtime.vm.equationHook = proc(a, b: JSValue): bool {.gcsafe.} =
+    runtime.isLooselyEqual(a, b)
 
   runtime.vm[].feed(runtime.ir.modules)
   runtime.typeRegistrationFinalizer()
-
-  debug "interpreter: the following bytecode will now be executed"
-
-  #[ if not runtime.opts.dumpBytecode:
-    debug source
-  else:
-    echo source
-    quit(0) ]#
-
-  # debug "interpreter: begin VM analyzer"
-  # runtime.vm[].analyze()
 
   debug "interpreter: setting entry point to `outer`"
   runtime.vm[].setEntryPoint("outer")

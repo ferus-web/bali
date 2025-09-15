@@ -7,7 +7,7 @@ import
   pkg/bali/runtime/compiler/amd64/[common, native_forwarding],
   pkg/bali/runtime/compiler/base,
   pkg/bali/internal/assembler/amd64
-import pkg/shakar
+import pkg/shakar, pretty
 
 type MidtierJIT* = object of AMD64Codegen
 
@@ -15,6 +15,18 @@ template alignStack(offset: uint, body: untyped) =
   cgen.s.sub(regRsp.reg, offset)
   body
   cgen.s.add(regRsp.reg, offset)
+
+proc patchNativeJumps(cgen: var MidtierJIT) =
+  let oldOffset = cgen.s.offset
+  for patchAddr, jumpDest in cgen.patchJmps:
+    assert jumpDest in cgen.irToNativeMap,
+      "x64/midtier: Invariant: Jump destination " & $jumpDest &
+        " is not in IR->Native offsets map"
+    let resolvedDest = cgen.irToNativeMap[jumpDest]
+    cgen.s.offset = int(patchAddr)
+    cgen.s.jmp(resolvedDest)
+
+  cgen.s.offset = oldOffset # Just in case we ever add any future passes after this
 
 proc compileLowered(
     cgen: var MidtierJIT, pipeline: pipeline.Pipeline
@@ -27,7 +39,9 @@ proc compileLowered(
 
   # cgen.s.sub(regRsp.reg, 64) # FIXME: bad, evil, ugly, bald, no-good hack
 
-  for inst in fn.insts:
+  for i, inst in fn.insts:
+    cgen.irToNativeMap[i] = cgen.s.label()
+
     case inst.kind
     of InstKind.LoadNumber:
       let
@@ -261,11 +275,38 @@ proc compileLowered(
       alignStack 8:
         cgen.s.mov(regRdi, cast[int64](cgen.vm))
         cgen.s.call(cgen.callbacks.resetArgs)
+    of InstKind.Equate:
+      let
+        a = inst.args[0].vreg
+        b = inst.args[1].vreg
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(a))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+      cgen.s.push(regR8.reg)
+
+      alignStack 16:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(b))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.pop(regRsi.reg)
+        cgen.s.mov(regRdx.reg, regRax)
+        cgen.s.call(cgen.callbacks.equate)
+    of InstKind.Jump:
+      cgen.patchJmps[cgen.s.label()] = inst.args[0].vint
+      cgen.s.jmp(BackwardsLabel(0x0)) # Emit a dummy jmp
     else:
       debug "jit/amd64: midtier cannot lower op into x64 code: " & $inst.kind
       return
 
   cgen.s.ret()
+
+  patchNativeJumps(cgen)
   cgen.cached[fn.name] = cast[JITSegment](cgen.s.data)
   some(cast[JITSegment](cgen.s.data))
 

@@ -168,6 +168,9 @@ type
     data*: ptr UncheckedArray[byte]
     offset*: int
 
+proc `==`*(a, b: BackwardsLabel): bool {.borrow.}
+proc `$`*(a: BackwardsLabel): string {.borrow.}
+
 when defined(windows):
   const
     param1* = regRcx

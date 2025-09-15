@@ -16,8 +16,6 @@ type OpStream* = object
 
   opToIrMap*: Table[int, int]
 
-import pretty
-
 func eof*(stream: OpStream): bool {.inline.} =
   stream.cursor > stream.ops.len - 1
 
@@ -251,7 +249,6 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
     else:
       bailout "cannot find predictable pattern for op: " & $stream.peekKind()
 
-  print stream.opToIrMap
   patchJumps(fn, stream)
 
   true
