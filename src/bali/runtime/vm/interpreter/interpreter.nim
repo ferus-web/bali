@@ -454,7 +454,10 @@ proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: i
   of 1:
     # 1 - callargs register
     msg "read callargs register"
-    interpreter.addAtom(interpreter.registers.callArgs[index], store)
+    if interpreter.registers.callArgs.len > index:
+      interpreter.addAtom(interpreter.registers.callArgs[index], store)
+    else:
+      interpreter.addAtom(undefined(interpreter.heapManager), store)
   of 2:
     # 2 - error register
     msg "read error register"
