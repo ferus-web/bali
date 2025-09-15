@@ -1119,8 +1119,13 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
           interpreter.runningCompiled = true
           (&compiled)()
           interpreter.runningCompiled = false
+
           interpreter.currIndex = clause.rollback.opIndex
           interpreter.currClause = clause.rollback.clause
+
+          # We just append all the ops - 2 (1 sub because the len is 1 bigger than the real size, 1 sub because we've already inc'd this value once)
+          interpreter.profTotalFrames += uint64(clause.operations.len - 2)
+
           vmd "execute",
             "exec'd JIT segment successfully, setting pc to end of clause/" &
               $interpreter.currIndex
