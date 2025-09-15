@@ -357,7 +357,7 @@ proc genCall(
     let indexed = runtime.index(nam, defaultParams(fn))
 
     if indexed == runtime.index("undefined", defaultParams(fn)):
-      runtime.ir.invoke(nam)
+      runtime.ir.call(nam)
     else:
       runtime.ir.invoke(indexed)
 
