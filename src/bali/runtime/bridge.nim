@@ -273,7 +273,7 @@ proc registerType*[T](runtime: Runtime, name: string, prototype: typedesc[T]) =
       runtime.types[typIdx].constructor(),
   ) ]#
 
-proc call*(runtime: Runtime, callable: JSValue, arguments: varargs[JSValue]): JSValue =
+proc callNoRetval*(runtime: Runtime, callable: JSValue, arguments: varargs[JSValue]) =
   if callable.kind != BytecodeCallable:
     raise newException(ValueError, "Cannot call value of type " & $callable.kind)
 
@@ -282,6 +282,9 @@ proc call*(runtime: Runtime, callable: JSValue, arguments: varargs[JSValue]): JS
 
   runtime.vm[].call(&callable.getBytecodeClause(), default(Operation))
   runtime.vm[].run()
+
+proc call*(runtime: Runtime, callable: JSValue, arguments: varargs[JSValue]): JSValue =
+  runtime.callNoRetval(callable, arguments)
 
   let retVal = runtime.getReturnValue()
   if !retVal:
