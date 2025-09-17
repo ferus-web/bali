@@ -534,28 +534,14 @@ proc opDiv(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(floating(interpreter.heapManager, a / b), posA)
   inc interpreter.currIndex
 
-import pretty
 proc opSub(interpreter: var PulsarInterpreter, op: var Operation) =
-  echo "opSub start"
-  print op
-
-  echo "get posA"
   let posA = (&op.arguments[0].getInt())
 
-  echo "get a @ " & $posA
-  print interpreter.get posA
   let a = &(&interpreter.get(posA)).getNumeric()
-
-  echo "get b"
   let b = &(&interpreter.get((&op.arguments[1].getInt()))).getNumeric()
 
-  print interpreter.get &op.arguments[0].getint
-  print interpreter.get &op.arguments[1].getint
-
-  echo "store " & $(a - b) & " @ " & $posA
   interpreter.addAtom(floating(interpreter.heapManager, a - b), posA)
   inc interpreter.currIndex
-  echo "opSub end"
 
 #[proc opEquate(interpreter: var PulsarInterpreter, op: var Operation) =
   msg "equate"
@@ -1319,20 +1305,6 @@ proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
   )
 
   interp.tryInitializeJIT()
-
-  interp[].registerBuiltin(
-    "print",
-    proc(op: Operation) =
-      for i, x in op.arguments:
-        if i == 0:
-          continue
-
-        let val = interp[].get((&x.getInt()))
-
-        if *val:
-          echo (&val).crush("", quote = false)
-    ,
-  )
 
   interp
 
