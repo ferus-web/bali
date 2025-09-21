@@ -31,6 +31,7 @@ type
   Builtin* = proc(op: Operation) {.gcsafe.}
 
   EquationHook* = proc(a, b: JSValue): bool {.gcsafe.}
+  TypeErrorHook* = proc() {.gcsafe.}
 
   PulsarInterpreter* = object
     tokenizer: Tokenizer
@@ -49,6 +50,7 @@ type
 
     registers*: Registers
     equationHook*: EquationHook
+    typeErrorHook*: TypeErrorHook
 
     when defined(amd64):
       baseline*: BaselineJIT
@@ -421,7 +423,7 @@ proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) {.gcsafe.} =
       callable.fn()
       inc interpreter.currIndex
     else:
-      raise newException(ValueError, "INVK cannot deal with atom: " & $callable.kind)
+      interpreter.typeErrorHook()
   elif value.kind == String:
     msg "atom is string/ref to native function"
     interpreter.call(&getStr(value), default(Operation))
