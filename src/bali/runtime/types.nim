@@ -127,6 +127,9 @@ type
 
 {.push warning[UnreachableCode]: off.}
 proc setExperiment*(opts: var ExperimentOpts, name: string, value: bool): bool =
+  ## Enable/disable an experimental Bali feature using its string flag (`name`).
+  ## This function returns `true` if the operation succeeds, and `false` if
+  ## the experiment is not recognized.
   case name
   else:
     warn "Unrecognized experiment \"" & name & "\"!"
