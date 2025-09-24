@@ -1154,9 +1154,13 @@ proc parseScope*(parser: Parser): seq[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected left curly bracket, got EOF instead"
 
+  let ephTok = deepCopy(parser.tokenizer)
+  var singleExpr = false
   if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
     if (&tok).kind != TokenKind.LCurly:
-      parser.error Other, "expected left curly bracket"
+      # This is likely a single expression for the body
+      singleExpr = true
+      parser.tokenizer = ephTok
 
   inc parser.ast.currentScope
   parser.ast.scopes.setLen(parser.ast.currentScope + 1)
@@ -1165,18 +1169,19 @@ proc parseScope*(parser: Parser): seq[Statement] =
   var metRCurly = false
 
   while not parser.tokenizer.eof:
-    let
-      prevPos = parser.tokenizer.pos
-      prevLoc = parser.tokenizer.location
-      c = parser.tokenizer.nextExceptWhitespace()
+    if not singleExpr:
+      let
+        prevPos = parser.tokenizer.pos
+        prevLoc = parser.tokenizer.location
+        c = parser.tokenizer.nextExceptWhitespace()
 
-    if *c and (&c).kind == TokenKind.RCurly:
-      debug "parser: met end of curly bracket block"
-      metRCurly = true
-      break
-    else:
-      parser.tokenizer.pos = prevPos
-      parser.tokenizer.location = prevLoc
+      if *c and (&c).kind == TokenKind.RCurly:
+        debug "parser: met end of curly bracket block"
+        metRCurly = true
+        break
+      else:
+        parser.tokenizer.pos = prevPos
+        parser.tokenizer.location = prevLoc
 
     let stmt = parser.parseStatement()
 
@@ -1191,9 +1196,12 @@ proc parseScope*(parser: Parser): seq[Statement] =
 
     stmts &= statement
 
+    if singleExpr:
+      break
+
   dec parser.ast.currentScope
 
-  if not metRCurly:
+  if not metRCurly and not singleExpr:
     parser.error Other, "scope body must end with curly bracket"
 
   stmts
