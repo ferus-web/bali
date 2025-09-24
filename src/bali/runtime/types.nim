@@ -195,7 +195,9 @@ proc globalIndex*(): IndexParams {.inline.} =
 proc internalIndex*(stmt: Statement): IndexParams {.inline.} =
   IndexParams(priorities: @[vkInternal], stmt: some stmt)
 
-proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
+proc markInternal*(
+    runtime: Runtime, stmt: Statement, ident: string, index: Option[uint] = none(uint)
+) =
   var toRm: seq[int]
   for i, value in runtime.values:
     if value.kind == vkInternal and value.identifier == ident:
@@ -205,18 +207,20 @@ proc markInternal*(runtime: Runtime, stmt: Statement, ident: string) =
     runtime.values.del(rm)
 
   {.cast(gcsafe).}:
+    let indexS =
+      if *index:
+        &index
+      else:
+        runtime.addrIdx
+
     runtime.values &=
-      Value(
-        kind: vkInternal,
-        index: runtime.addrIdx,
-        identifier: ident,
-        ownerStmt: hash(stmt),
-      )
+      Value(kind: vkInternal, index: indexS, identifier: ident, ownerStmt: hash(stmt))
 
-    info "Ident \"" & ident & "\" is being internally marked at index " &
-      $runtime.addrIdx & " with statement hash: " & $hash(stmt)
+    info "Ident \"" & ident & "\" is being internally marked at index " & $indexS &
+      " with statement hash: " & $hash(stmt)
 
-  inc runtime.addrIdx
+  if !index:
+    inc runtime.addrIdx
 
 proc markGlobal*(runtime: Runtime, ident: string, index: Option[uint] = none(uint)) =
   var toRm: seq[int]
@@ -297,7 +301,7 @@ proc index*(
         return value.index
 
   debug "runtime: cannot find identifier \"" & ident &
-    "\" in index search, returning pointer to undefined()"
+    "\" in index search, returning index to undefined()"
   runtime.index("undefined", params)
 
 proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
