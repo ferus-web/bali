@@ -47,9 +47,9 @@ func `$`*(error: ParseError): string =
   buff & " (line " & $error.location.line & ", column " & $error.location.col & ')'
 
 {.push gcsafe.}
-proc parseArguments*(parser: Parser): Option[PositionedArguments]
+proc parseArguments(parser: Parser): Option[PositionedArguments]
 
-proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
+proc parseFunctionCall(parser: Parser, name: string): Option[Statement] =
   let
     args = parser.parseArguments()
     arguments =
@@ -75,9 +75,9 @@ proc parseFunctionCall*(parser: Parser, name: string): Option[Statement] =
   else:
     return some call(name.callFunction, arguments)
 
-proc parseAtom*(parser: Parser, token: Token): Option[MAtom]
+proc parseAtom(parser: Parser, token: Token): Option[MAtom]
 
-func tokenToArithBinOp*(token: TokenKind): BinaryOperation {.raises: [ValueError].} =
+func tokenToArithBinOp(token: TokenKind): BinaryOperation {.raises: [ValueError].} =
   case token
   of TokenKind.Add:
     BinaryOperation.Add
@@ -90,7 +90,7 @@ func tokenToArithBinOp*(token: TokenKind): BinaryOperation {.raises: [ValueError
   else:
     raise newException(ValueError, "Invalid token for arithmetic operation: " & $token)
 
-proc parseExpression*(
+proc parseExpression(
     parser: Parser, storeIn: Option[string] = none(string), ignoreTerms: bool = false
 ): Option[Statement] =
   info "parser: parsing arithmetic/binary expression"
@@ -264,7 +264,7 @@ proc parseExpression*(
     return
     #parser.error Other, "expected left term and right term to complete expression"
 
-proc parseConstructor*(parser: Parser): Option[Statement] =
+proc parseConstructor(parser: Parser): Option[Statement] =
   let next = parser.tokenizer.nextExceptWhitespace()
 
   if !next:
@@ -279,7 +279,7 @@ proc parseConstructor*(parser: Parser): Option[Statement] =
 
   return some(constructObject((&next).ident, &parser.parseArguments()))
 
-proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
+proc parseTypeofCall(parser: Parser): Option[PositionedArguments] =
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
@@ -324,7 +324,7 @@ proc parseTypeofCall*(parser: Parser): Option[PositionedArguments] =
 
   some(args)
 
-proc parseTable*(parser: Parser): Option[MAtom] =
+proc parseTable(parser: Parser): Option[MAtom] =
   # We are assuming that the starting curly bracket (`{`) has been consumed.
   debug "parser: parsing table"
   if parser.tokenizer.eof:
@@ -389,7 +389,7 @@ proc parseTable*(parser: Parser): Option[MAtom] =
   if not metRCurly:
     parser.error Other, "property list must be ended by }"
 
-proc parseArray*(parser: Parser): Option[MAtom] =
+proc parseArray(parser: Parser): Option[MAtom] =
   # We are assuming that the starting bracket (`[`) has been consumed.
   debug "parser: parsing array"
   if parser.tokenizer.eof:
@@ -457,7 +457,7 @@ proc parseArray*(parser: Parser): Option[MAtom] =
 
   some stackSequence(arr)
 
-proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
+proc parseArrayIndex(parser: Parser, ident: string): Option[Statement] =
   # We are assuming that the starting bracket (`[`) has been consumed.
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
@@ -506,7 +506,7 @@ proc parseArrayIndex*(parser: Parser, ident: string): Option[Statement] =
   else:
     parser.error Other, "expected expression, got EOF"
 
-proc expectEqualsSign*(
+proc expectEqualsSign(
     parser: Parser, stubDef: proc(): Result[Option[Statement], void] {.gcsafe.}
 ): Result[Option[Statement], void] =
   # FIXME: this is utterly fucking deranged.
@@ -525,7 +525,7 @@ proc expectEqualsSign*(
     parser.error UnexpectedToken,
       "expected semicolon or equal sign after identifier, got " & $nextTok.kind
 
-proc parseTernaryOp*(
+proc parseTernaryOp(
     parser: Parser,
     ident: Option[string] = none(string),
     atom: Option[MAtom] = none(MAtom),
@@ -585,11 +585,11 @@ proc parseTernaryOp*(
 
   some(tern)
 
-proc parseFunction*(
+proc parseFunction(
   parser: Parser, name: Option[string] = none(string)
 ): Option[Function]
 
-proc parseDeclaration*(
+proc parseDeclaration(
     parser: Parser, initialIdent: string, reassignment: bool = false
 ): Option[Statement] =
   debug "parser: parse declaration"
@@ -763,9 +763,9 @@ proc parseDeclaration*(
       elif *toCall:
         return some(callAndStoreMut(ident, &toCall))
 
-proc parseStatement*(parser: Parser): Option[Statement]
+proc parseStatement(parser: Parser): Option[Statement]
 
-proc parseFunction*(
+proc parseFunction(
     parser: Parser, name: Option[string] = none(string)
 ): Option[Function] =
   info "parser: parse function"
@@ -890,7 +890,7 @@ proc parseFunction*(
   info "parser: parsed function: " & &name
   some function(&name, body, arguments)
 
-proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
+proc parseAtom(parser: Parser, token: Token): Option[MAtom] =
   info "parser: trying to parse an atom out of " & $token.kind
 
   case token.kind
@@ -921,7 +921,7 @@ proc parseAtom*(parser: Parser, token: Token): Option[MAtom] =
     return
     # parser.error UnexpectedToken, "expected value, got " & $token.kind & " instead."
 
-proc parseArguments*(parser: Parser): Option[PositionedArguments] =
+proc parseArguments(parser: Parser): Option[PositionedArguments] =
   info "parser: parse arguments for function call"
   var
     metEnd = false
@@ -1035,7 +1035,7 @@ proc parseArguments*(parser: Parser): Option[PositionedArguments] =
 
   some args
 
-proc parseThrow*(parser: Parser): Option[Statement] =
+proc parseThrow(parser: Parser): Option[Statement] =
   info "parser: parsing throw-expr"
 
   var
@@ -1066,7 +1066,7 @@ proc parseThrow*(parser: Parser): Option[Statement] =
 
   some(ensureMove(stmt))
 
-proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
+proc parseReassignment(parser: Parser, ident: string): Option[Statement] =
   info "parser: parsing re-assignment to identifier: " & ident
 
   var expr: Option[Statement]
@@ -1146,7 +1146,7 @@ proc parseReassignment*(parser: Parser, ident: string): Option[Statement] =
 
     return some(ensureMove(callStoreExpr))
 
-proc parseScope*(parser: Parser): seq[Statement] =
+proc parseScope(parser: Parser): seq[Statement] =
   ## Firstly, parse the opening right-facing curly bracket (`{`), and then
   ## add every statement that is parsed to a vector of statements until a left-facing
   ## curly bracket (`}`) is encountered.
@@ -1206,7 +1206,7 @@ proc parseScope*(parser: Parser): seq[Statement] =
 
   stmts
 
-proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] =
+proc parseExprInParenWrap(parser: Parser, token: TokenKind): Option[Statement] =
   ## Parse an expression that is currently wrapped in parenthesis
   ## like `(x == 32)`. Used when parsing if statements and while loops.
   debug "parser: parsing possible expression in parenthesis wrap for token kind: " &
@@ -1246,7 +1246,7 @@ proc parseExprInParenWrap*(parser: Parser, token: TokenKind): Option[Statement] 
 
   expr
 
-proc parseForLoop*(parser: Parser): Option[Statement] =
+proc parseForLoop(parser: Parser): Option[Statement] =
   ## Parse a for-loop expression.
   ## **Basic Rules**
   ##
@@ -1318,7 +1318,7 @@ proc parseForLoop*(parser: Parser): Option[Statement] =
 
   return some(forLoop(initializer, condition, incrementor, body))
 
-proc parseTryClause*(parser: Parser): Option[Statement] =
+proc parseTryClause(parser: Parser): Option[Statement] =
   ## Parse a try-catch clause.
   debug "parser: parsing try-catch clause"
   var statement = Statement(kind: TryCatch)
@@ -1356,7 +1356,7 @@ proc parseTryClause*(parser: Parser): Option[Statement] =
 
   some(ensureMove(statement))
 
-proc parseCompoundAssignment*(
+proc parseCompoundAssignment(
     parser: Parser, target: string, compound: Token
 ): Option[Statement] =
   if parser.tokenizer.eof:
@@ -1421,7 +1421,7 @@ proc parseCompoundAssignment*(
     parser.error Other,
       "expected expression, literal or identifier after compound assignment"
 
-proc parseStatement*(parser: Parser): Option[Statement] =
+proc parseStatement(parser: Parser): Option[Statement] =
   if parser.tokenizer.eof:
     return
 
@@ -1646,6 +1646,9 @@ proc parseStatement*(parser: Parser): Option[Statement] =
     parser.error UnexpectedToken, $token.kind
 
 proc parse*(parser: Parser): AST {.inline.} =
+  ## This routine parses the entire source file provided to the
+  ## `parser` object and outputs an abstract syntax tree representation
+  ## of the JavaScript code, as well as syntax errors if there are any.
   parser.ast = newAST()
   parser.lines = parser.tokenizer.source.split('\n').mapIt(it.strip(trailing = false))
 
@@ -1674,6 +1677,9 @@ proc parse*(parser: Parser): AST {.inline.} =
 func newParser*(
     input: string, opts: ParserOpts = default(ParserOpts)
 ): Parser {.inline.} =
+  ## This routine creates a new `Parser` object and returns it based
+  ## off of the `input` string buffer, and optionally the `opts` struct
+  ## that can be used to guide the parser in certain ways.
   Parser(tokenizer: newTokenizer(input), opts: opts)
 
 {.pop.}
