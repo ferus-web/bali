@@ -444,15 +444,20 @@ proc parseArray(parser: Parser): Option[Statement] =
     # `,` and `]` to add another element and to close off the parsing algorithm
     # respectively.
     var copiedTok = deepCopy(parser.tokenizer)
-    if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
-      if (&tok).kind notin {TokenKind.Comma, TokenKind.RBracket}:
-        parser.error UnexpectedToken,
-          "expected comma (,) or right bracket (]) after array element, got " &
-            $(&tok).kind
+    while not parser.tokenizer.eof:
+      if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
+        let kind = (&tok).kind
+        if kind == TokenKind.Comment:
+          continue
+
+        if kind notin {TokenKind.Comma, TokenKind.RBracket}:
+          parser.error UnexpectedToken,
+            "expected comma (,) or right bracket (]) after array element, got " & $kind
+        else:
+          parser.tokenizer = ensureMove(copiedTok)
+          break
       else:
-        parser.tokenizer = ensureMove(copiedTok)
-    else:
-      parser.error Other, "missing ] after element list"
+        parser.error Other, "missing ] after element list"
 
     prev = token.kind
 
