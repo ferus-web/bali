@@ -75,7 +75,7 @@ proc parseFunctionCall(parser: Parser, name: string): Option[Statement] =
   else:
     return some call(name.callFunction, arguments)
 
-proc parseAtom(parser: Parser, token: Token): Option[MAtom]
+proc parseAtom(parser: Parser, token: Token): Option[Statement]
 
 func tokenToArithBinOp(token: TokenKind): BinaryOperation {.raises: [ValueError].} =
   case token
@@ -127,10 +127,10 @@ proc parseExpression(
       debug "parser: whilst parsing arithmetic expr, found number"
       if term.binLeft == nil:
         debug "parser: atom will fill left term"
-        term.binLeft = atomHolder(&parser.parseAtom(next))
+        term.binLeft = &parser.parseAtom(next)
       else:
         debug "parser: atom will fill right term"
-        term.binRight = atomHolder(&parser.parseAtom(next))
+        term.binRight = &parser.parseAtom(next)
     of TokenKind.String:
       if (let err = next.getError(); *err):
         debug "parser: whilst parsing arithmetic expr, found String with error. Adding to syntax error and aborting parsing."
@@ -139,10 +139,10 @@ proc parseExpression(
       debug "parser: whilst parsing arithmetic expr, found String"
       if term.binLeft == nil:
         debug "parser: atom will fill left term"
-        term.binLeft = atomHolder(&parser.parseAtom(next))
+        term.binLeft = &parser.parseAtom(next)
       else:
         debug "parser: atom will fill right term"
-        term.binRight = atomHolder(&parser.parseAtom(next))
+        term.binRight = &parser.parseAtom(next)
     of TokenKind.Identifier:
       debug "parser: whilst parsing arithmetic expr, found ident"
       if term.binLeft == nil:
@@ -317,13 +317,14 @@ proc parseTypeofCall(parser: Parser): Option[PositionedArguments] =
       if !atom:
         parser.error UnexpectedToken, "expected value or identifier, got " & $token.kind
 
-      args.pushAtom(&atom)
+      args.pushImmExpr(&atom)
 
   if mustEndWithParen and not metParen:
     parser.error Other, "missing ) in parenthetical"
 
   some(args)
 
+#[
 proc parseTable(parser: Parser): Option[MAtom] =
   # We are assuming that the starting curly bracket (`{`) has been consumed.
   debug "parser: parsing table"
@@ -388,15 +389,16 @@ proc parseTable(parser: Parser): Option[MAtom] =
 
   if not metRCurly:
     parser.error Other, "property list must be ended by }"
+]#
 
-proc parseArray(parser: Parser): Option[MAtom] =
+proc parseArray(parser: Parser): Option[Statement] =
   # We are assuming that the starting bracket (`[`) has been consumed.
   debug "parser: parsing array"
   if parser.tokenizer.eof:
     parser.error Other, "expected expression, got EOF"
 
   var
-    arr: seq[MAtom]
+    arr: MixedLiteralChildren
     prev = TokenKind.LBracket
     metRBracket = false
 
@@ -416,7 +418,7 @@ proc parseArray(parser: Parser): Option[MAtom] =
       if prev in {TokenKind.LBracket, TokenKind.Comma}:
         debug "parser: previous token was left bracket or comma, appending `undefined` to array"
         prev = TokenKind.Comma
-        arr &= stackUndefined()
+        arr &= atomHolder(stackUndefined())
       else:
         debug "parser: previous token wasn't those two, continuing."
         prev = TokenKind.Comma
@@ -427,13 +429,15 @@ proc parseArray(parser: Parser): Option[MAtom] =
       debug "parser: found comment whilst parsing array elements"
       continue
 
-    let atom = parser.parseAtom(token)
-    if !atom:
-      parser.error UnexpectedToken,
-        "expected expression, value or name, got " & $token.kind & " instead."
+    if token.kind == TokenKind.Identifier:
+      arr &= identHolder(token.ident)
+    else:
+      let atom = parser.parseAtom(token)
+      if !atom:
+        parser.error UnexpectedToken,
+          "expected expression, value or name, got " & $token.kind & " instead."
 
-    debug "parser: appending atom to array: " & (&atom).crush()
-    arr &= &atom
+      arr &= &atom
 
     # Just a check to see if the next token is valid.
     # From valid, according to the grammar rules, it can only be two tokens:
@@ -455,7 +459,7 @@ proc parseArray(parser: Parser): Option[MAtom] =
   if not metRBracket:
     parser.error Other, "array is not closed off by bracket"
 
-  some stackSequence(arr)
+  some createArrayLiteral(arr)
 
 proc parseArrayIndex(parser: Parser, ident: string): Option[Statement] =
   # We are assuming that the starting bracket (`[`) has been consumed.
@@ -555,7 +559,7 @@ proc parseTernaryOp(
   let trueKind = (&trueExpr).kind
   case trueKind
   of TokenKind.Number, TokenKind.String:
-    tern.trueTernary = atomHolder(&parser.parseAtom(&trueExpr))
+    tern.trueTernary = &parser.parseAtom(&trueExpr)
   of TokenKind.Identifier:
     tern.trueTernary = identHolder((&trueExpr).ident)
   else:
@@ -576,7 +580,7 @@ proc parseTernaryOp(
   let falseKind = (&falseExpr).kind
   case falseKind
   of TokenKind.Number, TokenKind.String:
-    tern.falseTernary = atomHolder(&parser.parseAtom(&falseExpr))
+    tern.falseTernary = &parser.parseAtom(&falseExpr)
   of TokenKind.Identifier:
     tern.falseTernary = identHolder((&falseExpr).ident)
   else:
@@ -705,11 +709,13 @@ proc parseDeclaration(
       )
       break
     of TokenKind.LBracket:
-      atom = parser.parseArray()
+      ternary = parser.parseArray()
       break
-    of TokenKind.LCurly:
-      atom = parser.parseTable()
-      break
+    # FIXME: Make table parsing work again
+    #
+    # of TokenKind.LCurly:
+    #  atom = parser.parseTable()
+    #  break
     of TokenKind.Function:
       let fn = parser.parseFunction(name = some(ident))
       declareFn = fn
@@ -726,7 +732,7 @@ proc parseDeclaration(
 
   if *ternary:
     var tern = &ternary
-    tern.ternaryStoreIn = some(ident)
+    tern.storeIn = some(ident)
     return some(tern)
 
   if *declareFn:
@@ -890,7 +896,7 @@ proc parseFunction(
   info "parser: parsed function: " & &name
   some function(&name, body, arguments)
 
-proc parseAtom(parser: Parser, token: Token): Option[MAtom] =
+proc parseAtom(parser: Parser, token: Token): Option[Statement] =
   info "parser: trying to parse an atom out of " & $token.kind
 
   case token.kind
@@ -902,21 +908,23 @@ proc parseAtom(parser: Parser, token: Token): Option[MAtom] =
     else:
       debug "parser: parseAtom: token contains floating-point value"
       return some stackFloating(token.floatVal) ]#
-    return some stackFloating(token.floatVal)
+    return some atomHolder(stackFloating(token.floatVal))
   of TokenKind.String:
     if (let err = token.getError(); *err):
       parser.error Other, &err
 
     debug "parser: parseAtom: token is String: " & token.str
-    return some stackStr(token.str)
+    return some atomHolder stackStr(token.str)
   of TokenKind.True:
-    return some stackBoolean(true)
+    return some atomHolder stackBoolean(true)
   of TokenKind.False:
-    return some stackBoolean(false)
+    return some atomHolder stackBoolean(false)
   of TokenKind.LBracket:
     return parser.parseArray()
-  of TokenKind.LCurly:
-    return parser.parseTable()
+  # FIXME: Make table parsing work again
+  #
+  # of TokenKind.LCurly:
+  # return parser.parseTable()
   else:
     return
     # parser.error UnexpectedToken, "expected value, got " & $token.kind & " instead."
@@ -990,7 +998,7 @@ proc parseArguments(parser: Parser): Option[PositionedArguments] =
         parser.error Other, "expected atom, got malformed data instead."
           # FIXME: make this less vague!
 
-      args.pushAtom(&atom)
+      args.pushImmExpr(&atom)
     of TokenKind.True:
       last = some(TokenKind.True)
       args.pushAtom(stackBoolean(true))
@@ -1017,7 +1025,7 @@ proc parseArguments(parser: Parser): Option[PositionedArguments] =
         if !arr:
           parser.error Other, "got malformed array while parsing arguments"
 
-        args.pushAtom(&arr)
+        args.pushImmExpr(&arr)
       else:
         # Else, we're at an array index.
         let access = parser.parseArrayIndex((&lastData).ident)
@@ -1085,7 +1093,7 @@ proc parseReassignment(parser: Parser, ident: string): Option[Statement] =
       return expr
 
   var
-    atom: Option[MAtom]
+    atom: Option[Statement]
     vIdent: Option[string]
     toCall: Option[Statement]
 
@@ -1230,7 +1238,7 @@ proc parseExprInParenWrap(parser: Parser, token: TokenKind): Option[Statement] =
       parser.tokenizer = copiedTokPhase2
       parser.error Other, "expected expression, got nothing instead"
     else:
-      let holder = atomHolder(&atom)
+      let holder = &atom
       expr = some Statement(
         kind: BinaryOp, binLeft: holder, binRight: holder, op: BinaryOperation.Equal
       )
@@ -1371,7 +1379,7 @@ proc parseCompoundAssignment(
 
   let copiedTok = parser.tokenizer.deepCopy()
   let expr = parser.parseExpression()
-  var atom: Option[MAtom]
+  var atom: Option[Statement]
   var identifier: Option[string]
 
   if !expr:
@@ -1620,10 +1628,8 @@ proc parseStatement(parser: Parser): Option[Statement] =
   of TokenKind.String, TokenKind.Number, TokenKind.Null, TokenKind.LBracket,
       TokenKind.LCurly:
     let atom = parser.parseAtom(token)
-    if !atom:
-      return
 
-    return some atomHolder(&atom)
+    return atom
   of TokenKind.Comment:
     if token.multiline:
       parser.precededByMultilineComment = true
@@ -1659,7 +1665,11 @@ proc parse*(parser: Parser): AST {.inline.} =
       var statement = &stmt
       statement.line = parser.tokenizer.location.line
       statement.col = parser.tokenizer.location.col
-      statement.source = parser.lines[statement.line]
+
+      if parser.lines.len.uint > statement.line:
+        # FIXME: how is this even possible?
+        # fix the darned tokenizer...
+        statement.source = parser.lines[statement.line]
 
       case statement.kind
       of WhileStmt, IfStmt, ForLoop:

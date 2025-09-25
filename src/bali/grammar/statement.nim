@@ -34,6 +34,7 @@ type
     TryCatch
     CompoundAssignment
     DefineFunction
+    CreateArrayLiteral
 
   FieldAccess* = ref object
     prev*, next*: FieldAccess
@@ -88,17 +89,20 @@ type
     ident*: Option[string]
     function*: string
 
+  MixedLiteralChildren* = seq[Statement]
+
   Statement* = ref object
     line*, col*: uint = 1
     source*: string
+    storeIn*: Option[string]
 
     case kind*: StatementKind
     of CreateMutVal:
       mutIdentifier*: string
-      mutAtom*: MAtom
+      mutAtom*: Statement
     of CreateImmutVal:
       imIdentifier*: string
-      imAtom*: MAtom
+      imAtom*: Statement
     of Call:
       fn*: FunctionCall
       arguments*: PositionedArguments
@@ -121,6 +125,7 @@ type
     of ReassignVal:
       reIdentifier*: string
       reAtom*: MAtom
+      reExpr*: Statement
     of ThrowError:
       error*: tuple[str: Option[string], exc: Option[void], ident: Option[string]]
     of BinaryOp:
@@ -157,7 +162,7 @@ type
     of Break: discard
     of AccessArrayIndex:
       arrAccIdent*: string
-      arrAccIndex*: Option[MAtom]
+      arrAccIndex*: Option[Statement]
       arrAccIdentIndex*: Option[string]
     of TernaryOp:
       ternaryCond*: Statement
@@ -175,11 +180,13 @@ type
     of CompoundAssignment:
       compAsgnOp*: BinaryOperation
       compAsgnTarget*: string
-      compAsgnCompounder*: Option[MAtom]
+      compAsgnCompounder*: Option[Statement]
       compAsgnCompounderIdent*: Option[string]
     of DefineFunction:
       defunFn*: Function
       limitedTo*: Option[Scope]
+    of CreateArrayLiteral:
+      calChildren*: MixedLiteralChildren
 
 func hash*(access: FieldAccess): Hash {.inline.} =
   hash((access.identifier))
@@ -272,11 +279,17 @@ proc pushAtom*(args: var PositionedArguments, atom: MAtom) {.inline.} =
   args &= CallArg(kind: cakAtom, atom: atom)
 
 proc pushImmExpr*(args: var PositionedArguments, expr: Statement) {.inline.} =
-  assert expr.kind in {BinaryOp, AccessArrayIndex},
+  assert expr.kind in {BinaryOp, AccessArrayIndex, AtomHolder},
     "Attempt to push invalid expression to arguments: " & $expr.kind
   args &= CallArg(kind: cakImmediateExpr, expr: expr)
 
 {.push checks: off, inline.}
+proc atomHolder*(atom: MAtom): Statement =
+  Statement(kind: AtomHolder, atom: atom)
+
+proc identHolder*(ident: string): Statement =
+  Statement(kind: IdentHolder, ident: ident)
+
 proc defineFunction*(fn: Function, limitedTo: Option[Scope] = none(Scope)): Statement =
   Statement(kind: DefineFunction, defunFn: fn, limitedTo: limitedTo)
 
@@ -292,7 +305,7 @@ proc throwError*(
   Statement(kind: ThrowError, error: (str: errorStr, exc: errorExc, ident: errorIdent))
 
 proc createImmutVal*(name: string, atom: MAtom): Statement =
-  Statement(kind: CreateImmutVal, imIdentifier: name, imAtom: atom)
+  Statement(kind: CreateImmutVal, imIdentifier: name, imAtom: atomHolder atom)
 
 proc breakStmt*(): Statement =
   Statement(kind: Break)
@@ -323,11 +336,11 @@ proc forLoop*(
 proc increment*(ident: string): Statement =
   Statement(kind: Increment, incIdent: ident)
 
-proc arrayAccess*(ident: string, index: MAtom): Statement =
-  Statement(kind: AccessArrayIndex, arrAccIdent: ident, arrAccIndex: index.some)
+proc arrayAccess*(ident: string, index: Statement): Statement =
+  Statement(kind: AccessArrayIndex, arrAccIdent: ident, arrAccIndex: some(index))
 
 proc arrayAccess*(ident: string, index: string): Statement =
-  Statement(kind: AccessArrayIndex, arrAccIdent: ident, arrAccIdentIndex: index.some)
+  Statement(kind: AccessArrayIndex, arrAccIdent: ident, arrAccIdentIndex: some(index))
 
 proc decrement*(ident: string): Statement =
   Statement(kind: Decrement, decIdent: ident)
@@ -339,12 +352,6 @@ proc ifStmt*(condition: Statement, body, elseScope: Scope): Statement =
   Statement(
     kind: IfStmt, conditionExpr: condition, branchTrue: body, branchFalse: elseScope
   )
-
-proc atomHolder*(atom: MAtom): Statement =
-  Statement(kind: AtomHolder, atom: atom)
-
-proc identHolder*(ident: string): Statement =
-  Statement(kind: IdentHolder, ident: ident)
 
 proc copyValMut*(dest, source: string): Statement =
   Statement(kind: CopyValMut, cpMutSourceIdent: source, cpMutDestIdent: dest)
@@ -370,6 +377,9 @@ proc binOp*(
 proc reassignVal*(identifier: string, atom: MAtom): Statement =
   Statement(kind: ReassignVal, reIdentifier: identifier, reAtom: atom)
 
+proc reassignVal*(identifier: string, expr: Statement): Statement =
+  Statement(kind: ReassignVal, reIdentifier: identifier, reExpr: expr)
+
 proc returnFunc*(retVal: MAtom): Statement =
   Statement(kind: ReturnFn, retVal: some(retVal))
 
@@ -387,7 +397,7 @@ proc callAndStoreMut*(ident: string, fn: Statement): Statement =
   Statement(kind: CallAndStoreResult, mutable: true, storeIdent: ident, storeFn: fn)
 
 proc createMutVal*(name: string, atom: MAtom): Statement =
-  Statement(kind: CreateMutVal, mutIdentifier: name, mutAtom: atom)
+  Statement(kind: CreateMutVal, mutIdentifier: name, mutAtom: atomHolder atom)
 
 proc identArg*(ident: string): CallArg =
   CallArg(kind: cakIdent, ident: ident)
@@ -422,12 +432,16 @@ proc callFunction*(name: string, field: FieldAccess): FunctionCall =
   FunctionCall(function: name, field: some field)
 
 proc compoundAssignment*(
-    op: BinaryOperation, target: string, compounder: MAtom
+    op: BinaryOperation, target: string, compounder: MAtom | Statement
 ): Statement =
   Statement(
     kind: CompoundAssignment,
     compAsgnTarget: target,
-    compAsgnCompounder: some(compounder),
+    compAsgnCompounder:
+      when compounder is MAtom:
+        some(atomHolder compounder)
+      else:
+        some(compounder),
     compAsgnOp: op,
   )
 
@@ -441,7 +455,16 @@ proc compoundAssignment*(
     compAsgnOp: op,
   )
 
+proc createArrayLiteral*(children: MixedLiteralChildren): Statement =
+  Statement(kind: CreateArrayLiteral, calChildren: children)
+
 {.pop.}
 
 proc normalizeIRName*(call: FunctionCall): string =
   return normalizeIRName(call.function)
+
+func unwrap*(stmt: Statement): MAtom =
+  if stmt.kind == AtomHolder:
+    return stmt.atom
+
+  raise newException(ValueError, "Cannot unwrap " & $stmt.kind)

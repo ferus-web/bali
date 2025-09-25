@@ -82,17 +82,17 @@ proc expand*(
     of BinaryOp:
       debug "niche: expand BinaryOp"
 
-      if *stmt.binStoreIn:
-        debug "niche: BinaryOp evaluation will be stored in: " & &stmt.binStoreIn & " (" &
+      if *stmt.storeIn:
+        debug "niche: BinaryOp evaluation will be stored in: " & &stmt.storeIn & " (" &
           $runtime.addrIdx & ')'
         runtime.ir.loadInt(runtime.addrIdx, 0)
 
         if not internal:
           debug "niche: ...locally"
-          runtime.markLocal(fn, &stmt.binStoreIn)
+          runtime.markLocal(fn, &stmt.storeIn)
         else:
           debug "niche: ...internally"
-          runtime.markInternal(stmt, &stmt.binStoreIn)
+          runtime.markInternal(stmt, &stmt.storeIn)
 
       if stmt.binLeft.kind == AtomHolder:
         debug "niche: BinaryOp left term is an atom"
@@ -169,9 +169,14 @@ proc expand*(
         ) # load undefined atom
 
         var expr = &stmt.retExpr
-        expr.binStoreIn = some("retval")
+        expr.storeIn = some("retval")
         runtime.generateBytecode(
-          fn, move(expr), internal = true, ownerStmt = some(stmt)
+          fn,
+          expr,
+          internal = true,
+          parentStmt = some(expr),
+          ownerStmt = some(stmt),
+          exprStoreIn = expr.storeIn,
         )
       else:
         runtime.generateBytecode(
@@ -268,7 +273,7 @@ proc genCreateImmutVal(
   debug "emitter: generate IR for creating immutable value with identifier: " &
     stmt.imIdentifier
 
-  let idx = runtime.loadIRAtom(deepCopy(stmt.imAtom))
+  let idx = runtime.loadIRAtom(deepCopy(stmt.imAtom.unwrap))
 
   if not internal:
     if fn.name == "outer":
@@ -286,7 +291,7 @@ proc genCreateMutVal(
     internal: bool,
     ownerStmt: Option[Statement],
 ) =
-  let idx = runtime.loadIRAtom(stmt.mutAtom)
+  let idx = runtime.loadIRAtom(stmt.mutAtom.unwrap)
 
   if not internal:
     if fn.name == "outer":
@@ -939,7 +944,7 @@ proc genAccessArrayIndex(
   let atomIdx = runtime.index(stmt.arrAccIdent, defaultParams(fn))
   let fieldIndex =
     if *stmt.arrAccIndex:
-      runtime.loadIRAtom(&stmt.arrAccIndex)
+      runtime.loadIRAtom((&stmt.arrAccIndex).unwrap)
     elif *stmt.arrAccIdentIndex:
       runtime.index(&stmt.arrAccIdentIndex, defaultParams(fn))
     else:
@@ -1121,7 +1126,7 @@ proc genCompoundAsgn(runtime: Runtime, fn: Function, stmt: Statement) =
   let target = runtime.index(stmt.compAsgnTarget, defaultParams(fn))
   let compounder =
     if *stmt.compAsgnCompounder:
-      runtime.loadIRAtom(&stmt.compAsgnCompounder)
+      runtime.loadIRAtom(unwrap &stmt.compAsgnCompounder)
     elif *stmt.compAsgnCompounderIdent:
       runtime.index(&stmt.compAsgnCompounderIdent, defaultParams(fn))
     else:
@@ -1159,6 +1164,27 @@ proc genDefineFunction(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.ir.loadBytecodeCallable(
     runtime.addrIdx - 1, normalizeIRName(stmt.defunFn.name)
   )
+
+proc genCreateArrayLit(runtime: Runtime, fn: Function, stmt: Statement) =
+  let pos = runtime.addrIdx
+  runtime.ir.loadList(pos)
+  runtime.markLocal(fn, &stmt.storeIn)
+
+  for child in stmt.calChildren:
+    case child.kind
+    of IdentHolder:
+      runtime.ir.appendList(pos, runtime.index(child.ident, defaultParams(fn)))
+    of AtomHolder:
+      runtime.ir.appendList(pos, runtime.loadIRAtom(child.atom))
+    else:
+      unreachable
+
+proc genAtomHolder(
+    runtime: Runtime, fn: Function, stmt: Statement, storeIn: string, parent: Statement
+) =
+  let index = runtime.loadIRAtom(stmt.atom)
+  runtime.markInternal(parent, storeIn, index = some(index))
+  inc runtime.addrIdx
 
 {.pop.}
 
@@ -1232,6 +1258,12 @@ proc generateBytecode(
     runtime.genCompoundAsgn(fn = fn, stmt = stmt)
   of DefineFunction:
     runtime.genDefineFunction(fn = fn, stmt = stmt)
+  of CreateArrayLiteral:
+    runtime.genCreateArrayLit(fn = fn, stmt = stmt)
+  of AtomHolder:
+    runtime.genAtomHolder(
+      fn = fn, stmt = stmt, storeIn = &exprStoreIn, parent = &parentStmt
+    )
   else:
     warn "emitter: unimplemented bytecode generation directive: " & $stmt.kind
 
