@@ -1665,7 +1665,11 @@ proc parse*(parser: Parser): AST {.inline.} =
       var statement = &stmt
       statement.line = parser.tokenizer.location.line
       statement.col = parser.tokenizer.location.col
-      statement.source = parser.lines[statement.line]
+
+      if parser.lines.len.uint > statement.line:
+        # FIXME: how is this even possible?
+        # fix the darned tokenizer...
+        statement.source = parser.lines[statement.line]
 
       case statement.kind
       of WhileStmt, IfStmt, ForLoop:

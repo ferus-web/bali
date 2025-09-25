@@ -82,17 +82,17 @@ proc expand*(
     of BinaryOp:
       debug "niche: expand BinaryOp"
 
-      if *stmt.binStoreIn:
-        debug "niche: BinaryOp evaluation will be stored in: " & &stmt.binStoreIn & " (" &
+      if *stmt.storeIn:
+        debug "niche: BinaryOp evaluation will be stored in: " & &stmt.storeIn & " (" &
           $runtime.addrIdx & ')'
         runtime.ir.loadInt(runtime.addrIdx, 0)
 
         if not internal:
           debug "niche: ...locally"
-          runtime.markLocal(fn, &stmt.binStoreIn)
+          runtime.markLocal(fn, &stmt.storeIn)
         else:
           debug "niche: ...internally"
-          runtime.markInternal(stmt, &stmt.binStoreIn)
+          runtime.markInternal(stmt, &stmt.storeIn)
 
       if stmt.binLeft.kind == AtomHolder:
         debug "niche: BinaryOp left term is an atom"
@@ -169,9 +169,14 @@ proc expand*(
         ) # load undefined atom
 
         var expr = &stmt.retExpr
-        expr.binStoreIn = some("retval")
+        expr.storeIn = some("retval")
         runtime.generateBytecode(
-          fn, move(expr), internal = true, ownerStmt = some(stmt)
+          fn,
+          expr,
+          internal = true,
+          parentStmt = some(expr),
+          ownerStmt = some(stmt),
+          exprStoreIn = expr.storeIn,
         )
       else:
         runtime.generateBytecode(
