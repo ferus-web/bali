@@ -104,7 +104,7 @@ proc main() =
       let buff = randomBuffer()
       tryParse(state, i, bin, buff)
 
-      if state.runs[i].verdict != Verdict.Failed:
+      if state.runs[i].verdict == Verdict.Passed:
         removeFile(state.runs[i].path)
     let mode =
       if paramCount() > 2:
