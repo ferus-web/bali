@@ -32,6 +32,7 @@ type
 
   EquationHook* = proc(a, b: JSValue): bool {.gcsafe.}
   TypeErrorHook* = proc() {.gcsafe.}
+  AddAtomsOpImpl* = proc(a, b: JSValue): JSValue {.gcsafe.}
 
   PulsarInterpreter* = object
     tokenizer: Tokenizer
@@ -49,8 +50,10 @@ type
     heapManager*: HeapManager
 
     registers*: Registers
+
     equationHook*: EquationHook
     typeErrorHook*: TypeErrorHook
+    addOpImpl*: AddAtomsOpImpl
 
     when defined(amd64):
       baseline*: BaselineJIT
@@ -508,9 +511,14 @@ proc opAdd(interpreter: var PulsarInterpreter, op: var Operation) =
     a = &interpreter.get(aPos)
     b = &interpreter.get((&op.arguments[1].getInt()))
 
-  interpreter.addAtom(
-    floating(interpreter.heapManager, &a.getNumeric() + &b.getNumeric()), aPos
-  )
+  if a.kind == b.kind and a.kind == Float:
+    # fast-path for floats
+    interpreter.addAtom(
+      floating(interpreter.heapManager, &a.getNumeric() + &b.getNumeric()), aPos
+    )
+  else:
+    # slow-path for everything else
+    interpreter.addAtom(interpreter.addOpImpl(a, b), aPos)
   inc interpreter.currIndex
 
 proc opMult(interpreter: var PulsarInterpreter, op: var Operation) =

@@ -9,8 +9,8 @@ import
   pkg/bali/runtime/vm/ir/generator,
   pkg/bali/runtime/vm/heap/manager,
   pkg/bali/runtime/vm/atom,
-  pkg/bali/runtime/abstract/equating
-import pkg/bali/stdlib/prelude
+  pkg/bali/runtime/abstract/[to_string, equating],
+  pkg/bali/stdlib/prelude
 import pkg/bali/grammar/prelude
 
 proc typeRegistrationFinalizer*(runtime: Runtime) {.gcsafe.} =
@@ -106,6 +106,9 @@ proc run*(runtime: Runtime) {.gcsafe.} =
 
   runtime.vm.typeErrorHook = proc() {.gcsafe.} =
     runtime.typeError("not a function")
+
+  runtime.vm.addOpImpl = proc(a, b: JSValue): JSValue {.gcsafe.} =
+    newJSString(runtime, runtime.ToString(a) & runtime.ToString(b))
 
   runtime.vm[].feed(runtime.ir.modules)
   runtime.typeRegistrationFinalizer()
