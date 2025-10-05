@@ -1,7 +1,7 @@
 name: bali
 backend: Cpp
 license: BSD-3
-kind: Binary
+kind: Library
 binaries: [balde]
 toolchain:
   version: 2.2.4
