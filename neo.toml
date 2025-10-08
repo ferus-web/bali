@@ -1,0 +1,31 @@
+[package]
+name = "bali"
+version = "0.8.1"
+license = "BSD3"
+kind = "Hybrid"
+backend = "Cpp"
+binaries = ["balde"]
+
+[toolchain]
+version = "2.2.0"
+
+dependencies = {
+   kaleidoscope = ">= 0.1.1",
+   ptr_math = ">= 0.3.0",
+   jsony = ">= 1.1.5",
+   colored_logger = "== 0.1.0",
+   "https://github.com/ferus-web/sanchar" = ">= 2.0.2",
+   shakar = ">= 0.1.3",
+   noise = ">= 0.1.10",
+   fuzzy = ">= 0.1.0",
+   results = ">= 0.5.0",
+   yaml = ">= 2.1.1",
+   "https://github.com/ferus-web/nim-gmp" = ">= 0.1.0",
+   icu4nim = ">= 76.1.0",
+   librng = "== 0.1.3",
+   pretty = "== 0.1.0",
+   ferrite = ">= 0.1.3",
+   simdutf = "== 6.5.12",
+   crunchy = ">= 0.1.11",
+   libbacktrace = ">= 0.0.8",
+}

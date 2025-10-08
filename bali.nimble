@@ -6,7 +6,7 @@ description = "The Bali JavaScript Engine"
 license = "BSD3"
 srcDir = "src"
 backend = "cpp"
-# bin = @["balde", "test262"]
+bin = @["balde"]
 installExt = @["nim"]
 binDir = "bin"
 
@@ -27,7 +27,7 @@ requires "yaml >= 2.1.1"
 requires "kaleidoscope >= 0.1.1"
 requires "https://github.com/ferus-web/nim-gmp >= 0.1.0"
 requires "ferrite >= 0.1.3"
-requires "icu4nim >= 76.1.0.1"
+requires "icu4nim >= 76.1.0"
 requires "ptr_math >= 0.3.0"
 requires "libbacktrace >= 0.0.8"
 requires "shakar >= 0.1.3"
