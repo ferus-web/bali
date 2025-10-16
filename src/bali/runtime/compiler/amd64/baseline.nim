@@ -414,8 +414,10 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
 
   true
 
-proc compile*(cgen: var BaselineJIT, clause: Clause): Option[JITSegment] =
-  if cgen.cached.contains(clause.name):
+proc compile*(
+    cgen: var BaselineJIT, clause: Clause, ignoreCache: bool = false
+): Option[JITSegment] =
+  if cgen.cached.contains(clause.name) and not ignoreCache:
     debug "jit/amd64: found cached version of JIT'd clause"
     return some(cgen.cached[clause.name])
 

@@ -310,8 +310,10 @@ proc compileLowered(
   cgen.cached[fn.name] = cast[JITSegment](cgen.s.data)
   some(cast[JITSegment](cgen.s.data))
 
-proc compile*(cgen: var MidtierJIT, clause: Clause): Option[JITSegment] =
-  if clause.name in cgen.cached:
+proc compile*(
+    cgen: var MidtierJIT, clause: Clause, ignoreCache: bool = false
+): Option[JITSegment] =
+  if clause.name in cgen.cached and not ignoreCache:
     return some(cgen.cached[clause.name])
 
   let lowered = lowering.lower(clause)
