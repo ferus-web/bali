@@ -511,8 +511,8 @@ proc opAdd(interpreter: var PulsarInterpreter, op: var Operation) =
     a = &interpreter.get(aPos)
     b = &interpreter.get((&op.arguments[1].getInt()))
 
-  if a.kind == b.kind and a.kind == Float:
-    # fast-path for floats
+  if a.kind in {Integer, Float} and b.kind in {Integer, Float}:
+    # fast-path for numerics
     interpreter.addAtom(
       floating(interpreter.heapManager, &a.getNumeric() + &b.getNumeric()), aPos
     )
