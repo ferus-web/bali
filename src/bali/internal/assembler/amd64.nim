@@ -166,6 +166,7 @@ type
 
   AssemblerX64* = object
     data*: ptr UncheckedArray[byte]
+    capacity*: int
     offset*: int
 
 proc `==`*(a, b: BackwardsLabel): bool {.borrow.}
@@ -193,14 +194,16 @@ const BaseAssemblerSize* {.intdefine: "BaliBaseAssemblerSize".} = 0x10000
 proc curAdr*(assembler: AssemblerX64): int64 =
   cast[int64](assembler.data) + assembler.offset
 
-proc initAssemblerX64*(data: ptr UncheckedArray[byte]): AssemblerX64 =
+proc initAssemblerX64*(data: ptr UncheckedArray[byte], capacity: int): AssemblerX64 =
   result.data = data
+  result.capacity = capacity
 
 proc initAssemblerX64*(): AssemblerX64 =
   var s: AssemblerX64
   s.data = cast[ptr UncheckedArray[byte]](allocateExecutableBuffer(
     uint64(BaseAssemblerSize), readable = true, writable = true
   ))
+  s.capacity = BaseAssemblerSize
 
   ensureMove(s)
 
@@ -253,6 +256,8 @@ proc isDirectReg[T](rm: Rm[T], reg: T): bool =
   rm.kind == rmDirect and rm.directReg == reg
 
 proc write[T](assembler: var AssemblerX64, data: T) =
+  assert assembler.offset + sizeof(T) < assembler.capacity,
+    "Assembler has run out of buffer memory"
   copyMem(addr assembler.data[assembler.offset], unsafeAddr data, sizeof(T))
   assembler.offset += sizeof(T)
 
