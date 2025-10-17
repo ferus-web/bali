@@ -323,8 +323,6 @@ proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   of Null:
     runtime.ir.loadNull(runtime.addrIdx)
     return runtime.addrIdx
-  of Ident:
-    unreachable
   of Boolean:
     runtime.ir.loadBool(runtime.addrIdx, atom)
     return runtime.addrIdx
