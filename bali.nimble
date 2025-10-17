@@ -17,7 +17,6 @@ requires "librng == 0.1.3"
 requires "pretty == 0.1.0"
 requires "colored_logger == 0.1.0"
 requires "simdutf == 6.5.12"
-requires "https://github.com/ferus-web/sanchar >= 2.0.2"
 requires "jsony >= 1.1.5"
 requires "crunchy >= 0.1.11"
 requires "results >= 0.5.0"
@@ -45,3 +44,6 @@ task grammarfuzzer, "Compile the grammarfuzzer":
 
 task balde, "Compile balde":
   exec "nim c -o:bin/balde src/balde.nim"
+
+requires "url >= 0.1.0"
+
