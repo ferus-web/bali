@@ -66,6 +66,16 @@ proc expand*(
           discard runtime.loadIRAtom(arg.atom)
           let name = $hash(stmt) & '_' & $i
           runtime.markInternal(stmt, name)
+        elif arg.kind == cakImmediateExpr:
+          debug "niche: add code to solve expression to expand ConstructObject's immediate expression argument"
+          runtime.markInternal(stmt, $i)
+          runtime.generateBytecode(
+            fn,
+            arg.expr,
+            internal = true,
+            exprStoreIn = some($i),
+            parentStmt = some(stmt),
+          )
     of CallAndStoreResult:
       debug "niche: expand CallAndStoreResult statement by expanding child Call statement"
       runtime.expand(fn, stmt.storeFn, internal)
@@ -404,6 +414,7 @@ proc genConstructObject(
   runtime.expand(fn, stmt, internal)
   runtime.ir.resetArgs()
   runtime.ir.passArgument(runtime.index(stmt.objName, defaultParams(fn)))
+
   for i, arg in stmt.args:
     case arg.kind
     of cakIdent:
@@ -421,7 +432,8 @@ proc genConstructObject(
       )
       runtime.ir.passArgument(index)
     of cakImmediateExpr:
-      discard
+      let index = runtime.index($i, internalIndex(stmt))
+      runtime.ir.passArgument(index)
 
   runtime.ir.call("BALI_ICTOR")
   runtime.ir.resetArgs()
