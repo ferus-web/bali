@@ -351,7 +351,6 @@ proc moveAtom*(gen: IRGenerator, source, dest: uint): uint {.inline, discardable
 
 proc copyAtom*(gen: IRGenerator, source, dest: uint): uint {.inline, discardable.} =
   ## Copy an atom from one index to another.
-  assert dest != 0
   gen.addOp(
     IROperation(opCode: CopyAtom, arguments: @[stackInteger source, stackInteger dest])
   )
