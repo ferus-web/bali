@@ -1,13 +1,16 @@
-## JavaScript URL API - uses sanchar's builtin URL parser
+## JavaScript URL API - uses nim-url for URL parsing as per WHATWG
+##
+## Copyright (C) 2024-2025 Trayambak Rai (xtrayambak at disroot dot org)
+
 import std/[options, logging]
-import bali/internal/sugar
-import bali/runtime/[arguments, types, atom_helpers, bridge, construction]
-import bali/runtime/abstract/coercion
-import bali/stdlib/errors
-import bali/stdlib/types/std_string_type
-import bali/runtime/vm/atom
-import sanchar/parse/url
-var parser = newURLParser()
+import
+  pkg/bali/internal/sugar,
+  pkg/bali/runtime/[arguments, types, atom_helpers, bridge, construction],
+  pkg/bali/runtime/abstract/coercion,
+  pkg/bali/stdlib/errors,
+  pkg/bali/stdlib/types/std_string_type,
+  pkg/bali/runtime/vm/atom
+import pkg/[results, url]
 
 type JSURL = object
   host*: string
@@ -23,22 +26,25 @@ type JSURL = object
 
 proc transposeUrlToObject(runtime: Runtime, parsed: URL, source: string): JSValue =
   var url = runtime.createObjFromType(JSURL)
-  url["hostname"] = runtime.newJSString(parsed.hostname())
-  url["pathname"] = runtime.newJSString(parsed.path())
-  url["port"] = integer(runtime, parsed.port.int)
-  url["protocol"] = runtime.newJSString(parsed.scheme() & ':')
-  url["search"] = runtime.newJSString(parsed.query())
-  url["hostname"] = runtime.newJSString(parsed.hostname())
+
+  if *parsed.hostname:
+    url["hostname"] = runtime.newJSString(&parsed.hostname)
+
+  url["pathname"] = runtime.newJSString(parsed.pathname)
+
+  if *parsed.port:
+    url["port"] = integer(runtime, &parsed.port)
+
+  url["protocol"] = runtime.newJSString(parsed.scheme & ':')
+
+  if *parsed.query:
+    url["search"] = runtime.newJSString(&parsed.query)
+
   url["source"] = runtime.newJSString(source)
-  url["origin"] = runtime.newJSString(
-    parsed.scheme() & "://" & parsed.hostname() & ":" & $parsed.port()
-  )
-  url["hash"] = runtime.newJSString(
-    if parsed.fragment().len > 0:
-      '#' & parsed.fragment()
-    else:
-      newString(0)
-  )
+  url["origin"] = runtime.newJSString(serialize(parsed))
+
+  if *parsed.fragment:
+    url["hash"] = runtime.newJSString('#' & &parsed.fragment)
 
   ensureMove(url)
 
@@ -70,23 +76,14 @@ proc generateStdIR*(runtime: Runtime) =
         )
         return
 
-      let str = runtime.ToString(source)
+      let
+        str = runtime.ToString(source)
+        parsed = tryParseUrl(str)
 
-      let parsed =
-        try:
-          parser.parse(str)
-        except URLParseError as pError:
-          debug "url: encountered parse error whilst parsing url: " & str & ": " &
-            pError.msg
-          debug "url: this is a constructor, so a TypeError will be thrown."
-          runtime.typeError(pError.msg)
-          newURL("", "", "", "")
-            # unreachable, no need to worry. this just exists to make the compiler happy.
-
-      if parsed.scheme().len < 1:
-        return
-
-      ret transposeUrlToObject(runtime, parsed, str)
+      if !parsed:
+        runtime.typeError($parsed.error())
+      else:
+        ret transposeUrlToObject(runtime, &parsed, str)
     ,
   )
 
@@ -110,17 +107,13 @@ proc generateStdIR*(runtime: Runtime) =
       if not runtime.isA(source, JSString):
         ret null(runtime)
 
-      let str = runtime.ToString(source)
+      let
+        str = runtime.ToString(source)
+        parsed = tryParseURL(str)
 
-      var parsed =
-        try:
-          parser.parse(str)
-        except URLParseError as exc:
-          debug "url: encountered parse error whilst parsing url: " & str & ": " &
-            exc.msg
-          debug "url: this is the function variant, so no error will be thrown."
-          URL()
-
-      ret transposeUrlToObject(runtime, parsed, str)
+      if *parsed:
+        ret transposeUrlToObject(runtime, &parsed, str)
+      else:
+        ret JSURL()
     ,
   )

@@ -1,7 +1,6 @@
 ## Implementation of the `Date` object
 ##
-## Author(s): 
-## Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[math, strformat, times, logging, options]
 import bali/internal/sugar
 import bali/runtime/vm/atom

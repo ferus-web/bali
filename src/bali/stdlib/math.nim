@@ -1,4 +1,6 @@
 ## Implementation of the Web Math API
+##
+## Copyright (C) 2024-2025 Trayambak Rai (xtrayambak at disroot dot org)
 
 import std/[importutils, tables, math, options, logging]
 import bali/runtime/vm/prelude
