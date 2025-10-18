@@ -1005,7 +1005,6 @@ proc getCompilationJudgement*(
     # the runtime for deterministicness' sake.
     return CompilationJudgement.DontCompile
 
-  assert interpreter.profTotalFrames != 0
   let dispatchRatio =
     float(clause.profIterationsSpent.int / interpreter.profTotalFrames.int) * 100f
 
@@ -1045,7 +1044,11 @@ proc shouldCompile*(
   # running them in the interpreter) for no reason?
   if *clause.cachedJudgement and judgement < &clause.cachedJudgement:
     judgement = &clause.cachedJudgement
-  else:
+  elif judgement != CompilationJudgement.DontCompile:
+    # Only cache the judgement if it isn't due to the code
+    # not being warm enough, otherwise code that doesn't
+    # get warm enough in a short period of time will never
+    # get compiled.
     clause.cachedJudgement = some(judgement)
 
   # TODO: implement more heuristics
@@ -1092,6 +1095,12 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
       continue
 
     # If this clause is considered hot, consider compiling it.
+    # TODO: A massive weakness of our JIT is that it currently
+    # only accounts for entire functions and not sub-sections of
+    # a function. This means that we cannot, say, optimize an infinite loop AT ALL
+    # or optimize a really slow loop as soon as viable. Ideally, we should have a way
+    # to compile the entire function then make the CPU's IP jump to the compiled
+    # instruction where `interpreter.currIndex` is at
     if interpreter.currIndex == 0 and hasJITSupport and interpreter.useJit and
         not interpreter.trapped:
       let (gettingCompiled, tier) = interpreter.shouldCompile(clause)
