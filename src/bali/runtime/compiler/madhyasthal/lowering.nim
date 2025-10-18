@@ -151,6 +151,7 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
 
   while not stream.eof:
     let op = stream.peek()
+    # debugEcho $op.index & ") " & $op.opcode
     stream.opToIrMap[op.index.int] = fn.insts.len
 
     case op.opcode
@@ -257,5 +258,5 @@ proc lower*(clause: Clause): Option[ir.Function] =
   var fn = Function(name: clause.name)
   var stream = OpStream(ops: clause.operations)
 
-  discard lowerStream(fn, stream)
-  return some(fn)
+  if lowerStream(fn, stream):
+    return some(fn)

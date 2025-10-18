@@ -3,5 +3,5 @@
 */
 
 while (true == true) {
-	console.log("Hello, bali!")
+	// console.log("Hello, bali!")
 }

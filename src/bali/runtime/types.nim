@@ -1,4 +1,6 @@
 ## Runtime types
+##
+## Copyright (C) 2024-2025 Trayambak Rai (xtrayambak at disroot dot org)
 
 import std/[options, hashes, logging, tables, sugar]
 import pkg/bali/runtime/vm/ir/generator
