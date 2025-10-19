@@ -120,7 +120,6 @@ type
     allocStatsStart*: AllocStats
 
     types*: seq[JSType]
-    predefinedBytecode*: string
 
     heapManager*: HeapManager
     deathCallback*: DeathCallback

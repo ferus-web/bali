@@ -1,8 +1,11 @@
+## Bytecode interpreter implementation
+##
+## Copyright (C) 2024-2025 Trayambak Rai (xtrayambak at disroot dot org)
+
 import std/[math, tables, strutils, options]
 import pkg/bali/runtime/vm/heap/[manager, boehm]
-import pkg/bali/runtime/vm/[atom, debugging]
-import pkg/bali/runtime/vm/[shared, tokenizer, exceptions]
-import pkg/bali/runtime/vm/interpreter/[operation, bytecodeopsetconv, types, resolver]
+import pkg/bali/runtime/vm/[atom, debugging, exceptions]
+import pkg/bali/runtime/vm/interpreter/[operation, types, resolver]
 import pkg/bali/runtime/vm/ir/shared
 import pkg/bali/runtime/normalize
 import pkg/bali/runtime/compiler/base
@@ -35,7 +38,6 @@ type
   AddAtomsOpImpl* = proc(a, b: JSValue): JSValue {.gcsafe.}
 
   PulsarInterpreter* = object
-    tokenizer: Tokenizer
     currClause: int
     currIndex*: uint = 0
     clauses: seq[Clause]
@@ -107,32 +109,6 @@ proc getClause*(interpreter: PulsarInterpreter, name: string): Option[Clause] =
   for clause in interpreter.clauses:
     if clause.name == name:
       return clause.some()
-
-proc analyze*(interpreter: var PulsarInterpreter) =
-  var cTok = interpreter.tokenizer.deepCopy()
-  while not interpreter.tokenizer.isEof:
-    let
-      clause = interpreter.getClause()
-      tok = cTok.maybeNext()
-
-    if *tok and (&tok).kind == tkClause:
-      interpreter.clauses.add(
-        Clause(name: (&tok).clause, operations: @[], rollback: ClauseRollback())
-      )
-      interpreter.currClause = interpreter.clauses.len - 1
-      interpreter.tokenizer.pos = cTok.pos
-      continue
-
-    let op = nextOperation interpreter.tokenizer
-
-    if *clause and *op:
-      interpreter.clauses[interpreter.currClause].operations.add(&op)
-      cTok.pos = interpreter.tokenizer.pos
-      continue
-
-    if *tok and (&tok).kind == tkEnd and *clause:
-      interpreter.tokenizer.pos = cTok.pos
-      continue
 
 {.push checks: on, inline.}
 proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: int) {.cdecl.} =
@@ -1311,21 +1287,6 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
     interp[].midtier = MidtierJIT(
       initJITForPlatform(interp, interp.heapManager, callbacks, Tier.Midtier)
     )
-
-proc newPulsarInterpreter*(source: string): ptr PulsarInterpreter =
-  var interp = cast[ptr PulsarInterpreter](allocShared(sizeof(PulsarInterpreter)))
-  interp[] = PulsarInterpreter(
-    tokenizer: newTokenizer(source),
-    clauses: @[],
-    builtins: initTable[string, Builtin](),
-    currIndex: 0'u,
-    stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
-    trapped: false, # Pre-allocate space for some value pointers
-  )
-
-  interp.tryInitializeJIT()
-
-  interp
 
 proc feed*(interp: var PulsarInterpreter, modules: seq[CodeModule]) =
   for module in modules:

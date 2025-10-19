@@ -116,7 +116,6 @@ proc allocRuntime*(ctx: Input, file: string): Runtime =
         jitCompiler: not ctx.enabled("disable-jit", "Nz"),
       ),
     ),
-    predefinedBytecode = readFile(file),
   )
   let expStr = ctx.flag("enable-experiments")
 
@@ -360,21 +359,6 @@ proc execFile(ctx: Input, file: string) {.inline.} =
       " bytes"
     echo "* GC Allocations: " & $runtime.heapManager.metrics.allocatedBytesGc & " bytes"
 
-proc execBytecodeFile(file: string) =
-  if not fileExists(file):
-    die "file not found:", file
-
-  let perms = getFilePermissions(file)
-  if fpGroupRead notin perms and fpUserRead notin perms:
-    die "access denied:", file
-
-  let bytecode = readFile(file)
-  if bytecode.len < 1:
-    die "empty bytecode file: " & file
-
-  let runtime = newRuntime(file = file, ast = AST(), predefinedBytecode = bytecode)
-  runtime.run()
-
 proc baldeRun(ctx: Input) =
   if not ctx.enabled("verbose", "v"):
     setLogFilter(lvlWarn)
@@ -545,7 +529,6 @@ Options:
   --dump-statistics                       Dump some diagnostic statistics from the runtime.
   --incremental                           Set the garbage collector mode to incremental, potentially reducing GC latency.
   --version, -V                           Output the version of Bali/Balde in the standard output
-  --evaluate-bytecode, -B                 Evaluate the provided source as bytecode instead of parsing it as JavaScript.
   --dump-allocation-metrics, -A           Dump information about all allocations performed during the JavaScript execution phase.
 
 Codegen Flags:
@@ -585,10 +568,7 @@ proc main() {.inline.} =
     quit(0)
 
   if input.command.len > 0:
-    if not input.enabled("evaluate-bytecode", "B"):
-      baldeRun(input)
-    else:
-      execBytecodeFile(input.command)
+    baldeRun(input)
   else:
     baldeRepl(input)
 

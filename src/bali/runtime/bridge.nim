@@ -68,7 +68,6 @@ proc dumpStatistics*(runtime: Runtime): RuntimeStats =
   var stats: RuntimeStats
 
   stats.atomsAllocated = uint(runtime.vm.stack.len)
-  stats.bytecodeSize = uint(runtime.vm.tokenizer.input.len / 1024)
   stats.breaksGenerated = uint(runtime.irHints.breaksGeneratedAt.len)
   stats.vmHasHalted = runtime.vm.halt
   stats.fieldAccesses = runtime.statFieldAccesses

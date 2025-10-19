@@ -130,19 +130,18 @@ proc newRuntime*(
     file: string,
     ast: AST = default(AST),
     opts: InterpreterOpts = default(InterpreterOpts),
-    predefinedBytecode: string = "",
 ): Runtime {.inline.} =
   ## Instantiate the runtime by feeding it the name of the file executed and the AST, alongside the interpreter settings.
-  ## If the input isn't from a file, you can set it to anything - it's primarily used for caching.
-  ## The AST must be valid.
+  ## If the input isn't from a file, you can set it to anything (e.g `repl#1`) - it's primarily used for debug traces.
+  ##
+  ## **NOTE**: If the AST is not valid, a `SyntaxError` will be thrown as soon as `run()` is called.
   ## You can check the options exposed to you in `InterpreterOpts` by checking its documentation.
 
   Runtime(
     ast: ast,
     clauses: @[],
     ir: newIRGenerator("bali"),
-    vm: newPulsarInterpreter(predefinedBytecode),
+    vm: newPulsarInterpreter(@[]),
     heapManager: initHeapManager(),
     opts: opts,
-    predefinedBytecode: predefinedBytecode,
   )
