@@ -520,29 +520,13 @@ proc genBinaryOp(
 
   # TODO: recursive IR generation
 
-  const MutatorOps = {
-    BinaryOperation.Add, BinaryOperation.Sub, BinaryOperation.Mult, BinaryOperation.Div
-  }
-
   let
     leftIdx =
       if leftTerm.kind == AtomHolder:
         runtime.index("left_term", internalIndex(stmt))
       elif leftTerm.kind == IdentHolder:
-        if stmt.op notin MutatorOps:
-          runtime.index(leftTerm.ident, defaultParams(fn))
-        else:
-          block:
-            # If the op causes [1] to be mutated, we need to copy [1] into a temporary space
-            # to avoid unforeseen side effects and invariants.
-            inc runtime.addrIdx
-            runtime.ir.copyAtom(
-              runtime.index(leftTerm.ident, defaultParams(fn)), runtime.addrIdx
-            )
-
-            runtime.addrIdx
+        runtime.index(leftTerm.ident, defaultParams(fn))
       else:
-        unreachable
         0
 
     rightIdx =
@@ -551,7 +535,6 @@ proc genBinaryOp(
       elif rightTerm.kind == IdentHolder:
         runtime.index(rightTerm.ident, defaultParams(fn))
       else:
-        unreachable
         0
 
   case stmt.op
@@ -629,15 +612,16 @@ proc genBinaryOp(
     warn "emitter: unimplemented binary operation: " & $stmt.op
 
   if *stmt.binStoreIn:
-    let indexed =
-      if not internal:
-        runtime.markLocal(fn, &stmt.binStoreIn)
-        runtime.addrIdx - 1'u
-      else:
-        runtime.index(&stmt.binStoreIn, internalIndex(stmt))
-
-    if leftIdx != indexed:
-      runtime.ir.copyAtom(leftIdx, indexed)
+    runtime.ir.copyAtom(
+      leftIdx,
+      runtime.index(
+        &stmt.binStoreIn,
+        if not internal:
+          defaultParams(fn)
+        else:
+          internalIndex(stmt),
+      ),
+    )
   elif *exprStoreIn:
     assert *parentStmt
     runtime.ir.copyAtom(
