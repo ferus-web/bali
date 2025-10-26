@@ -520,7 +520,7 @@ proc genBinaryOp(
 
   # TODO: recursive IR generation
 
-  let
+  var
     leftIdx =
       if leftTerm.kind == AtomHolder:
         runtime.index("left_term", internalIndex(stmt))
@@ -536,6 +536,16 @@ proc genBinaryOp(
         runtime.index(rightTerm.ident, defaultParams(fn))
       else:
         0
+
+  if not internal and *stmt.binStoreIn and leftTerm.kind == IdentHolder and
+      leftTerm.ident != &stmt.binStoreIn:
+    # In a case like
+    # <z> = <x> + <y>
+    # We can't just go around mutating <x>, as that'd break semantic correctness.
+    # As such, we need to copy <x> to <z> and rewrite the LHS address to <z>'s address
+    runtime.markLocal(fn, &stmt.binStoreIn)
+    runtime.ir.copyAtom(leftIdx, runtime.addrIdx - 1)
+    leftIdx = runtime.addrIdx - 1
 
   case stmt.op
   of BinaryOperation.Add:
@@ -612,16 +622,14 @@ proc genBinaryOp(
     warn "emitter: unimplemented binary operation: " & $stmt.op
 
   if *stmt.binStoreIn:
-    runtime.ir.copyAtom(
-      leftIdx,
-      runtime.index(
-        &stmt.binStoreIn,
-        if not internal:
-          defaultParams(fn)
-        else:
-          internalIndex(stmt),
-      ),
-    )
+    let address =
+      if internal:
+        runtime.index(&stmt.binStoreIn, internalIndex(stmt))
+      else:
+        leftIdx
+
+    # runtime.ir.loadNull(address)
+    runtime.ir.copyAtom(leftIdx, address)
   elif *exprStoreIn:
     assert *parentStmt
     runtime.ir.copyAtom(

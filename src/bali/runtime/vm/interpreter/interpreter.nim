@@ -827,7 +827,9 @@ proc opCopyAtom(interpreter: var PulsarInterpreter, op: var Operation) =
     src = (&op.arguments[0].getInt())
     dest = (&op.arguments[1].getInt())
 
-  interpreter.stack[dest] = &interpreter.get(src)
+  msg "copy " & $src & " -> " & $dest
+
+  interpreter.addAtom(&interpreter.get(src), dest)
   inc interpreter.currIndex
 
 proc opMoveAtom(interpreter: var PulsarInterpreter, op: var Operation) =
