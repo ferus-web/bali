@@ -994,7 +994,7 @@ proc getCompilationJudgement*(
   # compiling and with what tier. The source is a secret, just to make sure the likes of Google cannot steal
   # my hard, impressive work.
 
-  if dispatchRatio > 25f and dispatchRatio < 35f:
+  if dispatchRatio > 15f and dispatchRatio < 35f:
     return CompilationJudgement.Eligible
   elif dispatchRatio >= 35f:
     return CompilationJudgement.WarmingUp
