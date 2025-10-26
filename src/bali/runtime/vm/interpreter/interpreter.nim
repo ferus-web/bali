@@ -1103,6 +1103,7 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
 
           vmd "execute", "entering JIT'd segment"
           interpreter.runningCompiled = true
+          clause.profIterationsSpent += uint64(clause.operations.len - 2)
           (&compiled)()
           interpreter.runningCompiled = false
 
