@@ -1032,7 +1032,15 @@ proc shouldCompile*(
   # TODO: implement more heuristics
   case judgement
   of CompilationJudgement.Eligible:
-    return (gettingCompiled: true, tier: some(Tier.Baseline))
+    # If the function is trivial (< 4 ops), then we can just put it through
+    # the baseline compiler. Otherwise, we can put it through the midtier
+    # since it's leaps faster and doesn't take a lot of extra time to do
+    # its thingmajig.
+
+    if clause.operations.len < 4:
+      return (gettingCompiled: true, tier: some(Tier.Baseline))
+    else:
+      return (gettingCompiled: true, tier: some(Tier.Midtier))
   of CompilationJudgement.WarmingUp:
     return (gettingCompiled: true, tier: some(Tier.Midtier))
   else:
