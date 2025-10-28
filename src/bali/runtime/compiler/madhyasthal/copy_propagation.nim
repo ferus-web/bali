@@ -2,7 +2,7 @@
 ##
 ## The basic idea behind this pass is that the middle-end (AST -> Bytecode / "Niche") generates a lot of unnecessary
 ## copy instructions. We can safely* eliminate these unnecessary copies if we can prove that the copied destination
-## is unworthy of copying (it is never mutated)
+## is unworthy of copying (it is never mutated AND it is locally defined)
 ##
 ## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[sets]
@@ -51,6 +51,12 @@ func eliminateUnmutatedCopies*(
       if mut.reg == copy.dest:
         # We can't eliminate this, it's mutated further.
         # Any attempts to eliminate this copy will cause semantic breakage.
+        continue
+
+      if copy.dest notin pipeline.info.esc.locals:
+        # If the register is not locally owned, we cannot
+        # safely alias the copy as it might end up mutating
+        # a global state, which'd cause semantic breakage.
         continue
 
       unmutated.incl(copy)

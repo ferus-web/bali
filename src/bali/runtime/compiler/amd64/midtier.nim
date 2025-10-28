@@ -323,7 +323,10 @@ proc compile*(
 
   var pipeline = Pipeline(fn: &lowered)
   pipeline.optimize(
-    {Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.CopyPropagation}
+    {
+      Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.EscapeAnalysis,
+      Passes.CopyPropagation,
+    }
   )
 
   return compileLowered(cgen, pipeline)
