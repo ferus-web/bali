@@ -11,7 +11,7 @@
 ## 
 ## THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import std/[macros, options]
-import pkg/bali/internal/assembler/buffer_alloc
+import pkg/bali/internal/assembler/buffer_alloc, pkg/bali/platform/[libc]
 
 type
   CannotAllocateJITBuffer* = object of Defect
@@ -194,16 +194,19 @@ const BaseAssemblerSize* {.intdefine: "BaliBaseAssemblerSize".} = 0x10000
 proc curAdr*(assembler: AssemblerX64): int64 =
   cast[int64](assembler.data) + assembler.offset
 
-proc initAssemblerX64*(data: ptr UncheckedArray[byte], capacity: int): AssemblerX64 =
-  result.data = data
-  result.capacity = capacity
+# proc initAssemblerX64*(data: ptr UncheckedArray[byte], capacity: int): AssemblerX64 =
+#  result.data = data
+#  result.capacity = capacity
 
-proc initAssemblerX64*(): AssemblerX64 =
+proc initAssemblerX64*(): AssemblerX64 {.sideEffect.} =
   var s: AssemblerX64
   s.data = cast[ptr UncheckedArray[byte]](allocateExecutableBuffer(
     uint64(BaseAssemblerSize), readable = true, writable = true
   ))
+
   s.capacity = BaseAssemblerSize
+  when defined(baliAssemblerSimulateBufferOom):
+    s.offset = s.capacity
 
   ensureMove(s)
 
@@ -255,9 +258,44 @@ declareMemCtors(MemOnly)
 proc isDirectReg[T](rm: Rm[T], reg: T): bool =
   rm.kind == rmDirect and rm.directReg == reg
 
+proc expandBuffer*(assembler: var AssemblerX64, baseline: uint64) {.sideEffect.} =
+  ## This routine "expands" the working area/buffer of the assembler
+  ## by `baseline * 4` bytes. `baseline` is the minimum number of bytes required
+  ## for the next `write()` to succeed safely. (i.e, sans any UB)
+  ##
+  ## **NOTE**: This is very expensive!
+  ##           It internally calls `posix_memalign()`/`VirtualAlloc()` and frees
+  ##           the old buffer.
+  ##
+  ## 4x the baseline is allocated for performance's sake.
+
+  let
+    expansion = baseline * 4'u64
+    capacity = uint64(assembler.capacity) + expansion
+    # If we need a byte more to fit in, we'll allocate 4 bytes instead. Remember, mmap() is not a cheap syscall!
+
+  echo capacity, " shalt be allocated"
+
+  # TODO: Perhaps there's a way to expand the pre-existing buffer that's
+  # likely cheaper?
+  let newBuffer = cast[ptr UncheckedArray[byte]](allocateExecutableBuffer(
+    capacity, readable = true, writable = true
+  ))
+
+  # Copy the pre-existing assembled machine code into the new buffer.
+  echo assembler.offset, " bytes will be copied"
+  copyMem(newBuffer[0].addr, assembler.data[0].addr, assembler.offset - 1)
+
+  # Dispose of the old buffer.
+  libc.free(assembler.data)
+
+  assembler.data = newBuffer
+  assembler.capacity = int(capacity)
+
 proc write[T](assembler: var AssemblerX64, data: T) =
-  assert assembler.offset + sizeof(T) < assembler.capacity,
-    "Assembler has run out of buffer memory"
+  if assembler.offset + sizeof(T) > assembler.capacity:
+    assembler.expandBuffer(baseline = uint64(sizeof(T)))
+
   copyMem(addr assembler.data[assembler.offset], unsafeAddr data, sizeof(T))
   assembler.offset += sizeof(T)
 
