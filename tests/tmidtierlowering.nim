@@ -9,8 +9,8 @@ var x = createRuntimeForSource(
   """
 function thing()
 {
-	let x = 32 // x never escapes, so it can be stack-allocated
-	let y = 64 // y never escapes, so it can be stack-allocated
+        let x = 32
+	let y = 64
 	let z = x + y;
 
 	return z
@@ -36,7 +36,10 @@ echo dumpFunction(lowered)
 
 var ppl = Pipeline(fn: lowered)
 ppl.optimize(
-  {Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.CopyPropagation}
+  @[
+    Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.EscapeAnalysis,
+    Passes.CopyPropagation,
+  ]
 )
 print ppl.info
 
