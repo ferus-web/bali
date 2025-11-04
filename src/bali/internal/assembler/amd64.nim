@@ -194,6 +194,18 @@ const BaseAssemblerSize* {.intdefine: "BaliBaseAssemblerSize".} = 0x10000
 proc curAdr*(assembler: AssemblerX64): int64 =
   cast[int64](assembler.data) + assembler.offset
 
+proc dump*(s: AssemblerX64, file: string) =
+  assert(s.offset < s.capacity)
+
+  var data = newSeqOfCap[uint8](s.offset)
+  var i = 0
+
+  while i < s.offset:
+    data &= s.data[i]
+    inc i
+
+  writeFile(file, ensureMove(data))
+
 proc initAssemblerX64*(data: ptr UncheckedArray[byte], capacity: int): AssemblerX64 =
   result.data = data
   result.capacity = capacity
