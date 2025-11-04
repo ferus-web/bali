@@ -9,6 +9,7 @@ func markDef(pipeline: var pipeline.Pipeline, reg: ir.Reg, at: SomeNumber) =
   pipeline.info.dce.defs.incl(
     Definition(reg: reg, inst: uint32(at))
   )
+  pipeline.info.dce.rawDefs.incl(reg)
   #!fmt: on
 
 func markUse(pipeline: var pipeline.Pipeline, reg: ir.Reg, at: SomeNumber) =
@@ -135,9 +136,19 @@ func scanAndElimDeadRefs*(pipeline: var pipeline.Pipeline, dead: HashSet[ir.Reg]
     pipeline.fn.insts &= inst
 
     if inst.args[0].kind == avkPos:
+      if inst.args[0].vreg notin pipeline.info.dce.rawDefs:
+        # We cannot determine if a global is alive,
+        # and we needn't care either.
+        continue
+
       pipeline.info.dce.alive.incl(inst.args[0].vreg)
 
     if inst.args[1].kind == avkPos:
+      if inst.args[1].vreg notin pipeline.info.dce.rawDefs:
+        # We cannot determine if a global is alive,
+        # and we needn't care either.
+        continue
+
       pipeline.info.dce.alive.incl(inst.args[1].vreg)
 
 func eliminateDeadCodeNaive*(pipeline: var pipeline.Pipeline) =
