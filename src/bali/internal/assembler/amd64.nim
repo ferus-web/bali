@@ -364,7 +364,7 @@ proc writeModrm[T, U](assembler: var AssemblerX64, rm: Rm[T], reg: U): int =
   of rmDirect:
     when T isnot void:
       assembler.writeField 0b11, byte(reg), byte(rm.directReg)
-      -1
+      return -1
     else:
       raiseAssert(
         "memory only operand. Direct register not allowed (how was this constructed?)"
@@ -399,7 +399,7 @@ proc writeModrm[T, U](assembler: var AssemblerX64, rm: Rm[T], reg: U): int =
       assembler.writeField 0b00, byte(reg), 0b100
       assembler.writeField byte(rm.simpleScale), byte(rm.simpleIndex), 0b101
       assembler.write rm.simpleDisp
-    -1
+    return -1
   of rmIndirectScaledAndBase:
     assert rm.baseIndex != regRsp, "rsp cannot be scaled"
     if rm.baseDisp == 0 and rm.base != regRbp and rm.base != regR13:
@@ -413,12 +413,12 @@ proc writeModrm[T, U](assembler: var AssemblerX64, rm: Rm[T], reg: U): int =
       assembler.writeField 0b10, byte(reg), 0b100
       assembler.writeField byte(rm.baseScale), byte(rm.baseIndex), byte(rm.base)
       assembler.write rm.baseDisp
-    -1
+    return -1
   of rmIndirectGlobal:
     assembler.writeField 0b00, byte(reg), 0b101
     let offset = assembler.offset
     assembler.write 0'i32
-    offset
+    return offset
 
 proc fixupRip[T](assembler: var AssemblerX64, modrm: Rm[T], location: int) =
   if location != -1:

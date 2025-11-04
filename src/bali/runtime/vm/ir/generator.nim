@@ -7,23 +7,14 @@ import bali/runtime/vm/[atom]
 import bali/runtime/vm/ir/[emitter, shared]
 import pkg/shakar
 
-proc newModule*(gen: IRGenerator, name: string) {.inline.} =
+func newModule*(gen: IRGenerator, name: string) {.inline, quirky.} =
   ## Create a new module/function/clause definition. 
   ## The name allotted to this module must be unique.
-  when not defined(danger):
-    for i, module in gen.modules:
-      if module.name == name:
-        raise newException(
-          ValueError,
-          "Attempt to create duplicate module \"" & name &
-            "\"; already exists at position " & $i,
-        )
-
   gen.cachedModule = nil
-  gen.modules.add(CodeModule(name: name, operations: newSeq[IROperation]()))
+  gen.modules.add(CodeModule(name: name, operations: newSeqOfCap[IROperation](8)))
   gen.currModule = name
 
-proc addOp*(gen: IRGenerator, operation: IROperation): uint {.inline.} =
+proc addOp*(gen: IRGenerator, operation: IROperation): uint {.inline, quirky.} =
   ## Add an operation to the current clause's operation list.
   ## You shouldn't have to use this directly.
 
@@ -41,8 +32,9 @@ proc addOp*(gen: IRGenerator, operation: IROperation): uint {.inline.} =
     gen.cachedIndex = gen.cachedModule.operations.len.uint
     return gen.cachedIndex
 
-  raise newException(FieldDefect, "Cannot find any clause with name: " & gen.currModule)
+  unreachable
 
+{.push quirky.}
 proc loadInt*[V: SomeInteger](
     gen: IRGenerator, position: uint, value: V
 ): uint {.inline, discardable.} =
@@ -412,5 +404,7 @@ proc emit*(gen: IRGenerator, destination: File) {.inline, sideEffect.} =
 func newIRGenerator*(name: string): IRGenerator {.inline.} =
   ## Initialize a new IR generation helper.
   IRGenerator(name: name, modules: newSeq[CodeModule]())
+
+{.pop.}
 
 export shared, Ops
