@@ -13,6 +13,7 @@ mkShell {
     act
     boa
     mimalloc
+    ltrace
   ];
 
   LD_LIBRARY_PATH = lib.makeLibraryPath [

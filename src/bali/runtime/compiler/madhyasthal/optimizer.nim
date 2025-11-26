@@ -10,7 +10,7 @@ import
   ]
 import pkg/[shakar]
 
-func optimize*(pipeline: var pipeline.Pipeline, passes: set[Passes] = {}) =
+func optimize*(pipeline: var pipeline.Pipeline, passes: seq[Passes]) =
   for pass in passes:
     case pass
     of Passes.NaiveDeadCodeElim:

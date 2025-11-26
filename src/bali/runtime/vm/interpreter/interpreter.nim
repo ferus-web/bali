@@ -22,8 +22,8 @@ when hasJITSupport:
     .}
 
 const
-  BaliVMInitialPreallocatedStackSize* {.intdefine.} = 16
-  BaliVMPreallocatedStackSize* {.intdefine.} = 4
+  BaliVMInitialPreallocatedStackSize* {.intdefine.} = 64
+  BaliVMPreallocatedStackSize* {.intdefine.} = 2
 
 type
   Registers* = object
@@ -76,7 +76,7 @@ proc `=destroy`*(vm: PulsarInterpreter) =
   # I think we're somehow confusing ORC.
   discard
 
-proc find*(clause: Clause, id: uint): Option[Operation] =
+proc find*(clause: Clause, id: uint): Option[Operation] {.inline, cdecl.} =
   vmd "find-op-in-clause", "target = " & $id & "; len = " & $clause.operations.len
   if clause.operations.len.uint <= id:
     vmd "find-op-in-clause", "id is beyond op len of " & $clause.operations.len.uint
@@ -87,7 +87,7 @@ proc find*(clause: Clause, id: uint): Option[Operation] =
 
 func getClause*(
     interpreter: PulsarInterpreter, id: Option[int] = none int
-): Option[Clause] =
+): Option[Clause] {.inline, cdecl.} =
   let id =
     if *id:
       &id
@@ -101,34 +101,38 @@ func getClause*(
 
 proc get*(
     interpreter: PulsarInterpreter, id: int, ignoreLocalityRules: bool = false
-): Option[JSValue] =
-  if id < interpreter.stack.len:
+): Option[JSValue] {.inline, cdecl.} =
+  if id < interpreter.stack.len and interpreter.stack[id] != nil:
     return some(interpreter.stack[id])
 
-proc getClause*(interpreter: PulsarInterpreter, name: string): Option[Clause] =
+proc getClause*(
+    interpreter: PulsarInterpreter, name: string
+): Option[Clause] {.inline, cdecl.} =
   for clause in interpreter.clauses:
     if clause.name == name:
       return clause.some()
 
 {.push checks: on, inline.}
-proc addAtom*(interpreter: var PulsarInterpreter, value: JSValue, id: int) {.cdecl.} =
+proc addAtom*(
+    interpreter: var PulsarInterpreter, value: JSValue, id: int
+) {.inline, cdecl.} =
   if id > interpreter.stack.len - 1:
     # We need to allocate more slots.
     interpreter.stack.setLen(id + BaliVMPreallocatedStackSize)
 
   interpreter.stack[id] = value
 
-proc hasBuiltin*(interpreter: PulsarInterpreter, name: string): bool =
+proc hasBuiltin*(interpreter: PulsarInterpreter, name: string): bool {.inline, cdecl.} =
   name in interpreter.builtins
 
 proc registerBuiltin*(
     interpreter: var PulsarInterpreter, name: string, builtin: Builtin
-) =
+) {.inline, cdecl.} =
   interpreter.builtins[name] = builtin
 
 proc callBuiltin*(
     interpreter: PulsarInterpreter, name: string, op: Operation
-) {.gcsafe.} =
+) {.gcsafe, inline, cdecl.} =
   interpreter.builtins[name](op)
 
 {.pop.}
@@ -137,7 +141,7 @@ proc throw*(
     interpreter: var PulsarInterpreter,
     exception: RuntimeException,
     bubbling: bool = false,
-) =
+) {.inline, cdecl.} =
   if *interpreter.currJumpOnErr:
     interpreter.currIndex = &interpreter.currJumpOnErr - 2
     interpreter.currJumpOnErr = none(uint)
@@ -187,7 +191,9 @@ proc throw*(
 
   interpreter.trace = newTrace
 
-proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
+proc generateTraceback*(
+    interpreter: PulsarInterpreter
+): Option[string] {.inline, cdecl.} =
   var
     msg = "Traceback (most recent call last)"
     currTrace = interpreter.trace
@@ -287,7 +293,7 @@ proc generateTraceback*(interpreter: PulsarInterpreter): Option[string] =
 
   some(ensureMove(msg))
 
-proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: int) =
+proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: int) {.inline, cdecl.} =
   let
     a = interpreter.get(src)
     b = interpreter.get(dest)
@@ -331,12 +337,12 @@ proc appendAtom*(interpreter: var PulsarInterpreter, src, dest: int) =
   else:
     discard
 
-proc zeroOut*(interpreter: var PulsarInterpreter, index: int) {.inline.} =
+proc zeroOut*(interpreter: var PulsarInterpreter, index: int) {.inline, cdecl.} =
   ## Remove a stack index.
   boehmDealloc(interpreter.stack[index])
   interpreter.stack.del(index)
 
-proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
+proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline, cdecl.} =
   var
     atomA = interpreter.get(a)
     atomB = interpreter.get(b)
@@ -350,7 +356,10 @@ proc swap*(interpreter: var PulsarInterpreter, a, b: int) {.inline.} =
   interpreter.addAtom(&atomA, b)
   interpreter.addAtom(&atomB, a)
 
-proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) {.gcsafe.} =
+import pkg/pretty
+proc call*(
+    interpreter: var PulsarInterpreter, name: string, op: Operation
+) {.gcsafe, inline, cdecl.} =
   msg "calling function " & name
   msg "trapped? " & $interpreter.trapped
 
@@ -386,7 +395,8 @@ proc call*(interpreter: var PulsarInterpreter, name: string, op: Operation) {.gc
       msg "new op to execute chosen @ " & newClause.name & '/' & $interpreter.currIndex
       # set execution op index to 0 to start from the beginning
     else:
-      raise newException(ValueError, "Reference to unknown clause: " & name)
+      print interpreter.clauses
+      unreachable
 
 proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) {.gcsafe.} =
   if value.kind == Integer:
@@ -454,7 +464,7 @@ proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: i
       InvalidRegisterRead, "Attempt to read from non-existant register " & $register
     )
 
-{.push cdecl, gcsafe.}
+{.push cdecl, gcsafe, quirky.}
 proc opCall(interpreter: var PulsarInterpreter, op: var Operation) =
   let name = &op.arguments[0].getStr()
   msg "call " & name
@@ -1322,13 +1332,12 @@ proc feed*(interp: var PulsarInterpreter, modules: seq[CodeModule]) =
 proc newPulsarInterpreter*(clauses: seq[CodeModule]): ptr PulsarInterpreter =
   var interp = cast[ptr PulsarInterpreter](allocShared(sizeof(PulsarInterpreter)))
   interp[] = PulsarInterpreter(
-    clauses: @[],
+    clauses: newSeqOfCap[Clause](8),
     builtins: initTable[string, Builtin](),
     currIndex: 0'u,
     stack: newSeq[JSValue](BaliVMInitialPreallocatedStackSize),
     trapped: false, # Pre-allocate space for some value pointers
   )
-  interp.heapManager = initHeapManager()
   interp[].feed(clauses)
   interp.tryInitializeJIT()
 

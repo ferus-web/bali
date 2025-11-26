@@ -53,11 +53,15 @@ func eliminateUnmutatedCopies*(
         # Any attempts to eliminate this copy will cause semantic breakage.
         continue
 
-      if copy.dest notin pipeline.info.esc.locals:
+      if copy.source notin pipeline.info.esc.locals:
+        # debugecho "Can't optimize escapee %" & $copy.source & " -> %" & $copy.dest
         # If the register is not locally owned, we cannot
         # safely alias the copy as it might end up mutating
         # a global state, which'd cause semantic breakage.
         continue
+
+      # print pipeline.info.esc.locals
+      # debugecho "Optimizing local %" & $copy.source & " -> %" & $copy.dest
 
       unmutated.incl(copy)
 

@@ -8,7 +8,7 @@ import bali/internal/sugar
 type JSConsole* = object
 
 const DefaultConsoleDelegate* = proc(level: ConsoleLevel, msg: string) {.gcsafe.} =
-  echo $level & ": " & msg
+  echo msg
 
 proc attachConsoleDelegate*(runtime: Runtime, del: ConsoleDelegate) {.inline.} =
   runtime.consoleDelegate = del

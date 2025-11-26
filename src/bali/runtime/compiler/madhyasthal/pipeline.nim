@@ -18,6 +18,7 @@ type
 
   DCEPassInfo* = object
     defs*: HashSet[Definition]
+    rawDefs*: HashSet[ir.Reg]
     uses*: HashSet[Use]
     alive*: HashSet[ir.Reg]
 
@@ -45,3 +46,8 @@ type
     EscapeAnalysis
 
   OptimizationPass* = proc(state: var Pipeline): bool
+
+func isUsedBeyond*(dce: DCEPassInfo, reg: ir.Reg, inst: uint32): bool {.inline.} =
+  for use in dce.uses:
+    if use.reg == reg and use.inst > inst:
+      return true

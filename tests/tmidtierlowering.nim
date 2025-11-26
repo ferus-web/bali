@@ -1,6 +1,10 @@
 ## madhyasthal lowering tests
 import std/[importutils, tables, sets]
-import pkg/bali/runtime/compiler/madhyasthal/[ir, lowering, dumper, pipeline, optimizer]
+import
+  pkg/bali/runtime/compiler/madhyasthal/[ir, lowering, dumper, pipeline, optimizer],
+  pkg/bali/runtime/compiler/amd64/midtier,
+  pkg/bali/runtime/compiler/base,
+  pkg/bali/internal/assembler/amd64
 import pkg/bali/runtime/vm/interpreter/interpreter
 import pkg/bali/easy
 import pkg/[shakar, pretty]
@@ -9,8 +13,8 @@ var x = createRuntimeForSource(
   """
 function thing()
 {
-	let x = 32 // x never escapes, so it can be stack-allocated
-	let y = 64 // y never escapes, so it can be stack-allocated
+        let x = 32
+	let y = 64
 	let z = x + y;
 
 	return z
@@ -36,9 +40,16 @@ echo dumpFunction(lowered)
 
 var ppl = Pipeline(fn: lowered)
 ppl.optimize(
-  {Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.CopyPropagation}
+  @[
+    Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.EscapeAnalysis,
+    Passes.CopyPropagation,
+  ]
 )
 print ppl.info
 
 echo "Optimized: "
 echo dumpFunction(ppl.fn)
+
+discard x.vm.midtier.compile(outer)
+
+x.vm.midtier.s.dump("midkumo.bin")
