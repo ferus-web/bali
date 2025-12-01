@@ -1,6 +1,6 @@
 ## JavaScript tokenizer
 
-import std/[math, options, logging, strutils, tables]
+import std/[math, options, strutils, tables]
 import bali/grammar/token
 import bali/internal/sugar
 import results
@@ -75,7 +75,6 @@ proc tokenize*(
   tokens
 
 proc consumeInvalid*(tokenizer: Tokenizer): Token =
-  warn "tokenizer: consume invalid token for character: " & (&tokenizer.charAt()).repr()
   tokenizer.advance()
 
   Token(kind: TokenKind.Invalid)
@@ -192,35 +191,26 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
   Token(kind: TokenKind.Number, hasSign: hasSign, floatVal: valF32, intVal: intValue)
 
 proc consumeBackslash*(tokenizer: Tokenizer): Result[char, MalformedStringReason] =
-  debug "tokenizer: consume backslash"
   tokenizer.advance()
 
   if tokenizer.eof:
-    debug "tokenizer: `\\` is abruptly ended by the end of the stream, returning Invalid"
     return
 
   case &tokenizer.charAt()
   of 'u':
-    debug "tokenizer: backslash starts unicode sequence"
     discard tokenizer.consume()
     if not tokenizer.eof and &tokenizer.charAt() == '{':
-      debug "tokenizer: getting numeric unicode codepoint"
       discard tokenizer.consume()
       if not tokenizer.eof and &tokenizer.charAt(1) notin {'0' .. '9'}:
         # FIXME: `consumeNumeric` is stupid and will return zero when it can't parse a number ahead.
         # Fix that crap, this is a temporary solution.
-        debug "tokenizer: wanted to get numeric unicode codepoint, got `" &
-          &tokenizer.charAt(1) & "` instead."
         return err(MalformedStringReason.BadUnicodeEscape)
 
       let numeric = tokenizer.consumeNumeric(negative = false)
       let uniHex =
         if numeric.kind != TokenKind.Number or not *numeric.intVal:
-          debug "tokenizer: unicode escape is followed by non-number, setting codepoint to zero"
           0'i32
         else:
-          debug "tokenizer: unicode escape is followed by a number: " &
-            $(&numeric.intVal)
           &numeric.intVal
 
       if uniHex < 0'i32:
@@ -230,7 +220,6 @@ proc consumeBackslash*(tokenizer: Tokenizer): Result[char, MalformedStringReason
         return err(MalformedStringReason.UnicodeEscapeIntTooBig)
 
       if tokenizer.eof:
-        debug "tokenizer: hit EOF before seeing closing bracket of unicode escape codepoint"
         return err(MalformedStringReason.BadUnicodeEscape)
 
       tokenizer.pos -= 1
@@ -238,22 +227,17 @@ proc consumeBackslash*(tokenizer: Tokenizer): Result[char, MalformedStringReason
         # so we have to manually rewind it
       let brace = tokenizer.consume()
       if brace != '}':
-        debug "tokenizer: expected `}`, got `" & brace &
-          "` instead when interpreting unicode escape codepoint"
         return err(MalformedStringReason.BadUnicodeEscape)
       else:
-        debug "tokenizer: got `}` to successfully complete off unicode escape codepoint"
         tokenizer.pos += 1 # FIXME: same crap as above
 
       return ok(parseHexStr($uniHex)[0])
   else:
-    debug "tokenizer: got ANSI escape `\\" & &tokenizer.charAt() & '`'
     return ok(('\\' & &tokenizer.charAt())[0])
 
   return err(MalformedStringReason.BadUnicodeEscape)
 
 proc consumeIdentifier*(tokenizer: Tokenizer): Token =
-  debug "tokenizer: consume identifier"
   var
     ident = newString(0)
     containsUnicodeEsc = false
@@ -266,28 +250,23 @@ proc consumeIdentifier*(tokenizer: Tokenizer): Token =
       ident &= c
       tokenizer.advance()
     of '\\':
-      debug "tokenizer: found backslash whilst consuming identifier, checking if it's a unicode escape"
       let codepoint = tokenizer.consumeBackslash()
       if *codepoint:
-        debug "tokenizer: identifier contains unicode escape"
         containsUnicodeEsc = true
         ident &= &codepoint
     else:
       break
 
   if not Keywords.contains(ident):
-    debug "tokenizer: consumed identifier \"" & ident & "\""
     Token(
       kind: TokenKind.Identifier, ident: ident, containsUnicodeEsc: containsUnicodeEsc
     )
   else:
     let keyword = Keywords[ident]
-    debug "tokenizer: consumed keyword: " & $keyword
 
     Token(kind: keyword, containsUnicodeEsc: containsUnicodeEsc)
 
 proc consumeWhitespace*(tokenizer: Tokenizer): Token =
-  debug "tokenizer: consume whitespace"
   var ws = newString(0)
 
   while not tokenizer.eof():
@@ -300,8 +279,6 @@ proc consumeWhitespace*(tokenizer: Tokenizer): Token =
     else:
       break
 
-  debug "tokenizer: consumed " & $ws.len & " whitespace character(s)"
-
   Token(kind: TokenKind.Whitespace, whitespace: ws)
 
 proc consumeEquality*(tokenizer: Tokenizer): Token =
@@ -309,26 +286,21 @@ proc consumeEquality*(tokenizer: Tokenizer): Token =
   let next = tokenizer.charAt()
 
   if not *next:
-    debug "tokenizer: consume equal-to sign"
     return Token(kind: TokenKind.EqualSign)
 
   case &next
   of '=':
     if tokenizer.charAt(1) != some('='):
-      debug "tokenizer: consume equality sign"
       tokenizer.advance()
       return Token(kind: TokenKind.Equal)
     else:
-      debug "tokenizer: consume true equality sign"
       tokenizer.advance(2)
       return Token(kind: TokenKind.TrueEqual)
   else:
-    debug "tokenizer: consume equal-to sign because next char isn't another equal sign"
     return Token(kind: TokenKind.EqualSign)
 
 proc consumeString*(tokenizer: Tokenizer): Token =
   let closesWith = &tokenizer.charAt()
-  debug "tokenizer: consume string with closing character: " & closesWith
   tokenizer.advance()
 
   var
@@ -350,7 +322,6 @@ proc consumeString*(tokenizer: Tokenizer): Token =
           str &= &escaped
           continue
         else:
-          debug "tokenizer: got malformed unicode escape whilst consuming string"
           malformed = true
           malformationReason = @escaped
       else:
@@ -362,15 +333,10 @@ proc consumeString*(tokenizer: Tokenizer): Token =
     tokenizer.advance()
 
   if not malformed and (not tokenizer.eof and &tokenizer.charAt() != closesWith):
-    debug "tokenizer: string does not end with expected closing character"
     malformed = true
     malformationReason = MalformedStringReason.UnclosedString
 
   tokenizer.advance() # consume ending quote
-  if not malformed:
-    debug "tokenizer: consumed string \"" & str & '\"'
-  else:
-    warn "tokenizer: consumed malformed string: " & str
 
   Token(
     kind: TokenKind.String,
@@ -380,7 +346,6 @@ proc consumeString*(tokenizer: Tokenizer): Token =
   )
 
 proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
-  debug "tokenizer: consuming comment"
   tokenizer.advance()
   var comment = newString(0)
 
@@ -397,8 +362,6 @@ proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
     comment &= c
     tokenizer.advance()
 
-  debug "tokenizer: consumed comment: " & comment
-
   Token(kind: TokenKind.Comment, multiline: multiline, comment: comment)
 
 proc consumeSlash*(tokenizer: Tokenizer): Token =
@@ -407,7 +370,6 @@ proc consumeSlash*(tokenizer: Tokenizer): Token =
   let next = tokenizer.charAt()
 
   if not *next:
-    info "tokenizer: consumed divide sign"
     return Token(kind: TokenKind.Div)
 
   case &next
@@ -416,7 +378,6 @@ proc consumeSlash*(tokenizer: Tokenizer): Token =
   of '/':
     return tokenizer.consumeComment(multiline = false)
   else:
-    info "tokenizer: consumed divide sign"
     return Token(kind: TokenKind.Div)
 
 proc consumeExclaimation*(tokenizer: Tokenizer): Token =
@@ -459,7 +420,6 @@ proc consumeAmpersand*(tokenizer: Tokenizer): Token =
 
   case &next
   of '&':
-    debug "tokenizer: consumed And operand"
     tokenizer.advance()
     return Token(kind: TokenKind.And)
   else:
@@ -474,7 +434,6 @@ proc consumePipe*(tokenizer: Tokenizer): Token =
 
   case &next
   of '|':
-    debug "tokenizer: consumed Or operand"
     tokenizer.advance()
     return Token(kind: TokenKind.Or)
   else:
@@ -526,22 +485,17 @@ proc consumeLessThan*(tokenizer: Tokenizer): Token =
     return Token(kind: LessThan)
 
 proc consumeMinus*(tokenizer: Tokenizer): Token =
-  debug "tokenizer: consume minus sign"
   if not tokenizer.eof and (let c = tokenizer.charAt(1); *c):
     case &c
     of {'0' .. '9'}:
-      debug "tokenizer: minus sign is followed by numeric, consuming Number"
       return tokenizer.consumeNumeric(true)
     of '-':
-      debug "tokenizer: minus sign is followed by another one, consuming Decrement"
       tokenizer.advance(2)
       return Token(kind: TokenKind.Decrement)
     else:
-      debug "tokenizer: minus sign is followed by: " & &tokenizer.charAt(1)
       discard
 
   tokenizer.advance()
-  debug "tokenizer: minus sign is not followed by another minus, consuming Sub"
   return Token(kind: TokenKind.Sub)
 
 proc next*(tokenizer: Tokenizer): Token =
@@ -615,7 +569,6 @@ proc next*(tokenizer: Tokenizer): Token =
     if *codepoint:
       var token = tokenizer.consumeIdentifier()
 
-      debug "tokenizer: prepending " & &codepoint & " to identifier " & token.ident
       token.ident = &codepoint & token.ident
 
       token
