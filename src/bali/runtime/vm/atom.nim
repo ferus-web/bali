@@ -5,8 +5,6 @@ import std/[tables, hashes, options]
 import pkg/[shakar, gmp]
 import pkg/bali/runtime/vm/heap/manager
 
-{.experimental: "strictDefs".}
-
 type
   MAtomKind* {.size: sizeof(uint8).} = enum
     Null = 0

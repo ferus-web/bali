@@ -3,8 +3,6 @@ import bali/runtime/vm/atom
 import bali/runtime/normalize
 import bali/internal/sugar
 
-{.experimental: "strictDefs".}
-
 type
   StatementKind* = enum
     CreateImmutVal

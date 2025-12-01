@@ -5,8 +5,6 @@ import bali/grammar/token
 import bali/internal/sugar
 import results
 
-{.experimental: "strictDefs".}
-
 type
   TokenizerOpts* = object
     ignoreWhitespace*: bool = false

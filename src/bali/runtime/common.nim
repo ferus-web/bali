@@ -58,6 +58,7 @@ proc registerEcmaTypes*(runtime: Runtime) =
   std_number.generateStdIR(runtime)
   std_set.generateStdIR(runtime)
   std_object.generateStdIR(runtime)
+  std_function.generateBindings(runtime)
 
   parseIntGenerateStdIR(runtime)
 

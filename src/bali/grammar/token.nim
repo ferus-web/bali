@@ -1,7 +1,5 @@
 import std/[options, strutils, tables]
 
-{.experimental: "strictDefs".}
-
 type
   TokenKind* {.pure.} = enum
     Identifier

@@ -1383,6 +1383,9 @@ proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
     if runtime.isA(atom, JSBigInt):
       return "bigint"
 
+    if runtime.isA(atom, JSFunction):
+      return "function"
+
     return "object"
   of Boolean:
     return "boolean"
