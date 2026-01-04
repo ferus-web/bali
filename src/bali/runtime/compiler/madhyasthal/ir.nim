@@ -1,6 +1,6 @@
 ## IR types for Madhyasthal / the midtier JIT compiler for Bali
 ##
-## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
 
 type
   InstKind* {.pure, size: sizeof(uint16).} = enum
@@ -25,6 +25,7 @@ type
     ResetArgs
     Jump
     Equate
+    LesserThanInt
 
   Register* {.size: sizeof(uint8), pure.} = enum
     ReturnValue = 0
@@ -168,6 +169,12 @@ func jump*(index: int): Inst =
 func equate*(a, b: uint32): Inst =
   Inst(
     kind: InstKind.Equate,
+    args: [ArgVariant(kind: avkPos, vreg: a), ArgVariant(kind: avkPos, vreg: b)],
+  )
+
+func lesserThanI*(a, b: uint32): Inst =
+  Inst(
+    kind: InstKind.LesserThanInt,
     args: [ArgVariant(kind: avkPos, vreg: a), ArgVariant(kind: avkPos, vreg: b)],
   )
 {.pop.}
