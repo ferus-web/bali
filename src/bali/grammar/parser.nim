@@ -1061,7 +1061,7 @@ proc parseReassignment(parser: Parser, ident: string): Option[Statement] =
       parser.error UnexpectedToken, $tok.kind
 
   if *atom:
-    var reassignExpr = reassignVal(ident, &atom)
+    var reassignExpr = reassignVal(ident, (&atom).atom)
     reassignExpr.source = parser.lines[parser.tokenizer.location.line]
 
     return some(ensureMove(reassignExpr))
