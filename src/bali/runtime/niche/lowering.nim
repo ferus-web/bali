@@ -453,6 +453,8 @@ proc genReassignVal(runtime: Runtime, fn: Function, stmt: Statement) =
       runtime.ir.loadStr(index, stmt.reAtom)
     of Float:
       runtime.ir.loadFloat(index, stmt.reAtom)
+    of Null:
+      runtime.ir.loadNull(index)
     else:
       unreachable
   else:
