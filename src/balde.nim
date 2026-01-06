@@ -285,7 +285,7 @@ proc execFile(ctx: Input, file: string) {.inline.} =
 
   if ctx.enabled("dump-tokens", "T"):
     let excludeWs = ctx.enabled("no-whitespace")
-    let tok = newTokenizer(source)
+    var tok = newTokenizer(source)
     while not tok.eof:
       if excludeWs:
         let val = tok.nextExceptWhitespace()

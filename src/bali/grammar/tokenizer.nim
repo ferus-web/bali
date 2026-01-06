@@ -12,7 +12,7 @@ type
   SourceLocation* = object
     line*, col*: uint = 0
 
-  Tokenizer* = ref object
+  Tokenizer* = object
     pos*: uint = 0
     location*: SourceLocation
     source: string
@@ -26,7 +26,7 @@ func eof*(tokenizer: Tokenizer): bool =
 
   tokenizer.source.len < 1 or tokenizer.pos > len
 
-proc consume*(tokenizer: Tokenizer): char =
+proc consume*(tokenizer: var Tokenizer): char =
   inc tokenizer.pos
   inc tokenizer.location.col
   let c = tokenizer.source[tokenizer.pos]
@@ -37,16 +37,16 @@ proc consume*(tokenizer: Tokenizer): char =
 
   c
 
-func hasAtleast*(tokenizer: Tokenizer, num: uint): bool =
+func hasAtleast*(tokenizer: var Tokenizer, num: uint): bool =
   (tokenizer.pos + num) < (tokenizer.source.len.uint - 1)
 
-func charAt*(tokenizer: Tokenizer, offset: uint = 0): Option[char] =
+func charAt*(tokenizer: var Tokenizer, offset: uint = 0): Option[char] =
   if (tokenizer.pos + offset) > tokenizer.source.len.uint - 1:
     return
 
   tokenizer.source[tokenizer.pos + offset].some()
 
-proc advance*(tokenizer: Tokenizer, offset: uint = 1) =
+proc advance*(tokenizer: var Tokenizer, offset: uint = 1) =
   # FIXME: this newline checking can be done accurately in a for-loop
   if tokenizer.charAt() == some('\n'):
     inc tokenizer.location.line
@@ -58,10 +58,10 @@ proc advance*(tokenizer: Tokenizer, offset: uint = 1) =
 func newTokenizer*(source: string): Tokenizer =
   Tokenizer(pos: 0, location: SourceLocation(col: 0, line: 0), source: source)
 
-proc next*(tokenizer: Tokenizer): Token
+proc next*(tokenizer: var Tokenizer): Token
 
 proc tokenize*(
-    tokenizer: Tokenizer, opts: TokenizerOpts = default(TokenizerOpts)
+    tokenizer: var Tokenizer, opts: TokenizerOpts = default(TokenizerOpts)
 ): seq[Token] =
   var tokens: seq[Token] = @[]
 
@@ -74,7 +74,7 @@ proc tokenize*(
 
   tokens
 
-proc consumeInvalid*(tokenizer: Tokenizer): Token =
+proc consumeInvalid*(tokenizer: var Tokenizer): Token =
   tokenizer.advance()
 
   Token(kind: TokenKind.Invalid)
@@ -88,7 +88,7 @@ proc charToDecimalDigit*(c: char): Option[uint32] {.inline.} =
 
   none(uint32)
 
-proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
+proc consumeNumeric*(tokenizer: var Tokenizer, negative: bool = false): Token =
   if not tokenizer.hasAtleast(1):
     let value = parseInt($(&tokenizer.charAt()))
     tokenizer.advance()
@@ -190,7 +190,7 @@ proc consumeNumeric*(tokenizer: Tokenizer, negative: bool = false): Token =
   let valF32 = value.float64
   Token(kind: TokenKind.Number, hasSign: hasSign, floatVal: valF32, intVal: intValue)
 
-proc consumeBackslash*(tokenizer: Tokenizer): Result[char, MalformedStringReason] =
+proc consumeBackslash*(tokenizer: var Tokenizer): Result[char, MalformedStringReason] =
   tokenizer.advance()
 
   if tokenizer.eof:
@@ -237,7 +237,7 @@ proc consumeBackslash*(tokenizer: Tokenizer): Result[char, MalformedStringReason
 
   return err(MalformedStringReason.BadUnicodeEscape)
 
-proc consumeIdentifier*(tokenizer: Tokenizer): Token =
+proc consumeIdentifier*(tokenizer: var Tokenizer): Token =
   var
     ident = newString(0)
     containsUnicodeEsc = false
@@ -266,7 +266,7 @@ proc consumeIdentifier*(tokenizer: Tokenizer): Token =
 
     Token(kind: keyword, containsUnicodeEsc: containsUnicodeEsc)
 
-proc consumeWhitespace*(tokenizer: Tokenizer): Token =
+proc consumeWhitespace*(tokenizer: var Tokenizer): Token {.inline.} =
   var ws = newString(0)
 
   while not tokenizer.eof():
@@ -281,7 +281,7 @@ proc consumeWhitespace*(tokenizer: Tokenizer): Token =
 
   Token(kind: TokenKind.Whitespace, whitespace: ws)
 
-proc consumeEquality*(tokenizer: Tokenizer): Token =
+proc consumeEquality*(tokenizer: var Tokenizer): Token =
   tokenizer.advance()
   let next = tokenizer.charAt()
 
@@ -299,7 +299,7 @@ proc consumeEquality*(tokenizer: Tokenizer): Token =
   else:
     return Token(kind: TokenKind.EqualSign)
 
-proc consumeString*(tokenizer: Tokenizer): Token =
+proc consumeString*(tokenizer: var Tokenizer): Token =
   let closesWith = &tokenizer.charAt()
   tokenizer.advance()
 
@@ -345,7 +345,7 @@ proc consumeString*(tokenizer: Tokenizer): Token =
     strMalformedReason: malformationReason,
   )
 
-proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
+proc consumeComment*(tokenizer: var Tokenizer, multiline: bool = false): Token =
   tokenizer.advance()
   var comment = newString(0)
 
@@ -364,7 +364,7 @@ proc consumeComment*(tokenizer: Tokenizer, multiline: bool = false): Token =
 
   Token(kind: TokenKind.Comment, multiline: multiline, comment: comment)
 
-proc consumeSlash*(tokenizer: Tokenizer): Token =
+proc consumeSlash*(tokenizer: var Tokenizer): Token {.inline.} =
   tokenizer.advance()
 
   let next = tokenizer.charAt()
@@ -380,7 +380,7 @@ proc consumeSlash*(tokenizer: Tokenizer): Token =
   else:
     return Token(kind: TokenKind.Div)
 
-proc consumeExclaimation*(tokenizer: Tokenizer): Token =
+proc consumeExclaimation*(tokenizer: var Tokenizer): Token =
   tokenizer.advance()
 
   let next = tokenizer.charAt()
@@ -398,7 +398,7 @@ proc consumeExclaimation*(tokenizer: Tokenizer): Token =
   else:
     return Token(kind: TokenKind.Invalid)
 
-proc consumePlus*(tokenizer: Tokenizer): Token =
+proc consumePlus*(tokenizer: var Tokenizer): Token {.inline.} =
   tokenizer.advance()
 
   let next = tokenizer.charAt()
@@ -412,7 +412,7 @@ proc consumePlus*(tokenizer: Tokenizer): Token =
   else:
     return Token(kind: TokenKind.Add)
 
-proc consumeAmpersand*(tokenizer: Tokenizer): Token =
+proc consumeAmpersand*(tokenizer: var Tokenizer): Token {.inline.} =
   tokenizer.advance()
   let next = tokenizer.charAt()
   if !next:
@@ -425,7 +425,7 @@ proc consumeAmpersand*(tokenizer: Tokenizer): Token =
   else:
     return tokenizer.consumeInvalid()
 
-proc consumePipe*(tokenizer: Tokenizer): Token =
+proc consumePipe*(tokenizer: var Tokenizer): Token {.inline.} =
   tokenizer.advance()
 
   let next = tokenizer.charAt()
@@ -439,7 +439,7 @@ proc consumePipe*(tokenizer: Tokenizer): Token =
   else:
     return tokenizer.consumeInvalid()
 
-proc consumeHash*(tokenizer: Tokenizer): Token =
+proc consumeHash*(tokenizer: var Tokenizer): Token =
   tokenizer.advance()
 
   if tokenizer.charAt() == some('!'):
@@ -466,7 +466,7 @@ proc consumeHash*(tokenizer: Tokenizer): Token =
 
   tokenizer.consumeInvalid()
 
-proc consumeGreaterThan*(tokenizer: Tokenizer): Token =
+proc consumeGreaterThan*(tokenizer: var Tokenizer): Token {.inline.} =
   tokenizer.advance()
 
   if tokenizer.charAt() == some('='):
@@ -475,7 +475,7 @@ proc consumeGreaterThan*(tokenizer: Tokenizer): Token =
   else:
     return Token(kind: GreaterThan)
 
-proc consumeLessThan*(tokenizer: Tokenizer): Token =
+proc consumeLessThan*(tokenizer: var Tokenizer): Token {.inline.} =
   tokenizer.advance()
 
   if tokenizer.charAt() == some('='):
@@ -484,7 +484,7 @@ proc consumeLessThan*(tokenizer: Tokenizer): Token =
   else:
     return Token(kind: LessThan)
 
-proc consumeMinus*(tokenizer: Tokenizer): Token =
+proc consumeMinus*(tokenizer: var Tokenizer): Token {.inline.} =
   if not tokenizer.eof and (let c = tokenizer.charAt(1); *c):
     case &c
     of {'0' .. '9'}:
@@ -498,7 +498,7 @@ proc consumeMinus*(tokenizer: Tokenizer): Token =
   tokenizer.advance()
   return Token(kind: TokenKind.Sub)
 
-proc next*(tokenizer: Tokenizer): Token =
+proc next*(tokenizer: var Tokenizer): Token =
   let c = tokenizer.charAt()
 
   case &c
@@ -583,7 +583,7 @@ proc next*(tokenizer: Tokenizer): Token =
   else:
     tokenizer.consumeInvalid()
 
-proc nextExceptWhitespace*(tokenizer: Tokenizer): Option[Token] =
+proc nextExceptWhitespace*(tokenizer: var Tokenizer): Option[Token] =
   if tokenizer.eof:
     return
 
