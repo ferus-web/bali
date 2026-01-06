@@ -12,6 +12,11 @@ import
 type
   ConstantPool* = seq[cstring]
 
+  ConditionalJump* = object
+    label*: BackwardsLabel
+    op*: int
+    condition*: Condition
+
   AMD64Codegen* = object of RootObj
     cached*: Table[string, JITSegment]
     s*: AssemblerX64
@@ -27,6 +32,7 @@ type
 
     irToNativeMap*: Table[int, BackwardsLabel]
     patchJmps*: Table[BackwardsLabel, int]
+    patchConditionalJmps*: seq[ConditionalJump]
 
     dumpIrForFuncs*: seq[string]
 
