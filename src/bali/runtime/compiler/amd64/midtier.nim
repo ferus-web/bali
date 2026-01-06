@@ -9,8 +9,11 @@ import
   pkg/bali/internal/assembler/amd64
 import pkg/shakar, pretty
 
-const EnsureNoInt8Align* = high(uint8)
-  # This is used as a placeholder value for conditional jumps, to ensure that the assembler doesn't emit a short-jump if the dummy value fits into a signed 8-bit int.
+const
+  EnsureNoInt8Align* = high(uint8)
+    ## This is used as a placeholder value for conditional jumps, to ensure that the assembler doesn't emit a short-jump if the dummy value fits into a signed 8-bit int.
+
+  DummyJumpAddr* = 0xF33DC0DE ## Self-explanatory.
 
 type MidtierJIT* = object of AMD64Codegen
 
@@ -318,7 +321,7 @@ proc compileLowered(
         cgen.s.call(cgen.callbacks.equate)
     of InstKind.Jump:
       cgen.patchJmps[cgen.s.label()] = inst.args[0].vint + 1
-      cgen.s.jmp(BackwardsLabel(0x0)) # Emit a dummy jmp
+      cgen.s.jmp(BackwardsLabel(DummyJumpAddr)) # Emit a dummy jmp
     of InstKind.LesserThanInt:
       let
         a = inst.args[0].vreg
