@@ -562,25 +562,20 @@ proc opSub(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.currIndex += 2]#
 
 proc opReturn(interpreter: var PulsarInterpreter, op: var Operation) =
-  let clause = interpreter.getClause()
-
-  if not *clause:
-    msg "got return but we are not in any clause"
-    inc interpreter.currIndex
-    return
-
-  let idx = &getInt(op.arguments[0])
+  let
+    clause = interpreter.clauses[interpreter.currClause]
+    idx = &getInt(op.arguments[0])
 
   # write the return value to the `retVal` register
   interpreter.registers.retVal = interpreter.get(idx)
 
   # revert back to where we left off in the previous clause (or exit if this was the final clause - that's handled by the logic in `run`)
 
-  msg "rolling back to clause " & $((&clause).rollback.clause)
-  interpreter.currClause = (&clause).rollback.clause
+  msg "rolling back to clause " & $clause.rollback.clause
+  interpreter.currClause = clause.rollback.clause
 
-  msg "rolling back to index " & $((&clause).rollback.opIndex)
-  interpreter.currIndex = (&clause).rollback.opIndex
+  msg "rolling back to index " & $clause.rollback.opIndex
+  interpreter.currIndex = clause.rollback.opIndex
 
 proc opLoadList(interpreter: var PulsarInterpreter, op: var Operation) =
   msg "load list"
@@ -1060,12 +1055,11 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
   while not interpreter.halt:
     inc interpreter.profTotalFrames
     vmd "fetch", "new frame " & $interpreter.currIndex
-    let cls = interpreter.getClause()
+    var clause = interpreter.clauses[interpreter.currClause]
 
-    if not *cls:
-      break
+    # if not *cls:
+    #  break
 
-    var clause = &cls
     if clause.compiled and interpreter.trapped:
       # FIXME: this is broken!!! :^(
       #        i'm losing my mind and i have zero clue as to why
