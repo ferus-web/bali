@@ -12,11 +12,12 @@ import
   pkg/bali/runtime/abstract/[to_string, equating],
   pkg/bali/stdlib/prelude
 import pkg/bali/grammar/prelude
+import pkg/shakar
 
 proc typeRegistrationFinalizer*(runtime: Runtime) {.gcsafe.} =
   ## Called by the engine when it needs to register all types' function properties.
   for typ in runtime.types:
-    let index = runtime.index(typ.name, globalIndex())
+    let index = &runtime.resolveVariable(typ.name, globalIndex())
     var jsObj = obj(runtime)
 
     for name, value in typ.members:
@@ -108,6 +109,9 @@ proc run*(runtime: Runtime) {.gcsafe.} =
 
   runtime.vm.typeErrorHook = proc() {.gcsafe.} =
     runtime.typeError("not a function")
+
+  runtime.vm.referenceErrorHook = proc(binding: string) {.gcsafe.} =
+    runtime.referenceError('\'' & binding & "' is not defined")
 
   runtime.vm.addOpImpl = proc(a, b: JSValue): JSValue {.gcsafe.} =
     newJSString(runtime, runtime.ToString(a) & runtime.ToString(b))

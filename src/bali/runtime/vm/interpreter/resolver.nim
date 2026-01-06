@@ -174,3 +174,6 @@ proc resolve*(clause: Clause, op: var Operation, heap: HeapManager) =
       # Clause/Builtin
       op.arguments &=
         op.consume(String, "INVK expects an ident/string at position 1", heap = heap)
+  of ThrowReferenceError:
+    op.arguments &=
+      op.consume(Integer, "THROWREF expects a string at position 1", heap = heap)

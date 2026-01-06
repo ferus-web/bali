@@ -35,6 +35,7 @@ type
 
   EquationHook* = proc(a, b: JSValue): bool {.gcsafe.}
   TypeErrorHook* = proc() {.gcsafe.}
+  ReferenceErrorHook* = proc(binding: string) {.gcsafe.}
   AddAtomsOpImpl* = proc(a, b: JSValue): JSValue {.gcsafe.}
 
   PulsarInterpreter* = object
@@ -55,6 +56,7 @@ type
 
     equationHook*: EquationHook
     typeErrorHook*: TypeErrorHook
+    referenceErrorHook*: ReferenceErrorHook
     addOpImpl*: AddAtomsOpImpl
 
     when defined(amd64):
@@ -949,6 +951,10 @@ proc opPower(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(floating(interpreter.heapManager, a ^ b.int), posA)
   inc interpreter.currIndex
 
+proc opThrowReferenceError*(interpreter: var PulsarInterpreter, op: var Operation) =
+  let binding = &op.arguments[0].getStr()
+  interpreter.referenceErrorHook(binding)
+
 {.pop.}
 
 proc execute*(interpreter: var PulsarInterpreter, op: var Operation) {.gcsafe.} =
@@ -960,6 +966,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) {.gcsafe.} 
     opResetArgs, opCopyAtom, opMoveAtom, opLoadFloat, opZeroRetval,
     opLoadBytecodeCallable, opExecuteBytecodeCallable, opLoadUndefined,
     opGreaterThanEqualInt, opLesserThanEqualInt, opInvoke, opPower,
+    opThrowReferenceError,
   ]
   OpDispatchTable[cast[uint8](op.opcode)](interpreter, op)
 

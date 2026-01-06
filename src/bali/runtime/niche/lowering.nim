@@ -396,7 +396,8 @@ proc genReturnFn(runtime: Runtime, fn: Function, stmt: Statement) =
 
 proc genCallAndStoreResult(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.generateBytecode(fn, stmt.storeFn, ownerStmt = some(stmt))
-  var index = runtime.index(stmt.storeIdent, defaultParams(fn))
+  var index =
+    runtime.index(stmt.storeIdent, defaultParams(fn), willHandleResolveFail = true)
 
   if index == runtime.index("undefined", defaultParams(fn)):
     runtime.markLocal(fn, stmt.storeIdent)

@@ -1,15 +1,14 @@
 ## Runtime types
 ##
-## Copyright (C) 2024-2025 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2024-2026 Trayambak Rai (xtrayambak at disroot dot org)
 
 import std/[options, hashes, logging, tables, sugar]
 import pkg/bali/runtime/vm/ir/generator
 import pkg/bali/runtime/vm/prelude
 import pkg/bali/grammar/prelude
-import pkg/bali/internal/sugar
 import pkg/bali/runtime/[atom_obj_variant, atom_helpers, normalize]
 import pkg/bali/runtime/vm/heap/manager
-import pkg/librng
+import pkg/[shakar, librng]
 
 type
   NativeFunction* = proc() {.gcsafe.}
@@ -269,13 +268,13 @@ proc markLocal*(
 
   inc runtime.addrIdx
 
-proc index*(
+proc resolveVariable*(
     runtime: Runtime, ident: string, params: IndexParams, demangle: bool = false
-): uint {.gcsafe.} =
+): Option[uint] =
   for value in runtime.values:
     for prio in params.priorities:
       if value.kind == vkGlobal and value.identifier == ident:
-        return value.index
+        return some(value.index)
 
       if value.kind != prio:
         continue
@@ -299,11 +298,23 @@ proc index*(
             identMatch and value.ownerStmt == hash(&params.stmt)
 
       if cond:
-        return value.index
+        return some(value.index)
 
-  debug "runtime: cannot find identifier \"" & ident &
-    "\" in index search, returning index to undefined()"
-  runtime.index("undefined", params)
+proc index*(
+    runtime: Runtime,
+    ident: string,
+    params: IndexParams,
+    demangle: bool = false,
+    willHandleResolveFail: bool = false,
+): uint {.gcsafe.} =
+  let resolved = resolveVariable(runtime, ident, params, demangle)
+  if !resolved:
+    if not willHandleResolveFail:
+      runtime.ir.throwReferenceError(ident)
+
+    return 0'u
+
+  &resolved
 
 proc loadIRAtom*(runtime: Runtime, atom: MAtom): uint =
   debug "codegen: loading atom with kind: " & $atom.kind
