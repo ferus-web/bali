@@ -13,7 +13,7 @@ const
   EnsureNoInt8Align* = high(uint8)
     ## This is used as a placeholder value for conditional jumps, to ensure that the assembler doesn't emit a short-jump if the dummy value fits into a signed 8-bit int.
 
-  DummyJumpAddr* = 0xF33DC0DE ## Self-explanatory.
+  DummyJumpAddr* = 0xC0D ## Self-explanatory. Also, fish. :^)
 
 type MidtierJIT* = object of AMD64Codegen
 
