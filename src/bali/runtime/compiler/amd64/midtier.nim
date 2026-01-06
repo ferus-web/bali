@@ -1,13 +1,16 @@
 ## Mid-tier JIT compiler for x86-64, utilizing the Madhyasthal pipeline.
 ##
-## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
-import std/[logging, posix, options, tables]
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
+import std/[logging, posix, options, strutils, tables]
 import
   pkg/bali/runtime/compiler/madhyasthal/[ir, lowering, pipeline, optimizer, dumper],
   pkg/bali/runtime/compiler/amd64/[common, native_forwarding],
   pkg/bali/runtime/compiler/base,
   pkg/bali/internal/assembler/amd64
 import pkg/shakar, pretty
+
+const EnsureNoInt8Align* = high(uint8)
+  # This is used as a placeholder value for conditional jumps, to ensure that the assembler doesn't emit a short-jump if the dummy value fits into a signed 8-bit int.
 
 type MidtierJIT* = object of AMD64Codegen
 
@@ -18,13 +21,27 @@ template alignStack(offset: uint, body: untyped) =
 
 proc patchNativeJumps(cgen: var MidtierJIT) =
   let oldOffset = cgen.s.offset
-  for patchAddr, jumpDest in cgen.patchJmps:
+
+  template verifyValidJumpDest(jumpDest: int, patchAddr: BackwardsLabel) =
     assert jumpDest in cgen.irToNativeMap,
       "x64/midtier: Invariant: Jump destination " & $jumpDest &
-        " is not in IR->Native offsets map"
+        " is not in IR->Native offsets map (IR op " & $jumpDest & ", jump @ 0x" &
+        toHex(cast[int64](cgen.s.data) + cast[int64](patchAddr)) & ", +" &
+        $cast[int64](patchAddr) & ')'
+
+  for patchAddr, jumpDest in cgen.patchJmps:
+    verifyValidJumpDest(jumpDest, patchAddr)
     let resolvedDest = cgen.irToNativeMap[jumpDest]
     cgen.s.offset = int(patchAddr)
     cgen.s.jmp(resolvedDest)
+
+  for jmp in cgen.patchConditionalJmps:
+    verifyValidJumpDest(jmp.op, jmp.label)
+
+    let resolvedDest = cgen.irToNativeMap[jmp.op]
+    # echo $jmp.op & ": " & $resolvedDest
+    cgen.s.offset = cast[int64](jmp.label)
+    cgen.s.jcc(jmp.condition, resolvedDest)
 
   cgen.s.offset = oldOffset # Just in case we ever add any future passes after this
 
@@ -41,6 +58,8 @@ proc compileLowered(
 
   for i, inst in fn.insts:
     cgen.irToNativeMap[i] = cgen.s.label()
+
+    # debugEcho $i & " -> " & $inst.kind
 
     case inst.kind
     of InstKind.LoadNumber:
@@ -298,8 +317,38 @@ proc compileLowered(
         cgen.s.mov(regRdx.reg, regRax)
         cgen.s.call(cgen.callbacks.equate)
     of InstKind.Jump:
-      cgen.patchJmps[cgen.s.label()] = inst.args[0].vint
+      cgen.patchJmps[cgen.s.label()] = inst.args[0].vint + 1
       cgen.s.jmp(BackwardsLabel(0x0)) # Emit a dummy jmp
+    of InstKind.LesserThanInt:
+      let
+        a = inst.args[0].vreg
+        b = inst.args[1].vreg
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(a))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+        cgen.s.mov(regRdi.reg, regRax)
+        cgen.s.call(getRawFloat)
+
+        cgen.s.movsd(regXmm1, regXmm0.reg)
+
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(b))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+      cgen.s.comisd(regXmm0, regXmm1.reg)
+
+      # A < B: pc += 1
+      cgen.patchConditionalJmps &=
+        ConditionalJump(label: cgen.s.label(), op: i + 1, condition: condBelow)
+      cgen.s.jcc(condBelow, BackwardsLabel(EnsureNoInt8Align))
+
+      # A >= B: pc += 2
+      cgen.patchConditionalJmps &=
+        ConditionalJump(label: cgen.s.label(), op: i + 2, condition: condNotBelow)
+      cgen.s.jcc(condNotBelow, BackwardsLabel(EnsureNoInt8Align))
     else:
       debug "jit/amd64: midtier cannot lower op into x64 code: " & $inst.kind
       return
@@ -322,12 +371,16 @@ proc compile*(
     return
 
   var pipeline = Pipeline(fn: &lowered)
-  pipeline.optimize(
-    @[
-      Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.EscapeAnalysis,
-      Passes.CopyPropagation,
-    ]
-  )
+
+  when not defined(baliMadhyasthalDoNotApplyPasses):
+    pipeline.optimize(
+      @[
+        Passes.NaiveDeadCodeElim, Passes.AlgebraicSimplification, Passes.EscapeAnalysis,
+        Passes.CopyPropagation,
+      ]
+    )
+  else:
+    pipeline.optimize(@[])
 
   return compileLowered(cgen, pipeline)
 

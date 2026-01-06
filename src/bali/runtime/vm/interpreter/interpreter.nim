@@ -1260,7 +1260,7 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
       jitd "callback", "createField()"
       target[$field] = undefined(vm.heapManager),
     allocEncodedFloat: proc(vm: var PulsarInterpreter, v: int64): JSValue {.cdecl.} =
-      jitd "callback", "allocEncodedFloat()"
+      jitd "callback", "allocEncodedFloat(v=" & $cast[float64](v) & ')'
 
       floating(vm.heapManager, cast[float64](v)),
     allocFloat: proc(vm: var PulsarInterpreter, v: float64): JSValue {.cdecl.} =

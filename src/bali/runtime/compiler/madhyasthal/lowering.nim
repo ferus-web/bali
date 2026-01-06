@@ -6,7 +6,7 @@
 import std/[algorithm, options, logging, tables]
 import pkg/[shakar]
 import
-  pkg/bali/runtime/compiler/madhyasthal/[ir],
+  pkg/bali/runtime/compiler/madhyasthal/ir,
   pkg/bali/runtime/vm/[atom, shared],
   pkg/bali/runtime/vm/interpreter/[types, operation]
 
@@ -137,6 +137,9 @@ proc patchJumps*(fn: var Function, stream: OpStream) =
     else:
       fn.insts[i].args[0] = ArgVariant(kind: avkInt, vint: stream.opToIrMap[index] - 1)
 
+    # echo "Patch jump. bytecode=" & $index & ", ir=" & $(stream.optoirmap[index] - 1)
+    # echo dumpinst(fn.insts[stream.opToIrMap[index] - 1])
+
   for del in toDelete.reversed:
     fn.insts.delete(del)
 
@@ -247,6 +250,14 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
 
       # We need to "patch" this once the IR is fully lowered
       fn.insts &= jump(&op.arguments[0].getInt())
+    of LesserThanInt:
+      let op = stream.consume()
+
+      # just like Jump, we need to patch this
+      fn.insts &=
+        lesserThanI(
+          uint32(&op.arguments[0].getInt()), uint32(&op.arguments[1].getInt())
+        )
     else:
       bailout "cannot find predictable pattern for op: " & $stream.peekKind()
 
