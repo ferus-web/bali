@@ -6,6 +6,13 @@
 
 function expensiveLoop()
 {
+	var i = 0;
+	while (i < 65536)
+	{
+		i = 65536;
+	}
+
+	return i;
 }
 
 // NOTE: madhyasthal triggers at i < 1471
