@@ -1157,20 +1157,22 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
       interpreter.currIndex = clause.rollback.opIndex
       continue
 
+    let shouldJudge = hasJITSupport and interpreter.useJit and not interpreter.trapped
+
     # If this clause is considered hot, consider compiling it.
-    if hasJITSupport and interpreter.useJit and not interpreter.trapped:
+    if interpreter.currIndex == 0 and shouldJudge:
       let (gettingCompiled, tierOpt) = interpreter.shouldCompile(clause)
 
       # The baseline JIT does not support mid-execution patching.
       # The midtier JIT does.
-      if gettingCompiled and (&tierOpt == Tier.Midtier or interpreter.currIndex != 0):
+      if gettingCompiled:
         let tier = &tierOpt
 
         jitd "fetch",
           "has jit support, compiling clause " & clause.name & " with JIT tier `" & $tier &
             '`'
 
-        var compiled =
+        let compiled =
           case tier
           of Tier.Baseline:
             interpreter.baseline.compile(clause)
@@ -1182,20 +1184,11 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
 
         if *compiled:
           clause.compiled = true
+          clause.profIterationsSpent += uint64(clause.operations.len - 2)
           interpreter.clauses[interpreter.currClause] = clause
-
-          if tier == Tier.Midtier:
-            let nativeOffset =
-              interpreter.midtier.getOpOffset(int(interpreter.currIndex))
-
-            if *nativeOffset:
-              compiled = some(fromOffset(&compiled, int64(&nativeOffset)))
-            else:
-              compiled = none(JITSegment)
 
           vmd "execute", "entering JIT'd segment"
           interpreter.runningCompiled = true
-          clause.profIterationsSpent += uint64(clause.operations.len - 2)
           (&compiled)()
           interpreter.runningCompiled = false
 
