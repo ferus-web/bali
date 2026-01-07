@@ -1,6 +1,6 @@
 ## IR -> human-readable string conversion routine(s)
 ##
-## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
 import pkg/bali/runtime/compiler/madhyasthal/ir
 
 func dumpInst*(buffer: var string, inst: ir.Inst) =
@@ -26,6 +26,12 @@ func dumpInst*(buffer: var string, inst: ir.Inst) =
       buffer &= ' '
 
   buffer &= ')'
+
+func dumpInst*(inst: ir.Inst): string =
+  var res: string
+  dumpInst(res, inst)
+
+  ensureMove(res)
 
 func dumpFunction*(fn: ir.Function): string =
   var buffer = newStringOfCap(512)

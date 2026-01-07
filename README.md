@@ -48,10 +48,8 @@ As such, both of these benchmarks are actually just running in the interpreter. 
 **Try it for yourself**: [Source code](tests/data/iterate-for-no-reason-001.js)
 | Engine                  | Time Taken                                                     |
 | ----------------------- | -------------------------------------------------------------- |
-| Bali (Interpreter)      | 3.9ms (best case) - 5.9ms (worst case)                         |
-| Bali (JIT)              | 3.9ms (best case) - 6.0ms (worst case)                         |   
-
-This proves that the JIT barely worsens the worst case scenario.
+| Bali (Interpreter)      | 3.4ms (best case) - 7.9ms (worst case)                         |
+| Bali (JIT)              | 3.3ms (best case) - 5.3ms (worst case)                         |   
 
 ## Finding a substring in a moderately large string
 Bali's string-find function (`String.prototype.indexOf`) is SIMD-accelerated, and as such, is pretty fast.
@@ -63,8 +61,8 @@ As such, both of these benchmarks are actually just running in the interpreter. 
 **Try it for yourself**: [Source code](tests/data/string-find-001.js)
 | Engine                     | Time Taken                                   |
 | -------------------------- | -------------------------------------------- |
-| Bali (Interpreter)         | 4.1ms (best case) - 6.1ms (worst case)       |
-| Bali (JIT)                 | 4.1ms (best case) - 7.1ms (worst case)       |
+| Bali (Interpreter)         | 3.5ms (best case) - 5.8ms (worst case)       |
+| Bali (JIT)                 | 3.5ms (best case) - 5.5ms (worst case)       |
 
 ## JIT-triggering microbenchmark
 This script is intentionally designed to make Bali's profiling mechanism catch onto it and optimize it.
@@ -72,8 +70,8 @@ This script is intentionally designed to make Bali's profiling mechanism catch o
 **Try it for yourself**: [Source code](tests/data/trigger-jit-001.js)
 | Engine                     | Time Taken                                   |
 | -------------------------- | -------------------------------------------- |
-| Bali (Interpreter)         | 586.9ms (best case) - 601.3ms (worst case)   |
-| Bali (JIT)                 | 356.7ms (best case) - 374.5ms (worst case)   |
+| Bali (Interpreter)         | 268.5ms (best case) - 275.5ms (worst case)   |
+| Bali (JIT)                 | 162.4ms (best case) - 169.2ms (worst case)   |
 
 Here, the JIT is **1.65x** faster than the interpreter!
 

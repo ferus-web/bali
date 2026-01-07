@@ -13,13 +13,7 @@ type Operation* = object
 
   arguments*: seq[JSValue]
   consumed*: bool = false
-  lastConsume: int = 0
-
   resolved*: bool = false
-
-  when not defined(mirageNoJit) and defined(amd64):
-    called*: int
-      ## How many times has this operation been called this clause execution? (used to determine if it should be JIT'd)
 
 proc expand*(operation: Operation): string {.inline.} =
   assert operation.consumed,
@@ -30,9 +24,6 @@ proc expand*(operation: Operation): string {.inline.} =
     expanded &= ' ' & $arg.crush("")
 
   expanded
-
-proc shouldCompile*(operation: Operation): bool {.inline, noSideEffect, gcsafe.} =
-  operation.called >= MirageOperationJitThreshold
 
 proc consume*(
     operation: var Operation,

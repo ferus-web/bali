@@ -170,6 +170,8 @@ type
     ## Generic opcode to invoke either a bytecode callable (reference to clause), clause or builtin.
     Invoke
     Power
+    ThrowReferenceError
+    ResolveField
 
 const
   OpCodeToTable* = {
@@ -212,6 +214,8 @@ const
     "LTEI": LesserThanEqualInt,
     "INVK": Invoke,
     "POW": Power,
+    "THROWREF": ThrowReferenceError,
+    "RESFLD": ResolveField,
   }.toTable
 
   OpCodeToString* = static:

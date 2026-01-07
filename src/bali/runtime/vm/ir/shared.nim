@@ -18,7 +18,7 @@ type
     name*: string
     operations*: seq[IROperation]
 
-  IRGenerator* = ref object
+  IRGenerator* = object
     name*: string
     cachedIndex*: uint
     modules*: seq[CodeModule]

@@ -1,4 +1,6 @@
 ## Baseline JIT for AMD64 SystemV systems
+##
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak@disroot.org)
 
 import std/[logging, hashes, posix, tables, options, streams]
 import pkg/bali/runtime/compiler/base, pkg/bali/runtime/vm/heap/boehm
@@ -9,9 +11,9 @@ import
   pkg/bali/runtime/compiler/amd64/[common, native_forwarding],
   pkg/bali/internal/assembler/amd64
 
-type BaselineJIT* = object of AMD64Codegen
+type BaselineJIT* = ref object of AMD64Codegen
 
-proc prepareAtomAddCall(cgen: var BaselineJIT, index: int64) =
+proc prepareAtomAddCall(cgen: BaselineJIT, index: int64) =
   # Signature for addAtom is:
   # proc(vm: var PulsarInterpreter, atom: JSValue, index: uint): void
   cgen.s.sub(regRsp.reg, 8)
@@ -21,7 +23,7 @@ proc prepareAtomAddCall(cgen: var BaselineJIT, index: int64) =
   cgen.s.call(cgen.callbacks.addAtom)
   cgen.s.add(regRsp.reg, 8)
 
-proc prepareAtomGetCall(cgen: var BaselineJIT, index: int64) =
+proc prepareAtomGetCall(cgen: BaselineJIT, index: int64) =
   # proc rawGet(vm: PulsarInterpreter, index: uint): JSValue
   cgen.s.sub(regRsp.reg, 8)
   cgen.s.mov(regRdi, cast[int64](cgen.vm))
@@ -31,12 +33,12 @@ proc prepareAtomGetCall(cgen: var BaselineJIT, index: int64) =
 
   # The output will be in rax
 
-proc dump*(cgen: var BaselineJIT, file: string) =
+proc dump*(cgen: BaselineJIT, file: string) =
   var stream = newFileStream(file, fmWrite)
   stream.writeData(cgen.s.data[0].addr, 0x10000)
   stream.close()
 
-proc patchJumpPoints*(cgen: var BaselineJIT) =
+proc patchJumpPoints*(cgen: BaselineJIT) =
   warn "TODO: Implement jump-point patching"
   unreachable
 
@@ -44,7 +46,7 @@ proc patchJumpPoints*(cgen: var BaselineJIT) =
     cgen.s.offset = offset
     cgen.s.jmp(cgen.bcToNativeOffsetMap[index])
 
-proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
+proc emitNativeCode*(cgen: BaselineJIT, clause: Clause): bool =
   for i, op in clause.operations:
     var op = op # FIXME: stupid ugly hack
 
@@ -415,7 +417,7 @@ proc emitNativeCode*(cgen: var BaselineJIT, clause: Clause): bool =
   true
 
 proc compile*(
-    cgen: var BaselineJIT, clause: Clause, ignoreCache: bool = false
+    cgen: BaselineJIT, clause: Clause, ignoreCache: bool = false
 ): Option[JITSegment] =
   if cgen.cached.contains(clause.name) and not ignoreCache:
     debug "jit/amd64: found cached version of JIT'd clause"

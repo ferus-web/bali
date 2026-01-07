@@ -12,7 +12,12 @@ import
 type
   ConstantPool* = seq[cstring]
 
-  AMD64Codegen* = object of RootObj
+  ConditionalJump* = object
+    label*: BackwardsLabel
+    op*: int
+    condition*: Condition
+
+  AMD64CodegenObj = object of RootObj
     cached*: Table[string, JITSegment]
     s*: AssemblerX64
     callbacks*: VMCallbacks
@@ -27,23 +32,26 @@ type
 
     irToNativeMap*: Table[int, BackwardsLabel]
     patchJmps*: Table[BackwardsLabel, int]
+    patchConditionalJmps*: seq[ConditionalJump]
 
     dumpIrForFuncs*: seq[string]
 
-proc `=destroy`*(cgen: AMD64Codegen) =
+  AMD64Codegen* = ref AMD64CodegenObj
+
+proc `=destroy`*(cgen: AMD64CodegenObj) =
   for cnst in cgen.cpool:
     dealloc(cast[pointer](cnst))
 
   free(cgen.s.data)
 
-proc prepareGCAlloc*(cgen: var AMD64Codegen, size: uint) =
+proc prepareGCAlloc*(cgen: AMD64Codegen, size: uint) =
   cgen.s.mov(regRdi, cast[int64](cgen.vm))
   cgen.s.mov(regRsi, size.int64)
   cgen.s.sub(regRsp.reg, 8)
   cgen.s.call(cgen.callbacks.alloc)
   cgen.s.add(regRsp.reg, 8)
 
-proc prepareLoadString*(cgen: var AMD64Codegen, str: cstring) =
+proc prepareLoadString*(cgen: AMD64Codegen, str: cstring) =
   prepareGCAlloc(cgen, str.len.uint)
 
   # the GC allocated memory's pointer is in rax.

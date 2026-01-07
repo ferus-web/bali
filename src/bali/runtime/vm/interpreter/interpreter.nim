@@ -34,7 +34,8 @@ type
   Builtin* = proc(op: Operation) {.gcsafe.}
 
   EquationHook* = proc(a, b: JSValue): bool {.gcsafe.}
-  TypeErrorHook* = proc() {.gcsafe.}
+  TypeErrorHook* = proc(message: string) {.gcsafe.}
+  ReferenceErrorHook* = proc(binding: string) {.gcsafe.}
   AddAtomsOpImpl* = proc(a, b: JSValue): JSValue {.gcsafe.}
 
   PulsarInterpreter* = object
@@ -55,6 +56,7 @@ type
 
     equationHook*: EquationHook
     typeErrorHook*: TypeErrorHook
+    referenceErrorHook*: ReferenceErrorHook
     addOpImpl*: AddAtomsOpImpl
 
     when defined(amd64):
@@ -412,7 +414,7 @@ proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) {.gcsafe.} =
       callable.fn()
       inc interpreter.currIndex
     else:
-      interpreter.typeErrorHook()
+      interpreter.typeErrorHook("not a function")
   elif value.kind == String:
     msg "atom is string/ref to native function"
     interpreter.call(&getStr(value), default(Operation))
@@ -465,22 +467,22 @@ proc readRegister*(interpreter: var PulsarInterpreter, store, register, index: i
     )
 
 {.push cdecl, gcsafe, quirky.}
-proc opCall(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opCall(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let name = &op.arguments[0].getStr()
   msg "call " & name
-  interpreter.call(name, op)
+  interpreter.call(name, op[])
 
-proc opLoadInt(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLoadInt(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "load int"
   interpreter.addAtom(op.arguments[1], &op.arguments[0].getInt())
   inc interpreter.currIndex
 
-proc opLoadStr(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLoadStr(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "load str"
   interpreter.addAtom(op.arguments[1], &op.arguments[0].getInt())
   inc interpreter.currIndex
 
-proc opJump(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opJump(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let pos = op.arguments[0].getInt()
 
   if not *pos:
@@ -491,7 +493,7 @@ proc opJump(interpreter: var PulsarInterpreter, op: var Operation) =
   msg "jump to " & $(&pos)
   interpreter.currIndex = (&pos).uint - 1'u
 
-proc opAdd(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opAdd(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let
     aPos = (&op.arguments[0].getInt())
     a = &interpreter.get(aPos)
@@ -507,7 +509,7 @@ proc opAdd(interpreter: var PulsarInterpreter, op: var Operation) =
     interpreter.addAtom(interpreter.addOpImpl(a, b), aPos)
   inc interpreter.currIndex
 
-proc opMult(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opMult(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let
     posA = (&op.arguments[0].getInt())
     a = &(&interpreter.get(posA)).getNumeric()
@@ -516,7 +518,7 @@ proc opMult(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(floating(interpreter.heapManager, a * b), posA)
   inc interpreter.currIndex
 
-proc opDiv(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opDiv(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let
     posA = (&op.arguments[0].getInt())
     a = &(&interpreter.get(posA)).getNumeric()
@@ -530,7 +532,7 @@ proc opDiv(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(floating(interpreter.heapManager, a / b), posA)
   inc interpreter.currIndex
 
-proc opSub(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opSub(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let posA = (&op.arguments[0].getInt())
 
   let a = &(&interpreter.get(posA)).getNumeric()
@@ -539,7 +541,7 @@ proc opSub(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(floating(interpreter.heapManager, a - b), posA)
   inc interpreter.currIndex
 
-#[proc opEquate(interpreter: var PulsarInterpreter, op: var Operation) =
+#[proc opEquate(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "equate"
   var
     prev = interpreter.get(&op.arguments[0].getInt())
@@ -561,33 +563,28 @@ proc opSub(interpreter: var PulsarInterpreter, op: var Operation) =
   else:
     interpreter.currIndex += 2]#
 
-proc opReturn(interpreter: var PulsarInterpreter, op: var Operation) =
-  let clause = interpreter.getClause()
-
-  if not *clause:
-    msg "got return but we are not in any clause"
-    inc interpreter.currIndex
-    return
-
-  let idx = &getInt(op.arguments[0])
+proc opReturn(interpreter: var PulsarInterpreter, op: ptr Operation) =
+  let
+    clause = interpreter.clauses[interpreter.currClause]
+    idx = &getInt(op.arguments[0])
 
   # write the return value to the `retVal` register
   interpreter.registers.retVal = interpreter.get(idx)
 
   # revert back to where we left off in the previous clause (or exit if this was the final clause - that's handled by the logic in `run`)
 
-  msg "rolling back to clause " & $((&clause).rollback.clause)
-  interpreter.currClause = (&clause).rollback.clause
+  msg "rolling back to clause " & $clause.rollback.clause
+  interpreter.currClause = clause.rollback.clause
 
-  msg "rolling back to index " & $((&clause).rollback.opIndex)
-  interpreter.currIndex = (&clause).rollback.opIndex
+  msg "rolling back to index " & $clause.rollback.opIndex
+  interpreter.currIndex = clause.rollback.opIndex
 
-proc opLoadList(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLoadList(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "load list"
   interpreter.addAtom(sequence(interpreter.heapManager, @[]), &op.arguments[0].getInt())
   inc interpreter.currIndex
 
-proc opAddList(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opAddList(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "add list"
   let
     pos = (&op.arguments[0].getInt())
@@ -609,7 +606,7 @@ proc opAddList(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.stack[pos] = list
   inc interpreter.currIndex
 
-proc opLoadUint(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLoadUint(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "load uint"
   interpreter.addAtom(
     integer(interpreter.heapManager, (&op.arguments[1].getInt())),
@@ -617,12 +614,12 @@ proc opLoadUint(interpreter: var PulsarInterpreter, op: var Operation) =
   )
   inc interpreter.currIndex
 
-proc opLoadBool(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLoadBool(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "load bool"
   interpreter.addAtom(op.arguments[1], (&op.arguments[0].getInt()))
   inc interpreter.currIndex
 
-proc opSwap(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opSwap(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "swap"
   let
     a = &op.arguments[0].getInt()
@@ -631,11 +628,11 @@ proc opSwap(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.swap(a, b)
   inc interpreter.currIndex
 
-proc opJumpOnError(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opJumpOnError(interpreter: var PulsarInterpreter, op: ptr Operation) =
   interpreter.currJumpOnErr = some(uint(&op.arguments[0].getInt()))
   inc interpreter.currIndex
 
-proc opGreaterThanInt(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opGreaterThanInt(interpreter: var PulsarInterpreter, op: ptr Operation) =
   if op.arguments.len < 2:
     msg "gti: expected 2 args, got " & $op.arguments.len & "; ignoring"
     inc interpreter.currIndex
@@ -667,7 +664,7 @@ proc opGreaterThanInt(interpreter: var PulsarInterpreter, op: var Operation) =
     msg "gti: a <= b; pc += 2"
     interpreter.currIndex += 2
 
-proc opLesserThanInt(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLesserThanInt(interpreter: var PulsarInterpreter, op: ptr Operation) =
   if op.arguments.len < 2:
     inc interpreter.currIndex
     return
@@ -691,11 +688,11 @@ proc opLesserThanInt(interpreter: var PulsarInterpreter, op: var Operation) =
   else:
     interpreter.currIndex += 2
 
-proc opLoadObject(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLoadObject(interpreter: var PulsarInterpreter, op: ptr Operation) =
   interpreter.addAtom(obj(interpreter.heapManager), (&op.arguments[0].getInt()))
   inc interpreter.currIndex
 
-proc opCreateField(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opCreateField(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let oatomIndex = ((&op.arguments[0].getInt()))
 
   let oatomId = interpreter.get(oatomIndex)
@@ -716,7 +713,7 @@ proc opCreateField(interpreter: var PulsarInterpreter, op: var Operation) =
 
   inc interpreter.currIndex
 
-proc opFastWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opFastWriteField(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let
     oatomIndex = (&op.arguments[0].getInt())
     oatomId = interpreter.get(oatomIndex)
@@ -728,7 +725,7 @@ proc opFastWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
   var atom = &oatomId
   let fieldIndex = (&op.arguments[1].getInt())
 
-  let toWrite = op.consume(
+  let toWrite = op[].consume(
     Integer, "", enforce = false, some(op.rawArgs.len - 1), interpreter.heapManager
   )
   atom.objValues[fieldIndex] = toWrite
@@ -736,7 +733,7 @@ proc opFastWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(atom, oatomIndex)
   inc interpreter.currIndex
 
-proc opWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opWriteField(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let
     oatomIndex = (&op.arguments[0].getInt())
     oatomId = interpreter.get(oatomIndex)
@@ -764,12 +761,12 @@ proc opWriteField(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(atom, oatomIndex)
   inc interpreter.currIndex
 
-proc opCrashInterpreter(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opCrashInterpreter(interpreter: var PulsarInterpreter, op: ptr Operation) =
   when defined(release):
     raise
       newException(CatchableError, "Encountered `CRASHINTERP` during execution; abort!")
 
-proc opInc(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opInc(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let atom = &interpreter.get((&op.arguments[0].getInt()))
 
   case atom.kind
@@ -784,7 +781,7 @@ proc opInc(interpreter: var PulsarInterpreter, op: var Operation) =
 
   inc interpreter.currIndex
 
-proc opDec(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opDec(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let atom = &interpreter.get((&op.arguments[0].getInt()))
 
   case atom.kind
@@ -799,13 +796,13 @@ proc opDec(interpreter: var PulsarInterpreter, op: var Operation) =
 
   inc interpreter.currIndex
 
-proc opLoadNull(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLoadNull(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let idx = (&op.arguments[0].getInt())
 
   interpreter.addAtom(null(interpreter.heapManager), idx)
   inc interpreter.currIndex
 
-proc opReadReg(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opReadReg(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let
     idx = (&op.arguments[0].getInt())
     register = (&op.arguments[1].getInt())
@@ -819,7 +816,7 @@ proc opReadReg(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.readRegister(idx, register, index)
   inc interpreter.currIndex
 
-proc opPassArg(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opPassArg(interpreter: var PulsarInterpreter, op: ptr Operation) =
   # append to callArgs register
   let idx = (&op.arguments[0].getInt())
   msg "passing to args register: " & $idx
@@ -828,11 +825,11 @@ proc opPassArg(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.registers.callArgs.add(value)
   inc interpreter.currIndex
 
-proc opResetArgs(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opResetArgs(interpreter: var PulsarInterpreter, op: ptr Operation) =
   interpreter.registers.callArgs.reset()
   inc interpreter.currIndex
 
-proc opCopyAtom(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opCopyAtom(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let
     src = (&op.arguments[0].getInt())
     dest = (&op.arguments[1].getInt())
@@ -842,7 +839,7 @@ proc opCopyAtom(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(&interpreter.get(src), dest)
   inc interpreter.currIndex
 
-proc opMoveAtom(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opMoveAtom(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let
     src = (&op.arguments[0].getInt())
     dest = (&op.arguments[1].getInt())
@@ -851,7 +848,7 @@ proc opMoveAtom(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.stack[src] = null(interpreter.heapManager)
   inc interpreter.currIndex
 
-proc opLoadFloat(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLoadFloat(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let
     pos = (&op.arguments[0].getInt())
     value = op.arguments[1]
@@ -859,12 +856,12 @@ proc opLoadFloat(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(value, pos)
   inc interpreter.currIndex
 
-proc opZeroRetval(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opZeroRetval(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "zero retval"
   interpreter.registers.retVal = none(JSValue)
   inc interpreter.currIndex
 
-proc opLoadBytecodeCallable(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLoadBytecodeCallable(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "load bytecode segment"
   let
     index = (&op.arguments[0].getInt())
@@ -876,18 +873,18 @@ proc opLoadBytecodeCallable(interpreter: var PulsarInterpreter, op: var Operatio
   interpreter.addAtom(bytecodeCallable(interpreter.heapManager, clause), index)
   inc interpreter.currIndex
 
-proc opExecuteBytecodeCallable(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opExecuteBytecodeCallable(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "exec bytecode segment"
   let callable = &getBytecodeClause(&interpreter.get((&op.arguments[0].getInt())))
 
-  interpreter.call(callable, op)
+  interpreter.call(callable, op[])
 
-proc opLoadUndefined(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLoadUndefined(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "load undefined"
   interpreter.addAtom(undefined(interpreter.heapManager), (&op.arguments[0].getInt()))
   inc interpreter.currIndex
 
-proc opGreaterThanEqualInt(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opGreaterThanEqualInt(interpreter: var PulsarInterpreter, op: ptr Operation) =
   if op.arguments.len < 2:
     inc interpreter.currIndex
     return
@@ -912,7 +909,7 @@ proc opGreaterThanEqualInt(interpreter: var PulsarInterpreter, op: var Operation
   else:
     interpreter.currIndex += 2
 
-proc opLesserThanEqualInt(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opLesserThanEqualInt(interpreter: var PulsarInterpreter, op: ptr Operation) =
   msg "ltei"
   if op.arguments.len < 2:
     msg "expected 2 args, ignoring"
@@ -942,10 +939,10 @@ proc opLesserThanEqualInt(interpreter: var PulsarInterpreter, op: var Operation)
     msg "a >= b; pc += 2"
     interpreter.currIndex += 2
 
-proc opInvoke(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opInvoke(interpreter: var PulsarInterpreter, op: ptr Operation) =
   interpreter.invoke(op.arguments[0])
 
-proc opPower(interpreter: var PulsarInterpreter, op: var Operation) =
+proc opPower(interpreter: var PulsarInterpreter, op: ptr Operation) =
   let
     posA = (&op.arguments[0].getInt())
     a = &(&interpreter.get(posA)).getNumeric()
@@ -954,9 +951,79 @@ proc opPower(interpreter: var PulsarInterpreter, op: var Operation) =
   interpreter.addAtom(floating(interpreter.heapManager, a ^ b.int), posA)
   inc interpreter.currIndex
 
+proc opThrowReferenceError*(interpreter: var PulsarInterpreter, op: ptr Operation) =
+  let binding = &op.arguments[0].getStr()
+  msg "binding: " & binding
+
+  interpreter.referenceErrorHook(binding)
+
+func createFieldAccess(vm: PulsarInterpreter, values: seq[string]): ptr FieldAccess =
+  template newFieldAccess(): ptr FieldAccess =
+    cast[ptr FieldAccess](vm.heapManager.allocate(uint8(sizeof(FieldAccess))))
+
+  var top = newFieldAccess()
+  var curr: ptr FieldAccess
+  top.field = cstring(values[0])
+  curr = top
+
+  for nVal in 1 ..< values.len:
+    var next = newFieldAccess()
+    next.field = cstring(values[nVal])
+    next.prev = curr
+    curr.next = next
+    curr = next
+
+  top
+
+proc findField(heap: HeapManager, atom: JSValue, accesses: ptr FieldAccess): JSValue =
+  let field = $accesses.field
+  if field in atom.objFields:
+    if accesses.next == nil:
+      return atom.objValues[atom.objFields[field]]
+    else:
+      return findField(heap, atom, accesses.next)
+  else:
+    return undefined(heap)
+
+proc opResolveField(interpreter: var PulsarInterpreter, op: ptr Operation) =
+  let
+    index = &getInt(op.arguments[0])
+    storeAt = &getInt(op.arguments[1])
+
+  msg "index: " & $index & ", storeAt: " & $storeAt
+
+  var accessesFrags = newSeq[string](op.arguments.len - 2)
+  for i in 2 ..< op.arguments.len:
+    accessesFrags[i - 2] = &getStr(op.arguments[i])
+
+  let atom = &interpreter.get(index)
+
+  if isUndefined(atom):
+    interpreter.typeErrorHook("value is undefined")
+    return
+
+  if isNull(atom):
+    interpreter.typeErrorHook("value is null")
+    return
+
+  if atom.kind != Object:
+    interpreter.addAtom(undefined(interpreter.heapManager), storeAt)
+    inc interpreter.currIndex
+    return
+
+  interpreter.addAtom(
+    findField(
+      interpreter.heapManager,
+      atom,
+      createFieldAccess(interpreter, ensureMove(accessesFrags)),
+    ),
+    storeAt,
+  )
+  inc interpreter.currIndex
+
 {.pop.}
 
-proc execute*(interpreter: var PulsarInterpreter, op: var Operation) {.gcsafe.} =
+proc execute*(interpreter: var PulsarInterpreter, op: ptr Operation) {.gcsafe.} =
   const OpDispatchTable = [
     opCall, opLoadInt, opLoadStr, opJump, opAdd, opMult, opDiv, opSub, opReturn,
     opLoadList, opAddList, opLoadUint, opLoadBool, opSwap, opJumpOnError,
@@ -965,6 +1032,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) {.gcsafe.} 
     opResetArgs, opCopyAtom, opMoveAtom, opLoadFloat, opZeroRetval,
     opLoadBytecodeCallable, opExecuteBytecodeCallable, opLoadUndefined,
     opGreaterThanEqualInt, opLesserThanEqualInt, opInvoke, opPower,
+    opThrowReferenceError, opResolveField,
   ]
   OpDispatchTable[cast[uint8](op.opcode)](interpreter, op)
 
@@ -1060,12 +1128,11 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
   while not interpreter.halt:
     inc interpreter.profTotalFrames
     vmd "fetch", "new frame " & $interpreter.currIndex
-    let cls = interpreter.getClause()
+    var clause = interpreter.clauses[interpreter.currClause]
 
-    if not *cls:
-      break
+    # if not *cls:
+    #  break
 
-    var clause = &cls
     if clause.compiled and interpreter.trapped:
       # FIXME: this is broken!!! :^(
       #        i'm losing my mind and i have zero clue as to why
@@ -1090,23 +1157,23 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
       interpreter.currIndex = clause.rollback.opIndex
       continue
 
+    let shouldJudge = hasJITSupport and interpreter.useJit and not interpreter.trapped
+
     # If this clause is considered hot, consider compiling it.
-    # TODO: A massive weakness of our JIT is that it currently
-    # only accounts for entire functions and not sub-sections of
-    # a function. This means that we cannot, say, optimize an infinite loop AT ALL
-    # or optimize a really slow loop as soon as viable. Ideally, we should have a way
-    # to compile the entire function then make the CPU's IP jump to the compiled
-    # instruction where `interpreter.currIndex` is at
-    if interpreter.currIndex == 0 and hasJITSupport and interpreter.useJit and
-        not interpreter.trapped:
-      let (gettingCompiled, tier) = interpreter.shouldCompile(clause)
+    if interpreter.currIndex == 0 and shouldJudge:
+      let (gettingCompiled, tierOpt) = interpreter.shouldCompile(clause)
+
+      # The baseline JIT does not support mid-execution patching.
+      # The midtier JIT does.
       if gettingCompiled:
-        # TODO: JIT'd functions should be able to call other JIT'd segments
+        let tier = &tierOpt
+
         jitd "fetch",
           "has jit support, compiling clause " & clause.name & " with JIT tier `" & $tier &
             '`'
+
         let compiled =
-          case &tier
+          case tier
           of Tier.Baseline:
             interpreter.baseline.compile(clause)
           of Tier.Midtier:
@@ -1117,11 +1184,11 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
 
         if *compiled:
           clause.compiled = true
+          clause.profIterationsSpent += uint64(clause.operations.len - 2)
           interpreter.clauses[interpreter.currClause] = clause
 
           vmd "execute", "entering JIT'd segment"
           interpreter.runningCompiled = true
-          clause.profIterationsSpent += uint64(clause.operations.len - 2)
           (&compiled)()
           interpreter.runningCompiled = false
 
@@ -1158,7 +1225,7 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
       vmd "decode", "resolved/decoded op"
 
     vmd "execute", "exec phase beginning"
-    interpreter.execute(operation)
+    interpreter.execute(operation.addr)
     vmd "execute", "exec phase ended, saving op state"
     clause.operations[index] = ensureMove(operation)
     inc clause.profIterationsSpent
@@ -1260,7 +1327,7 @@ proc tryInitializeJIT(interp: ptr PulsarInterpreter) =
       jitd "callback", "createField()"
       target[$field] = undefined(vm.heapManager),
     allocEncodedFloat: proc(vm: var PulsarInterpreter, v: int64): JSValue {.cdecl.} =
-      jitd "callback", "allocEncodedFloat()"
+      jitd "callback", "allocEncodedFloat(v=" & $cast[float64](v) & ')'
 
       floating(vm.heapManager, cast[float64](v)),
     allocFloat: proc(vm: var PulsarInterpreter, v: float64): JSValue {.cdecl.} =

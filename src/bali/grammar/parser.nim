@@ -1061,7 +1061,7 @@ proc parseReassignment(parser: Parser, ident: string): Option[Statement] =
       parser.error UnexpectedToken, $tok.kind
 
   if *atom:
-    var reassignExpr = reassignVal(ident, &atom)
+    var reassignExpr = reassignVal(ident, (&atom).atom)
     reassignExpr.source = parser.lines[parser.tokenizer.location.line]
 
     return some(ensureMove(reassignExpr))
@@ -1246,14 +1246,14 @@ proc parseTryClause(parser: Parser): Option[Statement] =
   statement.tryStmtBody = Scope(stmts: parser.parseScope())
   statement.source = parser.lines[parser.tokenizer.location.line]
 
-  let copied = parser.tokenizer.deepCopy()
+  var copied = parser.tokenizer
 
   if not copied.eof and
       (let tok = copied.nextExceptWhitespace(); *tok and (&tok).kind == TokenKind.Catch):
     # There's a catch clause.
     parser.tokenizer = copied
 
-    let copiedParen = parser.tokenizer.deepCopy()
+    var copiedParen = parser.tokenizer
     if not copiedParen.eof and (
       let paren = copiedParen.nextExceptWhitespace()
       *paren and (&paren).kind == TokenKind.LParen

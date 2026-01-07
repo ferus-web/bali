@@ -33,4 +33,11 @@ type
 
   JITSegment* = proc(): void {.cdecl, gcsafe.}
 
+func fromOffset*(segment: JITSegment, offset: int64): JITSegment =
+  ## Given a compiled segment `segment` and an `offset`,
+  ## compute a new segment, beginning from that offset.
+  ##
+  ## **NOTE**: Use this carefully. It is unsafe.
+  cast[JITSegment](cast[int64](segment) + offset)
+
 export Clause

@@ -243,21 +243,13 @@ proc resolveFieldAccess*(
   )
   let accessResult = runtime.addrIdx - 1 # index where the value will be stored
 
-  # Pass the index at which the atom is located
-  inc runtime.addrIdx
-  runtime.ir.loadUint(runtime.addrIdx, address)
-  runtime.ir.passArgument(runtime.addrIdx)
+  var access = access.next
+  var accessSeq: seq[string]
+  while access != nil:
+    accessSeq &= access.identifier
+    access = access.next
 
-  # Pass the index at wbich the result is to be stored
-  inc runtime.addrIdx
-  runtime.ir.loadUint(runtime.addrIdx, accessResult)
-  runtime.ir.passArgument(runtime.addrIdx)
-
-  # Pass all the fields
-  runtime.loadFieldAccessStrings(access)
-
-  runtime.ir.call("BALI_RESOLVEFIELD")
-  runtime.ir.resetArgs()
+  runtime.ir.resolveField(address, accessResult, ensureMove(accessSeq))
 
   accessResult
 
@@ -396,7 +388,8 @@ proc genReturnFn(runtime: Runtime, fn: Function, stmt: Statement) =
 
 proc genCallAndStoreResult(runtime: Runtime, fn: Function, stmt: Statement) =
   runtime.generateBytecode(fn, stmt.storeFn, ownerStmt = some(stmt))
-  var index = runtime.index(stmt.storeIdent, defaultParams(fn))
+  var index =
+    runtime.index(stmt.storeIdent, defaultParams(fn), willHandleResolveFail = true)
 
   if index == runtime.index("undefined", defaultParams(fn)):
     runtime.markLocal(fn, stmt.storeIdent)
@@ -453,6 +446,8 @@ proc genReassignVal(runtime: Runtime, fn: Function, stmt: Statement) =
       runtime.ir.loadStr(index, stmt.reAtom)
     of Float:
       runtime.ir.loadFloat(index, stmt.reAtom)
+    of Null:
+      runtime.ir.loadNull(index)
     else:
       unreachable
   else:
@@ -1358,15 +1353,6 @@ proc generateBytecodeForScope(
   for child in scope.children:
     runtime.generateBytecodeForScope(child)
 
-proc findField*(runtime: Runtime, atom: JSValue, accesses: FieldAccess): JSValue =
-  if accesses.identifier in atom.objFields:
-    if accesses.next == nil:
-      return atom.objValues[atom.objFields[accesses.identifier]]
-    else:
-      return runtime.findField(atom, accesses.next)
-  else:
-    return undefined(runtime)
-
 proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
   ## Compute the type of an atom.
   case atom.kind
@@ -1400,46 +1386,6 @@ proc computeTypeof*(runtime: Runtime, atom: JSValue): string =
 
 proc generateInternalIR*(runtime: Runtime) =
   ## Generate the internal functions needed by Bali to work properly.
-  runtime.vm[].registerBuiltin(
-    "BALI_RESOLVEFIELD",
-    proc(op: Operation) =
-      inc runtime.statFieldAccesses
-      let
-        index = &getInt(&runtime.argument(1))
-        storeAt = &getInt(&runtime.argument(2))
-
-        accesses = createFieldAccess(
-          (
-            proc(): seq[string] =
-              if runtime.argumentCount() < 3:
-                return
-
-              var accesses: seq[string]
-              for i in 3 .. runtime.argumentCount():
-                accesses.add(&(&runtime.argument(i)).getStr())
-
-              accesses
-          )()
-        )
-
-      debug "hooks: BALI_RESOLVEFIELD: index = " & $index & ", destination = " & $storeAt
-
-      let atom = &runtime.vm[].get(index)
-
-      if atom.isUndefined():
-        runtime.typeError("value is undefined")
-
-      if atom.isNull():
-        runtime.typeError("value is null")
-
-      if atom.kind != Object:
-        debug "runtime: atom is not an object, returning undefined."
-        runtime.vm[].addAtom(undefined(runtime), storeAt)
-        return
-
-      runtime.vm[].addAtom(runtime.findField(atom, accesses), storeAt),
-  )
-
   runtime.vm[].registerBuiltin(
     "BALI_TYPEOF",
     proc(op: Operation) =
