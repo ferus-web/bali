@@ -371,6 +371,66 @@ proc compileLowered(cgen: MidtierJIT, pipeline: pipeline.Pipeline): Option[JITSe
         cgen.s.mov(regRsi.reg, regRax)
         cgen.s.mov(regRdx, int64(inst.args[0].vreg))
         cgen.s.call(cgen.callbacks.addAtom)
+    of InstKind.GreaterThanInt:
+      let
+        a = inst.args[0].vreg
+        b = inst.args[1].vreg
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(a))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+        cgen.s.mov(regRdi.reg, regRax)
+        cgen.s.call(getRawFloat)
+
+        cgen.s.movsd(regXmm1, regXmm0.reg)
+
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(b))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+      cgen.s.comisd(regXmm0, regXmm1.reg)
+
+      # A <= B: pc += 1
+      cgen.patchConditionalJmps &=
+        ConditionalJump(label: cgen.s.label(), op: i + 1, condition: condNotBelow)
+      cgen.s.jcc(condNotBelow, BackwardsLabel(EnsureNoInt8Align))
+
+      # A > B: pc += 2
+      cgen.patchConditionalJmps &=
+        ConditionalJump(label: cgen.s.label(), op: i + 2, condition: condBelow)
+      cgen.s.jcc(condBelow, BackwardsLabel(EnsureNoInt8Align))
+    of InstKind.GreaterThanEqualInt:
+      let
+        a = inst.args[0].vreg
+        b = inst.args[1].vreg
+
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(a))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+        cgen.s.mov(regRdi.reg, regRax)
+        cgen.s.call(getRawFloat)
+
+        cgen.s.movsd(regXmm1, regXmm0.reg)
+
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(b))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+      cgen.s.comisd(regXmm0, regXmm1.reg)
+
+      # A >= B: pc += 1
+      cgen.patchConditionalJmps &=
+        ConditionalJump(label: cgen.s.label(), op: i + 1, condition: condNbequal)
+      cgen.s.jcc(condNbequal, BackwardsLabel(EnsureNoInt8Align))
+
+      # A > B: pc += 2
+      cgen.patchConditionalJmps &=
+        ConditionalJump(label: cgen.s.label(), op: i + 2, condition: condBequal)
+      cgen.s.jcc(condBequal, BackwardsLabel(EnsureNoInt8Align))
     else:
       debug "jit/amd64: midtier cannot lower op into x64 code: " & $inst.kind
       return

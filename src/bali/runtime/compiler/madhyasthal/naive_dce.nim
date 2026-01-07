@@ -112,7 +112,10 @@ func scanForUsedRegs*(
       used.incl(inst.args[0].vreg)
     of InstKind.ReadProperty:
       used.incl(inst.args[0].vreg)
-    of {InstKind.Equate, InstKind.LesserThanInt}:
+    of {
+      InstKind.Equate, InstKind.LesserThanInt, InstKind.GreaterThanInt,
+      InstKind.GreaterThanEqualInt,
+    }:
       used.incl(inst.args[0].vreg)
       used.incl(inst.args[1].vreg)
     else:
