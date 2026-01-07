@@ -34,7 +34,7 @@ type
   Builtin* = proc(op: Operation) {.gcsafe.}
 
   EquationHook* = proc(a, b: JSValue): bool {.gcsafe.}
-  TypeErrorHook* = proc() {.gcsafe.}
+  TypeErrorHook* = proc(message: string) {.gcsafe.}
   ReferenceErrorHook* = proc(binding: string) {.gcsafe.}
   AddAtomsOpImpl* = proc(a, b: JSValue): JSValue {.gcsafe.}
 
@@ -414,7 +414,7 @@ proc invoke*(interpreter: var PulsarInterpreter, value: JSValue) {.gcsafe.} =
       callable.fn()
       inc interpreter.currIndex
     else:
-      interpreter.typeErrorHook()
+      interpreter.typeErrorHook("not a function")
   elif value.kind == String:
     msg "atom is string/ref to native function"
     interpreter.call(&getStr(value), default(Operation))
@@ -953,7 +953,73 @@ proc opPower(interpreter: var PulsarInterpreter, op: var Operation) =
 
 proc opThrowReferenceError*(interpreter: var PulsarInterpreter, op: var Operation) =
   let binding = &op.arguments[0].getStr()
+  msg "binding: " & binding
+
   interpreter.referenceErrorHook(binding)
+
+func createFieldAccess(vm: PulsarInterpreter, values: seq[string]): ptr FieldAccess =
+  template newFieldAccess(): ptr FieldAccess =
+    cast[ptr FieldAccess](vm.heapManager.allocate(uint8(sizeof(FieldAccess))))
+
+  var top = newFieldAccess()
+  var curr: ptr FieldAccess
+  top.field = cstring(values[0])
+  curr = top
+
+  for nVal in 1 ..< values.len:
+    var next = newFieldAccess()
+    next.field = cstring(values[nVal])
+    next.prev = curr
+    curr.next = next
+    curr = next
+
+  top
+
+proc findField(heap: HeapManager, atom: JSValue, accesses: ptr FieldAccess): JSValue =
+  let field = $accesses.field
+  if field in atom.objFields:
+    if accesses.next == nil:
+      return atom.objValues[atom.objFields[field]]
+    else:
+      return findField(heap, atom, accesses.next)
+  else:
+    return undefined(heap)
+
+proc opResolveField(interpreter: var PulsarInterpreter, op: var Operation) =
+  let
+    index = &getInt(op.arguments[0])
+    storeAt = &getInt(op.arguments[1])
+
+  msg "index: " & $index & ", storeAt: " & $storeAt
+
+  var accessesFrags = newSeq[string](op.arguments.len - 2)
+  for i in 2 ..< op.arguments.len:
+    accessesFrags[i - 2] = &getStr(op.arguments[i])
+
+  let atom = &interpreter.get(index)
+
+  if isUndefined(atom):
+    interpreter.typeErrorHook("value is undefined")
+    return
+
+  if isNull(atom):
+    interpreter.typeErrorHook("value is null")
+    return
+
+  if atom.kind != Object:
+    interpreter.addAtom(undefined(interpreter.heapManager), storeAt)
+    inc interpreter.currIndex
+    return
+
+  interpreter.addAtom(
+    findField(
+      interpreter.heapManager,
+      atom,
+      createFieldAccess(interpreter, ensureMove(accessesFrags)),
+    ),
+    storeAt,
+  )
+  inc interpreter.currIndex
 
 {.pop.}
 
@@ -966,7 +1032,7 @@ proc execute*(interpreter: var PulsarInterpreter, op: var Operation) {.gcsafe.} 
     opResetArgs, opCopyAtom, opMoveAtom, opLoadFloat, opZeroRetval,
     opLoadBytecodeCallable, opExecuteBytecodeCallable, opLoadUndefined,
     opGreaterThanEqualInt, opLesserThanEqualInt, opInvoke, opPower,
-    opThrowReferenceError,
+    opThrowReferenceError, opResolveField,
   ]
   OpDispatchTable[cast[uint8](op.opcode)](interpreter, op)
 

@@ -171,6 +171,7 @@ type
     Invoke
     Power
     ThrowReferenceError
+    ResolveField
 
 const
   OpCodeToTable* = {
@@ -214,6 +215,7 @@ const
     "INVK": Invoke,
     "POW": Power,
     "THROWREF": ThrowReferenceError,
+    "RESFLD": ResolveField,
   }.toTable
 
   OpCodeToString* = static:

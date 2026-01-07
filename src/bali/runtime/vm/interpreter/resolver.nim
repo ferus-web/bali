@@ -177,3 +177,13 @@ proc resolve*(clause: Clause, op: var Operation, heap: HeapManager) =
   of ThrowReferenceError:
     op.arguments &=
       op.consume(Integer, "THROWREF expects a string at position 1", heap = heap)
+  of ResolveField:
+    op.arguments &=
+      op.consume(Integer, "RESFLD expects an integer at position 1", heap = heap)
+
+    op.arguments &=
+      op.consume(Integer, "RESFLD expects an integer at position 2", heap = heap)
+
+    for i in 2 ..< op.arguments.len:
+      op.arguments &=
+        op.consume(String, "RESFLD expects an optional string", heap = heap)

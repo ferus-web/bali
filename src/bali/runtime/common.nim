@@ -107,8 +107,8 @@ proc run*(runtime: Runtime) {.gcsafe.} =
   runtime.vm.equationHook = proc(a, b: JSValue): bool {.gcsafe.} =
     runtime.isLooselyEqual(a, b)
 
-  runtime.vm.typeErrorHook = proc() {.gcsafe.} =
-    runtime.typeError("not a function")
+  runtime.vm.typeErrorHook = proc(message: string) {.gcsafe.} =
+    runtime.typeError(message)
 
   runtime.vm.referenceErrorHook = proc(binding: string) {.gcsafe.} =
     runtime.referenceError('\'' & binding & "' is not defined")

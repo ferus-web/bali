@@ -14,7 +14,6 @@ proc argument*(
   ## Error message substitutions:
   ## `{nargs}` - the number of arguments currently in the call arguments register
   assert(position > 0, "argument() only accepts naturals.")
-  debug "runtime: fetching argument #" & $position
 
   if runtime.vm.registers.callArgs.len < position:
     debug "runtime: argument(): " & $position & " > " &

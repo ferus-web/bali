@@ -1,7 +1,15 @@
+## Interpreter types
+##
+## Copyright (C) 2024-2026 Trayambak Rai (xtrayambak@disroot.org)
+
 import std/options
 import pkg/bali/runtime/vm/interpreter/operation
 
 type
+  FieldAccess* = object
+    prev*, next*: ptr FieldAccess
+    field*: cstring
+
   Clause* = object
     name*: string
     operations*: seq[Operation]
