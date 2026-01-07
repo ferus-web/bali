@@ -9,7 +9,7 @@ function expensiveLoop()
 	var i = 0;
 	while (i < 65536)
 	{
-		i = 65536;
+		i++;
 	}
 
 	return i;

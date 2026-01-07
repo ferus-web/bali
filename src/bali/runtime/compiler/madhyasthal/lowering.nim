@@ -258,6 +258,10 @@ proc lowerStream*(fn: var Function, stream: var OpStream): bool =
         lesserThanI(
           uint32(&op.arguments[0].getInt()), uint32(&op.arguments[1].getInt())
         )
+    of Increment:
+      let op = stream.consume()
+
+      fn.insts &= increment(uint32(&op.arguments[0].getInt()))
     else:
       bailout "cannot find predictable pattern for op: " & $stream.peekKind()
 

@@ -352,6 +352,26 @@ proc compileLowered(
       cgen.patchConditionalJmps &=
         ConditionalJump(label: cgen.s.label(), op: i + 2, condition: condNotBelow)
       cgen.s.jcc(condNotBelow, BackwardsLabel(EnsureNoInt8Align))
+    of InstKind.Increment:
+      alignStack 8:
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi, int64(inst.args[0].vreg))
+        cgen.s.call(cgen.callbacks.getAtom)
+
+        cgen.s.mov(regRdi.reg, regRax)
+        cgen.s.call(getRawFloat)
+
+        cgen.s.mov(regR9, 0x3FF0000000000000)
+        cgen.s.movq(regXmm1, regR9.reg)
+        cgen.s.addsd(regXmm0, regXmm1.reg)
+
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.call(cgen.callbacks.allocFloat)
+
+        cgen.s.mov(regRdi, cast[int64](cgen.vm))
+        cgen.s.mov(regRsi.reg, regRax)
+        cgen.s.mov(regRdx, int64(inst.args[0].vreg))
+        cgen.s.call(cgen.callbacks.addAtom)
     else:
       debug "jit/amd64: midtier cannot lower op into x64 code: " & $inst.kind
       return
