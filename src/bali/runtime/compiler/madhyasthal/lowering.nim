@@ -2,7 +2,7 @@
 ## This essentially analyzes common bytecode patterns and translates
 ## them into Madhyasthal's specialized ops.
 ##
-## Copyright (C) 2025 Trayambak Rai (xtrayambak at disroot dot org)
+## Copyright (C) 2025-2026 Trayambak Rai (xtrayambak at disroot dot org)
 import std/[algorithm, options, logging, tables]
 import pkg/[shakar]
 import
@@ -274,4 +274,4 @@ proc lower*(clause: Clause): Option[ir.Function] =
   var stream = OpStream(ops: clause.operations)
 
   if lowerStream(fn, stream):
-    return some(fn)
+    return some(ensureMove(fn))

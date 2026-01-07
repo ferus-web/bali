@@ -1158,22 +1158,20 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
       continue
 
     # If this clause is considered hot, consider compiling it.
-    # TODO: A massive weakness of our JIT is that it currently
-    # only accounts for entire functions and not sub-sections of
-    # a function. This means that we cannot, say, optimize an infinite loop AT ALL
-    # or optimize a really slow loop as soon as viable. Ideally, we should have a way
-    # to compile the entire function then make the CPU's IP jump to the compiled
-    # instruction where `interpreter.currIndex` is at
-    if interpreter.currIndex == 0 and hasJITSupport and interpreter.useJit and
-        not interpreter.trapped:
-      let (gettingCompiled, tier) = interpreter.shouldCompile(clause)
-      if gettingCompiled:
-        # TODO: JIT'd functions should be able to call other JIT'd segments
+    if hasJITSupport and interpreter.useJit and not interpreter.trapped:
+      let (gettingCompiled, tierOpt) = interpreter.shouldCompile(clause)
+
+      # The baseline JIT does not support mid-execution patching.
+      # The midtier JIT does.
+      if gettingCompiled and (&tierOpt == Tier.Midtier or interpreter.currIndex != 0):
+        let tier = &tierOpt
+
         jitd "fetch",
           "has jit support, compiling clause " & clause.name & " with JIT tier `" & $tier &
             '`'
-        let compiled =
-          case &tier
+
+        var compiled =
+          case tier
           of Tier.Baseline:
             interpreter.baseline.compile(clause)
           of Tier.Midtier:
@@ -1185,6 +1183,15 @@ proc run*(interpreter: var PulsarInterpreter) {.gcsafe.} =
         if *compiled:
           clause.compiled = true
           interpreter.clauses[interpreter.currClause] = clause
+
+          if tier == Tier.Midtier:
+            let nativeOffset =
+              interpreter.midtier.getOpOffset(int(interpreter.currIndex))
+
+            if *nativeOffset:
+              compiled = some(fromOffset(&compiled, int64(&nativeOffset)))
+            else:
+              compiled = none(JITSegment)
 
           vmd "execute", "entering JIT'd segment"
           interpreter.runningCompiled = true

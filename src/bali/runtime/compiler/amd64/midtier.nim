@@ -15,14 +15,15 @@ const
 
   DummyJumpAddr* = 0xC0D ## Self-explanatory. Also, fish. :^)
 
-type MidtierJIT* = object of AMD64Codegen
+type MidtierJIT* = ref object of AMD64Codegen
+  stream*: OpStream
 
 template alignStack(offset: uint, body: untyped) =
   cgen.s.sub(regRsp.reg, offset)
   body
   cgen.s.add(regRsp.reg, offset)
 
-proc patchNativeJumps(cgen: var MidtierJIT) =
+proc patchNativeJumps(cgen: MidtierJIT) =
   let oldOffset = cgen.s.offset
 
   template verifyValidJumpDest(jumpDest: int, patchAddr: BackwardsLabel) =
@@ -48,9 +49,7 @@ proc patchNativeJumps(cgen: var MidtierJIT) =
 
   cgen.s.offset = oldOffset # Just in case we ever add any future passes after this
 
-proc compileLowered(
-    cgen: var MidtierJIT, pipeline: pipeline.Pipeline
-): Option[JITSegment] =
+proc compileLowered(cgen: MidtierJIT, pipeline: pipeline.Pipeline): Option[JITSegment] =
   let fn = pipeline.fn
   if unlikely(fn.name in cgen.dumpIrForFuncs):
     echo dumpFunction(fn)
@@ -382,18 +381,28 @@ proc compileLowered(
   cgen.cached[fn.name] = cast[JITSegment](cgen.s.data)
   some(cast[JITSegment](cgen.s.data))
 
+proc getOpOffset*(cgen: MidtierJIT, op: int): Option[BackwardsLabel] =
+  let irOffset = cgen.stream.opToIrMap[op + 1]
+
+  if cgen.irToNativeMap.contains(irOffset):
+    return some(cgen.irToNativeMap[irOffset])
+
+  none(BackwardsLabel)
+
 proc compile*(
-    cgen: var MidtierJIT, clause: Clause, ignoreCache: bool = false
+    cgen: MidtierJIT, clause: Clause, ignoreCache: bool = false
 ): Option[JITSegment] =
   if clause.name in cgen.cached and not ignoreCache:
     return some(cgen.cached[clause.name])
 
-  let lowered = lowering.lower(clause)
-  if !lowered:
+  var lowered = Function(name: clause.name)
+  cgen.stream = OpStream(ops: clause.operations)
+
+  if not lowerStream(lowered, cgen.stream):
     warn "jit/amd64: midtier compiler failed to lower clause, falling back to VM"
     return
 
-  var pipeline = Pipeline(fn: &lowered)
+  var pipeline = Pipeline(fn: ensureMove(lowered))
 
   when not defined(baliMadhyasthalDoNotApplyPasses):
     pipeline.optimize(
