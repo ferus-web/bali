@@ -1,0 +1,1063 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://bali.xtrayambak.xyz/MANUAL/">
+      
+      
+      
+        <link rel="next" href="../HEAP/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Getting started with Bali - The Bali JavaScript Engine</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#bali-manual" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="The Bali JavaScript Engine" class="md-header__button md-logo" aria-label="The Bali JavaScript Engine" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            The Bali JavaScript Engine
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Getting started with Bali
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ferus-web/bali" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ferus-web/bali
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="The Bali JavaScript Engine" class="md-nav__button md-logo" aria-label="The Bali JavaScript Engine" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    The Bali JavaScript Engine
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ferus-web/bali" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ferus-web/bali
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started with Bali
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../HEAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bali's Heap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PULSAR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bali's interpreter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CODE_STYLE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Style
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bali's JIT compilers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Bali's JIT compilers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../jit/BASELINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Baseline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../jit/MADHYASTHAL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Midtier/Madhyasthal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="bali-manual">Bali Manual</h1>
+<p><strong>Author</strong>: Trayambak Rai (xtrayambak at disroot dot org)</p>
+<p><strong>Version Series Targetted</strong>: 0.8.0</p>
+<p>This manual is largely inspired by Monoucha's manual.</p>
+<p><strong>WARNING</strong>: Bali is only tested with the default memory management strategy (ORC). It uses ORC extensively and as such, it will probably not compile with other strategies.</p>
+<p><strong>WARNING</strong>: If you embed Bali in your program, you must compile it with the C++ backend as Bali relies on some C++ libraries.</p>
+<p><strong>This manual is largely under construction. Report problems if you can.</strong></p>
+<h1 id="table-of-contents">Table of Contents</h1>
+<ul>
+<li><a href="#introduction">Introduction</a><ul>
+<li><a href="#terms-to-learn">Terms to learn</a><ul>
+<li><a href="#atom">Atom</a></li>
+</ul>
+</li>
+<li><a href="#drooling-babys-first-scripts">Drooling Baby's First Scripts</a></li>
+<li><a href="#babys-first-scripts">Baby's First Scripts</a></li>
+<li><a href="#the-holy-grail-of-bali-the-runtime-structure">The holy grail of Bali, the Runtime structure</a></li>
+</ul>
+</li>
+<li><a href="#creating-new-types">Creating new types</a><ul>
+<li><a href="#wrapping-primitives">Wrapping Primitives</a></li>
+<li><a href="#wrapping-our-type">Wrapping our Type</a></li>
+<li><a href="#modifying-our-prototype">Modifying our Type's Prototype</a></li>
+</ul>
+</li>
+<li><a href="#supported-ecmascript-apis">Supported ECMAScript APIs</a><ul>
+<li><a href="#the-math-type">The Math type</a></li>
+<li><a href="#the-json-type">The JSON type</a> </li>
+<li><a href="#the-url-type">The URL type</a></li>
+<li><a href="#the-bigint-type">The BigInt type</a></li>
+<li><a href="#the-string-type">The String type</a></li>
+<li><a href="#the-date-type">The Date type</a></li>
+<li><a href="#the-number-type">The Number type</a> </li>
+<li><a href="#the-set-type">The Set type</a></li>
+</ul>
+</li>
+<li><a href="#using-balde">Using Balde</a><ul>
+<li><a href="#running-scripts">Running scripts</a></li>
+<li><a href="#flags">Flags</a></li>
+<li><a href="#using-the-repl">Using the REPL</a></li>
+<li><a href="#experiments">Experiments</a></li>
+</ul>
+</li>
+<li><a href="#controlling-codegen">Controlling Codegen</a><ul>
+<li><a href="#prelude">Prelude</a></li>
+<li><a href="#loop-elision">Loop Elision</a></li>
+<li><a href="#loop-allocation-elision">Loop Allocation Elision</a></li>
+<li><a href="#return-value-register-scrubber">Return-value register scrubber</a></li>
+<li><a href="#disabling-optimizations">Disabling optimizations</a></li>
+</ul>
+</li>
+<li><a href="#using-the-native-interface">Using the Native Interface</a><ul>
+<li><a href="#a-small-example">A small example</a></li>
+<li><a href="#allocating-memory">Allocating memory</a></li>
+</ul>
+</li>
+<li><a href="#migration-notices">Migration Notices</a><ul>
+<li><a href="#07x-to-080">0.7.x -&gt; 0.8.0</a></li>
+</ul>
+</li>
+</ul>
+<h1 id="introduction">Introduction</h1>
+<p>Bali is a JavaScript engine written from scratch in Nim for the <a href="https://github.com/ferus-web/ferus">Ferus web engine</a>. It is designed to be convenient to interface with whilst being fast and compliant. It provides you high-level abstractions as far as humanly possible.</p>
+<p>Currently, it has a fairly-fast bytecode VM as well as a baseline JIT compiler for x86-64 SysV systems.</p>
+<p>Bali is evolving very quickly, and as such, the API is subject to breaking. Such changes will be generally marked by a bump in the minor version.</p>
+<h2 id="terms-to-learn">Terms to learn</h2>
+<p>Although not evident at first, learning these terms will make things much easier for you.</p>
+<h3 id="atom">Atom</h3>
+<p>An atom is a variant type discriminated by its <code>kind</code> field that can be:
+- An integer (signed)
+- An integer (unsigned)
+- A float (64-bit)
+- A string
+- A sequence (of more atoms, but you can mark it as homogenous to restrict it to one type)
+- An object (basically, an overglorified hashmap)
+There's also an identifier type, but that's only internally used by Mirage.</p>
+<p>A <code>JSValue</code> is a pointer to an atom, and it is generally what is used instead of a <code>MAtom</code>, to facilitate easier value manipulation.</p>
+<h2 id="drooling-babys-first-scripts">Drooling Baby's First Scripts</h2>
+<p>We'll now learn how to use Bali's <code>easy</code> module, which as the name suggests, gives you the simplest-possible way to execute JavaScript in Nim. It is incredibly dumbed down, and you're recommended to not use it for serious projects where more control over the entire execution flow is required.</p>
+<p>All you need to is import a single component: <code>bali/easy</code></p>
+<pre><code class="language-nim">import pkg/bali/easy
+
+proc main() =
+  var runtime = createRuntimeForSource(
+    &quot;&quot;&quot;
+console.log(&quot;Goo goo ga ga&quot;)
+console.log(&quot;It doesn't get simpler than this.&quot;)
+  &quot;&quot;&quot;
+  )
+
+  runtime.run()
+
+when isMainModule:
+  main()
+</code></pre>
+<p>It's mostly meant to be used as a gentle introduction to using Bali.</p>
+<h2 id="babys-first-scripts">Baby's First Scripts</h2>
+<p>Now, we'll learn how to write a Nim program that can load and evaluate JavaScript. You'll need to import two of Bali's components:
+- The <code>grammar</code> module, which as the name suggests, is responsible for lexing and parsing the JavaScript source code into an abstract syntax tree
+- The <code>runtime</code> module, which takes in the AST and converts it into bytecode that targets the <a href="https://github.com/ferus-web/mirage">Mirage/Pulsar</a> interpreter.</p>
+<p>However, all of the complexities are neatly abstracted away, so you needn't worry about all of that. The API is deceptively simple.
+Here's the minimal example.</p>
+<pre><code class="language-nim">import pkg/bali/grammar/prelude
+import pkg/bali/runtime/prelude
+
+# Create a parser.
+let parser = newParser(&quot;&quot;&quot;
+console.log(&quot;Hello from JavaScript!&quot;)
+&quot;&quot;&quot;)
+
+# Parse the source code into an AST.
+let ast = parser.parse()
+
+# Instantiate the runtime, which generates the bytecode and runs it.
+# You can optionally pass on a filename, it only exists to keep the
+# bytecode caching mechanism work.
+let runtime = newRuntime(&quot;nameofyourfile.js&quot;, ast)
+
+# Begin execution. This halts your code until execution is completed.
+runtime.run()
+</code></pre>
+<p>Let's breakdown what each line does:
+- We're creating a parser with <code>newParser()</code> and feeding it our source code.
+- We're parsing the source code into an abstract syntax tree.
+- We're feeding the AST to the runtime.
+- We're running the generated bytecode.</p>
+<p>That's it! You just executed JavaScript with Bali! Yay.</p>
+<h1 id="the-holy-grail-of-bali-the-runtime-structure">The holy grail of Bali, the Runtime structure</h1>
+<p>The <code>Runtime</code> type is what you initialize when you wish to execute JavaScript. It acts as a catalyst where various different Bali subsystems intersect and work together. It helps you do the following things:</p>
+<ul>
+<li>Expose your custom types written in Nim to JavaScript</li>
+<li>Expose your Nim-native functions to JavaScript (for instance, you can create a <code>perlinNoise()</code> function and implement it in Nim so that it's fast!)</li>
+<li>Set properties on types</li>
+<li>Call JavaScript functions and get their return values in Nim
+and much, much more.</li>
+</ul>
+<p>Basically, if you wish to do anything with Bali apart from just using it as a script executor, chances are that you'll need to interact with the <code>Runtime</code> structure, obtained via <code>newRuntime()</code> or the <code>createRuntimeForFile()</code> / <code>createRuntimeForSource()</code> functions.</p>
+<h1 id="creating-new-types">Creating new types</h1>
+<p>Now, let us learn how to create new types. Bali can automatically "wrap" a Nim object into its representative atom.
+Bali can do this for primitives like integers, floats, strings and sequences of said primitives as well.</p>
+<h2 id="wrapping-primitives">Wrapping Primitives</h2>
+<p>Let us try wrapping some primitives into atoms before wrapping a Nim object.</p>
+<pre><code class="language-nim">import std/options
+import pkg/bali/runtime/prelude
+
+let name = &quot;John Doe&quot;
+let age = 24'u
+let likes = @[&quot;Skating&quot;, &quot;Tennis&quot;, &quot;Programming&quot;]
+
+let aName = runtime.wrap(name)
+let aAge = runtime.wrap(age)
+let aLikes = runtime.wrap(likes)
+
+assert aName.kind == String
+assert aAge.kind == Integer
+assert aLikes.kind == Sequence
+
+assert aName.isSome and aName.getStr().get() == name
+assert aAge.isSome and aAge.getInt().get() == age
+</code></pre>
+<p><strong>NOTE</strong>: When you call <code>wrap()</code>, Bali allocates the object's on the heap, which is normally controlled by the Boehm GC! Do not free the pointer unless you're 100% sure it's no longer needed. Due to how Bali is designed, deallocating a <code>JSValue</code> can cause a ripple effect where other parts of the code holding onto the pointer won't notice it, and will subsequently perform a user-after-free! Henceforth, leave deallocations to the GC, because it's smarter than you.
+Here, we just turned Nim types into atoms, which can be of any type, only dictated by their <code>kind</code> field. We can also turn the first two atoms back into their original representation.
+Unfortunately, it isn't as simple for the sequence, which can be dynamically typed with heterogenous types at this point.
+The <code>getXXX</code> functions return <code>Option[requested type]</code> as they need to safely provide a way to tell if an atom can be of the requested primitive type. </p>
+<h3 id="hold-up-this-isnt-how-javascript-engines-work">Hold up, this isn't how JavaScript engines work!</h3>
+<p>Yep, they use coercion. You <em>could</em> implement coercion like this using the exception system, but Bali already handles some of the coercion functions that ECMAScript expects. They'll be covered later.</p>
+<h2 id="wrapping-our-type">Wrapping our Type</h2>
+<p>Assuming you already have the runtime set up via <code>newRuntime()</code>, you can define types before <code>run()</code> is called.</p>
+<pre><code class="language-nim">type Person* = object
+  name*: string
+  age*: uint
+  likes*: seq[string]
+
+runtime.registerType(prototype = Person, name = &quot;Person&quot;)
+runtime.setProperty(Person, &quot;name&quot;, str(runtime, &quot;John Doe&quot;))
+runtime.setProperty(Person, &quot;age&quot;, integer(runtime, 24'u))
+runtime.setProperty(Person, &quot;likes&quot;, sequence(runtime, @[
+  str(runtime, &quot;Skating&quot;),
+  str(runtime, &quot;Tennis&quot;),
+  str(runtime, &quot;Programming&quot;)
+]))
+</code></pre>
+<p>Here, we're exposing our <code>Person</code> type to the JavaScript environment by specifying what fields it has, and also setting those fields.
+Now, you can easily just run this in your JS code:</p>
+<pre><code class="language-js">console.log(Person.name) // Log: John Doe
+console.log(Person.age) // Log: 24
+console.log(Person.likes) // Log: [Skating, Tennis, Programming]
+</code></pre>
+<p>You might notice that when we create JavaScript values, we need to pass our <code>Runtime</code> instance to the functions. This is because the function will then use our runtime's isolated heap context to allocate memory for the object. Earlier versions of Bali utilized a global, shared, thread-local heap context. As one might expect, this caused all sorts of issues, ranging from thread-offloading being impossible, to test-code drivers being very wonky.</p>
+<h2 id="modifying-our-prototype">Modifying our Prototype</h2>
+<p>Now, what if you wanted to add a function that can be called by every instance of your type?
+In order to do that, you need to modify its <strong>prototype</strong>. Assume that we want multiple instances of the previously defined <code>Person</code> class to be possible.
+We need to define a constructor for it.</p>
+<pre><code class="language-nim">runtime.defineConstructor(
+    &quot;Person&quot;,
+    proc =
+      let
+        name = runtime.ToString(&amp;runtime.argument(1), required = true, message = &quot;Expected `name` argument at pos 1, got {nargs}&quot;)
+        age = runtime.ToNumber(&amp;runtime.argument(2), required = true, message = &quot;Expected `age` argument at pos 2, got {nargs}&quot;)
+
+      let person = Person(name: name, age: age.uint)
+
+      ret person
+)
+</code></pre>
+<p>Now, we can call <code>new Person("John Doe", 24)</code> in JavaScript land and get an instance of the <code>Person</code> class!
+Let us assume you want a <code>greet</code> function for all <code>Person</code>(s) that returns "<name> greets you back.". We can implement it like this.</p>
+<pre><code class="language-nim">runtime.definePrototypeFn(
+    Person,
+    &quot;greet&quot;,
+    proc(value: JSValue) =
+      let 
+        name = runtime.ToString(value[&quot;name&quot;])
+        age = runtime.ToNumber(value[&quot;age&quot;])
+
+      echo name &amp; &quot; greets you back.&quot;
+)
+</code></pre>
+<p>Let us break that down, shall we?</p>
+<ul>
+<li><code>definePrototypeFn</code>, as the name suggests, sets up a function for a type's prototype. This prototype is copied to all of the instances of that type, and all of the child classes that derive from this one, and so on and so forth.</li>
+<li>You might be wondering what <code>value</code> here is. It's actually the <code>Person</code> type we called <code>ret</code> on to pass it over to JS-land. It's now in the form of an atom, and unfortunately there's no way to easily turn it back into its original representation, atleast right now.</li>
+</ul>
+<p>Now, the following code should work fine:</p>
+<pre><code class="language-js">let john = new Person(&quot;John Doe&quot;, 23)
+let jane = new Person(&quot;Jane Doe&quot;, 28)
+
+john.greet()
+jane.greet()
+</code></pre>
+<h1 id="supported-ecmascript-apis">Supported ECMAScript APIs</h1>
+<p>Bali supports the following ECMAScript APIs.</p>
+<h2 id="the-math-type">The Math Type</h2>
+<p>The <code>Math</code> type contains the following methods.</p>
+<h3 id="mathrandom"><code>Math.random</code></h3>
+<p>This function uses the global RNG instance created via <a href="https://github.com/xTrayambak/librng">librng</a> to generate a float between 0 and 1.
+<strong>WARNING</strong>: Do <em>NOT</em> tuse this function in places like cryptography! All of the PRNG algorithms used are highly predictable!</p>
+<h4 id="using-another-rng-algorithm">Using another RNG algorithm</h4>
+<p>You can pass the following values as arguments for <code>--define:BaliRNGAlgorithm</code>:</p>
+<ul>
+<li><code>xoroshiro128</code>: Xoroshiro128</li>
+<li><code>xoroshiro128pp</code>: Xoroshiro128++</li>
+<li><code>xoroshiro128ss</code>: Xoroshiro128**</li>
+<li><code>mersenne_twister</code>: Mersenne Twister</li>
+<li><code>marsaglia</code>: Marsaglia 69069</li>
+<li><code>pcg</code>: PCG</li>
+<li><code>lehmer</code>: Lehmer64</li>
+<li><code>splitmix</code>: Splitmix64</li>
+</ul>
+<p>All of them vary in terms of quality, footprint and speed. Bali defaults to <code>xoroshiro128</code> as it provides a nice balance between all of those.</p>
+<h3 id="the-rest-of-the-functions">The rest of the functions</h3>
+<p>All of the functions apart from <code>Math.hypot</code> have been implemented.</p>
+<h2 id="the-json-type">The JSON type</h2>
+<p>The <code>JSON</code> type has been implemented using the <a href="https://github.com/treeform/jsony">jsony</a> parser. It contains a routine to turn Nim's <code>JsonNode</code> structs into <code>JSValue</code>(s) on the fly.
+It is not very spec-compliant yet, and just exists for my convenience.</p>
+<h3 id="supported-routines">Supported Routines</h3>
+<ul>
+<li><code>JSON.parse()</code></li>
+<li><code>JSON.stringify()</code></li>
+</ul>
+<h2 id="the-url-type">The URL type</h2>
+<p>The <code>URL</code> type is not part of the JavaScript spec, but we implement it anyways. It uses Ferus' <a href="https://github.com/ferus-web/sanchar">sanchar</a> parser under the hood.</p>
+<h3 id="supported-routines_1">Supported Routines</h3>
+<ul>
+<li><code>new URL()</code> constructor</li>
+<li><code>URL.parse()</code></li>
+</ul>
+<h2 id="the-bigint-type">The BigInt type</h2>
+<p>The <code>BigInt</code> type has been implemented, but the vast majority of its routines have not. It uses the <a href="https://gmplib.org/">GNU MP BigNum</a> library under the hood.</p>
+<h3 id="supported-routines_2">Supported Routines</h3>
+<ul>
+<li><code>new BigInt()</code> constructor</li>
+<li><code>BigInt.prototype.toString()</code></li>
+</ul>
+<h2 id="the-string-type">The String type</h2>
+<p>This is perhaps the most complete implemented-by-Bali ECMAScript type here. It uses <a href="https://github.com/xTrayambak/kaleidoscope">Kaleidoscope</a> and <a href="https://github.com/ferus-web/simdutf">simdutf</a> under the hood.</p>
+<h3 id="supported-routines_3">Supported Routines</h3>
+<ul>
+<li><code>new String()</code> constructor</li>
+<li><code>String.prototype.indexOf()</code></li>
+<li><code>String.prototype.concat()</code></li>
+<li><code>String.prototype.trimStart()</code> / <code>String.prototype.trimLeft()</code></li>
+<li><code>String.prototype.trimEnd()</code> / <code>String.prototype.trimRight()</code></li>
+<li><code>String.prototype.toLowerCase()</code></li>
+<li><code>String.prototype.toUpperCase()</code></li>
+<li><code>String.prototype.repeat()</code></li>
+<li><code>String.fromCharCode()</code></li>
+<li><code>String.prototype.codePointAt()</code></li>
+<li><code>String.prototype.substring()</code></li>
+<li><code>String.prototype.charAt()</code></li>
+<li><code>String.prototype.at()</code></li>
+</ul>
+<h2 id="the-date-type">The Date type</h2>
+<p>This is yet another well-implemented-by-Bali ECMAScript type. It uses a mixture of <a href="https://unicode-org.github.io/icu/userguide/icu/">LibICU</a> and internal math-based logic, mostly translated from Ladybird's LibJS.</p>
+<h3 id="supported-routines_4">Supported Routines</h3>
+<ul>
+<li><code>new Date()</code> constructor</li>
+<li><code>Date.now()</code></li>
+<li><code>Date.parse()</code></li>
+<li><code>Date.prototype.getYear()</code></li>
+<li><code>Date.prototype.getFullYear()</code></li>
+<li><code>Date.prototype.toString()</code></li>
+<li><code>Date.prototype.getDay()</code></li>
+<li><code>Date.prototype.getDate()</code></li>
+</ul>
+<h2 id="the-number-type">The Number type</h2>
+<p>This is just a boxed representation of a number.</p>
+<h3 id="supported-routines_5">Supported Routines</h3>
+<ul>
+<li><code>Number.isFinite()</code></li>
+<li><code>Number.isNaN()</code></li>
+<li><code>Number.parseInt()</code></li>
+<li><code>Number.NaN</code></li>
+<li><code>Number.EPSILON</code></li>
+<li><code>Number.prototype.toString()</code></li>
+<li><code>Number.prototype.valueOf()</code></li>
+</ul>
+<h2 id="the-set-type">The Set type</h2>
+<p>The Set type uses a Sequence atom under the hood, with guards to ensure that no duplicated values can get lodged in on accident.</p>
+<h3 id="supported-routines_6">Supported Routines</h3>
+<ul>
+<li><code>new Set()</code></li>
+<li><code>Set.prototype.toString()</code></li>
+<li><code>Set.prototype.add()</code></li>
+<li><code>Set.prototype.size()</code></li>
+<li><code>Set.prototype.delete()</code></li>
+<li><code>Set.prototype.has()</code></li>
+<li><code>Set.prototype.clear()</code></li>
+</ul>
+<h1 id="using-balde">Using Balde</h1>
+<p>Balde, short for "<strong>Bal</strong>i <strong>de</strong>bugger" is a CLI tool that acts both as a script runner and a REPL.</p>
+<h2 id="running-scripts">Running Scripts</h2>
+<p>Running a JavaScript source file is as simple as:</p>
+<pre><code class="language-command">$ balde path/to/your/file.js
+</code></pre>
+<h2 id="flags">Flags</h2>
+<p>Balde supports a few flags for easier debugging.</p>
+<h3 id="-dump-ast"><code>--dump-ast</code></h3>
+<p>This flag lets the runtime evaluate the AST for any errors, but does not allow for its execution. Instead, it prints out the AST instead.
+This allows for semantic errors to be thrown out. If you want an immediate AST dump, use <code>--dump-no-eval</code>.</p>
+<pre><code class="language-command">$ balde path/to/your/file.js --dump-ast
+&lt;AST representation&gt;
+</code></pre>
+<h3 id="-dump-no-eval"><code>--dump-no-eval</code></h3>
+<p>This flag dumps the parsed representation (or AST) of the provided JavaScript source without any further evaluation. It also includes the parsing errors.</p>
+<pre><code class="language-command">$ balde path/to/your/file.js --dump-no-eval
+&lt;AST representation&gt;
+</code></pre>
+<h3 id="-verbose"><code>--verbose</code></h3>
+<p>This flag allows all debug logs to be shown, which can be used to diagnose bugs in the engine's multiple phases (tokenization, parsing, bytecode generation and runtime).
+Beware that this gets very spammy.</p>
+<pre><code class="language-command">$ balde path/to/your/file.js --verbose
+&lt;A boat load of logs&gt;
+</code></pre>
+<h3 id="-dump-tokens"><code>--dump-tokens</code></h3>
+<p>This flag dumps all of the tokens of a JavaScript source file.</p>
+<pre><code class="language-command">$ balde path/to/your/file.js --dump-tokens
+</code></pre>
+<h2 id="using-the-repl">Using the REPL</h2>
+<p><strong>WARNING</strong>: The REPL is still a very unstable feature. It is known to have several bugs.
+To run the REPL, simply run Balde with no arguments.</p>
+<h2 id="experiments">Experiments</h2>
+<p>Experiments are unstable Bali features that are locked behind an interpreter flag. In order to use them, you need to use the <code>--enable-experiments</code> flag.
+<code>--enable-experiments</code> expects a syntax like this:</p>
+<pre><code>--enable-experiments:&lt;experiment1&gt;;&lt;experiment2&gt;
+</code></pre>
+<h3 id="current-experiments">Current Experiments</h3>
+<p>There are currently no active experimental features.</p>
+<h2 id="controlling-codegen">Controlling Codegen</h2>
+<p>Bali exposes some levers to turn on/off some code generation features. This features help Bali emit faster bytecode by skipping certain expensive portions of the provided JS source into code that does roughly the same thing.</p>
+<p>If the optimized code does not perform the same behaviour as the unoptimized code, that is a bug. You should probably report it to me after you're 100% sure that it isn't a problem on your part.</p>
+<h3 id="prelude">Prelude</h3>
+<p>Bali exposes three code generation optimizations as of right now:
+- Loop Elider
+- Loop Allocation Eliminator
+- Return-value register scrubbing</p>
+<h3 id="loop-elision">Loop Elision</h3>
+<p>Say, we have some code like this (this is very stupid, most people don't write code like this):</p>
+<pre><code class="language-js">var i = 0
+while (i &lt; 999999)
+{
+    i++
+}
+</code></pre>
+<p>Bali can successfully prove that the while-loop only exists to modify the loop's state controller (<code>i</code>) in a particular way (increment it in this case)
+Bali now knows that there is not a need to:
+* Waste storage space by generating code for a loop
+* Waste CPU cycles by iterating 999999 times
+As such, it can compute the result that will be stored at the end in the <code>i</code> variable and turns the code into the rough equivalent of this:</p>
+<pre><code class="language-js">var i = 999999
+</code></pre>
+<p>This also works for decrements, as intended.</p>
+<p>There are a few cases where the loop elision will correctly fallback and actually generate the loop's code if it detects that a loop does more than mutate its own state.</p>
+<pre><code class="language-js">var i = 0
+while (i &lt; 999999)
+{
+    i++ // This is fine.
+    console.log(i) // Woops: we can't elide that loop now!
+}
+</code></pre>
+<p>Now, it realizes that it has to actually generate the loop. Loop elision makes Bali <em>really</em> fast against other JavaScript engines for very specifically cherry picked benchmarks, but serves next to no real-world usage. Yet.</p>
+<h3 id="loop-allocation-elision">Loop Allocation Elision</h3>
+<p>Say, we have some code like this (this actually happens in a lot of places):</p>
+<pre><code class="language-js">while (true)
+{
+  let x = &quot;Programming se me utsahit hota hun. Me vyavsaik programmer hun, aur tum ise idhar dekh sakte ho. Ye mera kaushal he.&quot;
+  console.log(x)
+}
+</code></pre>
+<p>AFAIK, other JavaScript engines like V8 and SpiderMonkey have an internal string interning "cache" to prevent allocating the same string again and again.
+Bali takes a different approach, because why not?</p>
+<p>Before a loop is about to be generated, Bali runs an optimization pass over the body to check if any allocations can be moved outside the loop's body.
+The aforementioned code sample, hence, would be converted into this:</p>
+<pre><code class="language-js">let x = &quot;Programming se me utsahit hota hun. Me vyavsaik programmer hun, aur tum ise idhar dekh sakte ho. Ye mera kaushal he.&quot;
+
+while (true)
+{
+  console.log(x)
+}
+</code></pre>
+<p>This prevents unnecessary allocations. Yay.</p>
+<h3 id="return-value-register-scrubber">Return-Value Register Scrubber</h3>
+<p>This optimization essentially allows the engine to emit the <code>ZRETV</code> instruction. This instruction clears the return-value register, which allows the garbage collector to quickly clear up the memory it might occupy. This makes some badly written code no longer result in an OOM. It, however, like most of Bali, is not battle tested and as such, might result in undefined behaviour. It is disabled by default.</p>
+<h3 id="disabling-optimizations">Disabling Optimizations</h3>
+<p>If you don't want the bytecode generator to spend time optimizing code (you're 100% sure you've written very neat code that will always make your CPU happy or something) or the bytecode generator ends up performing optimization incorrectly (rare, but if it occurs, please file a bug report), then you can disable codegen optimizations.</p>
+<h4 id="disabling-optimizations-in-balde">Disabling Optimizations in Balde</h4>
+<p>Balde exposes the following three flags to control optimizations:
+* --disable-loop-elision
+* --disable-loop-allocation-elim
+* --aggressively-free-retvals
+* --disable-jit</p>
+<h4 id="disabling-optimizations-in-nim-code">Disabling Optimizations in Nim code</h4>
+<p>When instantiating the <code>Runtime</code>, you can pass an <code>InterpreterOpts</code> struct containing a <code>CodegenOpts</code> struct.</p>
+<pre><code class="language-nim">var runtime = newRuntime(
+  fileName, ast, 
+  InterpreterOpts(
+    codegen: CodegenOpts(
+      elideLoops: false,
+      loopAllocationEliminator: false,
+      aggressivelyFreeRetvals: false,
+      jitCompiler: false
+    )
+  )
+)
+</code></pre>
+<h1 id="using-the-native-interface">Using the Native Interface</h1>
+<h2 id="a-small-example">A small example</h2>
+<p>Bali exposes a pretty neat two-way interface for native code written in Nim to interact with JavaScript, and vice versa.
+Here's a short example. Here's a brief summary of what it does:
+- The JavaScript code has a function called "shoutify" which takes in an argument and returns an all-upper-case version of it.
+- The Nim code has a function called "greet" which takes in an argument and prints "Hi there, <argument>" to stdout.
+- The JS code firstly calls the native greet function, passing "tray" as an argument. As expected, "Hi there, tray" gets printed to stdout.
+- After the execution is done, the Nim code tries finding a reference to the "shoutify" function in the global scope.
+- Then, it calls this function from Nim-land with the argument "tray".
+- The JS function turns this argument all into uppercase ("TRAY") and returns it.
+- Then, the Nim-land code gets it back and prints it out.</p>
+<pre><code class="language-nim">import pkg/bali/grammar/prelude
+import pkg/bali/runtime/prelude
+
+proc main =
+  let parser = newParser(
+    &quot;&quot;&quot;
+let greeting = greet(&quot;tray&quot;) // Here, we're calling a native function written in Nim
+console.log(greeting)
+
+function shoutify(name)
+{
+  // Make a name seem like it's been SHOUTED OUT.
+  // This is called by native code.
+  var x = new String(name);
+  var y = x.toUpperCase() // Fun fact: `toUpperCase()` is native code. So here, we have native code calling interpreted code, which in turn calls more native code. :^)
+
+  return y
+}
+&quot;&quot;&quot;
+  )
+  let ast = parser.parse()
+  var runtime = newRuntime(&quot;interop.js&quot;, ast)
+
+  runtime.defineFn(
+    &quot;greet&quot;,
+    proc() =
+      let arg = runtime.ToString(&amp;runtime.argument(1))
+      ret str(runtime, &quot;Hi there, &quot; &amp; arg)
+    ,
+  )
+
+  runtime.run() # Execute what we have so far.
+
+  let fn = runtime.get(&quot;shoutify&quot;) # Get the `shoutify` value reference in the global scope
+  if !fn:
+    return
+
+  let retval = runtime.call(&amp;fn, str(&quot;tray&quot;)) # Call the `shoutify` function in bytecode. Pass it the arguments it expects.
+  echo &quot;I AM SHOUTING YOUR NAME AT YOU, &quot; &amp; runtime.ToString(retval) # Take its return value and print it out.
+</code></pre>
+<h2 id="allocating-memory">Allocating memory</h2>
+<p>Bali lets the programmer allocate memory in the same way as JavaScript code using the <code>HeapManager</code> API. Each <code>Runtime</code> instance has one attached to it. \
+This essentially lets you tap into Bali's allocation flow. In most cases, however, you do not need to do this. All of the <code>JSValue</code>-returning functions already use your <code>Runtime</code> instance's internal heap context.</p>
+<pre><code class="language-nim">import pkg/bali/runtime/vm/heap/manager
+
+let x = runtime.heapManager.allocate(1337) # allocate 1337 bytes
+</code></pre>
+<p>This essentially performs the following steps:
+1. If the bump allocator has enough memory leftover for this allocation, it uses that.
+2. Otherwise, it calls into the GC to fetch the pointer of said size.</p>
+<p>If allocation fails, the <code>AllocationFailed</code> defect is thrown.</p>
+<h1 id="migration-notices">Migration Notices</h1>
+<p>Bali is constantly evolving in terms of its design, architecture and subsystems. Here's a few notes that can help you migrate from one version to another with the least amount of headaches.</p>
+<h2 id="07x-to-080">0.7.x to 0.8.0</h2>
+<p>0.7.8 was bumped to 0.8.0 for one major reason: <strong>All global states have been fully eliminated.</strong></p>
+<p>This brings a plethora of benefits with it, which you can probably guess. However, it also breaks most code written for any version prior to 0.8.0!
+Thankfully, the migration process is fairly straightforward. All functions that perform allocations on the JavaScript heap need to modified.</p>
+<p>Assuming your initialized <code>Runtime</code> instance is at <code>runtime</code>, the following migrations will suffice in the illustrated examples:
+* <code>str("Hello World!")</code> -&gt; <code>str(runtime, "Hello World!")</code>
+* <code>obj()</code> -&gt; <code>obj(runtime)</code>
+* <code>floating(13.37)</code> -&gt; <code>floating(runtime, 13.37)</code>
+* <code>sequence(@[])</code> -&gt; <code>sequence(runtime, @[])</code>
+* <code>bigint("383248324832843284832483248324")</code> -&gt; <code>bigint(runtime, "383248324832843284832483248324")</code></p>
+<p>And so on, and so forth.</p>
+<p>Another change is that the death callback is now a member of the <code>Runtime</code> struct and needs to be set via the <code>deathCallback</code> property, instead of using the previously provided function. The signature for the death callback has also been changed from <code>proc(PulsarInterpreter, int)</code> to <code>proc(PulsarInterpreter)</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024 - 2026 Trayambak Rai
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
