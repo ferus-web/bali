@@ -29,7 +29,6 @@ type
     foundShebang: bool = false
 
 template error(parser: Parser, errorKind: ParseErrorKind, msg: string) =
-  const inf = instantiationInfo()
   parser.errors &=
     ParseError(kind: errorKind, location: parser.tokenizer.location, message: msg)
 
@@ -96,7 +95,7 @@ proc parseExpression(
   var term = Statement(kind: BinaryOp, binStoreIn: storeIn)
 
   template parseRHSExpression(otherRight: Statement) =
-    var copiedTok = deepCopy(parser.tokenizer)
+    var copiedTok = parser.tokenizer
     if not parser.tokenizer.eof() and
         (let andSymbol = parser.tokenizer.nextExceptWhitespace(); *andSymbol):
       case (&andSymbol).kind
@@ -246,7 +245,7 @@ proc parseTypeofCall(parser: Parser): Option[PositionedArguments] =
     parser.error Other, "expected expression, got EOF"
 
   let
-    tokenizer = parser.tokenizer.deepCopy()
+    tokenizer = parser.tokenizer
     next = parser.tokenizer.nextExceptWhitespace()
     mustEndWithParen = *next and (&next).kind == TokenKind.LParen
 
@@ -397,7 +396,7 @@ proc parseArray(parser: Parser): Option[Statement] =
     # From valid, according to the grammar rules, it can only be two tokens:
     # `,` and `]` to add another element and to close off the parsing algorithm
     # respectively.
-    var copiedTok = deepCopy(parser.tokenizer)
+    var copiedTok = parser.tokenizer
     while not parser.tokenizer.eof:
       if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
         let kind = (&tok).kind
@@ -447,7 +446,7 @@ proc parseArrayIndex(parser: Parser, ident: string): Option[Statement] =
   if (let indexToken = parser.tokenizer.nextExceptWhitespace(); *indexToken):
     let
       token = &indexToken
-      cTok = deepCopy(parser.tokenizer)
+      cTok = parser.tokenizer
       atom = parser.parseAtom(token)
 
     if !atom:
@@ -569,7 +568,9 @@ proc parseDeclaration(
       of TokenKind.Number:
         parser.error UnexpectedToken, "numeric literal"
       else:
-        parser.error UnexpectedToken, $tok.kind
+        parser.error UnexpectedToken,
+          "expected identifier, equal-sign or numeric literal, got " & $tok.kind &
+            " instead"
 
   proc stubDef(): Result[Option[Statement], void] =
     case initialIdent
@@ -596,7 +597,7 @@ proc parseDeclaration(
     return
 
   let
-    copiedTok = parser.tokenizer.deepCopy()
+    copiedTok = parser.tokenizer
     expr = parser.parseExpression(ident.some())
 
   if !expr:
@@ -623,7 +624,7 @@ proc parseDeclaration(
       break
     of TokenKind.Identifier:
       if not parser.tokenizer.eof():
-        let copiedTok = parser.tokenizer.deepCopy()
+        let copiedTok = parser.tokenizer
         let next = parser.tokenizer.nextExceptWhitespace()
         case (&next).kind
         of TokenKind.LParen:
@@ -871,7 +872,7 @@ proc parseArguments(parser: Parser): Option[PositionedArguments] =
 
   while not parser.tokenizer.eof and not metEnd:
     inc idx
-    let copiedTok = deepCopy(parser.tokenizer)
+    let copiedTok = parser.tokenizer
 
     if (let expr = parser.parseExpression(); *expr):
       args.pushImmExpr(&expr)
@@ -1004,7 +1005,7 @@ proc parseReassignment(parser: Parser, ident: string): Option[Statement] =
   var expr: Option[Statement]
 
   if not parser.tokenizer.eof:
-    let copiedTok = parser.tokenizer.deepCopy()
+    let copiedTok = parser.tokenizer
     expr = parser.parseExpression()
 
     if !expr:
@@ -1029,7 +1030,7 @@ proc parseReassignment(parser: Parser, ident: string): Option[Statement] =
       atom = parser.parseAtom(tok)
     of TokenKind.Identifier:
       if not parser.tokenizer.eof():
-        let copied = parser.tokenizer.deepCopy()
+        let copied = parser.tokenizer
         let next = parser.tokenizer.nextExceptWhitespace()
         if *next and (&next).kind == TokenKind.LParen:
           # this is a function call!
@@ -1084,7 +1085,7 @@ proc parseScope(parser: Parser): seq[Statement] =
   if parser.tokenizer.eof:
     parser.error Other, "expected left curly bracket, got EOF instead"
 
-  let ephTok = deepCopy(parser.tokenizer)
+  let ephTok = parser.tokenizer
   var singleExpr = false
   if (let tok = parser.tokenizer.nextExceptWhitespace(); *tok):
     if (&tok).kind != TokenKind.LCurly:
@@ -1145,10 +1146,10 @@ proc parseExprInParenWrap(parser: Parser, token: TokenKind): Option[Statement] =
     if (&tok).kind != TokenKind.LParen:
       parser.error Other, "expected left parenthesis after " & $token & " token"
 
-  let copiedTok = parser.tokenizer.deepCopy()
+  let copiedTok = parser.tokenizer
   var expr = parser.parseExpression()
   if !expr:
-    let copiedTokPhase2 = parser.tokenizer.deepCopy()
+    let copiedTokPhase2 = parser.tokenizer
     parser.tokenizer = copiedTok
 
     let atom = parser.parseAtom(parser.tokenizer.next())
@@ -1197,7 +1198,7 @@ proc parseForLoop(parser: Parser): Option[Statement] =
   # Now, parse the next statement you can see.
   # This is the initializer.
   # Revert back if there's nothing.
-  var copiedTok = parser.tokenizer.deepCopy()
+  var copiedTok = parser.tokenizer
   let initializer = parser.parseStatement()
   if !initializer:
     parser.tokenizer = ensureMove(copiedTok)
@@ -1208,7 +1209,7 @@ proc parseForLoop(parser: Parser): Option[Statement] =
   # Now, parse the next statement you can see.
   # This is the condition.
   # Revert back if there's nothing.
-  copiedTok = parser.tokenizer.deepCopy()
+  copiedTok = parser.tokenizer
   let condition = parser.parseExpression()
   if !condition:
     parser.tokenizer = ensureMove(copiedTok)
@@ -1219,7 +1220,7 @@ proc parseForLoop(parser: Parser): Option[Statement] =
   # Now, parse the next statement you can see.
   # This is the incrementor.
   # Revert back if there's nothing.
-  copiedTok = parser.tokenizer.deepCopy()
+  copiedTok = parser.tokenizer
   let incrementor = parser.parseStatement()
   if !incrementor:
     parser.tokenizer = ensureMove(copiedTok)
@@ -1288,7 +1289,7 @@ proc parseCompoundAssignment(
       "expected equal-sign to start compound assignment, got " & $expEquals.kind &
         " instead."
 
-  let copiedTok = parser.tokenizer.deepCopy()
+  let copiedTok = parser.tokenizer
   let expr = parser.parseExpression()
   var atom: Option[Statement]
   var identifier: Option[string]
@@ -1434,7 +1435,7 @@ proc parseStatement(parser: Parser): Option[Statement] =
 
     while not parser.tokenizer.eof():
       let next = parser.tokenizer.next()
-      let copied = deepCopy(parser.tokenizer)
+      let copied = parser.tokenizer
       if (let expr = parser.parseExpression(); *expr):
         return some returnFunc(&expr)
       else:
@@ -1583,7 +1584,7 @@ proc parse*(parser: Parser): AST {.inline.} =
 
       parser.ast.appendToCurrentScope(statement)
 
-  parser.ast.errors = deepCopy(parser.errors)
+  parser.ast.errors = parser.errors
   parser.ast
 
 {.pop.}

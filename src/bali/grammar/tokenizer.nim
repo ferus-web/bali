@@ -50,6 +50,8 @@ func advance*(tokenizer: var Tokenizer, offset: uint = 1) =
   if tokenizer.charAt() == some('\n'):
     inc tokenizer.location.line
     tokenizer.location.col = 0
+    #debugecho "new line :D (+" & $offset & "; c=" & $tokenizer.pos & ", l=" &
+    #  $tokenizer.location.line & ')'
   else:
     tokenizer.location.col += offset
 
