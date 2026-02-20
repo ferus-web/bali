@@ -46,14 +46,14 @@ func charAt*(tokenizer: var Tokenizer, offset: uint = 0): Option[char] =
 
   tokenizer.source[tokenizer.pos + offset].some()
 
-proc advance*(tokenizer: var Tokenizer, offset: uint = 1) =
-  # FIXME: this newline checking can be done accurately in a for-loop
+func advance*(tokenizer: var Tokenizer, offset: uint = 1) =
   if tokenizer.charAt() == some('\n'):
     inc tokenizer.location.line
     tokenizer.location.col = 0
+  else:
+    tokenizer.location.col += offset
 
   tokenizer.pos += offset
-  tokenizer.location.col += offset
 
 func newTokenizer*(source: string): Tokenizer =
   Tokenizer(pos: 0, location: SourceLocation(col: 0, line: 0), source: source)
