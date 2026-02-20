@@ -9,7 +9,7 @@ mkShell {
     icu76
     pcre
     nph
-    quickjs
+    quickjs-ng
     act
     boa
     mimalloc
