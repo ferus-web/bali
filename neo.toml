@@ -10,7 +10,6 @@ binaries = ["balde"]
 version = "2.2.0"
 
 [dependencies]
-kaleidoscope = ">= 0.1.1"
 ptr_math = ">= 0.3.0"
 jsony = ">= 1.1.5"
 colored_logger = "== 0.1.0"

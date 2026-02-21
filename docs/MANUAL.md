@@ -296,7 +296,7 @@ The `BigInt` type has been implemented, but the vast majority of its routines ha
 - `BigInt.prototype.toString()`
 
 ## The String type
-This is perhaps the most complete implemented-by-Bali ECMAScript type here. It uses [Kaleidoscope](https://github.com/xTrayambak/kaleidoscope) and [simdutf](https://github.com/ferus-web/simdutf) under the hood.
+This is perhaps the most complete implemented-by-Bali ECMAScript type here. It uses [simdutf](https://github.com/ferus-web/simdutf) for many operations under the hood.
 
 ### Supported Routines
 - `new String()` constructor
