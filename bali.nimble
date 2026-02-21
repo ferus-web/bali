@@ -29,6 +29,7 @@ requires "icu4nim >= 76.1.0"
 requires "ptr_math >= 0.3.0"
 requires "libbacktrace >= 0.0.8"
 requires "shakar >= 0.1.3"
+requires "url >= 0.2.0"
 
 taskRequires "fmt", "nph#master"
 task fmt, "Format code":
@@ -43,5 +44,3 @@ task grammarfuzzer, "Compile the grammarfuzzer":
 
 task balde, "Compile balde":
   exec "nim c -o:bin/balde src/balde.nim"
-
-requires "url >= 0.1.0"
