@@ -8,11 +8,7 @@ import bali/runtime/abstract/[coercible, to_number, to_string]
 import bali/stdlib/errors, bali/stdlib/types/std_string_type
 import bali/internal/[trim_string, sugar]
 import bali/runtime/vm/atom
-import pkg/[kaleidoscope/search, ferrite/utf16view]
-
-const
-  ## At what point should Bali start SIMD-accelerating string related operations?
-  BaliStringAccelerationThreshold* {.intdefine.} = 128
+import pkg/ferrite/utf16view
 
 proc generateStdIr*(runtime: Runtime) =
   runtime.registerType(prototype = JSString, name = "String")
@@ -91,11 +87,7 @@ proc generateStdIr*(runtime: Runtime) =
         start = clamp(pos, 0'u, len)
 
       # 8. Return 𝔽(StringIndexOf(S, searchStr, start)).
-      if value.len < BaliStringAccelerationThreshold:
-        ret strutils.find(value[start ..< value.len], searchStr)
-          # Optimization: Don't use SIMD acceleration if a string is smaller than 512 characters
-      else:
-        ret search.find(value[start ..< value.len], searchStr)
+      ret strutils.find(value[start ..< value.len], searchStr)
     ,
   )
 
